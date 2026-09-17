@@ -1,0 +1,43 @@
+import '../../models/artifact.dart';
+
+const List<Artifact> mockArtifacts = [
+  Artifact(
+    id: 'artifact_1',
+    museumId: 'museum_national',
+    name: 'Trống đồng Đông Sơn',
+    category: 'Khảo cổ',
+    imageUrl: '',
+    period: 'Văn hóa Đông Sơn',
+    location: 'Phòng trưng bày 2',
+    summary: 'Tiếng vọng của một nền văn minh. Trống đồng kể câu chuyện về đời sống, tín ngưỡng và tài nghệ đúc đồng của cư dân Việt cổ.',
+    story: 'Ở trung tâm mặt trống là hình ngôi sao nhiều cánh. Bao quanh là các vành hoa văn hình học, hình chim và những cảnh sinh hoạt cộng đồng.\n\nKhông chỉ là một nhạc khí, trống đồng còn gắn với nghi lễ và biểu trưng cho vị thế trong cộng đồng. Mỗi hoa văn là một dấu vết giúp chúng ta tìm hiểu thế giới của cư dân Đông Sơn.',
+    aiGuide: 'Hãy quan sát từ ngôi sao giữa mặt trống ra các vòng hoa văn bên ngoài. Những hình người, chim và hoạt động sinh hoạt phản ánh mối liên hệ giữa con người với thiên nhiên trong văn hóa Đông Sơn.',
+    quizPrompt: 'Trống đồng này gắn với nền văn hóa nào?',
+  ),
+  Artifact(
+    id: 'artifact_2',
+    museumId: 'museum_national',
+    name: 'Ấn triện hoàng cung',
+    category: 'Cung đình',
+    imageUrl: '',
+    period: 'Triều Nguyễn',
+    location: 'Phòng trưng bày 7',
+    summary: 'Một dấu ấn của vương triều, gắn với văn thư và quyền lực trong đời sống cung đình.',
+    story: 'Ấn triện được sử dụng để xác nhận văn bản và thể hiện thẩm quyền. Hình thức, chất liệu và chữ khắc trên ấn phản ánh chức năng của từng loại ấn trong hệ thống quản lý.\n\nQua hiện vật này, người xem có thể tìm hiểu mối liên hệ giữa nghệ thuật chế tác, nghi lễ và hoạt động hành chính của triều đình.',
+    aiGuide: 'Ấn triện giúp xác nhận thẩm quyền của văn bản. Những chi tiết trang trí cho thấy đồ dùng hành chính cũng mang giá trị nghệ thuật và ý nghĩa biểu tượng.',
+    quizPrompt: 'Ấn triện này được giới thiệu trong bối cảnh triều đại nào?',
+  ),
+  Artifact(
+    id: 'artifact_3',
+    museumId: 'museum_ho_chi_minh',
+    name: 'Trang báo cách mạng',
+    category: 'Tư liệu',
+    imageUrl: '',
+    period: 'Thế kỷ XX',
+    location: 'Phòng trưng bày 4',
+    summary: 'Những con chữ lưu giữ khát vọng độc lập và tiếng nói của một thời đại.',
+    story: 'Báo chí là phương tiện truyền tải thông tin, kết nối cộng đồng và lan tỏa tư tưởng. Những trang báo còn lưu giữ cách diễn đạt, hình ảnh và mối quan tâm của xã hội trong từng giai đoạn.\n\nĐọc lại một trang báo là một cách tiếp cận lịch sử từ những điều người đương thời đã viết và chia sẻ.',
+    aiGuide: 'Hãy chú ý cách sắp xếp tiêu đề và các cột chữ. Trang báo là nguồn tư liệu để tìm hiểu vai trò của thông tin trong việc kết nối cộng đồng.',
+    quizPrompt: 'Trang báo được giới thiệu thuộc giai đoạn nào?',
+  ),
+];

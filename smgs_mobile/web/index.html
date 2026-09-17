@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6B2E2E">
+  <meta name="description" content="Cẩm nang bảo tàng Việt Nam. Khám phá hiện vật, tìm hiểu di sản và tạo hành trình tham quan của bạn.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Cẩm nang bảo tàng">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <title>SMGS · Cẩm nang bảo tàng</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html,body { margin:0; height:100%; background:#3B302A; }
+    #loading { box-sizing:border-box; max-width:500px; height:100%; margin:auto; background:#F4EBDD; color:#3B302A; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:Arial,sans-serif; text-align:center; padding:24px; }
+    #loading img { width:64px; height:64px; margin-bottom:24px; }
+    #loading h1 { font:normal 30px Georgia,serif; margin:0 0 12px; }
+    #loading p { font-size:16px; line-height:1.6; }
+    #loading small { margin-top:36px; color:#6B2E2E; font-size:14px; }
+  </style>
+</head>
+<body>
+  <div id="loading" role="status" aria-live="polite">
+    <img src="favicon.svg" alt="">
+    <h1>Cẩm nang bảo tàng</h1>
+    <p>Mỗi hiện vật, một câu chuyện.</p>
+    <small>Đang mở cánh cửa di sản…</small>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      document.getElementById('loading')?.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

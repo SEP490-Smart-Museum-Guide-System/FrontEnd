@@ -1,0 +1,110 @@
+# ====================================================================
+# Gitignore for Flutter Web & Android Mobile Project
+# ====================================================================
+
+# --------------------------------------------------------------------
+# Flutter & Dart
+# --------------------------------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+**/build/
+**/doc/api/
+.widget_preview/
+
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json
+
+# --------------------------------------------------------------------
+# Unused Platforms (Ignore if accidentally recreated)
+# --------------------------------------------------------------------
+ios/
+**/ios/
+macos/
+**/macos/
+windows/
+**/windows/
+linux/
+**/linux/
+
+# --------------------------------------------------------------------
+# Android
+# --------------------------------------------------------------------
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/GeneratedPluginRegistrant.java
+**/android/.cxx/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/app/build/
+**/android/build/
+*.keystore
+*.jks
+key.properties
+gradle-wrapper.jar
+
+# --------------------------------------------------------------------
+# IDE & Code Editors
+# --------------------------------------------------------------------
+# Visual Studio Code
+.vscode/
+**/.vscode/
+
+# IntelliJ / Android Studio
+.idea/
+**/.idea/
+*.iml
+*.ipr
+*.iws
+**/*.iml
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# --------------------------------------------------------------------
+# Operating System Files
+# --------------------------------------------------------------------
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon[\r]
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --------------------------------------------------------------------
+# Environment & Sensitive Files
+# --------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.bak
+*.tmp
+*.temp
+*.swp
+*.class
+*.log
+.history
+.atom/
+.build/
+.buildlog/
+.svn/
+migrate_working_dir/

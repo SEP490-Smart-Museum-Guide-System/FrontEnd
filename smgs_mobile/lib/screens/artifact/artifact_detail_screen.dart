@@ -1,0 +1,121 @@
+import 'package:flutter/material.dart';
+
+import '../../widgets/museum_ui.dart';
+import '../../models/artifact.dart';
+import '../../data/visit_store.dart';
+import '../ai_guide/ai_guide_screen.dart';
+import 'quiz_screen.dart';
+
+class ArtifactDetailScreen extends StatefulWidget {
+  const ArtifactDetailScreen({
+    super.key,
+    required this.artifact,
+    required this.museumName,
+  });
+  final Artifact artifact;
+  final String museumName;
+  @override
+  State<ArtifactDetailScreen> createState() => _ArtifactDetailScreenState();
+}
+
+class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        VisitStore.instance.visit(widget.artifact);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = widget.artifact;
+    return StoryScaffold(
+      title: a.name,
+      photo: a.id == 'artifact_1'
+          ? Image.asset(
+              'assets/images/ngoc-lu-web.jpg',
+              height: 300,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              semanticLabel: 'Trống đồng Ngọc Lũ',
+            )
+          : HeritageArt(kind: a.id, height: 300),
+      actions: [
+        ListenableBuilder(
+          listenable: VisitStore.instance,
+          builder: (context, _) => IconButton(
+            tooltip: VisitStore.instance.saved.contains(a.id)
+                ? 'Bỏ lưu hiện vật'
+                : 'Lưu hiện vật',
+            onPressed: () => VisitStore.instance.toggleSave(a.id),
+            icon: Icon(
+              VisitStore.instance.saved.contains(a.id)
+                  ? Icons.bookmark
+                  : Icons.bookmark_border,
+              color: AppColors.deepBurgundy,
+            ),
+          ),
+        ),
+      ],
+      children: [
+        Text(
+          a.id == 'artifact_1'
+              ? 'Trống đồng Ngọc Lũ · Ảnh: VuThiAnh, Wikimedia Commons'
+              : 'Hình minh họa · Không phải ảnh hiện vật gốc',
+          style: AppTextStyles.caption,
+        ),
+        const SizedBox(height: 24),
+        Eyebrow(a.category),
+        const SizedBox(height: 8),
+        Text(
+          a.name,
+          style: AppTextStyles.display.copyWith(color: AppColors.deepBurgundy),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          a.period,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.deepBurgundy,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${widget.museumName}\n${a.location}',
+          style: AppTextStyles.bodySmall,
+        ),
+        const Divider(),
+        Text(a.summary, style: AppTextStyles.bodyLarge),
+        const SizedBox(height: 24),
+        PrimaryButton(
+          label: 'Hỏi hướng dẫn viên',
+          icon: Icons.chat_bubble_outline,
+          onPressed: () => openPage(context, AiGuideScreen(artifact: a)),
+        ),
+        const SizedBox(height: 12),
+        SecondaryButton(
+          label: 'Bản thuyết minh',
+          icon: Icons.menu_book_outlined,
+          onPressed: () => showReading(
+            context,
+            title: 'Lời kể về hiện vật',
+            text:
+                '${a.aiGuide}\n\nThuyết minh âm thanh đang được chuẩn bị. Bạn có thể đọc nội dung ngay tại đây.',
+          ),
+        ),
+        const SectionHeading('Những điều còn lưu lại'),
+        ScrollReveal(child: Text(a.story, style: AppTextStyles.bodyLarge)),
+        const SizedBox(height: 24),
+        ActionTile(
+          title: 'Bạn đã khám phá được gì?',
+          subtitle: 'Thử sức với hai câu hỏi ngắn.',
+          icon: Icons.quiz_outlined,
+          onTap: () => openPage(context, QuizScreen(artifact: a)),
+        ),
+      ],
+    );
+  }
+}
