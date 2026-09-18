@@ -8,6 +8,7 @@ import '../artifact/artifact_discovery_screen.dart';
 import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
 import '../profile/services_screen.dart';
+import '../profile/profile_screen.dart';
 
 class MuseumDetailScreen extends StatelessWidget {
   const MuseumDetailScreen({super.key, required this.museum, this.heroTag});
@@ -118,8 +119,23 @@ class MuseumDetailScreen extends StatelessWidget {
           title: 'Dịch vụ số',
           subtitle: 'Tìm hiểu các tiện ích đồng hành.',
           icon: Icons.headphones_outlined,
-          onTap: () =>
-              openPage(context, ServicesScreen(museumName: museum.name)),
+          onTap: () => openPage(
+            context,
+            ServicesScreen(museumName: museum.name, museumId: museum.id),
+          ),
+        ),
+        ActionTile(
+          title: 'Góp ý về bảo tàng',
+          subtitle: 'Chia sẻ cảm nhận sau chuyến tham quan.',
+          icon: Icons.rate_review_outlined,
+          onTap: () => openPage(
+            context,
+            FeedbackScreen(
+              targetType: 'museum',
+              targetId: museum.id,
+              targetName: museum.name,
+            ),
+          ),
         ),
       ],
     );

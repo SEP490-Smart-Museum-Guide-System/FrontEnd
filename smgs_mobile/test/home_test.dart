@@ -97,6 +97,8 @@ void main() {
     await reach(tester, 'Chuẩn bị một chuyến đi');
     await tester.tap(find.text('Chuẩn bị một chuyến đi'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('Kiểm tra giờ mở cửa'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('Kiểm tra giờ mở cửa').hitTestable(),
       findsOneWidget,

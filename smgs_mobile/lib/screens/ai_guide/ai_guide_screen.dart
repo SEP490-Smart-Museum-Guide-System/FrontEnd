@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../models/artifact.dart';
+import '../../services/app_services.dart';
+import '../../widgets/narration_player.dart';
 
 class AiGuideScreen extends StatefulWidget {
   const AiGuideScreen({super.key, required this.artifact});
@@ -14,31 +16,35 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final List<({String text, bool visitor})> _messages = [];
-  static const _questions = [
-    'Hiện vật này có ý nghĩa gì?',
-    'Hiện vật thuộc thời kỳ nào?',
-    'Tôi nên chú ý chi tiết nào?',
-  ];
-  void _ask(String value) {
+  List<String> get _questions => AppServices.guide.suggestions;
+  bool _busy = false;
+  Future<void> _ask(String value) async {
     final question = value.trim();
-    if (question.isEmpty) {
+    if (question.isEmpty || _busy) {
       return;
     }
-    final a = widget.artifact;
-    final answer = question == _questions[0]
-        ? a.summary
-        : question == _questions[1]
-        ? 'Hiện vật được giới thiệu trong bối cảnh: ${a.period}.'
-        : question == _questions[2]
-        ? a.aiGuide
-        : 'Mình chưa có câu trả lời được kiểm chứng cho câu hỏi này trong bản trải nghiệm. Bạn có thể chọn câu hỏi gợi ý hoặc hỏi nhân viên bảo tàng để tìm hiểu thêm.';
     setState(() {
+      _busy = true;
       _messages.add((text: question, visitor: true));
-      _messages.add((text: answer, visitor: false));
       _input.clear();
+    });
+    String answer;
+    try {
+      answer = await AppServices.guide.answer(widget.artifact, question);
+    } catch (_) {
+      answer = 'Chưa thể trả lời lúc này. Bạn hãy thử lại câu hỏi.';
+    }
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _messages.add((text: answer, visitor: false));
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scroll.hasClients) {
+        if (reduceHeritageMotion(context)) {
+          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+          return;
+        }
         _scroll.animateTo(
           _scroll.position.maxScrollExtent,
           duration: const Duration(milliseconds: 200),
@@ -95,7 +101,10 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                 ..._questions.map(
                   (q) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: SecondaryButton(label: q, onPressed: () => _ask(q)),
+                    child: SecondaryButton(
+                      label: q,
+                      onPressed: _busy ? null : () => _ask(q),
+                    ),
                   ),
                 ),
                 if (_messages.isNotEmpty) const Divider(),
@@ -144,6 +153,46 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                     ),
                   ),
                 ),
+                if (_busy)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Đang tìm câu trả lời…',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                        SizedBox(height: 10),
+                        LinearProgressIndicator(),
+                      ],
+                    ),
+                  ),
+                if (_messages.isNotEmpty && !_busy)
+                  SecondaryButton(
+                    label: 'Đọc và nghe câu trả lời',
+                    icon: Icons.headphones_outlined,
+                    onPressed: () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      showDragHandle: true,
+                      constraints: const BoxConstraints(maxWidth: 500),
+                      builder: (context) => SafeArea(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: NarrationPlayer(text: _messages.last.text),
+                        ),
+                      ),
+                    ),
+                  ),
+                TextButton.icon(
+                  onPressed: () => showReading(
+                    context,
+                    title: 'Hỏi bằng giọng nói',
+                    text: 'Tính năng giọng nói đang được chuẩn bị. Trong bản trải nghiệm, bạn có thể nhập câu hỏi hoặc chọn gợi ý.',
+                  ),
+                  icon: const Icon(Icons.mic_none_outlined),
+                  label: const Text('Hỏi bằng giọng nói'),
+                ),
               ],
             ),
           ),
@@ -172,16 +221,28 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                 const SizedBox(width: 8),
                 SizedBox(
                   width: 64,
-                  child: IconButton.filled(
-                    tooltip: 'Gửi câu hỏi',
-                    onPressed: () => _ask(_input.text),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(56, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Tooltip(
+                    message: 'Gửi câu hỏi',
+                    child: FilledButton(
+                      onPressed: _busy ? null : () => _ask(_input.text),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(56, 56),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_upward, size: 20),
+                          Text('Gửi'),
+                        ],
                       ),
                     ),
-                    icon: const Icon(Icons.arrow_upward),
                   ),
                 ),
               ],

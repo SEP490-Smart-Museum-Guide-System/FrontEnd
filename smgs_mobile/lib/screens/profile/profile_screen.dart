@@ -5,12 +5,15 @@ import '../../widgets/collection_cards.dart';
 import '../../data/visit_store.dart';
 import '../../data/mock/mock_artifacts.dart';
 import 'services_screen.dart';
+import 'history_screen.dart';
+import '../../services/app_services.dart';
+import '../../services/app_preferences.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: VisitStore.instance,
+    listenable: Listenable.merge([VisitStore.instance, AppServices.auth]),
     builder: (context, _) {
       final store = VisitStore.instance;
       return MuseumPage(
@@ -48,7 +51,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Khách tham quan',
+                        AppServices.auth.user?.name ?? 'Khách tham quan',
                         style: AppTextStyles.sectionTitle.copyWith(
                           color: AppColors.antiqueIvory,
                         ),
@@ -73,10 +76,7 @@ class ProfileScreen extends StatelessWidget {
             title: 'Lịch sử khám phá',
             subtitle: 'Gặp lại những câu chuyện đã xem.',
             icon: Icons.history_outlined,
-            onTap: () => openPage(
-              context,
-              const PersonalCollectionScreen(kind: 'history'),
-            ),
+            onTap: () => openPage(context, const HistoryScreen()),
           ),
           ActionTile(
             title: 'Hiện vật đã lưu',
@@ -99,6 +99,18 @@ class ProfileScreen extends StatelessWidget {
             subtitle: 'Tiện ích cho chuyến tham quan.',
             icon: Icons.headphones_outlined,
             onTap: () => openPage(context, const ServicesScreen()),
+          ),
+          ActionTile(
+            title: 'Huy hiệu của bạn',
+            subtitle: '${store.points} điểm · ${store.badges.length} huy hiệu',
+            icon: Icons.military_tech_outlined,
+            onTap: () => openPage(context, const BadgesScreen()),
+          ),
+          ActionTile(
+            title: 'Dịch vụ đã đăng ký',
+            subtitle: 'Xem quyền sử dụng theo ngày và bảo tàng.',
+            icon: Icons.receipt_long_outlined,
+            onTap: () => openPage(context, const PurchasedServicesScreen()),
           ),
           const SectionHeading('Đồng hành cùng bạn'),
           const Panel(
@@ -125,6 +137,23 @@ class ProfileScreen extends StatelessWidget {
             subtitle: 'Giúp cẩm nang ngày một tốt hơn.',
             icon: Icons.rate_review_outlined,
             onTap: () => openPage(context, const FeedbackScreen()),
+          ),
+          const SizedBox(height: 16),
+          ActionTile(
+            title: 'Cài đặt trải nghiệm',
+            subtitle: 'Cỡ chữ và chuyển động theo ý bạn.',
+            icon: Icons.tune_outlined,
+            onTap: () => openPage(context, const SettingsScreen()),
+          ),
+          SecondaryButton(
+            label: AppServices.auth.user?.isGuest ?? true
+                ? 'Về đăng nhập'
+                : 'Đăng xuất',
+            icon: Icons.logout,
+            onPressed: () {
+              VisitStore.instance.reset();
+              AppServices.auth.logout();
+            },
           ),
           const SizedBox(height: 16),
           const Notice(
@@ -188,6 +217,46 @@ class PersonalCollectionScreen extends StatelessWidget {
         eyebrow: 'Sổ tay của bạn',
         subtitle: 'Những dấu ấn trong phiên tham quan này.',
         children: [
+          if (kind == 'quiz') ...[
+            Panel(
+              gold: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Eyebrow('Tiến độ thử tài'),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ProgressValue(
+                          value: '${store.points}',
+                          label: 'Tổng điểm',
+                        ),
+                      ),
+                      Expanded(
+                        child: _ProgressValue(
+                          value: '${store.quizScores.length}',
+                          label: 'Hiện vật',
+                        ),
+                      ),
+                      Expanded(
+                        child: _ProgressValue(
+                          value: '${store.badges.length}',
+                          label: 'Huy hiệu',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    '${store.quizResults.length} lượt thử tài đã hoàn thành trong phiên này.',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+          ],
           if (artifacts.isEmpty)
             EmptyState(
               title: 'Câu chuyện đang chờ bạn',
@@ -205,9 +274,13 @@ class PersonalCollectionScreen extends StatelessWidget {
                 if (kind == 'quiz')
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      '${store.quizScores[a.id]} / 2 câu trả lời đúng',
-                      style: AppTextStyles.bodyMedium,
+                    child: Panel(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(
+                        'Kết quả tốt nhất: ${store.quizScores[a.id]} / 2 câu đúng · '
+                        '${store.quizResults.where((r) => r.artifactId == a.id).length} lượt làm',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ),
                   ),
                 ArtifactCard(artifact: a),
@@ -220,8 +293,30 @@ class PersonalCollectionScreen extends StatelessWidget {
   );
 }
 
+class _ProgressValue extends StatelessWidget {
+  const _ProgressValue({required this.value, required this.label});
+  final String value, label;
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Text(
+        value,
+        style: AppTextStyles.pageTitle.copyWith(color: AppColors.deepBurgundy),
+      ),
+      const SizedBox(height: 4),
+      Text(label, style: AppTextStyles.caption, textAlign: TextAlign.center),
+    ],
+  );
+}
+
 class FeedbackScreen extends StatefulWidget {
-  const FeedbackScreen({super.key});
+  const FeedbackScreen({
+    super.key,
+    this.targetType = 'app',
+    this.targetId = 'smgs',
+    this.targetName = 'Cẩm nang SMGS',
+  });
+  final String targetType, targetId, targetName;
   @override
   State<FeedbackScreen> createState() => _FeedbackScreenState();
 }
@@ -243,7 +338,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     eyebrow: 'Góp ý trải nghiệm',
     subtitle: _submitted
         ? 'Góp ý đã được ghi nhận trong phiên trải nghiệm này.'
-        : 'Mỗi góp ý giúp chuyến tham quan trở nên dễ dàng hơn.',
+        : widget.targetName,
     children: _submitted
         ? [
             const Panel(
@@ -295,10 +390,107 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       VisitStore.instance.recordFeedback(
                         _rating!,
                         _comment.text.trim(),
+                        targetType: widget.targetType,
+                        targetId: widget.targetId,
+                        targetName: widget.targetName,
                       );
                       setState(() => _submitted = true);
                     },
             ),
           ],
+  );
+}
+
+class BadgesScreen extends StatelessWidget {
+  const BadgesScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final store = VisitStore.instance;
+    return MuseumPage(
+      back: true,
+      title: 'Dấu ấn của bạn',
+      eyebrow: 'Huy hiệu & điểm khám phá',
+      children: [
+        Panel(
+          gold: true,
+          child: Column(
+            children: [
+              const HeritageSeal(size: 80),
+              const SizedBox(height: 16),
+              Text('${store.points} điểm', style: AppTextStyles.display),
+              const SizedBox(height: 12),
+              const Text(
+                'Tổng điểm từ kết quả tốt nhất của mỗi hiện vật. Làm lại không cộng trùng điểm.',
+                style: AppTextStyles.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SectionHeading('Bộ sưu tập huy hiệu'),
+        if (store.badges.isEmpty)
+          const EmptyState(
+            title: 'Huy hiệu đầu tiên đang chờ',
+            message: 'Trả lời đúng toàn bộ câu hỏi của một hiện vật để nhận huy hiệu.',
+          ),
+        for (final badge in store.badges)
+          Panel(
+            gold: true,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.workspace_premium_outlined,
+                  color: AppColors.mutedGold,
+                  size: 40,
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: Text(badge, style: AppTextStyles.sectionTitle)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: AppPreferences.instance,
+    builder: (context, _) => MuseumPage(
+      back: true,
+      title: 'Vừa vặn với bạn',
+      eyebrow: 'Cài đặt trải nghiệm',
+      children: [
+        const Panel(
+          child: Text('Ngôn ngữ: Tiếng Việt', style: AppTextStyles.bodyMedium),
+        ),
+        const SizedBox(height: 18),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Chữ lớn hơn', style: AppTextStyles.bodyMedium),
+          value: AppPreferences.instance.largeText,
+          onChanged: AppPreferences.instance.setLargeText,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text(
+            'Giảm chuyển động',
+            style: AppTextStyles.bodyMedium,
+          ),
+          subtitle: const Text(
+            'Hiển thị nội dung ngay, tắt hiệu ứng cuộn.',
+            style: AppTextStyles.caption,
+          ),
+          value: AppPreferences.instance.reducedMotion,
+          onChanged: AppPreferences.instance.setReducedMotion,
+        ),
+        const SizedBox(height: 20),
+        const Notice(
+          'Cài đặt và dữ liệu chỉ được giữ trong phiên trải nghiệm hiện tại.',
+        ),
+      ],
+    ),
   );
 }

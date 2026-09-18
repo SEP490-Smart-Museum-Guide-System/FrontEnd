@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/museum_ui.dart';
 import '../../models/artifact.dart';
 import '../../data/visit_store.dart';
+import '../../services/app_services.dart';
+import '../../models/experience.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key, required this.artifact});
@@ -15,28 +17,12 @@ class _QuizScreenState extends State<QuizScreen> {
   int _question = 0, _score = 0;
   int? _selected;
   bool _answered = false, _finished = false;
-  List<String> get _options => _question == 0
-      ? switch (widget.artifact.id) {
-          'artifact_1' => [
-            'Văn hóa Đông Sơn',
-            'Văn hóa Óc Eo',
-            'Văn hóa Sa Huỳnh',
-          ],
-          'artifact_2' => ['Triều Lý', 'Triều Nguyễn', 'Triều Trần'],
-          _ => ['Thế kỷ XVIII', 'Thế kỷ XIX', 'Thế kỷ XX'],
-        }
-      : [
-          'Chỉ dùng để trang trí',
-          'Giúp tìm hiểu đời sống và lịch sử',
-          'Không mang thông tin lịch sử',
-        ];
-  int get _correct => _question == 1
-      ? 1
-      : switch (widget.artifact.id) {
-          'artifact_1' => 0,
-          'artifact_2' => 1,
-          _ => 2,
-        };
+  late final List<QuizQuestion> _questions = AppServices.quiz.questions(
+    widget.artifact,
+  );
+  List<String> get _options => _questions[_question].options;
+  int get _correct => _questions[_question].correctIndex;
+  int _points = 0;
   void _submit() {
     if (_selected == null) {
       return;
@@ -46,16 +32,22 @@ class _QuizScreenState extends State<QuizScreen> {
         _answered = true;
         if (_selected == _correct) {
           _score++;
+          _points += _questions[_question].points;
         }
       });
-    } else if (_question == 0) {
+    } else if (_question < _questions.length - 1) {
       setState(() {
-        _question = 1;
+        _question++;
         _selected = null;
         _answered = false;
       });
     } else {
-      VisitStore.instance.recordQuiz(widget.artifact.id, _score);
+      VisitStore.instance.recordQuiz(
+        widget.artifact.id,
+        _score,
+        total: _questions.length,
+        points: _points,
+      );
       setState(() => _finished = true);
     }
   }
@@ -80,7 +72,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    '$_score / 2',
+                    '$_score / ${_questions.length}',
                     style: AppTextStyles.display.copyWith(fontSize: 44),
                   ),
                   const SizedBox(height: 8),
@@ -90,10 +82,29 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _score == 2
+                    _score == _questions.length
                         ? 'Bạn đã ghi nhớ rất tốt!'
                         : 'Mỗi lần tìm hiểu là một khám phá mới.',
                     style: AppTextStyles.sectionTitle,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '$_points điểm trong lượt này',
+                    style: AppTextStyles.sectionTitle,
+                  ),
+                  if (_score == _questions.length) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Huy hiệu: Người bạn của di sản',
+                      style: AppTextStyles.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Sổ tay ghi nhận kết quả tốt nhất của mỗi hiện vật.',
+                    style: AppTextStyles.caption,
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -110,6 +121,7 @@ class _QuizScreenState extends State<QuizScreen> {
               onPressed: () => setState(() {
                 _question = 0;
                 _score = 0;
+                _points = 0;
                 _selected = null;
                 _answered = false;
                 _finished = false;
@@ -121,7 +133,7 @@ class _QuizScreenState extends State<QuizScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Câu ${_question + 1} trên 2',
+                    'Câu ${_question + 1} trên ${_questions.length}',
                     style: AppTextStyles.bodySmall,
                   ),
                 ),
@@ -132,12 +144,13 @@ class _QuizScreenState extends State<QuizScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            LinearProgressIndicator(value: (_question + 1) / 2, minHeight: 4),
+            LinearProgressIndicator(
+              value: (_question + 1) / _questions.length,
+              minHeight: 4,
+            ),
             const SizedBox(height: 28),
             Text(
-              _question == 0
-                  ? widget.artifact.quizPrompt
-                  : 'Vì sao chúng ta cần tìm hiểu hiện vật?',
+              _questions[_question].question,
               style: AppTextStyles.cardTitle,
             ),
             const SizedBox(height: 24),
@@ -210,7 +223,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _question == 0 ? widget.artifact.summary : 'Hiện vật lưu giữ dấu vết về văn hóa, con người và xã hội trong quá khứ.',
+                      _questions[_question].explanation,
                       style: AppTextStyles.bodyMedium,
                     ),
                   ],
@@ -220,7 +233,9 @@ class _QuizScreenState extends State<QuizScreen> {
             const SizedBox(height: 24),
             PrimaryButton(
               label: _answered
-                  ? (_question == 0 ? 'Câu tiếp theo' : 'Xem kết quả')
+                  ? (_question < _questions.length - 1
+                        ? 'Câu tiếp theo'
+                        : 'Xem kết quả')
                   : 'Trả lời',
               onPressed: _selected == null ? null : _submit,
             ),

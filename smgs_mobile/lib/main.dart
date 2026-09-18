@@ -4,7 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
-import 'navigation/main_navigation.dart';
+import 'screens/auth/auth_screen.dart';
+import 'services/app_preferences.dart';
 import 'widgets/heritage_decoration.dart';
 
 void main() {
@@ -24,17 +25,32 @@ class SMGSApp extends StatelessWidget {
     supportedLocales: const [Locale('vi')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: AppTheme.lightTheme,
-    builder: (context, child) => ColoredBox(
-      color: AppColors.darkBrown,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: ClipRect(
-            child: HeritagePaper(child: child ?? const SizedBox.shrink()),
+    builder: (context, child) => ListenableBuilder(
+      listenable: AppPreferences.instance,
+      builder: (context, _) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          disableAnimations:
+              MediaQuery.disableAnimationsOf(context) ||
+              AppPreferences.instance.reducedMotion,
+          textScaler: TextScaler.linear(
+            MediaQuery.textScalerOf(context).scale(16) /
+                16 *
+                (AppPreferences.instance.largeText ? 1.15 : 1),
+          ),
+        ),
+        child: ColoredBox(
+          color: AppColors.darkBrown,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: ClipRect(
+                child: HeritagePaper(child: child ?? const SizedBox.shrink()),
+              ),
+            ),
           ),
         ),
       ),
     ),
-    home: const MainNavigation(),
+    home: const AuthGate(),
   );
 }

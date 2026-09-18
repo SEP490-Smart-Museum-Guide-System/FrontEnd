@@ -31,19 +31,42 @@ class ExploreScreen extends StatefulWidget {
     this.standalone = false,
     this.museumId,
     this.artifactCategory,
+    this.initialQuery = '',
+    this.initialArtifacts = false,
   });
   final bool standalone;
   final String? museumId;
   final String? artifactCategory;
+  final String initialQuery;
+  final bool initialArtifacts;
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  String _query = '';
+  late String _query = widget.initialQuery;
+  late final _input = TextEditingController(text: widget.initialQuery);
+  String? _museum, _gallery, _exhibition;
+  bool _sortName = false;
   late String _category = widget.artifactCategory ?? 'Tất cả';
   late bool _artifacts =
-      widget.museumId != null || widget.artifactCategory != null;
+      widget.museumId != null ||
+      widget.artifactCategory != null ||
+      widget.initialArtifacts;
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  void _clear() => setState(() {
+    _query = '';
+    _input.clear();
+    _category = 'Tất cả';
+    _museum = null;
+    _gallery = null;
+    _exhibition = null;
+  });
   @override
   Widget build(BuildContext context) {
     final museums = mockMuseums
@@ -54,10 +77,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
               (_category == 'Tất cả' || m.category == _category),
         )
         .toList();
+    if (_sortName) museums.sort((a, b) => a.name.compareTo(b.name));
+    final filterMuseum = widget.museumId ?? _museum;
+    final scoped = mockArtifacts
+        .where((a) => filterMuseum == null || a.museumId == filterMuseum)
+        .toList();
+    final galleries = scoped.map((a) => a.location).toSet().toList();
+    final exhibitions = scoped.map((a) => a.exhibition).toSet().toList();
     final artifacts = mockArtifacts
         .where(
           (a) =>
-              (widget.museumId == null || a.museumId == widget.museumId) &&
+              (filterMuseum == null || a.museumId == filterMuseum) &&
+              (_gallery == null || a.location == _gallery) &&
+              (_exhibition == null || a.exhibition == _exhibition) &&
               _searchKey('${a.name} ${a.period} ${a.category} ${a.location}')
                   .contains(_searchKey(_query)) &&
               (_category == 'Tất cả' || a.category == _category),
@@ -73,6 +105,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       subtitle: 'Tìm một điểm đến. Mở một câu chuyện.',
       children: [
         TextField(
+          controller: _input,
           onChanged: (v) => setState(() => _query = v),
           decoration: const InputDecoration(
             labelText: 'Tìm kiếm',
@@ -81,6 +114,105 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         ),
         const SizedBox(height: 20),
+        if (_artifacts)
+          ExpansionTile(
+            title: const Text(
+              'Lọc bảo tàng, chuyên đề, phòng',
+              style: AppTextStyles.bodyMedium,
+            ),
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: 18),
+            children: [
+              if (widget.museumId == null) ...[
+                DropdownButtonFormField<String>(
+                  key: ValueKey('museum-$_museum'),
+                  initialValue: _museum ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Bảo tàng'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Tất cả bảo tàng'),
+                    ),
+                    ...mockMuseums.map(
+                      (m) => DropdownMenuItem(
+                        value: m.id,
+                        child: Text(m.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() {
+                    _museum = v == '' ? null : v;
+                    _gallery = null;
+                    _exhibition = null;
+                  }),
+                ),
+                const SizedBox(height: 16),
+              ],
+              DropdownButtonFormField<String>(
+                key: ValueKey('exhibition-$_exhibition'),
+                initialValue: _exhibition ?? '',
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Chuyên đề trưng bày',
+                ),
+                items: [
+                  const DropdownMenuItem(
+                    value: '',
+                    child: Text('Tất cả chuyên đề'),
+                  ),
+                  ...exhibitions.map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text(v, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                ],
+                onChanged: (v) =>
+                    setState(() => _exhibition = v == '' ? null : v),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                key: ValueKey('gallery-$_gallery'),
+                initialValue: _gallery ?? '',
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Phòng trưng bày'),
+                items: [
+                  const DropdownMenuItem(
+                    value: '',
+                    child: Text('Tất cả phòng'),
+                  ),
+                  ...galleries.map(
+                    (v) => DropdownMenuItem(
+                      value: v,
+                      child: Text(v, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                ],
+                onChanged: (v) => setState(() => _gallery = v == '' ? null : v),
+              ),
+            ],
+          )
+        else
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'Sắp xếp theo tên bảo tàng',
+              style: AppTextStyles.bodyMedium,
+            ),
+            value: _sortName,
+            onChanged: (v) => setState(() => _sortName = v ?? false),
+          ),
+        if (_query.isNotEmpty ||
+            _category != 'Tất cả' ||
+            _museum != null ||
+            _gallery != null ||
+            _exhibition != null)
+          TextButton.icon(
+            onPressed: _clear,
+            icon: const Icon(Icons.filter_alt_off_outlined),
+            label: const Text('Xóa bộ lọc và từ khóa'),
+          ),
         if (widget.museumId == null) ...[
           Row(
             children: [
@@ -105,6 +237,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       onPressed: () => setState(() {
                         _artifacts = mode;
                         _category = 'Tất cả';
+                        _gallery = null;
+                        _exhibition = null;
                       }),
                       child: Text(mode ? 'Hiện vật' : 'Bảo tàng'),
                     ),

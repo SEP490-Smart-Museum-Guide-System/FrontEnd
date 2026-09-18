@@ -1,11 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/main.dart';
+import 'package:smgs_mobile/services/app_services.dart';
 import 'package:smgs_mobile/widgets/heritage_motion.dart';
 
 import 'widget_test.dart' show tapText, screenSize;
 
 void main() {
+  setUp(() => AppServices.auth.guest());
+  testWidgets(
+    'Reveal follows a replaced scroll position after physics change',
+    (tester) async {
+      await screenSize(tester, const Size(390, 600));
+      Widget page(ScrollPhysics physics) => MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            physics: physics,
+            child: const Column(
+              children: [
+                SizedBox(height: 650),
+                ScrollReveal(
+                  child: SizedBox(
+                    height: 150,
+                    child: Text('Nội dung sau thay đổi cuộn'),
+                  ),
+                ),
+                SizedBox(height: 1200),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(page(const ClampingScrollPhysics()));
+      await tester.pumpAndSettle();
+      final state = tester.state<ScrollableState>(find.byType(Scrollable));
+      final oldPosition = state.position;
+      await tester.pumpWidget(page(const BouncingScrollPhysics()));
+      await tester.pumpAndSettle();
+      expect(
+        tester.state<ScrollableState>(find.byType(Scrollable)),
+        same(state),
+      );
+      expect(state.position, isNot(same(oldPosition)));
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -350),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FadeTransition>(
+              find.descendant(
+                of: find.byType(ScrollReveal),
+                matching: find.byType(FadeTransition),
+              ),
+            )
+            .opacity
+            .value,
+        1,
+      );
+    },
+  );
   testWidgets('Web semantics alone must not disable scroll animations', (
     tester,
   ) async {

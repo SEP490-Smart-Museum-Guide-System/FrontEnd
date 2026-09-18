@@ -31,6 +31,7 @@ class _ScrollRevealState extends State<ScrollReveal>
     curve: Curves.easeOutCubic,
   );
   ScrollableState? _scrollable;
+  ScrollPosition? _position;
   bool _shown = false;
   bool _queued = false;
 
@@ -38,10 +39,13 @@ class _ScrollRevealState extends State<ScrollReveal>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final scrollable = Scrollable.maybeOf(context);
-    if (scrollable != _scrollable) {
-      _scrollable?.position.removeListener(_scheduleCheck);
-      _scrollable = scrollable;
-      _scrollable?.position.addListener(_scheduleCheck);
+    _scrollable = scrollable;
+    // ScrollableState can retain its identity while replacing its position
+    // (for example when web accessibility changes the scrolling physics).
+    if (scrollable?.position != _position) {
+      _position?.removeListener(_scheduleCheck);
+      _position = scrollable?.position;
+      _position?.addListener(_scheduleCheck);
     }
     if (reduceHeritageMotion(context)) {
       _shown = true;
@@ -67,14 +71,14 @@ class _ScrollRevealState extends State<ScrollReveal>
         }
       }
       _shown = true;
-      _scrollable?.position.removeListener(_scheduleCheck);
+      _position?.removeListener(_scheduleCheck);
       _animation.forward();
     });
   }
 
   @override
   void dispose() {
-    _scrollable?.position.removeListener(_scheduleCheck);
+    _position?.removeListener(_scheduleCheck);
     _curve.dispose();
     _animation.dispose();
     super.dispose();

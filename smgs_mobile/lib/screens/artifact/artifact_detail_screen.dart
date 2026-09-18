@@ -5,6 +5,8 @@ import '../../models/artifact.dart';
 import '../../data/visit_store.dart';
 import '../ai_guide/ai_guide_screen.dart';
 import 'quiz_screen.dart';
+import '../../widgets/narration_player.dart';
+import '../profile/profile_screen.dart';
 
 class ArtifactDetailScreen extends StatefulWidget {
   const ArtifactDetailScreen({
@@ -46,16 +48,21 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
       actions: [
         ListenableBuilder(
           listenable: VisitStore.instance,
-          builder: (context, _) => IconButton(
-            tooltip: VisitStore.instance.saved.contains(a.id)
+          builder: (context, _) => Tooltip(
+            message: VisitStore.instance.saved.contains(a.id)
                 ? 'Bỏ lưu hiện vật'
                 : 'Lưu hiện vật',
-            onPressed: () => VisitStore.instance.toggleSave(a.id),
-            icon: Icon(
-              VisitStore.instance.saved.contains(a.id)
-                  ? Icons.bookmark
-                  : Icons.bookmark_border,
-              color: AppColors.deepBurgundy,
+            child: TextButton.icon(
+              onPressed: () => VisitStore.instance.toggleSave(a.id),
+              icon: Icon(
+                VisitStore.instance.saved.contains(a.id)
+                    ? Icons.bookmark
+                    : Icons.bookmark_border,
+                color: AppColors.deepBurgundy,
+              ),
+              label: Text(
+                VisitStore.instance.saved.contains(a.id) ? 'Đã lưu' : 'Lưu',
+              ),
             ),
           ),
         ),
@@ -99,12 +106,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         SecondaryButton(
           label: 'Bản thuyết minh',
           icon: Icons.menu_book_outlined,
-          onPressed: () => showReading(
-            context,
-            title: 'Lời kể về hiện vật',
-            text:
-                '${a.aiGuide}\n\nThuyết minh âm thanh đang được chuẩn bị. Bạn có thể đọc nội dung ngay tại đây.',
-          ),
+          onPressed: () => openPage(context, NarrationScreen(artifact: a)),
         ),
         const SectionHeading('Những điều còn lưu lại'),
         ScrollReveal(child: Text(a.story, style: AppTextStyles.bodyLarge)),
@@ -114,6 +116,19 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           subtitle: 'Thử sức với hai câu hỏi ngắn.',
           icon: Icons.quiz_outlined,
           onTap: () => openPage(context, QuizScreen(artifact: a)),
+        ),
+        ActionTile(
+          title: 'Góp ý về hiện vật',
+          subtitle: 'Chia sẻ cảm nhận về câu chuyện này.',
+          icon: Icons.rate_review_outlined,
+          onTap: () => openPage(
+            context,
+            FeedbackScreen(
+              targetType: 'artifact',
+              targetId: a.id,
+              targetName: a.name,
+            ),
+          ),
         ),
       ],
     );

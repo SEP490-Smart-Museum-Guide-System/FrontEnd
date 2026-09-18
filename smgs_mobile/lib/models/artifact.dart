@@ -11,6 +11,7 @@ class Artifact {
     required this.story,
     required this.aiGuide,
     required this.quizPrompt,
+    this.exhibition = 'Trưng bày thường xuyên',
   });
 
   final String id;
@@ -24,4 +25,5 @@ class Artifact {
   final String story;
   final String aiGuide;
   final String quizPrompt;
+  final String exhibition;
 }

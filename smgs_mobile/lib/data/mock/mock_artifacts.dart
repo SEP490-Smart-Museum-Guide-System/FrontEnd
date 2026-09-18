@@ -3,6 +3,7 @@ import '../../models/artifact.dart';
 const List<Artifact> mockArtifacts = [
   Artifact(
     id: 'artifact_1',
+    exhibition: 'Di sản Việt cổ',
     museumId: 'museum_national',
     name: 'Trống đồng Đông Sơn',
     category: 'Khảo cổ',
@@ -16,6 +17,7 @@ const List<Artifact> mockArtifacts = [
   ),
   Artifact(
     id: 'artifact_2',
+    exhibition: 'Dấu ấn vương triều',
     museumId: 'museum_national',
     name: 'Ấn triện hoàng cung',
     category: 'Cung đình',
@@ -29,6 +31,7 @@ const List<Artifact> mockArtifacts = [
   ),
   Artifact(
     id: 'artifact_3',
+    exhibition: 'Ký ức thế kỷ XX',
     museumId: 'museum_ho_chi_minh',
     name: 'Trang báo cách mạng',
     category: 'Tư liệu',

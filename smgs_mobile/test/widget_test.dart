@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:smgs_mobile/main.dart';
+import 'package:smgs_mobile/services/app_services.dart';
 import 'package:smgs_mobile/screens/home/home_screen.dart';
 import 'package:smgs_mobile/core/theme/app_theme.dart';
 import 'package:smgs_mobile/data/mock/mock_artifacts.dart';
@@ -55,11 +56,9 @@ Future<void> tapText(WidgetTester tester, String label) async {
 
 void main() {
   setUp(() {
+    AppServices.auth.guest();
     final s = VisitStore.instance;
-    s.viewed.clear();
-    s.saved.clear();
-    s.quizScores.clear();
-    s.completedTours = 0;
+    s.reset();
   });
   testWidgets('Vietnamese home and all five navigation tabs render at 360px', (
     tester,

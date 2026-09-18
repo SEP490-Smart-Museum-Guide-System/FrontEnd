@@ -220,6 +220,14 @@ class ArtifactCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(artifact.period, style: AppTextStyles.bodySmall),
+                    const SizedBox(height: 6),
+                    Text(
+                      mockMuseums
+                          .firstWhere((m) => m.id == artifact.museumId)
+                          .name,
+                      style: AppTextStyles.caption,
+                    ),
+                    Text(artifact.location, style: AppTextStyles.caption),
                   ],
                 ),
               ),
