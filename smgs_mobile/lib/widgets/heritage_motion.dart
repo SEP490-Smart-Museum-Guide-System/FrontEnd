@@ -9,6 +9,75 @@ bool reduceHeritageMotion(BuildContext context) =>
     // Only the user's explicit motion preference should disable these effects.
     MediaQuery.disableAnimationsOf(context);
 
+abstract final class HeritageMotion {
+  static const fast = Duration(milliseconds: 160);
+  static const standard = Duration(milliseconds: 280);
+  static const reveal = Duration(milliseconds: 440);
+  static const curve = Curves.easeOutCubic;
+}
+
+/// A restrained entrance used for complete pages and important content blocks.
+class SoftEntrance extends StatelessWidget {
+  const SoftEntrance({super.key, required this.child, this.offset = 14});
+
+  final Widget child;
+  final double offset;
+
+  @override
+  Widget build(BuildContext context) {
+    if (reduceHeritageMotion(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: HeritageMotion.standard,
+      curve: HeritageMotion.curve,
+      child: child,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, offset * (1 - value)),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Gives pointer users quiet feedback without changing the mobile layout.
+class HoverLift extends StatefulWidget {
+  const HoverLift({super.key, required this.child, this.enabled = true});
+
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<HoverLift> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final animate = widget.enabled && !reduceHeritageMotion(context);
+    return MouseRegion(
+      onEnter: animate ? (_) => setState(() => _hovered = true) : null,
+      onExit: animate ? (_) => setState(() => _hovered = false) : null,
+      child: AnimatedScale(
+        scale: animate && _hovered ? 1.008 : 1,
+        duration: HeritageMotion.fast,
+        curve: HeritageMotion.curve,
+        alignment: Alignment.center,
+        child: AnimatedSlide(
+          offset: animate && _hovered ? const Offset(0, -0.008) : Offset.zero,
+          duration: HeritageMotion.fast,
+          curve: HeritageMotion.curve,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
 /// Reveals a section once, when it actually enters the scroll viewport.
 /// Off-screen cached children do not start their animation prematurely.
 class ScrollReveal extends StatefulWidget {
@@ -24,7 +93,7 @@ class _ScrollRevealState extends State<ScrollReveal>
   bool get wantKeepAlive => true;
   late final _animation = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 560),
+    duration: HeritageMotion.reveal,
   );
   late final _curve = CurvedAnimation(
     parent: _animation,
@@ -94,7 +163,7 @@ class _ScrollRevealState extends State<ScrollReveal>
         animation: _curve,
         child: widget.child,
         builder: (context, child) => Transform.translate(
-          offset: Offset(0, 32 * (1 - _curve.value)),
+          offset: Offset(0, 22 * (1 - _curve.value)),
           child: child,
         ),
       ),
@@ -141,7 +210,7 @@ class _PhotoFlow extends FlowDelegate {
   @override
   BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) =>
       BoxConstraints.tight(
-        Size(constraints.maxWidth, constraints.maxHeight + 110),
+        Size(constraints.maxWidth, constraints.maxHeight + 72),
       );
   @override
   void paintChildren(FlowPaintingContext context) {
@@ -159,7 +228,7 @@ class _PhotoFlow extends FlowDelegate {
     }
     context.paintChild(
       0,
-      transform: Matrix4.translationValues(0, -110 * fraction, 0),
+      transform: Matrix4.translationValues(0, -72 * fraction, 0),
     );
   }
 

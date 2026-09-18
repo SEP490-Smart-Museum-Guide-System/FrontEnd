@@ -51,7 +51,7 @@ class AppTextStyles {
   );
   static const bodySmall = TextStyle(
     fontFamily: sansFamily,
-    fontSize: 16,
+    fontSize: 15,
     color: AppColors.secondaryText,
     height: 1.5,
   );
@@ -63,7 +63,7 @@ class AppTextStyles {
   );
   static const caption = TextStyle(
     fontFamily: sansFamily,
-    fontSize: 14,
+    fontSize: 13,
     color: AppColors.secondaryText,
     height: 1.45,
   );

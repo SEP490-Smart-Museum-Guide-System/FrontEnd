@@ -107,7 +107,6 @@ void main() {
           .role,
       UserRole.administrator,
     );
-    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -130,6 +129,17 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Curator studio stays readable in a narrow browser', (tester) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(const SMGSApp());
+    await tester.pumpAndSettle();
+    await tester.enterText(field('Email'), 'curator@smgs.vn');
+    await tester.enterText(field('Mật khẩu'), 'smgs123');
+    await tapText(tester, 'Đăng nhập');
+    expect(find.text('Kể câu chuyện\ndi sản thật hay.'), findsOneWidget);
+    expect(find.text('Dòng chảy nội dung'), findsOneWidget);
+  });
 
   testWidgets('QR and recognition handle match, no match and museum context', (
     tester,

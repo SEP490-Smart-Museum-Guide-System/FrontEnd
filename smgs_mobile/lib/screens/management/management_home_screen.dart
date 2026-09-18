@@ -21,7 +21,9 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFF6F2EB),
+    backgroundColor: _isAdmin
+        ? const Color(0xFFF3F5F7)
+        : const Color(0xFFF6EFE4),
     body: LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 860) return _buildCompact(context);
@@ -53,7 +55,9 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   );
 
   Widget _buildCompact(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFF6F2EB),
+    backgroundColor: _isAdmin
+        ? const Color(0xFFF3F5F7)
+        : const Color(0xFFF6EFE4),
     appBar: AppBar(title: Text(_isAdmin ? 'Quản trị SMGS' : 'Nghiệp vụ SMGS')),
     drawer: Drawer(
       child: _Sidebar(
@@ -74,7 +78,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   );
 
   Widget _buildPage() => _selectedIndex == 0
-      ? _OverviewPage(isAdmin: _isAdmin)
+      ? (_isAdmin ? const _OverviewPage(isAdmin: true) : const _CuratorStudio())
       : _WorkspacePage(item: _items[_selectedIndex], isAdmin: _isAdmin);
 }
 
@@ -95,7 +99,7 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: compact ? double.infinity : 276,
-    color: AppColors.deepBurgundy,
+    color: isAdmin ? const Color(0xFF252B33) : AppColors.deepBurgundy,
     child: SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -235,9 +239,9 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 76,
       padding: const EdgeInsets.symmetric(horizontal: 32),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFCFAF6),
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: isAdmin ? const Color(0xFFFDFEFE) : const Color(0xFFFFF9F0),
+        border: const Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
@@ -245,11 +249,15 @@ class _TopBar extends StatelessWidget {
             width: 300,
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Tìm trong hệ thống…',
+                hintText: isAdmin
+                    ? 'Tìm người dùng, giao dịch, bảo tàng…'
+                    : 'Tìm hiện vật, bản nháp, chuyên đề…',
                 prefixIcon: const Icon(Icons.search),
                 isDense: true,
                 filled: true,
-                fillColor: const Color(0xFFF3EDE4),
+                fillColor: isAdmin
+                    ? const Color(0xFFF0F2F4)
+                    : const Color(0xFFF3EDE4),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -270,7 +278,9 @@ class _TopBar extends StatelessWidget {
           Container(width: 1, height: 32, color: AppColors.border),
           const SizedBox(width: 18),
           CircleAvatar(
-            backgroundColor: AppColors.deepBurgundy,
+            backgroundColor: isAdmin
+                ? const Color(0xFF252B33)
+                : AppColors.deepBurgundy,
             foregroundColor: AppColors.lightText,
             child: Text(isAdmin ? 'QT' : 'NV'),
           ),
@@ -296,6 +306,284 @@ class _TopBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CuratorStudio extends StatelessWidget {
+  const _CuratorStudio();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(30),
+        decoration: BoxDecoration(
+          color: AppColors.deepBurgundy,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 24,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Eyebrow('Bàn biên tập hôm nay', light: true),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Kể câu chuyện\ndi sản thật hay.',
+                    style: AppTextStyles.display.copyWith(
+                      color: AppColors.lightText,
+                      fontSize: 36,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '12 nội dung đang chờ bạn kiểm duyệt trước khi xuất bản.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.antiqueIvory.withValues(alpha: .8),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.mutedGold,
+                      foregroundColor: AppColors.darkBrown,
+                    ),
+                    onPressed: () {},
+                    icon: const Icon(Icons.edit_note_outlined),
+                    label: const Text('Mở hàng chờ kiểm duyệt'),
+                  ),
+                ],
+              ),
+            ),
+            if (MediaQuery.sizeOf(context).width >= 600) ...[
+              const SizedBox(width: 24),
+              const HeritageSeal(size: 112, light: true),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 26),
+      Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 4,
+        children: [
+          Text('Dòng chảy nội dung', style: AppTextStyles.sectionTitle),
+          Text('48 nội dung trong tháng 9', style: AppTextStyles.caption),
+        ],
+      ),
+      const SizedBox(height: 14),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final count = constraints.maxWidth >= 900
+              ? 4
+              : constraints.maxWidth >= 520
+              ? 2
+              : 1;
+          final width = (constraints.maxWidth - (count - 1) * 12) / count;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: const [
+              _StageCard('18', 'Bản nháp', Icons.description_outlined),
+              _StageCard('09', 'AI đang hỗ trợ', Icons.auto_awesome_outlined),
+              _StageCard('12', 'Chờ kiểm duyệt', Icons.fact_check_outlined),
+              _StageCard('07', 'Sẵn sàng xuất bản', Icons.publish_outlined),
+            ].map((card) => SizedBox(width: width, child: card)).toList(),
+          );
+        },
+      ),
+      const SizedBox(height: 24),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final preview = const _FeaturedDraft();
+          final queue = const _EditorialQueue();
+          return constraints.maxWidth >= 980
+              ? const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 5, child: _FeaturedDraft()),
+                    SizedBox(width: 20),
+                    Expanded(flex: 4, child: _EditorialQueue()),
+                  ],
+                )
+              : Column(children: [preview, const SizedBox(height: 20), queue]);
+        },
+      ),
+    ],
+  );
+}
+
+class _StageCard extends StatelessWidget {
+  const _StageCard(this.value, this.label, this.icon);
+  final String value, label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFFAF2),
+      border: Border.all(color: AppColors.border),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, color: AppColors.deepBurgundy, size: 25),
+        const SizedBox(width: 13),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: AppTextStyles.sectionTitle),
+            Text(label, style: AppTextStyles.caption),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _FeaturedDraft extends StatelessWidget {
+  const _FeaturedDraft();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFFAF2),
+      border: Border.all(color: AppColors.border),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const MuseumPhoto(museumId: 'museum_national', height: 210),
+        Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Eyebrow('Bản nháp nổi bật'),
+              const SizedBox(height: 9),
+              Text(
+                'Tiếng vọng từ trống đồng Ngọc Lũ',
+                style: AppTextStyles.cardTitle,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Bản thuyết minh AI đã được đối chiếu nguồn và đang chờ biên tập câu chữ cuối.',
+                style: AppTextStyles.bodyMedium,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 17,
+                    backgroundColor: AppColors.mutedGold,
+                    child: Text('TH'),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Lê Thu Hà · sửa 18 phút trước',
+                      style: AppTextStyles.caption,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text('Mở bản nháp'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _EditorialQueue extends StatelessWidget {
+  const _EditorialQueue();
+
+  @override
+  Widget build(BuildContext context) => _WebPanel(
+    title: 'Tiếp theo trong hàng chờ',
+    action: 'Xem tất cả',
+    child: Column(
+      children: const [
+        _QueueItem(
+          'Áo Nhật Bình triều Nguyễn',
+          'Bộ câu hỏi · 8 câu',
+          'Ưu tiên',
+        ),
+        _QueueItem(
+          'Gốm hoa lam thế kỷ XV',
+          'Thuyết minh · 04:20 phút',
+          'Chờ duyệt',
+        ),
+        _QueueItem('Bản đồ tầng 2', 'Lộ trình · 6 điểm dừng', 'Cần sửa'),
+        _QueueItem(
+          'Ký ức mùa thu Hà Nội',
+          'Chuyên đề · 12 hiện vật',
+          'Bản nháp',
+        ),
+      ],
+    ),
+  );
+}
+
+class _QueueItem extends StatelessWidget {
+  const _QueueItem(this.title, this.subtitle, this.status);
+  final String title, subtitle, status;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 15),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: AppColors.border)),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 7,
+          height: 42,
+          decoration: BoxDecoration(
+            color: status == 'Ưu tiên'
+                ? AppColors.deepBurgundy
+                : AppColors.mutedGold,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(subtitle, style: AppTextStyles.caption),
+            ],
+          ),
+        ),
+        Text(status, style: AppTextStyles.caption),
+      ],
+    ),
+  );
 }
 
 class _OverviewPage extends StatelessWidget {
@@ -590,6 +878,7 @@ class _WorkspacePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!isAdmin) return _CuratorWorkspace(item: item);
     final rows = _workspaceRows(item.label);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,6 +985,144 @@ class _WorkspacePage extends StatelessWidget {
   }
 }
 
+class _CuratorWorkspace extends StatelessWidget {
+  const _CuratorWorkspace({required this.item});
+  final _NavItem item;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Eyebrow('Xưởng nội dung · SMGS'),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.label, style: AppTextStyles.display),
+                const SizedBox(height: 6),
+                Text(item.description, style: AppTextStyles.bodyMedium),
+              ],
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.add),
+            label: const Text('Tạo bản nháp'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 24),
+      Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          ChoiceChip(
+            label: const Text('Tất cả 24'),
+            selected: true,
+            onSelected: (_) {},
+          ),
+          ChoiceChip(
+            label: const Text('Bản nháp 8'),
+            selected: false,
+            onSelected: (_) {},
+          ),
+          ChoiceChip(
+            label: const Text('Chờ duyệt 12'),
+            selected: false,
+            onSelected: (_) {},
+          ),
+          ChoiceChip(
+            label: const Text('Cần sửa 4'),
+            selected: false,
+            onSelected: (_) {},
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final count = constraints.maxWidth >= 1050
+              ? 3
+              : constraints.maxWidth >= 640
+              ? 2
+              : 1;
+          final width = (constraints.maxWidth - (count - 1) * 16) / count;
+          return Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: _curatorDrafts
+                .map(
+                  (draft) => SizedBox(
+                    width: width,
+                    child: _DraftCard(draft: draft),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
+    ],
+  );
+}
+
+class _DraftCard extends StatelessWidget {
+  const _DraftCard({required this.draft});
+  final _Draft draft;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFFAF2),
+      border: Border.all(color: AppColors.border),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(19),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: AppColors.antiqueIvory,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(draft.icon, color: AppColors.deepBurgundy),
+              ),
+              const Spacer(),
+              Text(draft.status, style: AppTextStyles.caption),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(draft.title, style: AppTextStyles.sectionTitle),
+          const SizedBox(height: 7),
+          Text(draft.subtitle, style: AppTextStyles.bodySmall),
+          const SizedBox(height: 20),
+          const Divider(height: 1),
+          const SizedBox(height: 13),
+          Row(
+            children: [
+              Expanded(
+                child: Text(draft.updated, style: AppTextStyles.caption),
+              ),
+              IconButton(
+                tooltip: 'Mở nội dung',
+                onPressed: () {},
+                icon: const Icon(Icons.arrow_forward, size: 20),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _TableLabel extends StatelessWidget {
   const _TableLabel(this.label);
   final String label;
@@ -765,6 +1192,12 @@ class _PriorityRow {
   final String title, subtitle, status;
   final IconData icon;
   final Color color;
+}
+
+class _Draft {
+  const _Draft(this.title, this.subtitle, this.status, this.updated, this.icon);
+  final String title, subtitle, status, updated;
+  final IconData icon;
 }
 
 const _curatorItems = [
@@ -899,6 +1332,51 @@ const _adminPriority = [
     'Ổn định',
     Icons.cloud_done_outlined,
     Color(0xFF2F765B),
+  ),
+];
+
+const _curatorDrafts = [
+  _Draft(
+    'Trống đồng Ngọc Lũ',
+    'Thuyết minh âm thanh · Văn hóa Đông Sơn',
+    'Chờ duyệt',
+    'Sửa 18 phút trước',
+    Icons.graphic_eq,
+  ),
+  _Draft(
+    'Áo Nhật Bình',
+    'Bộ câu hỏi thử tài · 8 câu',
+    'Cần chỉnh sửa',
+    'Sửa 1 giờ trước',
+    Icons.quiz_outlined,
+  ),
+  _Draft(
+    'Gốm hoa lam',
+    'Thông tin hiện vật · 6 hình ảnh',
+    'Bản nháp',
+    'Sửa hôm qua',
+    Icons.image_outlined,
+  ),
+  _Draft(
+    'Dấu ấn cung đình',
+    'Chuyên đề · 12 hiện vật',
+    'Sẵn sàng',
+    'Sửa hôm qua',
+    Icons.collections_bookmark_outlined,
+  ),
+  _Draft(
+    'Bản đồ tầng 2',
+    'Sơ đồ bảo tàng · 6 điểm dừng',
+    'Cần chỉnh sửa',
+    'Sửa 16/09',
+    Icons.map_outlined,
+  ),
+  _Draft(
+    'Ký ức mùa thu Hà Nội',
+    'Hành trình theo chủ đề · 45 phút',
+    'Chờ duyệt',
+    'Sửa 15/09',
+    Icons.route_outlined,
   ),
 ];
 

@@ -16,17 +16,21 @@ void openPage(BuildContext context, Widget page) {
   final reduced = reduceHeritageMotion(context);
   Navigator.of(context).push(
     PageRouteBuilder<void>(
-      transitionDuration: Duration(milliseconds: reduced ? 0 : 320),
-      reverseTransitionDuration: Duration(milliseconds: reduced ? 0 : 260),
+      transitionDuration: reduced ? Duration.zero : HeritageMotion.standard,
+      reverseTransitionDuration: reduced
+          ? Duration.zero
+          : HeritageMotion.fast,
       pageBuilder: (context, animation, secondaryAnimation) =>
           HeritagePaper(child: page),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curve = animation.drive(CurveTween(curve: Curves.easeOutCubic));
+        final curve = animation.drive(
+          CurveTween(curve: HeritageMotion.curve),
+        );
         return FadeTransition(
           opacity: curve,
           child: SlideTransition(
             position: curve.drive(
-              Tween(begin: const Offset(0, 0.025), end: Offset.zero),
+              Tween(begin: const Offset(0, 0.018), end: Offset.zero),
             ),
             child: child,
           ),
@@ -51,8 +55,9 @@ class MuseumPage extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) {
-    final body = SafeArea(
-      child: ListView(
+    final body = SoftEntrance(
+      child: SafeArea(
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         children: [
           if (eyebrow != null) ...[
@@ -87,6 +92,7 @@ class MuseumPage extends StatelessWidget {
           const SizedBox(height: 24),
           ...children,
         ],
+        ),
       ),
     );
     return back
@@ -129,7 +135,7 @@ class Panel extends StatelessWidget {
     padding: padding,
     decoration: BoxDecoration(
       color: AppColors.card,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: gold ? AppColors.mutedGold : AppColors.border),
     ),
     child: child,
@@ -177,43 +183,54 @@ class ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: Material(
-      color: AppColors.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Icon(icon, size: 26, color: AppColors.deepBurgundy),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: AppTextStyles.bodySmall),
-                  ],
+    child: HoverLift(
+      child: Material(
+        color: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.antiqueIvory,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 24, color: AppColors.deepBurgundy),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: AppColors.secondaryText,
-              ),
-            ],
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(subtitle, style: AppTextStyles.bodySmall),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppColors.secondaryText,
+                ),
+              ],
+            ),
           ),
         ),
       ),
