@@ -4,7 +4,7 @@ Tài liệu này đối chiếu bản Flutter Web với sơ đồ **Smart Museum
 
 - **Đầy đủ:** có giao diện, trạng thái và luồng chính/luồng thay thế trong prototype.
 - **Mô phỏng:** hoàn thành được luồng trên web nhưng chưa kết nối phần cứng, máy chủ hoặc dịch vụ bên ngoài.
-- **Ngoài phạm vi mobile:** thuộc hệ thống nhân viên/quản trị; đặc tả hiện tại yêu cầu thiết kế riêng trước khi triển khai.
+- **Giao diện mô phỏng:** có điểm vào và màn hình tổng quan để duyệt UI; thao tác dữ liệu cần đặc tả nghiệp vụ và API thật.
 
 ## Visitor Use Cases
 
@@ -47,22 +47,22 @@ Các quan hệ trên đều có đường đi tương ứng trong giao diện v�
 
 | Nhóm use case | Trạng thái | Lý do / ranh giới |
 |---|---|---|
-| Manage Museum Content; Manage Artifact Information; Manage Media; Manage Gallery / Museum Map | Ngoài phạm vi mobile | `SMGS_Main_Flow_Full_Spec.md` nêu MF-07 cần đặc tả quản trị riêng; chưa có quyền, trạng thái bản nháp, phiên bản hay quy tắc xóa. |
-| Generate AI Content; Generate Narration; Generate Quiz Content | Ngoài phạm vi mobile | Prototype khách tham quan chỉ dùng dữ liệu mẫu qua các service interface. Chưa có yêu cầu về mô hình, nguồn, kiểm duyệt hay chi phí. |
-| Review / Edit AI Content; Approve / Reject Content; Publish Content | Ngoài phạm vi mobile | MF-08 chưa định nghĩa trạng thái duyệt, vai trò reviewer, lịch sử chỉnh sửa, rollback và audit. |
-| View Visitor Feedback / Museum Reports | Ngoài phạm vi mobile | Ứng dụng hiện ghi góp ý trong phiên để kiểm thử Visitor flow; chưa truyền dữ liệu lên hệ thống báo cáo. |
+| Manage Museum Content; Manage Artifact Information; Manage Media; Manage Gallery / Museum Map | Giao diện mô phỏng | Không gian nghiệp vụ có điểm vào cho nhóm quản lý nội dung; CRUD thật cần API và quy tắc phiên bản. |
+| Generate AI Content; Generate Narration; Generate Quiz Content | Giao diện mô phỏng | Có điểm vào tạo nội dung AI; mô hình, nguồn và chi phí chưa được kết nối. |
+| Review / Edit AI Content; Approve / Reject Content; Publish Content | Giao diện mô phỏng | Có hàng đợi duyệt và xuất bản; trạng thái duyệt, rollback và audit cần backend. |
+| View Visitor Feedback / Museum Reports | Giao diện mô phỏng | Có điểm vào phản hồi/báo cáo và số liệu tổng quan mẫu. |
 
 ## Administrator Use Cases
 
 | Nhóm use case | Trạng thái | Dữ liệu cần có trước khi triển khai |
 |---|---|---|
-| Manage Users; Manage Roles & Permissions | Ngoài phạm vi mobile | Ma trận quyền, chính sách mời/khóa/xóa tài khoản và khôi phục. |
-| Manage Museums; Assign Staff to Museum | Ngoài phạm vi mobile | Mô hình tổ chức, phạm vi nhân viên, vòng đời bảo tàng và quyền điều chuyển. |
-| Monitor Transactions | Ngoài phạm vi mobile | Giao dịch thật, webhook, đối soát, hoàn tiền và trạng thái từ cổng thanh toán. |
-| View Audit Logs | Ngoài phạm vi mobile | Sự kiện cần ghi, thời hạn lưu, dữ liệu nhạy cảm và quyền đọc log. |
-| Manage System Settings | Ngoài phạm vi mobile | Danh sách cấu hình, phạm vi toàn hệ thống/theo bảo tàng và quy tắc phê duyệt. |
+| Manage Users; Manage Roles & Permissions | Giao diện mô phỏng | Có điểm vào quản lý tài khoản và phân quyền; ma trận quyền thật cần backend. |
+| Manage Museums; Assign Staff to Museum | Giao diện mô phỏng | Có điểm vào hồ sơ bảo tàng và phân công nhân sự. |
+| Monitor Transactions | Giao diện mô phỏng | Có điểm vào theo dõi giao dịch; webhook, đối soát và hoàn tiền chưa kết nối. |
+| View Audit Logs | Giao diện mô phỏng | Có điểm vào nhật ký; chính sách lưu và sự kiện audit cần chốt. |
+| Manage System Settings | Giao diện mô phỏng | Có điểm vào cấu hình vận hành chung. |
 
-Không nên dựng các màn hình Staff/Admin giả khi những quy tắc trên chưa được chốt, vì giao diện sẽ khóa cứng sai mô hình quyền và quy trình nghiệp vụ.
+Đăng nhập dùng chung Email/Mật khẩu và tự điều hướng theo vai trò. Tài khoản nhân viên và quản trị viên chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
 
 ## Payment Use Cases và hệ thống bên ngoài
 
@@ -71,7 +71,7 @@ Không nên dựng các màn hình Staff/Admin giả khi những quy tắc trên
 ## Kết luận phạm vi
 
 - **Nhóm Visitor:** trùng khớp đầy đủ ở mức Flutter Web prototype; các chức năng phụ thuộc phần cứng/dịch vụ ngoài được mô phỏng và ghi nhãn rõ.
-- **Nhóm Staff / Curator, Administrator:** có trong sơ đồ toàn hệ thống nhưng không thuộc bản mobile visitor hiện tại, đúng với ranh giới trong đặc tả luồng chính.
+- **Nhóm Staff / Curator, Administrator:** đã có xác thực theo vai trò và giao diện tổng quan tương ứng; nghiệp vụ ghi dữ liệu vẫn ở mức mô phỏng cho đến khi có API và quy tắc chi tiết.
 - **Payment Gateway:** có ranh giới service và đủ luồng thành công/thất bại trong prototype; chưa kết nối giao dịch thật.
 
 Các tệp kiểm thử chính: `test/main_flows_test.dart`, `test/widget_test.dart`, `test/home_test.dart`, `test/motion_test.dart`.

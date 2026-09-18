@@ -1,11 +1,15 @@
+enum UserRole { visitor, curator, administrator }
+
 class VisitorUser {
   const VisitorUser({
     required this.name,
     required this.email,
     this.isGuest = false,
+    this.role = UserRole.visitor,
   });
   final String name, email;
   final bool isGuest;
+  final UserRole role;
 }
 
 class QuizQuestion {

@@ -13,6 +13,7 @@ import 'package:smgs_mobile/screens/profile/history_screen.dart';
 import 'package:smgs_mobile/screens/profile/services_screen.dart';
 import 'package:smgs_mobile/screens/tours/tours_screen.dart';
 import 'package:smgs_mobile/screens/explore/explore_screen.dart';
+import 'package:smgs_mobile/screens/management/management_home_screen.dart';
 import 'package:smgs_mobile/widgets/primary_button.dart';
 import 'package:smgs_mobile/widgets/narration_player.dart';
 import 'package:smgs_mobile/widgets/museum_route_map.dart';
@@ -75,6 +76,38 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Sample accounts open curator and administrator workspaces', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(const SMGSApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(field('Email'), 'curator@smgs.vn');
+    await tester.enterText(field('Mật khẩu'), 'smgs123');
+    await tapText(tester, 'Đăng nhập');
+    expect(find.byType(ManagementHomeScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
+          .role,
+      UserRole.curator,
+    );
+    await tapText(tester, 'Đăng xuất');
+
+    await tester.enterText(field('Email'), 'admin@smgs.vn');
+    await tester.enterText(field('Mật khẩu'), 'smgs123');
+    await tapText(tester, 'Đăng nhập');
+    expect(find.byType(ManagementHomeScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
+          .role,
+      UserRole.administrator,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('QR and recognition handle match, no match and museum context', (
     tester,

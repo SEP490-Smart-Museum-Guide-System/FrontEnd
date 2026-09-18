@@ -17,8 +17,22 @@ abstract class AuthService extends ChangeNotifier {
 
 class MockAuthService extends AuthService {
   VisitorUser? _user;
-  final _accounts = <String, ({String name, String password})>{
-    'khach@smgs.vn': (name: 'Minh An', password: 'smgs123'),
+  final _accounts = <String, ({String name, String password, UserRole role})>{
+    'khach@smgs.vn': (
+      name: 'Minh An',
+      password: 'smgs123',
+      role: UserRole.visitor,
+    ),
+    'curator@smgs.vn': (
+      name: 'Lê Thu Hà',
+      password: 'smgs123',
+      role: UserRole.curator,
+    ),
+    'admin@smgs.vn': (
+      name: 'Quản trị SMGS',
+      password: 'smgs123',
+      role: UserRole.administrator,
+    ),
   };
   @override
   VisitorUser? get user => _user;
@@ -32,7 +46,7 @@ class MockAuthService extends AuthService {
         'Email hoặc mật khẩu chưa đúng. Hãy dùng tài khoản mẫu hoặc đăng ký trong phiên này.',
       );
     }
-    _user = VisitorUser(name: account.name, email: key);
+    _user = VisitorUser(name: account.name, email: key, role: account.role);
     notifyListeners();
   }
 
@@ -45,7 +59,11 @@ class MockAuthService extends AuthService {
         'Địa chỉ này đã có tài khoản trong bản trải nghiệm.',
       );
     }
-    _accounts[key] = (name: name.trim(), password: password);
+    _accounts[key] = (
+      name: name.trim(),
+      password: password,
+      role: UserRole.visitor,
+    );
     _user = VisitorUser(name: name.trim(), email: key);
     notifyListeners();
   }

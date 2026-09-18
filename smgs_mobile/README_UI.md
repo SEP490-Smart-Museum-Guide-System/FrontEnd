@@ -14,7 +14,13 @@ flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8080
 
 Mở http://localhost:8080. Chọn **Tiếp tục với vai trò khách**, hoặc **Điền tài khoản mẫu** rồi **Đăng nhập**.
 
-Tài khoản mẫu: `khach@smgs.vn` / `smgs123`. Đây là thông tin mẫu được đóng gói cho bản thử nghiệm, không phải tài khoản thật. Đăng ký tạo tài khoản trong bộ nhớ của phiên hiện tại.
+Các tài khoản mẫu dùng chung mật khẩu `smgs123`:
+
+- Khách tham quan: `khach@smgs.vn`
+- Nhân viên / Kiểm duyệt viên: `curator@smgs.vn`
+- Quản trị viên: `admin@smgs.vn`
+
+Đây là thông tin mẫu được đóng gói cho bản thử nghiệm, không phải tài khoản thật. Đăng ký mới luôn tạo tài khoản khách tham quan trong bộ nhớ của phiên hiện tại. Hệ thống tự nhận diện vai trò từ tài khoản, không cho người dùng tự chọn quyền.
 
 ## Các luồng đã triển khai
 
@@ -27,8 +33,10 @@ Tài khoản mẫu: `khach@smgs.vn` / `smgs123`. Đây là thông tin mẫu đư
 | MF-05 | Lịch sử theo ngày và bảo tàng, chi tiết hiện vật/lượt thử tài/hành trình, góp ý có đánh giá bắt buộc và ngữ cảnh cụ thể |
 | MF-06 | 4 dịch vụ số theo ngày, chọn bảo tàng/ngày/VNPay hoặc MoMo, mô phỏng thành công/thất bại/thử lại, quyền sử dụng theo ngày, danh sách đã đăng ký |
 | MF-09 — khách tham quan | Màn hình mở đầu, đăng nhập, khách, đăng ký, khôi phục mô phỏng, hồ sơ, huy hiệu, dịch vụ, cài đặt cỡ chữ/chuyển động, đăng xuất |
+| MF-07 / MF-08 — nhân viên | Không gian nghiệp vụ, tổng quan nội dung, quản lý bảo tàng/hiện vật/phương tiện/bản đồ, tạo nội dung AI, kiểm duyệt, xuất bản và báo cáo |
+| MF-09 — quản trị viên | Không gian quản trị, tổng quan hệ thống, người dùng, vai trò, bảo tàng, phân công, giao dịch, nhật ký và cài đặt |
 
-MF-07, MF-08 và phần quản trị của MF-09 nằm ngoài bản khách tham quan này, đúng ranh giới phạm vi trong tài liệu. Chưa có màn hình quản lý hay chính sách phân quyền quản trị.
+Các thao tác nghiệp vụ của nhân viên và quản trị viên đang ở mức giao diện mô phỏng. Quy tắc duyệt, phiên bản nội dung, ma trận quyền, audit và API máy chủ cần được nối khi đặc tả backend được chốt.
 
 ## Trang chủ và chuyển động
 
