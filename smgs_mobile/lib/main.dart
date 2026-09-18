@@ -5,6 +5,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'screens/auth/auth_screen.dart';
+import 'models/experience.dart';
+import 'services/app_services.dart';
 import 'services/app_preferences.dart';
 import 'widgets/heritage_decoration.dart';
 
@@ -26,30 +28,39 @@ class SMGSApp extends StatelessWidget {
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: AppTheme.lightTheme,
     builder: (context, child) => ListenableBuilder(
-      listenable: AppPreferences.instance,
-      builder: (context, _) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          disableAnimations:
-              MediaQuery.disableAnimationsOf(context) ||
-              AppPreferences.instance.reducedMotion,
-          textScaler: TextScaler.linear(
-            MediaQuery.textScalerOf(context).scale(16) /
-                16 *
-                (AppPreferences.instance.largeText ? 1.15 : 1),
+      listenable: Listenable.merge([AppPreferences.instance, AppServices.auth]),
+      builder: (context, _) {
+        final role = AppServices.auth.user?.role;
+        final isManagement =
+            role == UserRole.curator || role == UserRole.administrator;
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            disableAnimations:
+                MediaQuery.disableAnimationsOf(context) ||
+                AppPreferences.instance.reducedMotion,
+            textScaler: TextScaler.linear(
+              MediaQuery.textScalerOf(context).scale(16) /
+                  16 *
+                  (AppPreferences.instance.largeText ? 1.15 : 1),
+            ),
           ),
-        ),
-        child: ColoredBox(
-          color: AppColors.darkBrown,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: ClipRect(
-                child: HeritagePaper(child: child ?? const SizedBox.shrink()),
+          child: ColoredBox(
+            color: isManagement ? const Color(0xFFE8E0D4) : AppColors.darkBrown,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isManagement ? 1440 : 500,
+                ),
+                child: ClipRect(
+                  child: isManagement
+                      ? (child ?? const SizedBox.shrink())
+                      : HeritagePaper(child: child ?? const SizedBox.shrink()),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     ),
     home: const AuthGate(),
   );

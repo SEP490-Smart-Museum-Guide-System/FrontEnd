@@ -94,7 +94,8 @@ void main() {
           .role,
       UserRole.curator,
     );
-    await tapText(tester, 'Đăng xuất');
+    AppServices.auth.logout();
+    await tester.pumpAndSettle();
 
     await tester.enterText(field('Email'), 'admin@smgs.vn');
     await tester.enterText(field('Mật khẩu'), 'smgs123');
@@ -108,6 +109,27 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Administrator uses a wide web dashboard with working navigation',
+    (tester) async {
+      await screenSize(tester, const Size(1280, 800));
+      await tester.pumpWidget(const SMGSApp());
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Email'), 'admin@smgs.vn');
+      await tester.enterText(field('Mật khẩu'), 'smgs123');
+      await tapText(tester, 'Đăng nhập');
+
+      expect(find.text('Cổng quản trị'), findsOneWidget);
+      expect(find.text('Tổng quan hệ thống'), findsOneWidget);
+      expect(find.text('Hệ thống ổn định'), findsOneWidget);
+      await tester.tap(find.text('Người dùng').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Danh sách làm việc'), findsOneWidget);
+      expect(find.text('PHỤ TRÁCH'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('QR and recognition handle match, no match and museum context', (
     tester,

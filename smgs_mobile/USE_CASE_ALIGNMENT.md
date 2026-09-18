@@ -62,7 +62,7 @@ Các quan hệ trên đều có đường đi tương ứng trong giao diện v�
 | View Audit Logs | Giao diện mô phỏng | Có điểm vào nhật ký; chính sách lưu và sự kiện audit cần chốt. |
 | Manage System Settings | Giao diện mô phỏng | Có điểm vào cấu hình vận hành chung. |
 
-Đăng nhập dùng chung Email/Mật khẩu và tự điều hướng theo vai trò. Tài khoản nhân viên và quản trị viên chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
+Đăng nhập dùng chung Email/Mật khẩu và tự điều hướng theo vai trò. Khách tham quan vào giao diện mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên vào dashboard web desktop có thanh điều hướng và vùng dữ liệu rộng. Tài khoản nội bộ chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
 
 ## Payment Use Cases và hệ thống bên ngoài
 

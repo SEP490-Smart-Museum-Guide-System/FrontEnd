@@ -1,6 +1,6 @@
 # SMGS — Cẩm nang bảo tàng Việt
 
-Bản trải nghiệm Flutter Web cho khách tham quan, triển khai theo SMGS_Main_Flow_Full_Spec.md. Giao diện và thông báo bằng tiếng Việt; phong cách giấy ngà, đỏ trầm, nâu và vàng cổ. Không cần trình giả lập.
+Bản trải nghiệm Flutter Web triển khai theo SMGS_Main_Flow_Full_Spec.md. Khách tham quan dùng bố cục mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên dùng dashboard web desktop. Giao diện và thông báo bằng tiếng Việt; phong cách giấy ngà, đỏ trầm, nâu và vàng cổ. Không cần trình giả lập.
 
 Ma trận đối chiếu từng use case trong sơ đồ: [`USE_CASE_ALIGNMENT.md`](USE_CASE_ALIGNMENT.md).
 
@@ -33,8 +33,8 @@ Các tài khoản mẫu dùng chung mật khẩu `smgs123`:
 | MF-05 | Lịch sử theo ngày và bảo tàng, chi tiết hiện vật/lượt thử tài/hành trình, góp ý có đánh giá bắt buộc và ngữ cảnh cụ thể |
 | MF-06 | 4 dịch vụ số theo ngày, chọn bảo tàng/ngày/VNPay hoặc MoMo, mô phỏng thành công/thất bại/thử lại, quyền sử dụng theo ngày, danh sách đã đăng ký |
 | MF-09 — khách tham quan | Màn hình mở đầu, đăng nhập, khách, đăng ký, khôi phục mô phỏng, hồ sơ, huy hiệu, dịch vụ, cài đặt cỡ chữ/chuyển động, đăng xuất |
-| MF-07 / MF-08 — nhân viên | Không gian nghiệp vụ, tổng quan nội dung, quản lý bảo tàng/hiện vật/phương tiện/bản đồ, tạo nội dung AI, kiểm duyệt, xuất bản và báo cáo |
-| MF-09 — quản trị viên | Không gian quản trị, tổng quan hệ thống, người dùng, vai trò, bảo tàng, phân công, giao dịch, nhật ký và cài đặt |
+| MF-07 / MF-08 — nhân viên | Dashboard web nghiệp vụ, tổng quan nội dung, quản lý bảo tàng/hiện vật/phương tiện/bản đồ, tạo nội dung AI, kiểm duyệt, xuất bản và báo cáo |
+| MF-09 — quản trị viên | Dashboard web quản trị, tổng quan hệ thống, người dùng, vai trò, bảo tàng, phân công, giao dịch, nhật ký và cài đặt |
 
 Các thao tác nghiệp vụ của nhân viên và quản trị viên đang ở mức giao diện mô phỏng. Quy tắc duyệt, phiên bản nội dung, ma trận quyền, audit và API máy chủ cần được nối khi đặc tả backend được chốt.
 
