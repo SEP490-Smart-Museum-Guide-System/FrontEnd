@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/museum_ui.dart';
 import '../../services/app_services.dart';
 import '../../models/artifact.dart';
+import '../../data/visit_store.dart';
 import '../explore/explore_screen.dart';
 import 'artifact_detail_screen.dart';
 
@@ -40,7 +41,10 @@ class _QRScanScreenState extends State<QRScanScreen> {
         _busy = false;
         _done = true;
       });
-      if (!widget.recognition && result != null) _open(result);
+      if (!widget.recognition && result != null) {
+        VisitStore.instance.visit(result);
+        _open(result);
+      }
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -70,19 +74,27 @@ class _QRScanScreenState extends State<QRScanScreen> {
         .firstWhere((m) => m.id == widget.museumId)
         .name,
     children: [
-      Container(
+      AnimatedContainer(
+        duration: reduceHeritageMotion(context)
+            ? Duration.zero
+            : HeritageMotion.standard,
+        curve: HeritageMotion.curve,
         height: 260,
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: AppColors.darkBrown,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Container(
+        child: AnimatedContainer(
+          duration: reduceHeritageMotion(context)
+              ? Duration.zero
+              : HeritageMotion.fast,
           decoration: BoxDecoration(
             border: Border.all(
               color: _flash ? AppColors.antiqueIvory : AppColors.mutedGold,
               width: 2,
             ),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

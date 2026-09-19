@@ -15,6 +15,8 @@ class VisitStore extends ChangeNotifier {
   final List<VisitRecord> history = [];
   final List<ServicePurchase> purchases = [];
   int completedTours = 0;
+  int get visitedCount =>
+      history.expand((record) => record.artifactIds).toSet().length;
   int get points => quizScores.values.fold(0, (sum, value) => sum + value * 10);
   Set<String> get badges =>
       quizResults.map((r) => r.badge).whereType<String>().toSet();
@@ -28,6 +30,12 @@ class VisitStore extends ChangeNotifier {
         return record;
       },
     );
+  }
+
+  void view(Artifact artifact) {
+    viewed.removeWhere((a) => a.id == artifact.id);
+    viewed.insert(0, artifact);
+    notifyListeners();
   }
 
   void visit(Artifact artifact) {

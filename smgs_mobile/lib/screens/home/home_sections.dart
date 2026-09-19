@@ -41,8 +41,9 @@ class HomeThemes extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: Material(
               color: AppColors.card,
-              shape: const RoundedRectangleBorder(
-                side: BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: AppColors.border),
               ),
               child: InkWell(
                 onTap: () => openPage(
@@ -119,7 +120,7 @@ class HomeRouteCard extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: AppColors.deepBurgundy,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Stack(
         children: [
@@ -267,85 +268,87 @@ class HomeMuseumStory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final museum = mockMuseums[1];
-    return Material(
-      color: AppColors.darkBrown,
-      borderRadius: BorderRadius.circular(6),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => openPage(context, MuseumDetailScreen(museum: museum)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ParallaxPhoto(
-                  height: 260,
-                  child: MuseumPhoto(museumId: museum.id),
-                ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  child: Container(
-                    color: AppColors.antiqueIvory,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    child: const Eyebrow('Ba Đình · Hà Nội'),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return HoverLift(
+      child: Material(
+        color: AppColors.darkBrown,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => openPage(context, MuseumDetailScreen(museum: museum)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
                 children: [
-                  Text(
-                    'Lắng nghe\nmột thời lịch sử.',
-                    style: AppTextStyles.display.copyWith(
-                      color: AppColors.antiqueIvory,
-                      fontSize: 30,
-                    ),
+                  ParallaxPhoto(
+                    height: 260,
+                    child: MuseumPhoto(museumId: museum.id),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    museum.name,
-                    style: AppTextStyles.sectionTitle.copyWith(
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: Container(
                       color: AppColors.antiqueIvory,
-                      fontSize: 20,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Từ không gian kiến trúc đến những trang tư liệu, mỗi điểm dừng mở thêm một góc nhìn.',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.antiqueIvory,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Ghé Bảo tàng Hồ Chí Minh',
-                          style: AppTextStyles.buttonText.copyWith(
-                            color: AppColors.antiqueIvory,
-                          ),
-                        ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
                       ),
-                      const SizedBox(width: 12),
-                      const Icon(
-                        Icons.arrow_forward,
-                        color: AppColors.antiqueIvory,
-                        size: 22,
-                      ),
-                    ],
+                      child: const Eyebrow('Ba Đình · Hà Nội'),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Lắng nghe\nmột thời lịch sử.',
+                      style: AppTextStyles.display.copyWith(
+                        color: AppColors.antiqueIvory,
+                        fontSize: 30,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      museum.name,
+                      style: AppTextStyles.sectionTitle.copyWith(
+                        color: AppColors.antiqueIvory,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Từ không gian kiến trúc đến những trang tư liệu, mỗi điểm dừng mở thêm một góc nhìn.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.antiqueIvory,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Ghé Bảo tàng Hồ Chí Minh',
+                            style: AppTextStyles.buttonText.copyWith(
+                              color: AppColors.antiqueIvory,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.arrow_forward,
+                          color: AppColors.antiqueIvory,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -360,7 +363,7 @@ class HomeQuizCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xFFECE0C9),
       border: Border.all(color: AppColors.mutedGold),
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,7 +406,7 @@ class HomeVisitGuide extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: AppColors.card,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(12),
       side: const BorderSide(color: AppColors.border),
     ),
     clipBehavior: Clip.antiAlias,

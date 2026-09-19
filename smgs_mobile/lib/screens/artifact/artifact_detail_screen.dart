@@ -26,7 +26,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        VisitStore.instance.visit(widget.artifact);
+        VisitStore.instance.view(widget.artifact);
       }
     });
   }

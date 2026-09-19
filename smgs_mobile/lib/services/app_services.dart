@@ -11,11 +11,12 @@ abstract class AuthService extends ChangeNotifier {
   Future<void> login(String email, String password);
   Future<void> register(String name, String email, String password);
   Future<void> recover(String email);
-  void guest();
   void logout();
 }
 
 class MockAuthService extends AuthService {
+  MockAuthService({VisitorUser? initialUser}) : _user = initialUser;
+
   VisitorUser? _user;
   final _accounts = <String, ({String name, String password, UserRole role})>{
     'khach@smgs.vn': (
@@ -26,7 +27,7 @@ class MockAuthService extends AuthService {
     'curator@smgs.vn': (
       name: 'Lê Thu Hà',
       password: 'smgs123',
-      role: UserRole.curator,
+      role: UserRole.staff,
     ),
     'admin@smgs.vn': (
       name: 'Quản trị SMGS',
@@ -71,16 +72,6 @@ class MockAuthService extends AuthService {
   @override
   Future<void> recover(String email) =>
       Future<void>.delayed(const Duration(milliseconds: 350));
-  @override
-  void guest() {
-    _user = const VisitorUser(
-      name: 'Khách tham quan',
-      email: '',
-      isGuest: true,
-    );
-    notifyListeners();
-  }
-
   @override
   void logout() {
     _user = null;

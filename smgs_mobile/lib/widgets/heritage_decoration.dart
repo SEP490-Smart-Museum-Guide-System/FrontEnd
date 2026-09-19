@@ -28,7 +28,8 @@ class _PaperPainter extends CustomPainter {
     }
     final grain = Paint()..color = AppColors.darkBrown.withAlpha(9);
     final random = math.Random(17);
-    for (var i = 0; i < size.width * size.height / 90; i++) {
+    final grainCount = math.min(1800, (size.width * size.height / 320).round());
+    for (var i = 0; i < grainCount; i++) {
       canvas.drawCircle(
         Offset(
           random.nextDouble() * size.width,

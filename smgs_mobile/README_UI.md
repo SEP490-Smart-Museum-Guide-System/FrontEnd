@@ -1,6 +1,6 @@
 # SMGS — Cẩm nang bảo tàng Việt
 
-Bản trải nghiệm Flutter Web triển khai theo SMGS_Main_Flow_Full_Spec.md. Khách tham quan dùng bố cục mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên dùng dashboard web desktop. Giao diện và thông báo bằng tiếng Việt; phong cách giấy ngà, đỏ trầm, nâu và vàng cổ. Không cần trình giả lập.
+Bản trải nghiệm Flutter Web triển khai theo `SMGS_Main_Flow_Full_Spec.md` và [`SMGS_Tong_quan_de_tai.md`](SMGS_Tong_quan_de_tai.md). Khách tham quan dùng bố cục mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên dùng dashboard web desktop. Giao diện và thông báo bằng tiếng Việt; phong cách giấy ngà, đỏ trầm, nâu và vàng cổ. Không cần trình giả lập.
 
 Ma trận đối chiếu từng use case trong sơ đồ: [`USE_CASE_ALIGNMENT.md`](USE_CASE_ALIGNMENT.md).
 
@@ -12,7 +12,7 @@ flutter pub get
 flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8080
 ```
 
-Mở http://localhost:8080. Chọn **Tiếp tục với vai trò khách**, hoặc **Điền tài khoản mẫu** rồi **Đăng nhập**.
+Mở http://localhost:8080, chọn một tài khoản mẫu rồi **Đăng nhập**. Hệ thống không có chế độ khách vãng lai.
 
 Các tài khoản mẫu dùng chung mật khẩu `smgs123`:
 
@@ -32,7 +32,7 @@ Các tài khoản mẫu dùng chung mật khẩu `smgs123`:
 | MF-04 | Tìm kiếm không dấu, lọc chủ đề/bảo tàng/chuyên đề/phòng, sắp xếp tên bảo tàng, xóa bộ lọc, trạng thái rỗng |
 | MF-05 | Lịch sử theo ngày và bảo tàng, chi tiết hiện vật/lượt thử tài/hành trình, góp ý có đánh giá bắt buộc và ngữ cảnh cụ thể |
 | MF-06 | 4 dịch vụ số theo ngày, chọn bảo tàng/ngày/VNPay hoặc MoMo, mô phỏng thành công/thất bại/thử lại, quyền sử dụng theo ngày, danh sách đã đăng ký |
-| MF-09 — khách tham quan | Màn hình mở đầu, đăng nhập, khách, đăng ký, khôi phục mô phỏng, hồ sơ, huy hiệu, dịch vụ, cài đặt cỡ chữ/chuyển động, đăng xuất |
+| MF-09 — khách tham quan | Màn hình mở đầu, đăng nhập bắt buộc, đăng ký, khôi phục mô phỏng, hồ sơ, huy hiệu, dịch vụ, cài đặt cỡ chữ/chuyển động, đăng xuất |
 | MF-07 / MF-08 — nhân viên | Dashboard web nghiệp vụ, tổng quan nội dung, quản lý bảo tàng/hiện vật/phương tiện/bản đồ, tạo nội dung AI, kiểm duyệt, xuất bản và báo cáo |
 | MF-09 — quản trị viên | Dashboard web quản trị, tổng quan hệ thống, người dùng, vai trò, bảo tàng, phân công, giao dịch, nhật ký và cài đặt |
 
@@ -67,7 +67,7 @@ Khi nối hệ thống thật, thay triển khai dịch vụ và lớp lưu tr�
 
 ## Kịch bản trình diễn
 
-1. Đăng nhập bằng tài khoản mẫu hoặc vào với vai trò khách.
+1. Đăng nhập bằng tài khoản mẫu.
 2. Chọn bảo tàng → Khám phá hiện vật → Quét mã mô phỏng.
 3. Mở hiện vật → Hỏi hướng dẫn viên → chọn câu hỏi gợi ý.
 4. Quay lại hiện vật → Thử tài → trả lời → xem điểm và huy hiệu.

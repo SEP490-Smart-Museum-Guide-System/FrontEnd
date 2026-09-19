@@ -17,15 +17,11 @@ void openPage(BuildContext context, Widget page) {
   Navigator.of(context).push(
     PageRouteBuilder<void>(
       transitionDuration: reduced ? Duration.zero : HeritageMotion.standard,
-      reverseTransitionDuration: reduced
-          ? Duration.zero
-          : HeritageMotion.fast,
+      reverseTransitionDuration: reduced ? Duration.zero : HeritageMotion.fast,
       pageBuilder: (context, animation, secondaryAnimation) =>
           HeritagePaper(child: page),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curve = animation.drive(
-          CurveTween(curve: HeritageMotion.curve),
-        );
+        final curve = animation.drive(CurveTween(curve: HeritageMotion.curve));
         return FadeTransition(
           opacity: curve,
           child: SlideTransition(
@@ -58,40 +54,56 @@ class MuseumPage extends StatelessWidget {
     final body = SoftEntrance(
       child: SafeArea(
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-        children: [
-          if (eyebrow != null) ...[
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          children: [
+            if (eyebrow != null) ...[
+              Row(
+                children: [
+                  Expanded(child: Eyebrow(eyebrow!)),
+                  const SizedBox(width: 12),
+                  const HeritageSeal(size: 34),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            AnimatedSwitcher(
+              duration: reduceHeritageMotion(context)
+                  ? Duration.zero
+                  : HeritageMotion.standard,
+              switchInCurve: HeritageMotion.curve,
+              child: Text(
+                title,
+                key: ValueKey(title),
+                style: AppTextStyles.display.copyWith(
+                  color: AppColors.deepBurgundy,
+                  fontSize: 32,
+                  height: 1.3,
+                ),
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 10),
+              AnimatedSwitcher(
+                duration: reduceHeritageMotion(context)
+                    ? Duration.zero
+                    : HeritageMotion.fast,
+                child: Text(
+                  subtitle!,
+                  key: ValueKey(subtitle),
+                  style: AppTextStyles.bodyMedium,
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: Eyebrow(eyebrow!)),
-                const SizedBox(width: 12),
-                const HeritageSeal(size: 34),
+                Container(width: 40, height: 2, color: AppColors.deepBurgundy),
+                const Expanded(child: Divider(height: 1, thickness: 1)),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            ...children,
           ],
-          Text(
-            title,
-            style: AppTextStyles.display.copyWith(
-              color: AppColors.deepBurgundy,
-              fontSize: 32,
-              height: 1.3,
-            ),
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 10),
-            Text(subtitle!, style: AppTextStyles.bodyMedium),
-          ],
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Container(width: 40, height: 2, color: AppColors.deepBurgundy),
-              const Expanded(child: Divider(height: 1, thickness: 1)),
-            ],
-          ),
-          const SizedBox(height: 24),
-          ...children,
-        ],
         ),
       ),
     );

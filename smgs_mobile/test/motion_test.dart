@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/main.dart';
 import 'package:smgs_mobile/services/app_services.dart';
+import 'package:smgs_mobile/models/experience.dart';
 import 'package:smgs_mobile/widgets/heritage_motion.dart';
 
 import 'widget_test.dart' show tapText, screenSize;
 
 void main() {
-  setUp(() => AppServices.auth.guest());
+  setUp(
+    () => AppServices.auth = MockAuthService(
+      initialUser: const VisitorUser(
+        name: 'Người dùng thử',
+        email: 'nguoidung@smgs.vn',
+      ),
+    ),
+  );
   testWidgets(
     'Reveal follows a replaced scroll position after physics change',
     (tester) async {

@@ -77,9 +77,32 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     ),
   );
 
-  Widget _buildPage() => _selectedIndex == 0
-      ? (_isAdmin ? const _OverviewPage(isAdmin: true) : const _CuratorStudio())
-      : _WorkspacePage(item: _items[_selectedIndex], isAdmin: _isAdmin);
+  Widget _buildPage() {
+    final page = _selectedIndex == 0
+        ? (_isAdmin
+              ? const _OverviewPage(isAdmin: true)
+              : const _CuratorStudio())
+        : _WorkspacePage(item: _items[_selectedIndex], isAdmin: _isAdmin);
+    if (reduceHeritageMotion(context)) return page;
+    return AnimatedSwitcher(
+      duration: HeritageMotion.standard,
+      switchInCurve: HeritageMotion.curve,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: animation.drive(
+            Tween(begin: const Offset(0, .018), end: Offset.zero),
+          ),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(
+        key: ValueKey('${widget.role.name}:$_selectedIndex'),
+        child: page,
+      ),
+    );
+  }
 }
 
 class _Sidebar extends StatelessWidget {
@@ -144,6 +167,7 @@ class _Sidebar extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 5),
                   child: Material(
+                    animationDuration: HeritageMotion.fast,
                     color: selected
                         ? AppColors.antiqueIvory.withValues(alpha: .13)
                         : Colors.transparent,
@@ -349,6 +373,27 @@ class _CuratorStudio extends StatelessWidget {
                     '12 nội dung đang chờ bạn kiểm duyệt trước khi xuất bản.',
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.antiqueIvory.withValues(alpha: .8),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.antiqueIvory.withValues(alpha: .1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.antiqueIvory.withValues(alpha: .18),
+                      ),
+                    ),
+                    child: Text(
+                      'Phạm vi phụ trách · Bảo tàng Lịch sử Quốc gia · Tầng 1–2',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.antiqueIvory,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 22),
@@ -678,41 +723,43 @@ class _MetricCard extends StatelessWidget {
   final _Metric metric;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFCFAF6),
-      border: Border.all(color: AppColors.border),
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: AppColors.antiqueIvory,
-            borderRadius: BorderRadius.circular(7),
+  Widget build(BuildContext context) => HoverLift(
+    child: Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFAF6),
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: AppColors.antiqueIvory,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(metric.icon, color: AppColors.deepBurgundy),
           ),
-          child: Icon(metric.icon, color: AppColors.deepBurgundy),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(metric.value, style: AppTextStyles.sectionTitle),
-              Text(metric.label, style: AppTextStyles.caption),
-            ],
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(metric.value, style: AppTextStyles.sectionTitle),
+                Text(metric.label, style: AppTextStyles.caption),
+              ],
+            ),
           ),
-        ),
-        Text(
-          metric.trend,
-          style: AppTextStyles.caption.copyWith(
-            color: const Color(0xFF2F765B),
-            fontWeight: FontWeight.w700,
+          Text(
+            metric.trend,
+            style: AppTextStyles.caption.copyWith(
+              color: const Color(0xFF2F765B),
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -880,6 +927,7 @@ class _WorkspacePage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isAdmin) return _CuratorWorkspace(item: item);
     final rows = _workspaceRows(item.label);
+    final commerce = item.label == 'Thương mại';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -912,13 +960,18 @@ class _WorkspacePage extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                child: const Row(
+                child: Row(
                   children: [
-                    Expanded(flex: 4, child: _TableLabel('NỘI DUNG')),
-                    Expanded(flex: 2, child: _TableLabel('PHỤ TRÁCH')),
-                    Expanded(flex: 2, child: _TableLabel('CẬP NHẬT')),
-                    Expanded(flex: 2, child: _TableLabel('TRẠNG THÁI')),
-                    SizedBox(width: 34),
+                    const Expanded(flex: 4, child: _TableLabel('NỘI DUNG')),
+                    Expanded(
+                      flex: 2,
+                      child: _TableLabel(
+                        commerce ? 'CỔNG THANH TOÁN' : 'PHỤ TRÁCH',
+                      ),
+                    ),
+                    const Expanded(flex: 2, child: _TableLabel('CẬP NHẬT')),
+                    const Expanded(flex: 2, child: _TableLabel('TRẠNG THÁI')),
+                    const SizedBox(width: 34),
                   ],
                 ),
               ),
@@ -1073,51 +1126,53 @@ class _DraftCard extends StatelessWidget {
   final _Draft draft;
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFFAF2),
-      border: Border.all(color: AppColors.border),
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(19),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: AppColors.antiqueIvory,
-                  borderRadius: BorderRadius.circular(6),
+  Widget build(BuildContext context) => HoverLift(
+    child: Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFAF2),
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(19),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: AppColors.antiqueIvory,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(draft.icon, color: AppColors.deepBurgundy),
                 ),
-                child: Icon(draft.icon, color: AppColors.deepBurgundy),
-              ),
-              const Spacer(),
-              Text(draft.status, style: AppTextStyles.caption),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(draft.title, style: AppTextStyles.sectionTitle),
-          const SizedBox(height: 7),
-          Text(draft.subtitle, style: AppTextStyles.bodySmall),
-          const SizedBox(height: 20),
-          const Divider(height: 1),
-          const SizedBox(height: 13),
-          Row(
-            children: [
-              Expanded(
-                child: Text(draft.updated, style: AppTextStyles.caption),
-              ),
-              IconButton(
-                tooltip: 'Mở nội dung',
-                onPressed: () {},
-                icon: const Icon(Icons.arrow_forward, size: 20),
-              ),
-            ],
-          ),
-        ],
+                const Spacer(),
+                Text(draft.status, style: AppTextStyles.caption),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Text(draft.title, style: AppTextStyles.sectionTitle),
+            const SizedBox(height: 7),
+            Text(draft.subtitle, style: AppTextStyles.bodySmall),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 13),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(draft.updated, style: AppTextStyles.caption),
+                ),
+                IconButton(
+                  tooltip: 'Mở nội dung',
+                  onPressed: () {},
+                  icon: const Icon(Icons.arrow_forward, size: 20),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -1256,9 +1311,9 @@ const _adminItems = [
     'Quản lý đơn vị và phân công nhân viên.',
   ),
   _NavItem(
-    'Giao dịch',
+    'Thương mại',
     Icons.receipt_long_outlined,
-    'Theo dõi thanh toán và quyền dịch vụ.',
+    'Đơn mua, thanh toán, hoàn tiền, hóa đơn và doanh thu.',
     badge: '3',
   ),
   _NavItem(
@@ -1269,7 +1324,7 @@ const _adminItems = [
   _NavItem(
     'Cài đặt',
     Icons.settings_outlined,
-    'Cấu hình vận hành chung của SMGS.',
+    'Cấu hình vận hành và quy tắc hoàn tiền của SMGS.',
   ),
 ];
 
@@ -1283,7 +1338,7 @@ const _curatorMetrics = [
 const _adminMetrics = [
   _Metric('1.284', 'Người dùng', '+8,4%', Icons.group_outlined),
   _Metric('06', 'Bảo tàng hoạt động', '+1', Icons.account_balance_outlined),
-  _Metric('126', 'Giao dịch hôm nay', '+14%', Icons.payments_outlined),
+  _Metric('48,6 tr', 'Doanh thu tháng', '+14%', Icons.payments_outlined),
   _Metric('98,7%', 'Hệ thống ổn định', '+0,4%', Icons.monitor_heart_outlined),
 ];
 
@@ -1380,9 +1435,31 @@ const _curatorDrafts = [
   ),
 ];
 
-List<(String, String, String, String)> _workspaceRows(String section) => [
-  ('$section · Hồ sơ 01', 'Lê Thu Hà', '10 phút trước', 'Đang xử lý'),
-  ('$section · Hồ sơ 02', 'Nguyễn Minh', 'Hôm nay', 'Chờ duyệt'),
-  ('$section · Hồ sơ 03', 'Trần Anh', 'Hôm qua', 'Đã cập nhật'),
-  ('$section · Hồ sơ 04', 'Hệ thống', '16/09/2026', 'Hoàn tất'),
-];
+List<(String, String, String, String)> _workspaceRows(
+  String section,
+) => switch (section) {
+  'Thương mại' => [
+    ('Đơn SMGS-260918-024', 'VNPay', '10 phút trước', 'Đã thanh toán'),
+    ('Hoàn tiền SMGS-260918-019', 'MoMo', 'Hôm nay', 'Chờ duyệt'),
+    ('Hóa đơn SMGS-260917-116', 'VNPay', 'Hôm qua', 'Đã phát hành'),
+    ('Đơn SMGS-260917-108', 'MoMo', '17/09/2026', 'Thất bại'),
+  ],
+  'Vai trò & phân quyền' => [
+    ('Nhóm Nhân viên nội dung', '12 tài khoản', 'Hôm nay', 'Đang hoạt động'),
+    ('Nhóm Kiểm duyệt', '04 tài khoản', 'Hôm qua', 'Đang hoạt động'),
+    ('Phạm vi Bảo tàng Quốc gia', '08 tài khoản', '16/09/2026', 'Đã cập nhật'),
+    ('Yêu cầu cấp quyền mới', '02 tài khoản', 'Hôm nay', 'Chờ duyệt'),
+  ],
+  'Bảo tàng & nhân sự' => [
+    ('Bảo tàng Lịch sử Quốc gia', '08 nhân viên', 'Hôm nay', 'Hoạt động'),
+    ('Bảo tàng Hồ Chí Minh', '06 nhân viên', 'Hôm qua', 'Hoạt động'),
+    ('Phân công khu trưng bày A', 'Lê Thu Hà', '16/09/2026', 'Đã cập nhật'),
+    ('Phân công tầng 2', 'Nguyễn Minh', '15/09/2026', 'Chờ xác nhận'),
+  ],
+  _ => [
+    ('$section · Hồ sơ 01', 'Lê Thu Hà', '10 phút trước', 'Đang xử lý'),
+    ('$section · Hồ sơ 02', 'Nguyễn Minh', 'Hôm nay', 'Chờ duyệt'),
+    ('$section · Hồ sơ 03', 'Trần Anh', 'Hôm qua', 'Đã cập nhật'),
+    ('$section · Hồ sơ 04', 'Hệ thống', '16/09/2026', 'Hoàn tất'),
+  ],
+};

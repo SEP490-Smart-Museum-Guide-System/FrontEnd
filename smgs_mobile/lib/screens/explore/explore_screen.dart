@@ -230,7 +230,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             : AppColors.darkBrown,
                         minimumSize: const Size(48, 52),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         side: const BorderSide(color: AppColors.border),
                       ),

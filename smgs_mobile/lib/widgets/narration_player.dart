@@ -5,26 +5,90 @@ import 'package:flutter/material.dart';
 import 'museum_ui.dart';
 import '../models/artifact.dart';
 
-class NarrationScreen extends StatelessWidget {
+class NarrationScreen extends StatefulWidget {
   const NarrationScreen({super.key, required this.artifact});
   final Artifact artifact;
+
+  @override
+  State<NarrationScreen> createState() => _NarrationScreenState();
+}
+
+class _NarrationScreenState extends State<NarrationScreen> {
+  String _length = 'Vừa';
+  String _detail = 'Tổng quan';
+
   @override
   Widget build(BuildContext context) => MuseumPage(
     back: true,
     title: 'Lời kể về hiện vật',
     eyebrow: 'Thuyết minh',
-    subtitle: artifact.name,
+    subtitle: widget.artifact.name,
     children: [
-      NarrationPlayer(text: artifact.aiGuide),
+      const SectionHeading('Chọn cách bạn muốn nghe'),
+      const Text('Độ dài', style: AppTextStyles.bodyMedium),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 10,
+        runSpacing: 8,
+        children: ['Ngắn', 'Vừa', 'Dài']
+            .map(
+              (value) => ChoiceChip(
+                label: Text(value),
+                selected: _length == value,
+                onSelected: (_) => setState(() => _length = value),
+                checkmarkColor: AppColors.antiqueIvory,
+                labelStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: _length == value
+                      ? AppColors.antiqueIvory
+                      : AppColors.darkBrown,
+                ),
+              ),
+            )
+            .toList(),
+      ),
+      const SizedBox(height: 18),
+      const Text('Mức độ chi tiết', style: AppTextStyles.bodyMedium),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 10,
+        runSpacing: 8,
+        children: ['Tổng quan', 'Chuyên sâu']
+            .map(
+              (value) => ChoiceChip(
+                label: Text(value),
+                selected: _detail == value,
+                onSelected: (_) => setState(() => _detail = value),
+                checkmarkColor: AppColors.antiqueIvory,
+                labelStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: _detail == value
+                      ? AppColors.antiqueIvory
+                      : AppColors.darkBrown,
+                ),
+              ),
+            )
+            .toList(),
+      ),
+      const SizedBox(height: 22),
+      AnimatedSwitcher(
+        duration: reduceHeritageMotion(context)
+            ? Duration.zero
+            : HeritageMotion.standard,
+        child: NarrationPlayer(
+          key: ValueKey('$_length:$_detail'),
+          text: widget.artifact.aiGuide,
+          variant: '$_length · $_detail',
+        ),
+      ),
       const SectionHeading('Đọc câu chuyện'),
-      Text(artifact.story, style: AppTextStyles.bodyLarge),
+      Text(widget.artifact.story, style: AppTextStyles.bodyLarge),
     ],
   );
 }
 
 class NarrationPlayer extends StatefulWidget {
-  const NarrationPlayer({super.key, required this.text});
+  const NarrationPlayer({super.key, required this.text, this.variant});
   final String text;
+  final String? variant;
   @override
   State<NarrationPlayer> createState() => _NarrationPlayerState();
 }
@@ -65,6 +129,10 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Eyebrow('Thuyết minh mẫu'),
+        if (widget.variant != null) ...[
+          const SizedBox(height: 6),
+          Text(widget.variant!, style: AppTextStyles.caption),
+        ],
         const SizedBox(height: 14),
         Text(widget.text, style: AppTextStyles.bodyLarge),
         const SizedBox(height: 18),

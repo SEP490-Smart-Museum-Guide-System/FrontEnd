@@ -54,15 +54,13 @@ class _AuthGateState extends State<AuthGate> {
               final user = AppServices.auth.user;
               if (user == null) return const AuthScreen();
               return switch (user.role) {
-                UserRole.curator => const ManagementHomeScreen(
-                  role: UserRole.curator,
+                UserRole.staff => const ManagementHomeScreen(
+                  role: UserRole.staff,
                 ),
                 UserRole.administrator => const ManagementHomeScreen(
                   role: UserRole.administrator,
                 ),
-                UserRole.visitor => MainNavigation(
-                  key: ValueKey(user.isGuest ? 'guest' : user.email),
-                ),
+                UserRole.visitor => MainNavigation(key: ValueKey(user.email)),
               };
             },
           ),
@@ -149,7 +147,7 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         if (_mode == 'login') ...[
           ClipRRect(
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(12),
             child: const MuseumPhoto(museumId: 'museum_national', height: 170),
           ),
           const SizedBox(height: 22),
@@ -160,7 +158,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
         ],
         const Notice(
-          'Bản trải nghiệm trên web. Hãy dùng thông tin mẫu; tài khoản chỉ tồn tại trong phiên này.',
+          'Đăng nhập để sử dụng SMGS. Tài khoản trải nghiệm chỉ tồn tại trong phiên này.',
         ),
         const SizedBox(height: 20),
         if (_recovered) ...[
@@ -255,17 +253,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   onPressed: _busy ? null : _submit,
                 ),
                 if (_mode == 'login') ...[
-                  const SizedBox(height: 12),
-                  SecondaryButton(
-                    label: 'Tiếp tục với vai trò khách',
-                    icon: Icons.person_outline,
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            VisitStore.instance.reset();
-                            AppServices.auth.guest();
-                          },
-                  ),
                   TextButton(
                     onPressed: _busy
                         ? null

@@ -37,6 +37,7 @@ void main() {
       await tester.pumpWidget(const SMGSApp());
       await tester.pumpAndSettle();
       expect(find.byType(AuthScreen), findsOneWidget);
+      expect(find.text('Tiếp tục với vai trò khách'), findsNothing);
       await tapText(tester, 'Đăng nhập');
       expect(find.text('Vui lòng nhập mật khẩu.'), findsOneWidget);
       await tapText(tester, 'Điền tài khoản mẫu');
@@ -44,6 +45,7 @@ void main() {
       expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
       expect(AppServices.auth.user!.name, 'Minh An');
       await tapText(tester, 'Cá nhân');
+      expect(find.byType(ProfileScreen), findsOneWidget);
       await tapText(tester, 'Đăng xuất');
       expect(AppServices.auth.user, isNull);
       expect(find.byType(AuthScreen), findsOneWidget);
@@ -92,7 +94,7 @@ void main() {
       tester
           .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
           .role,
-      UserRole.curator,
+      UserRole.staff,
     );
     AppServices.auth.logout();
     await tester.pumpAndSettle();
@@ -130,7 +132,9 @@ void main() {
     },
   );
 
-  testWidgets('Curator studio stays readable in a narrow browser', (tester) async {
+  testWidgets('Curator studio stays readable in a narrow browser', (
+    tester,
+  ) async {
     await screenSize(tester, const Size(390, 844));
     await tester.pumpWidget(const SMGSApp());
     await tester.pumpAndSettle();
@@ -165,6 +169,7 @@ void main() {
           .museumId,
       'museum_ho_chi_minh',
     );
+    expect(VisitStore.instance.history, isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(host(const QRScanScreen()));
     await tester.pumpAndSettle();
@@ -178,6 +183,24 @@ void main() {
           .id,
       'artifact_1',
     );
+    expect(
+      VisitStore.instance.history.single.artifactIds,
+      contains('artifact_1'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Narration separates duration from level of detail', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      host(NarrationScreen(artifact: mockArtifacts.first)),
+    );
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Dài');
+    await tapText(tester, 'Chuyên sâu');
+    expect(find.text('Dài · Chuyên sâu'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

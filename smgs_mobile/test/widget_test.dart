@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:smgs_mobile/main.dart';
 import 'package:smgs_mobile/services/app_services.dart';
+import 'package:smgs_mobile/models/experience.dart';
 import 'package:smgs_mobile/screens/home/home_screen.dart';
 import 'package:smgs_mobile/core/theme/app_theme.dart';
 import 'package:smgs_mobile/data/mock/mock_artifacts.dart';
@@ -37,7 +38,13 @@ Future<void> screenSize(WidgetTester tester, Size size) async {
 Future<void> tapText(WidgetTester tester, String label) async {
   final matches = find.text(label);
   if (matches.evaluate().isEmpty) {
-    final scrollable = find.byType(Scrollable).first;
+    final scrollable = find
+        .byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              axisDirectionToAxis(widget.axisDirection) == Axis.vertical,
+        )
+        .first;
     tester.state<ScrollableState>(scrollable).position.jumpTo(0);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -56,7 +63,12 @@ Future<void> tapText(WidgetTester tester, String label) async {
 
 void main() {
   setUp(() {
-    AppServices.auth.guest();
+    AppServices.auth = MockAuthService(
+      initialUser: const VisitorUser(
+        name: 'Người dùng thử',
+        email: 'nguoidung@smgs.vn',
+      ),
+    );
     final s = VisitStore.instance;
     s.reset();
   });
@@ -109,6 +121,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(VisitStore.instance.viewed.single.id, 'artifact_1');
+    expect(VisitStore.instance.history, isEmpty);
     await tester.tap(find.byTooltip('Lưu hiện vật'));
     await tester.pumpAndSettle();
     expect(VisitStore.instance.saved, contains('artifact_1'));

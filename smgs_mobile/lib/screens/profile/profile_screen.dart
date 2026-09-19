@@ -24,7 +24,7 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               color: AppColors.deepBurgundy,
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
@@ -33,7 +33,7 @@ class ProfileScreen extends StatelessWidget {
                   height: 60,
                   decoration: BoxDecoration(
                     border: Border.all(color: AppColors.mutedGold),
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(9),
                   ),
                   child: const HeritageSeal(size: 48, light: true),
                 ),
@@ -51,7 +51,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        AppServices.auth.user?.name ?? 'Khách tham quan',
+                        AppServices.auth.user?.name ?? 'Người dùng SMGS',
                         style: AppTextStyles.sectionTitle.copyWith(
                           color: AppColors.antiqueIvory,
                         ),
@@ -66,7 +66,7 @@ class ProfileScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Stat(value: '${store.viewed.length}', label: 'Đã khám phá'),
+              _Stat(value: '${store.visitedCount}', label: 'Đã tham quan'),
               _Stat(value: '${store.saved.length}', label: 'Đã lưu'),
               _Stat(value: '${store.completedTours}', label: 'Hành trình'),
             ],
@@ -146,9 +146,7 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => openPage(context, const SettingsScreen()),
           ),
           SecondaryButton(
-            label: AppServices.auth.user?.isGuest ?? true
-                ? 'Về đăng nhập'
-                : 'Đăng xuất',
+            label: 'Đăng xuất',
             icon: Icons.logout,
             onPressed: () {
               VisitStore.instance.reset();
@@ -480,7 +478,7 @@ class SettingsScreen extends StatelessWidget {
             style: AppTextStyles.bodyMedium,
           ),
           subtitle: const Text(
-            'Hiển thị nội dung ngay, tắt hiệu ứng cuộn.',
+            'Tắt hiệu ứng chuyển trang, hiện dần và dịch chuyển ảnh.',
             style: AppTextStyles.caption,
           ),
           value: AppPreferences.instance.reducedMotion,

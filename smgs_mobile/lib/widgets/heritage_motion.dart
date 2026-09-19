@@ -281,7 +281,7 @@ class StoryScaffold extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     child: Material(
                       color: AppColors.antiqueIvory,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(10),
                       child: const BackButton(),
                     ),
                   ),
@@ -308,7 +308,7 @@ class StoryScaffold extends StatelessWidget {
                           ),
                           child: Material(
                             color: AppColors.antiqueIvory,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(10),
                             child: action,
                           ),
                         ),

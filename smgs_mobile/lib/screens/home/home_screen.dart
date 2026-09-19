@@ -186,58 +186,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Material(
-                  color: AppColors.deepBurgundy,
-                  borderRadius: BorderRadius.circular(5),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: widget.onScan,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.mutedGold),
-                              borderRadius: BorderRadius.circular(3),
+                HoverLift(
+                  child: Material(
+                    color: AppColors.deepBurgundy,
+                    borderRadius: BorderRadius.circular(12),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: widget.onScan,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.mutedGold),
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                              child: const Icon(
+                                Icons.qr_code_scanner,
+                                color: AppColors.antiqueIvory,
+                                size: 25,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.qr_code_scanner,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Giải mã một hiện vật',
+                                    style: AppTextStyles.sectionTitle.copyWith(
+                                      fontSize: 18,
+                                      color: AppColors.antiqueIvory,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Quét mã · Mở câu chuyện',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.antiqueIvory,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.arrow_forward,
                               color: AppColors.antiqueIvory,
-                              size: 25,
+                              size: 22,
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Giải mã một hiện vật',
-                                  style: AppTextStyles.sectionTitle.copyWith(
-                                    fontSize: 18,
-                                    color: AppColors.antiqueIvory,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Quét mã · Mở câu chuyện',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.antiqueIvory,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.arrow_forward,
-                            color: AppColors.antiqueIvory,
-                            size: 22,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -346,8 +348,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     } else {
                       _scroll.animateTo(
                         0,
-                        duration: const Duration(milliseconds: 900),
-                        curve: Curves.easeInOutCubic,
+                        duration: const Duration(milliseconds: 620),
+                        curve: HeritageMotion.curve,
                       );
                     }
                   },
@@ -367,80 +369,82 @@ class _ArtifactEditorial extends StatelessWidget {
   const _ArtifactEditorial({required this.onTap});
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.card,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(5),
-      side: const BorderSide(color: AppColors.border),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ParallaxPhoto(
-                height: 235,
-                child: Image.asset(
-                  'assets/images/ngoc-lu-web.jpg',
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  semanticLabel: 'Trống đồng Ngọc Lũ, văn hóa Đông Sơn',
-                ),
-              ),
-              Positioned(
-                top: 14,
-                left: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  color: AppColors.antiqueIvory,
-                  child: const Eyebrow('Dấu ấn Đông Sơn'),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => HoverLift(
+    child: Material(
+      color: AppColors.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                const Text(
-                  'Tiếng vọng\ntừ ngàn xưa.',
-                  style: AppTextStyles.cardTitle,
+                ParallaxPhoto(
+                  height: 235,
+                  child: Image.asset(
+                    'assets/images/ngoc-lu-web.jpg',
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    semanticLabel: 'Trống đồng Ngọc Lũ, văn hóa Đông Sơn',
+                  ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Lần theo những vòng hoa văn, gặp lại một nền văn minh.',
-                  style: AppTextStyles.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Khám phá trống đồng',
-                        style: AppTextStyles.buttonText.copyWith(
-                          color: AppColors.deepBurgundy,
-                        ),
-                      ),
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    const SizedBox(width: 10),
-                    const Icon(
-                      Icons.arrow_forward,
-                      color: AppColors.deepBurgundy,
-                      size: 22,
-                    ),
-                  ],
+                    color: AppColors.antiqueIvory,
+                    child: const Eyebrow('Dấu ấn Đông Sơn'),
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tiếng vọng\ntừ ngàn xưa.',
+                    style: AppTextStyles.cardTitle,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Lần theo những vòng hoa văn, gặp lại một nền văn minh.',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Khám phá trống đồng',
+                          style: AppTextStyles.buttonText.copyWith(
+                            color: AppColors.deepBurgundy,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.arrow_forward,
+                        color: AppColors.deepBurgundy,
+                        size: 22,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );

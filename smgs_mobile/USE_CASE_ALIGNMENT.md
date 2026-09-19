@@ -12,12 +12,12 @@ Tài liệu này đối chiếu bản Flutter Web với sơ đồ **Smart Museum
 |---|---|---|
 | Select Museum | Đầy đủ | Trang Khám phá, danh sách bảo tàng và chi tiết bảo tàng. |
 | Discover Artifact | Đầy đủ | Từ bảo tàng hoặc tab Quét mã, người dùng chọn quét mã, nhận diện ảnh hoặc tra cứu danh sách. |
-| Scan QR Code | Mô phỏng | Khung quét, đèn mô phỏng, trạng thái xử lý, ánh xạ mã mẫu và hủy/quay lại. Không xin quyền máy ảnh trên web. |
-| Recognize Artifact by Image | Mô phỏng | Có trạng thái phân tích, kết quả phù hợp, không tìm thấy, thử lại và mở hiện vật. |
+| Scan QR Code | Mô phỏng | Khung quét, đèn mô phỏng, trạng thái xử lý, ánh xạ mã mẫu và hủy/quay lại. Quét QR ghi nhận hiện vật đã tham quan; không xin quyền máy ảnh trên web. |
+| Recognize Artifact by Image | Mô phỏng | Có trạng thái phân tích, kết quả phù hợp, không tìm thấy, thử lại và mở hiện vật; không tự ghi nhận đã tham quan. |
 | Search / Browse Artifacts | Đầy đủ | Tìm kiếm có dấu/không dấu; lọc theo bảo tàng, chủ đề, chuyên đề và phòng; xóa bộ lọc và trạng thái rỗng. |
 | View Artifact Information | Đầy đủ | Ảnh/minh họa, tên, thời kỳ, bảo tàng, phòng, chuyên đề, tóm tắt và câu chuyện chi tiết. |
 | Interact with AI Guide | Mô phỏng | Câu hỏi gợi ý, nhập câu hỏi nối tiếp, lịch sử trò chuyện, trạng thái chờ và phản hồi ngoài phạm vi. |
-| Request Audio Narration | Mô phỏng | Màn thuyết minh có đọc nội dung, phát/tạm dừng, tiến độ; chưa phát tệp âm thanh thật. Có thể đọc câu trả lời của hướng dẫn viên. |
+| Request Audio Narration | Mô phỏng | Chọn riêng độ dài và mức chi tiết; màn thuyết minh có đọc nội dung, phát/tạm dừng, tiến độ; chưa phát tệp âm thanh thật. Có thể đọc câu trả lời của hướng dẫn viên. |
 | Ask Follow-up Questions | Mô phỏng | Cho phép gửi nhiều câu hỏi trong cùng phiên trò chuyện; câu hỏi không có nguồn được trả lời minh bạch. |
 | Take Quiz | Đầy đủ | Một câu mỗi màn, bắt buộc chọn đáp án, khóa sau khi trả lời và chuyển câu tiếp theo. |
 | Receive Quiz Feedback | Đầy đủ | Hiện đúng/sai, đáp án và giải thích trước khi sang câu mới. |
@@ -62,11 +62,30 @@ Các quan hệ trên đều có đường đi tương ứng trong giao diện v�
 | View Audit Logs | Giao diện mô phỏng | Có điểm vào nhật ký; chính sách lưu và sự kiện audit cần chốt. |
 | Manage System Settings | Giao diện mô phỏng | Có điểm vào cấu hình vận hành chung. |
 
-Đăng nhập dùng chung Email/Mật khẩu và tự điều hướng theo vai trò. Khách tham quan vào giao diện mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên vào dashboard web desktop có thanh điều hướng và vùng dữ liệu rộng. Tài khoản nội bộ chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
+Đăng nhập dùng chung Email/Mật khẩu, bắt buộc với mọi người dùng và tự điều hướng theo vai trò. Khách tham quan vào giao diện mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên vào dashboard web desktop có thanh điều hướng và vùng dữ liệu rộng. Tài khoản nội bộ chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
 
 ## Payment Use Cases và hệ thống bên ngoài
 
 `PaymentService` tách khỏi giao diện. Bản web dùng `MockPaymentService`, nên có thể thay bằng adapter VNPay/MoMo hoặc cổng khác sau này. Khi tích hợp thật cần bổ sung tạo giao dịch phía máy chủ, chữ ký/xác minh callback, idempotency, đối soát và chỉ kích hoạt quyền sau khi máy chủ xác nhận trạng thái thanh toán.
+
+## Đối chiếu tài liệu tổng quan ngày 18/09/2026
+
+Các điểm đã được cập nhật theo `SMGS_Tong_quan_de_tai.md`:
+
+- Hệ thống có đúng ba vai trò `user`, `staff`, `admin`; mọi người dùng phải đăng nhập và không có chế độ khách vãng lai.
+- Chỉ quét QR ghi nhận hiện vật đã tham quan. Nhận diện ảnh hoặc mở chi tiết chỉ thêm vào danh sách vừa xem.
+- Thuyết minh cho phép chọn riêng độ dài và mức chi tiết.
+- Dashboard Staff thể hiện phạm vi bảo tàng/khu được phân công và luồng bản nháp → AI hỗ trợ → kiểm duyệt → xuất bản.
+- Dashboard Admin có khu thương mại cho đơn mua, lần thanh toán, hoàn tiền, hóa đơn và doanh thu.
+
+Các nội dung dưới đây mới dừng ở giao diện hoặc cần thêm đặc tả/API để hoàn chỉnh:
+
+- Lưu và chỉnh sửa tour AI; tách tour mẫu với tour được gợi ý; lưu bản chụp lộ trình cho từng lượt tham quan.
+- Lưu hội thoại nhiều hiện vật và liên kết phản hồi AI với phiên bản nguồn tri thức đã duyệt.
+- Phiên bản nội dung, lịch sử người tạo/người duyệt, rollback và quy tắc chuyển trạng thái chi tiết.
+- Đơn mua, nhiều lần thử thanh toán, hóa đơn, hoàn tiền theo tỷ lệ và thu hồi quyền sử dụng.
+- Chỉ mở đánh giá sau khi hoàn thành tour và lưu phản hồi của nhân viên.
+- Điểm từ quét QR, giới hạn cộng điểm và quy tắc huy hiệu sau khi các con số nghiệp vụ được chốt.
 
 ## Kết luận phạm vi
 
