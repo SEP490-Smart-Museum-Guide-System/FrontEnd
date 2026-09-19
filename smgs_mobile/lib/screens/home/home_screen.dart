@@ -136,21 +136,87 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Chạm vào\nmiền ký ức.',
-                  style: AppTextStyles.display.copyWith(
-                    fontSize: 38,
-                    height: 1.2,
-                    color: AppColors.deepBurgundy,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -1.4,
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.mutedGold.withAlpha(28),
+                      border: Border.all(
+                        color: AppColors.mutedGold.withAlpha(110),
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AppColors.mutedGold,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Gợi ý hôm nay · Hành trình 60 phút',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.deepBurgundy,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ),
+                const SizedBox(height: 14),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      right: -8,
+                      top: -20,
+                      child: Opacity(
+                        opacity: 0.07,
+                        child: const HeritageSeal(size: 118),
+                      ),
+                    ),
+                    Text(
+                      'Chạm vào\nmiền ký ức.',
+                      style: AppTextStyles.display.copyWith(
+                        fontSize: 38,
+                        height: 1.2,
+                        color: AppColors.deepBurgundy,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -1.4,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'Mỗi hiện vật, một câu chuyện đang chờ bạn.',
                   style: AppTextStyles.bodySmall,
+                ),
+                const SizedBox(height: 5),
+                Container(
+                  width: 54,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.deepBurgundy, AppColors.mutedGold],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
                 const SizedBox(height: 22),
                 TextField(
@@ -188,58 +254,96 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 HoverLift(
                   child: Material(
-                    color: AppColors.deepBurgundy,
+                    color: Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: widget.onScan,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.mutedGold),
-                                borderRadius: BorderRadius.circular(9),
-                              ),
-                              child: const Icon(
-                                Icons.qr_code_scanner,
-                                color: AppColors.antiqueIvory,
-                                size: 25,
-                              ),
+                    child: Ink(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.deepBurgundy, AppColors.darkBrown],
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          const Positioned(
+                            right: -28,
+                            top: -32,
+                            child: Opacity(
+                              opacity: 0.1,
+                              child: HeritageSeal(size: 112, light: true),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          InkWell(
+                            onTap: widget.onScan,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    'Giải mã một hiện vật',
-                                    style: AppTextStyles.sectionTitle.copyWith(
-                                      fontSize: 18,
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.antiqueIvory.withAlpha(
+                                        12,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.mutedGold,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.qr_code_scanner,
                                       color: AppColors.antiqueIvory,
+                                      size: 25,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Quét mã · Mở câu chuyện',
-                                    style: AppTextStyles.caption.copyWith(
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Giải mã một hiện vật',
+                                          style: AppTextStyles.sectionTitle
+                                              .copyWith(
+                                                fontSize: 18,
+                                                color: AppColors.antiqueIvory,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Quét mã · Mở câu chuyện',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.antiqueIvory,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.antiqueIvory.withAlpha(
+                                        18,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_forward,
                                       color: AppColors.antiqueIvory,
+                                      size: 20,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.arrow_forward,
-                              color: AppColors.antiqueIvory,
-                              size: 22,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -253,7 +357,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: AppTextStyles.caption,
                       ),
                     ),
-                    Icon(Icons.south, size: 19, color: AppColors.deepBurgundy),
+                    SoftEntrance(
+                      offset: -8,
+                      child: Icon(
+                        Icons.south,
+                        size: 19,
+                        color: AppColors.deepBurgundy,
+                      ),
+                    ),
                   ],
                 ),
                 ChapterHeading(
@@ -285,19 +396,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 const HomeThemes(),
                 const ChapterHeading(number: '04', title: 'Một giờ cho di sản'),
-                const ScrollReveal(child: HomeRouteCard()),
+                const ScrollReveal(child: HoverLift(child: HomeRouteCard())),
                 const ChapterHeading(number: '05', title: 'Một điểm hẹn khác'),
                 const ScrollReveal(child: HomeMuseumStory()),
                 const ChapterHeading(
                   number: '06',
                   title: 'Bạn hiểu di sản đến đâu?',
                 ),
-                const ScrollReveal(child: HomeQuizCard()),
+                const ScrollReveal(child: HoverLift(child: HomeQuizCard())),
                 const ChapterHeading(
                   number: '07',
                   title: 'Trước khi lên đường',
                 ),
-                const ScrollReveal(child: HomeVisitGuide()),
+                const ScrollReveal(child: HoverLift(child: HomeVisitGuide())),
                 ListenableBuilder(
                   listenable: VisitStore.instance,
                   builder: (context, _) => VisitStore.instance.viewed.isEmpty

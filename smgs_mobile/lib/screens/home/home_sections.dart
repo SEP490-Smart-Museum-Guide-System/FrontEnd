@@ -37,68 +37,71 @@ class HomeThemes extends StatelessWidget {
         ),
       ])
         ScrollReveal(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Material(
-              color: AppColors.card,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: const BorderSide(color: AppColors.border),
-              ),
-              child: InkWell(
-                onTap: () => openPage(
-                  context,
-                  ExploreScreen(
-                    standalone: true,
-                    artifactCategory: theme.category,
-                  ),
+          child: HoverLift(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Material(
+                color: AppColors.card,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: AppColors.border),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        child: Column(
-                          children: [
-                            Icon(
-                              theme.icon,
-                              color: AppColors.deepBurgundy,
-                              size: 30,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              theme.number,
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.mutedGold,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => openPage(
+                    context,
+                    ExploreScreen(
+                      standalone: true,
+                      artifactCategory: theme.category,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 40,
+                          child: Column(
+                            children: [
+                              Icon(
+                                theme.icon,
+                                color: AppColors.deepBurgundy,
+                                size: 30,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              theme.title,
-                              style: AppTextStyles.sectionTitle.copyWith(
-                                fontSize: 19,
+                              const SizedBox(height: 6),
+                              Text(
+                                theme.number,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.mutedGold,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(theme.caption, style: AppTextStyles.caption),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.north_east,
-                        size: 20,
-                        color: AppColors.deepBurgundy,
-                      ),
-                    ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                theme.title,
+                                style: AppTextStyles.sectionTitle.copyWith(
+                                  fontSize: 19,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(theme.caption, style: AppTextStyles.caption),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Icon(
+                          Icons.north_east,
+                          size: 20,
+                          color: AppColors.deepBurgundy,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -226,7 +229,7 @@ class HomeRouteCard extends StatelessWidget {
                       ),
                       textStyle: AppTextStyles.buttonText,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     onPressed: () => openPage(

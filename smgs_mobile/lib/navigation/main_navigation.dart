@@ -115,13 +115,21 @@ class _MainNavigationState extends State<MainNavigation> {
                                     ? Duration.zero
                                     : HeritageMotion.fast,
                                 curve: HeritageMotion.curve,
-                                width: 40,
-                                height: 34,
+                                width: active ? 46 : 40,
+                                height: 36,
                                 decoration: BoxDecoration(
                                   color: i == 2
                                       ? AppColors.deepBurgundy
+                                      : active
+                                      ? AppColors.deepBurgundy.withAlpha(22)
                                       : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(5),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: active && i != 2
+                                      ? Border.all(
+                                          color: AppColors.deepBurgundy
+                                              .withAlpha(32),
+                                        )
+                                      : null,
                                 ),
                                 alignment: Alignment.center,
                                 child: AnimatedScale(
@@ -142,8 +150,11 @@ class _MainNavigationState extends State<MainNavigation> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                item.label,
+                              AnimatedDefaultTextStyle(
+                                duration: reduceHeritageMotion(context)
+                                    ? Duration.zero
+                                    : HeritageMotion.fast,
+                                curve: HeritageMotion.curve,
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.caption.copyWith(
                                   fontWeight: active
@@ -153,6 +164,7 @@ class _MainNavigationState extends State<MainNavigation> {
                                       ? AppColors.deepBurgundy
                                       : AppColors.secondaryText,
                                 ),
+                                child: Text(item.label),
                               ),
                               const SizedBox(height: 10),
                             ],
