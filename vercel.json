@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd smgs_mobile && bash vercel-build.sh",
+  "outputDirectory": "smgs_mobile/build/web",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
