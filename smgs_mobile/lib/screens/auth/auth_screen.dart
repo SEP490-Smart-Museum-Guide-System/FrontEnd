@@ -54,6 +54,9 @@ class _AuthGateState extends State<AuthGate> {
               final user = AppServices.auth.user;
               if (user == null) return const AuthScreen();
               return switch (user.role) {
+                UserRole.museumStaff => const ManagementHomeScreen(
+                  role: UserRole.museumStaff,
+                ),
                 UserRole.staff => const ManagementHomeScreen(
                   role: UserRole.staff,
                 ),
@@ -308,8 +311,14 @@ class _RoleAccountPanel extends StatelessWidget {
         const SizedBox(height: 8),
         _RoleAccount(
           icon: Icons.badge_outlined,
-          label: 'Nhân viên / Kiểm duyệt viên',
+          label: 'Kiểm duyệt viên',
           email: 'curator@smgs.vn',
+          onTap: onSelected,
+        ),
+        _RoleAccount(
+          icon: Icons.museum_outlined,
+          label: 'Nhân viên bảo tàng',
+          email: 'museumstaff@smgs.vn',
           onTap: onSelected,
         ),
         _RoleAccount(

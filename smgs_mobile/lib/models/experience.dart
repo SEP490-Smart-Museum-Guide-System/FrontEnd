@@ -1,4 +1,4 @@
-enum UserRole { visitor, staff, administrator }
+enum UserRole { visitor, museumStaff, staff, administrator }
 
 class VisitorUser {
   const VisitorUser({

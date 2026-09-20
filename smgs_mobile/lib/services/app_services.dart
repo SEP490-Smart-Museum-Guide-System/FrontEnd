@@ -29,6 +29,11 @@ class MockAuthService extends AuthService {
       password: 'smgs123',
       role: UserRole.staff,
     ),
+    'museumstaff@smgs.vn': (
+      name: 'Nguyễn Minh Khoa',
+      password: 'smgs123',
+      role: UserRole.museumStaff,
+    ),
     'admin@smgs.vn': (
       name: 'Quản trị SMGS',
       password: 'smgs123',
@@ -213,32 +218,26 @@ class MockPremiumCatalog implements PremiumCatalog {
   @override
   List<PremiumOffer> get offers => const [
     PremiumOffer(
-      id: 'guide',
-      name: 'Hướng dẫn viên thông minh',
-      description: 'Hỏi đáp theo từng hiện vật trong ngày tham quan.',
-      price: 30000,
-      kind: DigitalServiceKind.guide,
+      id: 'ticket',
+      name: 'Vé vào cửa bảo tàng',
+      description: 'Vé tham quan theo ngày tại bảo tàng đã chọn.',
+      price: 50000,
+      kind: DigitalServiceKind.exhibition,
     ),
     PremiumOffer(
-      id: 'narration',
-      name: 'Thuyết minh trọn bộ',
-      description: 'Nội dung thuyết minh cho các hiện vật trong bộ sưu tập.',
-      price: 25000,
+      id: 'digital-guide',
+      name: 'Hướng dẫn số',
+      description:
+          'Thuyết minh, trợ lý AI và nội dung số trong ngày tham quan.',
+      price: 20000,
       kind: DigitalServiceKind.narration,
     ),
     PremiumOffer(
-      id: 'tour',
-      name: 'Hành trình cá nhân',
-      description: 'Lộ trình theo thời gian và những điều bạn yêu thích.',
-      price: 20000,
-      kind: DigitalServiceKind.tour,
-    ),
-    PremiumOffer(
-      id: 'exhibition',
-      name: 'Chuyên đề mở rộng',
-      description: 'Đọc thêm câu chuyện và tư liệu của các chủ đề trưng bày.',
-      price: 35000,
-      kind: DigitalServiceKind.exhibition,
+      id: 'combo',
+      name: 'Vé + Hướng dẫn số',
+      description: 'Một gói gồm vé vào cửa và toàn bộ quyền Hướng dẫn số.',
+      price: 65000,
+      kind: DigitalServiceKind.guide,
     ),
   ];
 }

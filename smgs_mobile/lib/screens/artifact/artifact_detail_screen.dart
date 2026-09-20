@@ -7,6 +7,7 @@ import '../ai_guide/ai_guide_screen.dart';
 import 'quiz_screen.dart';
 import '../../widgets/narration_player.dart';
 import '../profile/profile_screen.dart';
+import 'artifact_3d_screen.dart';
 
 class ArtifactDetailScreen extends StatefulWidget {
   const ArtifactDetailScreen({
@@ -108,6 +109,14 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           icon: Icons.menu_book_outlined,
           onPressed: () => openPage(context, NarrationScreen(artifact: a)),
         ),
+        if (a.id == 'artifact_1') ...[
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Xem mô hình 3D',
+            icon: Icons.view_in_ar_outlined,
+            onPressed: () => openPage(context, Artifact3DScreen(artifact: a)),
+          ),
+        ],
         const SectionHeading('Những điều còn lưu lại'),
         ScrollReveal(child: Text(a.story, style: AppTextStyles.bodyLarge)),
         const SizedBox(height: 24),

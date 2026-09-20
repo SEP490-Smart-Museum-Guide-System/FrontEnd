@@ -107,6 +107,17 @@ class MuseumDetailScreen extends StatelessWidget {
         ...artifacts.map((a) => ScrollReveal(child: ArtifactCard(artifact: a))),
         const SectionHeading('Chuẩn bị chuyến tham quan'),
         ActionTile(
+          title: 'Chỉ đường đến bảo tàng',
+          subtitle: 'Mở vị trí bảo tàng trên Google Maps.',
+          icon: Icons.directions_outlined,
+          onTap: () => showReading(
+            context,
+            title: 'Chỉ đường đến bảo tàng',
+            text:
+                '${museum.name}\n${museum.location}\n\nBản trải nghiệm chưa mở liên kết bên ngoài. Khi kết nối thật, nút này sẽ chuyển sang Google Maps để dẫn đường đến bảo tàng.',
+          ),
+        ),
+        ActionTile(
           title: 'Hành trình dành cho bạn',
           subtitle: 'Chọn thời gian và sở thích để bắt đầu.',
           icon: Icons.route_outlined,
@@ -116,9 +127,9 @@ class MuseumDetailScreen extends StatelessWidget {
           ),
         ),
         ActionTile(
-          title: 'Dịch vụ số',
-          subtitle: 'Tìm hiểu các tiện ích đồng hành.',
-          icon: Icons.headphones_outlined,
+          title: 'Vé & Hướng dẫn số',
+          subtitle: 'Chọn vé vào cửa, Hướng dẫn số hoặc gói kết hợp.',
+          icon: Icons.confirmation_number_outlined,
           onTap: () => openPage(
             context,
             ServicesScreen(museumName: museum.name, museumId: museum.id),

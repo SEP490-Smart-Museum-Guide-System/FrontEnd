@@ -32,7 +32,9 @@ class SMGSApp extends StatelessWidget {
       builder: (context, _) {
         final role = AppServices.auth.user?.role;
         final isManagement =
-            role == UserRole.staff || role == UserRole.administrator;
+            role == UserRole.museumStaff ||
+            role == UserRole.staff ||
+            role == UserRole.administrator;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             disableAnimations:

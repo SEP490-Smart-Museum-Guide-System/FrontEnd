@@ -95,9 +95,9 @@ class ProfileScreen extends StatelessWidget {
                 openPage(context, const PersonalCollectionScreen(kind: 'quiz')),
           ),
           ActionTile(
-            title: 'Dịch vụ số',
-            subtitle: 'Tiện ích cho chuyến tham quan.',
-            icon: Icons.headphones_outlined,
+            title: 'Vé & Hướng dẫn số',
+            subtitle: 'Vé vào cửa, quyền truy cập và gói kết hợp.',
+            icon: Icons.confirmation_number_outlined,
             onTap: () => openPage(context, const ServicesScreen()),
           ),
           ActionTile(
@@ -107,8 +107,8 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => openPage(context, const BadgesScreen()),
           ),
           ActionTile(
-            title: 'Dịch vụ đã đăng ký',
-            subtitle: 'Xem quyền sử dụng theo ngày và bảo tàng.',
+            title: 'Đơn mua của bạn',
+            subtitle: 'Xem vé, quyền sử dụng và lịch sử thanh toán.',
             icon: Icons.receipt_long_outlined,
             onTap: () => openPage(context, const PurchasedServicesScreen()),
           ),

@@ -16,6 +16,7 @@ class NarrationScreen extends StatefulWidget {
 class _NarrationScreenState extends State<NarrationScreen> {
   String _length = 'Vừa';
   String _detail = 'Tổng quan';
+  String _format = 'Âm thanh';
 
   @override
   Widget build(BuildContext context) => MuseumPage(
@@ -25,6 +26,27 @@ class _NarrationScreenState extends State<NarrationScreen> {
     subtitle: widget.artifact.name,
     children: [
       const SectionHeading('Chọn cách bạn muốn nghe'),
+      const Panel(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.language_outlined, color: AppColors.deepBurgundy),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Ngôn ngữ', style: AppTextStyles.caption),
+                  SizedBox(height: 3),
+                  Text('Tiếng Việt', style: AppTextStyles.bodyMedium),
+                ],
+              ),
+            ),
+            Icon(Icons.check_circle, color: AppColors.mutedGold),
+          ],
+        ),
+      ),
+      const SizedBox(height: 18),
       const Text('Độ dài', style: AppTextStyles.bodyMedium),
       const SizedBox(height: 10),
       Wrap(
@@ -68,16 +90,65 @@ class _NarrationScreenState extends State<NarrationScreen> {
             )
             .toList(),
       ),
+      const SizedBox(height: 18),
+      const Text('Định dạng', style: AppTextStyles.bodyMedium),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 10,
+        runSpacing: 8,
+        children: ['Âm thanh', 'Văn bản']
+            .map(
+              (value) => ChoiceChip(
+                avatar: Icon(
+                  value == 'Âm thanh'
+                      ? Icons.headphones_outlined
+                      : Icons.article_outlined,
+                  size: 18,
+                  color: _format == value
+                      ? AppColors.antiqueIvory
+                      : AppColors.deepBurgundy,
+                ),
+                label: Text(value),
+                selected: _format == value,
+                onSelected: (_) => setState(() => _format = value),
+                checkmarkColor: AppColors.antiqueIvory,
+                labelStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: _format == value
+                      ? AppColors.antiqueIvory
+                      : AppColors.darkBrown,
+                ),
+              ),
+            )
+            .toList(),
+      ),
       const SizedBox(height: 22),
       AnimatedSwitcher(
         duration: reduceHeritageMotion(context)
             ? Duration.zero
             : HeritageMotion.standard,
-        child: NarrationPlayer(
-          key: ValueKey('$_length:$_detail'),
-          text: widget.artifact.aiGuide,
-          variant: '$_length · $_detail',
-        ),
+        child: _format == 'Âm thanh'
+            ? NarrationPlayer(
+                key: ValueKey('$_length:$_detail:$_format'),
+                text: widget.artifact.aiGuide,
+                variant: '$_length · $_detail',
+              )
+            : Panel(
+                key: ValueKey('$_length:$_detail:$_format'),
+                gold: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Eyebrow('Bản đọc tiếng Việt'),
+                    const SizedBox(height: 8),
+                    Text('$_length · $_detail', style: AppTextStyles.caption),
+                    const SizedBox(height: 14),
+                    Text(
+                      widget.artifact.aiGuide,
+                      style: AppTextStyles.bodyLarge,
+                    ),
+                  ],
+                ),
+              ),
       ),
       const SectionHeading('Đọc câu chuyện'),
       Text(widget.artifact.story, style: AppTextStyles.bodyLarge),

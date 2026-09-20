@@ -8,6 +8,7 @@ import 'package:smgs_mobile/models/experience.dart';
 import 'package:smgs_mobile/screens/auth/auth_screen.dart';
 import 'package:smgs_mobile/screens/artifact/qr_scan_screen.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_detail_screen.dart';
+import 'package:smgs_mobile/screens/artifact/artifact_3d_screen.dart';
 import 'package:smgs_mobile/screens/profile/profile_screen.dart';
 import 'package:smgs_mobile/screens/profile/history_screen.dart';
 import 'package:smgs_mobile/screens/profile/services_screen.dart';
@@ -79,7 +80,7 @@ void main() {
     },
   );
 
-  testWidgets('Sample accounts open curator and administrator workspaces', (
+  testWidgets('Sample accounts open all internal role workspaces', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
@@ -96,6 +97,20 @@ void main() {
           .role,
       UserRole.staff,
     );
+    AppServices.auth.logout();
+    await tester.pumpAndSettle();
+
+    await tester.enterText(field('Email'), 'museumstaff@smgs.vn');
+    await tester.enterText(field('Mật khẩu'), 'smgs123');
+    await tapText(tester, 'Đăng nhập');
+    expect(find.byType(ManagementHomeScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
+          .role,
+      UserRole.museumStaff,
+    );
+    expect(find.text('Chăm chút từng\nhiện vật.'), findsOneWidget);
     AppServices.auth.logout();
     await tester.pumpAndSettle();
 
@@ -198,9 +213,51 @@ void main() {
       host(NarrationScreen(artifact: mockArtifacts.first)),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Tiếng Việt'), findsOneWidget);
+    await tapText(tester, 'Văn bản');
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Văn bản'))
+          .selected,
+      isTrue,
+    );
     await tapText(tester, 'Dài');
     await tapText(tester, 'Chuyên sâu');
     expect(find.text('Dài · Chuyên sâu'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Artifact with a model opens the simulated 3D viewer', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      host(
+        ArtifactDetailScreen(
+          artifact: mockArtifacts.first,
+          museumName: 'Bảo tàng Lịch sử Quốc gia',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Xem mô hình 3D');
+    expect(find.byType(Artifact3DScreen), findsOneWidget);
+    expect(find.text('Kéo ngang để xoay'), findsOneWidget);
+    expect(find.text('Đặt lại góc nhìn'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Product selection shows ticket, digital guide and combo', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(host(const ServicesScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Vé vào cửa bảo tàng'), findsOneWidget);
+    await tapText(tester, 'Hướng dẫn số');
+    expect(find.text('Hướng dẫn số'), findsOneWidget);
+    await tapText(tester, 'Vé + Hướng dẫn số');
+    expect(find.text('Vé + Hướng dẫn số'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -299,7 +356,7 @@ void main() {
       await tapText(tester, 'Xác nhận thanh toán mô phỏng');
       expect(find.text('Đã đăng ký dịch vụ'), findsOneWidget);
       expect(VisitStore.instance.purchases, hasLength(1));
-      await tapText(tester, 'Bắt đầu sử dụng dịch vụ');
+      await tapText(tester, 'Mở Hướng dẫn số');
       expect(find.byType(NarrationScreen), findsOneWidget);
       await tapText(tester, 'Phát thử mô phỏng');
       await tester.pump(const Duration(seconds: 2));

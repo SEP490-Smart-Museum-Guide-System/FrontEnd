@@ -15,9 +15,9 @@ Tài liệu này đối chiếu bản Flutter Web với sơ đồ **Smart Museum
 | Scan QR Code | Mô phỏng | Khung quét, đèn mô phỏng, trạng thái xử lý, ánh xạ mã mẫu và hủy/quay lại. Quét QR ghi nhận hiện vật đã tham quan; không xin quyền máy ảnh trên web. |
 | Recognize Artifact by Image | Mô phỏng | Có trạng thái phân tích, kết quả phù hợp, không tìm thấy, thử lại và mở hiện vật; không tự ghi nhận đã tham quan. |
 | Search / Browse Artifacts | Đầy đủ | Tìm kiếm có dấu/không dấu; lọc theo bảo tàng, chủ đề, chuyên đề và phòng; xóa bộ lọc và trạng thái rỗng. |
-| View Artifact Information | Đầy đủ | Ảnh/minh họa, tên, thời kỳ, bảo tàng, phòng, chuyên đề, tóm tắt và câu chuyện chi tiết. |
+| View Artifact Information | Đầy đủ | Ảnh/minh họa, tên, thời kỳ, bảo tàng, phòng, chuyên đề, tóm tắt, câu chuyện chi tiết và điểm vào mô hình 3D khi hiện vật hỗ trợ. |
 | Interact with AI Guide | Mô phỏng | Câu hỏi gợi ý, nhập câu hỏi nối tiếp, lịch sử trò chuyện, trạng thái chờ và phản hồi ngoài phạm vi. |
-| Request Audio Narration | Mô phỏng | Chọn riêng độ dài và mức chi tiết; màn thuyết minh có đọc nội dung, phát/tạm dừng, tiến độ; chưa phát tệp âm thanh thật. Có thể đọc câu trả lời của hướng dẫn viên. |
+| Request Audio Narration | Mô phỏng | Ngôn ngữ hiện là Tiếng Việt; chọn riêng độ dài, mức chi tiết và định dạng văn bản/âm thanh; màn thuyết minh có phát/tạm dừng và tiến độ nhưng chưa phát tệp âm thanh thật. |
 | Ask Follow-up Questions | Mô phỏng | Cho phép gửi nhiều câu hỏi trong cùng phiên trò chuyện; câu hỏi không có nguồn được trả lời minh bạch. |
 | Take Quiz | Đầy đủ | Một câu mỗi màn, bắt buộc chọn đáp án, khóa sau khi trả lời và chuyển câu tiếp theo. |
 | Receive Quiz Feedback | Đầy đủ | Hiện đúng/sai, đáp án và giải thích trước khi sang câu mới. |
@@ -29,7 +29,7 @@ Tài liệu này đối chiếu bản Flutter Web với sơ đồ **Smart Museum
 | View Visit History | Đầy đủ trong phiên | Nhóm theo ngày/bảo tàng; chi tiết hiện vật, hành trình, điểm bỏ qua và lượt thử tài. |
 | View Quiz Results / Progress | Đầy đủ trong phiên | Tổng điểm, số hiện vật, huy hiệu, số lượt làm và kết quả tốt nhất theo hiện vật. |
 | Submit Rating / Feedback | Đầy đủ trong phiên | Nhãn đánh giá bằng chữ, bắt buộc chọn mức, bình luận tùy chọn; liên kết đúng ứng dụng/bảo tàng/hiện vật/chuyến đi. |
-| Purchase Premium Content / Pass | Mô phỏng | 4 dịch vụ số theo bảo tàng và ngày; dùng thuật ngữ dịch vụ số, không gọi là vé vào cửa. |
+| Ticket, Digital Guide & Combo | Mô phỏng | Chọn riêng vé vào cửa, Hướng dẫn số hoặc gói kết hợp theo bảo tàng và ngày; có vé điện tử mẫu và quyền sử dụng theo sản phẩm. |
 | Process Payment | Mô phỏng | Chọn VNPay/MoMo, chọn kết quả thành công/thất bại, trạng thái xử lý và thử lại; không thu tiền thật. |
 | Activate Premium Access | Đầy đủ trong phiên | Chỉ giao dịch mô phỏng thành công mới kích hoạt; chống đăng ký trùng; quyền dùng gắn với bảo tàng và ngày. |
 
@@ -62,7 +62,7 @@ Các quan hệ trên đều có đường đi tương ứng trong giao diện v�
 | View Audit Logs | Giao diện mô phỏng | Có điểm vào nhật ký; chính sách lưu và sự kiện audit cần chốt. |
 | Manage System Settings | Giao diện mô phỏng | Có điểm vào cấu hình vận hành chung. |
 
-Đăng nhập dùng chung Email/Mật khẩu, bắt buộc với mọi người dùng và tự điều hướng theo vai trò. Khách tham quan vào giao diện mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên vào dashboard web desktop có thanh điều hướng và vùng dữ liệu rộng. Tài khoản nội bộ chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
+Đăng nhập dùng chung Email/Mật khẩu, bắt buộc với mọi người dùng và tự điều hướng theo vai trò. Khách tham quan vào giao diện mobile; Nhân viên bảo tàng, Kiểm duyệt viên và Quản trị viên vào dashboard web desktop có thanh điều hướng và vùng dữ liệu rộng. Tài khoản nội bộ chỉ dùng để duyệt giao diện; không cho tự đăng ký hoặc tự chọn quyền.
 
 ## Payment Use Cases và hệ thống bên ngoài
 
@@ -72,7 +72,7 @@ Các quan hệ trên đều có đường đi tương ứng trong giao diện v�
 
 Các điểm đã được cập nhật theo `SMGS_Tong_quan_de_tai.md`:
 
-- Hệ thống có đúng ba vai trò `user`, `staff`, `admin`; mọi người dùng phải đăng nhập và không có chế độ khách vãng lai.
+- Prototype có bốn không gian theo vai trò: Khách tham quan (`visitor`), Nhân viên bảo tàng (`museumStaff`), Kiểm duyệt viên (`staff`) và Quản trị viên (`administrator`). Mọi người dùng phải đăng nhập và không có chế độ khách vãng lai.
 - Chỉ quét QR ghi nhận hiện vật đã tham quan. Nhận diện ảnh hoặc mở chi tiết chỉ thêm vào danh sách vừa xem.
 - Thuyết minh cho phép chọn riêng độ dài và mức chi tiết.
 - Dashboard Staff thể hiện phạm vi bảo tàng/khu được phân công và luồng bản nháp → AI hỗ trợ → kiểm duyệt → xuất bản.
@@ -94,3 +94,15 @@ Các nội dung dưới đây mới dừng ở giao diện hoặc cần thêm đ
 - **Payment Gateway:** có ranh giới service và đủ luồng thành công/thất bại trong prototype; chưa kết nối giao dịch thật.
 
 Các tệp kiểm thử chính: `test/main_flows_test.dart`, `test/widget_test.dart`, `test/home_test.dart`, `test/motion_test.dart`.
+
+## Đối chiếu bản cập nhật hợp nhất ngày 20/09/2026
+
+UI đã được điều chỉnh nhẹ theo `SMGS_UI_Changes_Latest_Merged.md`:
+
+- Hiện vật Trống đồng có nút **Xem mô hình 3D** và trình xem mô phỏng kéo để xoay, thay đổi tỷ lệ và đặt lại góc nhìn.
+- Cài đặt thuyết minh thể hiện **Tiếng Việt**, độ dài, mức chi tiết và định dạng **Âm thanh / Văn bản**.
+- Chi tiết bảo tàng có điểm vào **Chỉ đường đến bảo tàng** và **Vé & Hướng dẫn số**.
+- Khu mua hàng dùng ba sản phẩm chính thức: **Vé vào cửa**, **Hướng dẫn số**, **Vé + Hướng dẫn số**; vé điện tử và thanh toán vẫn được ghi rõ là mô phỏng.
+- Hồ sơ tách rõ **Vé & Hướng dẫn số** với **Đơn mua của bạn**.
+
+Các phần cần backend hoặc dữ liệu chuyên dụng vẫn chưa được khẳng định là hoàn chỉnh: mô hình 3D thật, liên kết Google Maps, một tài khoản/một phiên thiết bị, hội thoại AI nhiều hiện vật được lưu lâu dài, chỉnh sửa tour đã lưu, nhiều lần thanh toán cho một đơn và toàn bộ lịch sử phiên bản nội dung.

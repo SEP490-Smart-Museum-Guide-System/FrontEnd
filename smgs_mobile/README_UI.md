@@ -1,6 +1,6 @@
 # SMGS — Cẩm nang bảo tàng Việt
 
-Bản trải nghiệm Flutter Web triển khai theo `SMGS_Main_Flow_Full_Spec.md` và [`SMGS_Tong_quan_de_tai.md`](SMGS_Tong_quan_de_tai.md). Khách tham quan dùng bố cục mobile; Nhân viên / Kiểm duyệt viên và Quản trị viên dùng dashboard web desktop. Giao diện và thông báo bằng tiếng Việt; phong cách giấy ngà, đỏ trầm, nâu và vàng cổ. Không cần trình giả lập.
+Bản trải nghiệm Flutter Web triển khai theo `SMGS_Main_Flow_Full_Spec.md`, [`SMGS_Tong_quan_de_tai.md`](SMGS_Tong_quan_de_tai.md) và [`SMGS_UI_Changes_Latest_Merged.md`](SMGS_UI_Changes_Latest_Merged.md). Khách tham quan dùng bố cục mobile; Nhân viên bảo tàng, Kiểm duyệt viên và Quản trị viên dùng dashboard web desktop. Giao diện và thông báo bằng tiếng Việt; phong cách giấy ngà, đỏ trầm, nâu và vàng cổ. Không cần trình giả lập.
 
 Ma trận đối chiếu từng use case trong sơ đồ: [`USE_CASE_ALIGNMENT.md`](USE_CASE_ALIGNMENT.md).
 
@@ -17,7 +17,8 @@ Mở http://localhost:8080, chọn một tài khoản mẫu rồi **Đăng nhậ
 Các tài khoản mẫu dùng chung mật khẩu `smgs123`:
 
 - Khách tham quan: `khach@smgs.vn`
-- Nhân viên / Kiểm duyệt viên: `curator@smgs.vn`
+- Kiểm duyệt viên: `curator@smgs.vn`
+- Nhân viên bảo tàng: `museumstaff@smgs.vn`
 - Quản trị viên: `admin@smgs.vn`
 
 Đây là thông tin mẫu được đóng gói cho bản thử nghiệm, không phải tài khoản thật. Đăng ký mới luôn tạo tài khoản khách tham quan trong bộ nhớ của phiên hiện tại. Hệ thống tự nhận diện vai trò từ tài khoản, không cho người dùng tự chọn quyền.

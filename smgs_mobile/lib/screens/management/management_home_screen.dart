@@ -17,7 +17,12 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
   int _selectedIndex = 0;
 
   bool get _isAdmin => widget.role == UserRole.administrator;
-  List<_NavItem> get _items => _isAdmin ? _adminItems : _curatorItems;
+  bool get _isMuseumStaff => widget.role == UserRole.museumStaff;
+  List<_NavItem> get _items => _isAdmin
+      ? _adminItems
+      : _isMuseumStaff
+      ? _museumStaffItems
+      : _curatorItems;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -31,6 +36,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
           children: [
             _Sidebar(
               isAdmin: _isAdmin,
+              isMuseumStaff: _isMuseumStaff,
               items: _items,
               selectedIndex: _selectedIndex,
               onSelected: (index) => setState(() => _selectedIndex = index),
@@ -38,7 +44,10 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             Expanded(
               child: Column(
                 children: [
-                  _TopBar(isAdmin: _isAdmin),
+                  _TopBar(
+                    isAdmin: _isAdmin,
+                    isMuseumStaff: _isMuseumStaff,
+                  ),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(32, 30, 32, 48),
@@ -58,10 +67,19 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     backgroundColor: _isAdmin
         ? const Color(0xFFF3F5F7)
         : const Color(0xFFF6EFE4),
-    appBar: AppBar(title: Text(_isAdmin ? 'Quản trị SMGS' : 'Nghiệp vụ SMGS')),
+    appBar: AppBar(
+      title: Text(
+        _isAdmin
+            ? 'Quản trị SMGS'
+            : _isMuseumStaff
+            ? 'Bảo tàng SMGS'
+            : 'Nghiệp vụ SMGS',
+      ),
+    ),
     drawer: Drawer(
       child: _Sidebar(
         isAdmin: _isAdmin,
+        isMuseumStaff: _isMuseumStaff,
         items: _items,
         selectedIndex: _selectedIndex,
         compact: true,
@@ -81,7 +99,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
     final page = _selectedIndex == 0
         ? (_isAdmin
               ? const _OverviewPage(isAdmin: true)
-              : const _CuratorStudio())
+              : _CuratorStudio(isMuseumStaff: _isMuseumStaff))
         : _WorkspacePage(item: _items[_selectedIndex], isAdmin: _isAdmin);
     if (reduceHeritageMotion(context)) return page;
     return AnimatedSwitcher(
@@ -108,13 +126,14 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
 class _Sidebar extends StatelessWidget {
   const _Sidebar({
     required this.isAdmin,
+    required this.isMuseumStaff,
     required this.items,
     required this.selectedIndex,
     required this.onSelected,
     this.compact = false,
   });
 
-  final bool isAdmin, compact;
+  final bool isAdmin, isMuseumStaff, compact;
   final List<_NavItem> items;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
@@ -145,7 +164,11 @@ class _Sidebar extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        isAdmin ? 'Cổng quản trị' : 'Cổng nghiệp vụ',
+                        isAdmin
+                            ? 'Cổng quản trị'
+                            : isMuseumStaff
+                            ? 'Không gian bảo tàng'
+                            : 'Cổng kiểm duyệt',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.antiqueIvory.withValues(alpha: .72),
                         ),
@@ -253,9 +276,9 @@ class _Sidebar extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.isAdmin});
+  const _TopBar({required this.isAdmin, required this.isMuseumStaff});
 
-  final bool isAdmin;
+  final bool isAdmin, isMuseumStaff;
 
   @override
   Widget build(BuildContext context) {
@@ -321,7 +344,11 @@ class _TopBar extends StatelessWidget {
                 ),
               ),
               Text(
-                isAdmin ? 'Quản trị viên' : 'Nhân viên kiểm duyệt',
+                isAdmin
+                    ? 'Quản trị viên'
+                    : isMuseumStaff
+                    ? 'Nhân viên bảo tàng'
+                    : 'Kiểm duyệt viên',
                 style: AppTextStyles.caption.copyWith(fontSize: 12),
               ),
             ],
@@ -333,7 +360,9 @@ class _TopBar extends StatelessWidget {
 }
 
 class _CuratorStudio extends StatelessWidget {
-  const _CuratorStudio();
+  const _CuratorStudio({this.isMuseumStaff = false});
+
+  final bool isMuseumStaff;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -359,10 +388,17 @@ class _CuratorStudio extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Eyebrow('Bàn biên tập hôm nay', light: true),
+                  Eyebrow(
+                    isMuseumStaff
+                        ? 'Không gian bảo tàng hôm nay'
+                        : 'Bàn kiểm duyệt hôm nay',
+                    light: true,
+                  ),
                   const SizedBox(height: 10),
                   Text(
-                    'Kể câu chuyện\ndi sản thật hay.',
+                    isMuseumStaff
+                        ? 'Chăm chút từng\nhiện vật.'
+                        : 'Kể câu chuyện\ndi sản thật hay.',
                     style: AppTextStyles.display.copyWith(
                       color: AppColors.lightText,
                       fontSize: 36,
@@ -370,7 +406,9 @@ class _CuratorStudio extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '12 nội dung đang chờ bạn kiểm duyệt trước khi xuất bản.',
+                    isMuseumStaff
+                        ? '06 hồ sơ hiện vật đang chờ bạn hoàn thiện và gửi kiểm duyệt.'
+                        : '12 nội dung đang chờ bạn kiểm duyệt trước khi xuất bản.',
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.antiqueIvory.withValues(alpha: .8),
                     ),
@@ -404,7 +442,11 @@ class _CuratorStudio extends StatelessWidget {
                     ),
                     onPressed: () {},
                     icon: const Icon(Icons.edit_note_outlined),
-                    label: const Text('Mở hàng chờ kiểm duyệt'),
+                    label: Text(
+                      isMuseumStaff
+                          ? 'Thêm hiện vật mới'
+                          : 'Mở hàng chờ kiểm duyệt',
+                    ),
                   ),
                 ],
               ),
@@ -1286,6 +1328,40 @@ const _curatorItems = [
     'Phản hồi & báo cáo',
     Icons.insights_outlined,
     'Theo dõi đánh giá và báo cáo theo bảo tàng.',
+  ),
+];
+
+const _museumStaffItems = [
+  _NavItem(
+    'Tổng quan',
+    Icons.dashboard_outlined,
+    'Tổng quan nội dung trong phạm vi bảo tàng được giao.',
+  ),
+  _NavItem(
+    'Hiện vật',
+    Icons.museum_outlined,
+    'Thêm hiện vật và cập nhật hồ sơ hiện vật.',
+  ),
+  _NavItem(
+    'Hình ảnh & 3D',
+    Icons.view_in_ar_outlined,
+    'Tải hình ảnh, tệp media và mô hình 3D.',
+  ),
+  _NavItem(
+    'Phòng & bản đồ',
+    Icons.map_outlined,
+    'Cập nhật phòng, khu vực và vị trí hiện vật.',
+  ),
+  _NavItem(
+    'Gửi kiểm duyệt',
+    Icons.send_outlined,
+    'Gửi phiên bản nội dung mới đến người có quyền duyệt.',
+    badge: '06',
+  ),
+  _NavItem(
+    'Phản hồi khách tham quan',
+    Icons.rate_review_outlined,
+    'Theo dõi góp ý thuộc bảo tàng được phân công.',
   ),
 ];
 

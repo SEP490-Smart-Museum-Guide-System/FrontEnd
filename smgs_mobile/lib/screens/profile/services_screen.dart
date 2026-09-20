@@ -12,9 +12,21 @@ import '../explore/explore_screen.dart';
 void openDigitalService(
   BuildContext context,
   PremiumOffer offer,
-  String museumId,
-) {
+  String museumId, [
+  DateTime? date,
+]) {
   final artifact = AppServices.catalog.inMuseum(museumId).first;
+  if (offer.id == 'ticket' || offer.id == 'combo') {
+    openPage(
+      context,
+      TicketDetailScreen(
+        offer: offer,
+        museumId: museumId,
+        date: date ?? DateTime.now(),
+      ),
+    );
+    return;
+  }
   final Widget page = switch (offer.kind) {
     DigitalServiceKind.guide => AiGuideScreen(artifact: artifact),
     DigitalServiceKind.narration => NarrationScreen(artifact: artifact),
@@ -49,14 +61,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
   @override
   Widget build(BuildContext context) => MuseumPage(
     back: true,
-    title: 'Hiểu sâu hơn,\ntrải nghiệm trọn vẹn.',
-    eyebrow: 'Dịch vụ số theo ngày',
+    title: 'Chọn đúng gói\ncho chuyến đi.',
+    eyebrow: 'Vé & Hướng dẫn số',
     subtitle: AppServices.catalog.museums
         .firstWhere((m) => m.id == _museumId)
         .name,
     children: [
       const Notice(
-        'Dịch vụ số được cung cấp riêng. Bản trải nghiệm chỉ dùng giá minh họa và thanh toán mô phỏng.',
+        'Bạn có thể mua riêng vé vào cửa, riêng Hướng dẫn số hoặc chọn gói kết hợp. Giá và thanh toán hiện chỉ là mô phỏng.',
       ),
       const SizedBox(height: 20),
       if (widget.museumId == null && widget.museumName == null) ...[
@@ -88,14 +100,26 @@ class _ServicesScreenState extends State<ServicesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(
-                      Icons.workspace_premium_outlined,
-                      color: AppColors.mutedGold,
+                      offer.id == 'ticket'
+                          ? Icons.confirmation_number_outlined
+                          : offer.id == 'combo'
+                          ? Icons.card_giftcard_outlined
+                          : Icons.headphones_outlined,
+                      color: AppColors.deepBurgundy,
                     ),
-                    SizedBox(width: 10),
-                    Expanded(child: Eyebrow('Dịch vụ nâng cao')),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Eyebrow(
+                        offer.id == 'ticket'
+                            ? 'Vé tham quan'
+                            : offer.id == 'combo'
+                            ? 'Gói tiết kiệm'
+                            : 'Trải nghiệm số',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -104,14 +128,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 Text(offer.description, style: AppTextStyles.bodyLarge),
                 const SizedBox(height: 18),
                 Text(
-                  '${vietnamesePrice(offer.price)} / ngày',
+                  vietnamesePrice(offer.price),
                   style: AppTextStyles.sectionTitle,
                 ),
                 const SizedBox(height: 6),
                 const Text('Giá minh họa', style: AppTextStyles.caption),
                 const SizedBox(height: 18),
                 PrimaryButton(
-                  label: 'Chọn dịch vụ',
+                  label: 'Chọn sản phẩm',
                   icon: Icons.arrow_forward,
                   onPressed: () => openPage(
                     context,
@@ -214,8 +238,8 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       );
       return MuseumPage(
         back: true,
-        title: 'Dành riêng\ncho chuyến đi.',
-        eyebrow: 'Xác nhận dịch vụ',
+        title: 'Xác nhận\nđơn mua.',
+        eyebrow: 'Thanh toán sản phẩm',
         subtitle: AppServices.catalog.museums
             .firstWhere((m) => m.id == widget.museumId)
             .name,
@@ -235,7 +259,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Giá minh họa cho một ngày sử dụng.',
+                  'Giá minh họa cho ngày tham quan đã chọn.',
                   style: AppTextStyles.caption,
                 ),
               ],
@@ -315,7 +339,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
             const Padding(
               padding: EdgeInsets.only(bottom: 16),
               child: Notice(
-                'Dịch vụ đã được đăng ký cho ngày này trong bản trải nghiệm.',
+                'Sản phẩm đã được mua cho ngày này trong bản trải nghiệm.',
               ),
             ),
           PrimaryButton(
@@ -337,7 +361,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
             ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy đăng ký dịch vụ'),
+            child: const Text('Hủy đơn mua'),
           ),
         ],
       );
@@ -402,9 +426,16 @@ class PaymentResultScreen extends StatelessWidget {
         if (success) ...[
           if (today)
             PrimaryButton(
-              label: 'Bắt đầu sử dụng dịch vụ',
-              icon: Icons.arrow_forward,
-              onPressed: () => openDigitalService(context, offer, museumId),
+              label: offer.id == 'ticket'
+                  ? 'Xem vé điện tử'
+                  : offer.id == 'combo'
+                  ? 'Xem vé và quyền sử dụng'
+                  : 'Mở Hướng dẫn số',
+              icon: offer.id == 'ticket' || offer.id == 'combo'
+                  ? Icons.qr_code_2_outlined
+                  : Icons.arrow_forward,
+              onPressed: () =>
+                  openDigitalService(context, offer, museumId, date),
             )
           else
             const Notice(
@@ -434,17 +465,17 @@ class PurchasedServicesScreen extends StatelessWidget {
     listenable: VisitStore.instance,
     builder: (context, _) => MuseumPage(
       back: true,
-      title: 'Dịch vụ của bạn',
-      eyebrow: 'Sổ tay trải nghiệm',
+      title: 'Đơn mua của bạn',
+      eyebrow: 'Vé & quyền sử dụng',
       children: [
         if (VisitStore.instance.purchases.isEmpty) ...[
           const EmptyState(
-            title: 'Chưa có dịch vụ nào',
-            message: 'Những dịch vụ bạn đăng ký trong bản trải nghiệm sẽ xuất hiện ở đây.',
+            title: 'Chưa có đơn mua nào',
+            message: 'Vé và Hướng dẫn số bạn mua trong bản trải nghiệm sẽ xuất hiện ở đây.',
           ),
           const SizedBox(height: 20),
           PrimaryButton(
-            label: 'Khám phá dịch vụ số',
+            label: 'Khám phá vé & Hướng dẫn số',
             onPressed: () => openPage(context, const ServicesScreen()),
           ),
         ],
@@ -474,7 +505,9 @@ class PurchasedServicesScreen extends StatelessWidget {
                   const SizedBox(height: 18),
                   PrimaryButton(
                     label: purchase.isForDay(DateTime.now())
-                        ? 'Sử dụng dịch vụ'
+                        ? purchase.offer.id == 'digital-guide'
+                              ? 'Mở Hướng dẫn số'
+                              : 'Xem vé điện tử'
                         : purchase.date.isBefore(
                             DateUtils.dateOnly(DateTime.now()),
                           )
@@ -485,6 +518,7 @@ class PurchasedServicesScreen extends StatelessWidget {
                             context,
                             purchase.offer,
                             purchase.museumId,
+                            purchase.date,
                           )
                         : null,
                   ),
@@ -495,4 +529,86 @@ class PurchasedServicesScreen extends StatelessWidget {
       ],
     ),
   );
+}
+
+class TicketDetailScreen extends StatelessWidget {
+  const TicketDetailScreen({
+    super.key,
+    required this.offer,
+    required this.museumId,
+    required this.date,
+  });
+
+  final PremiumOffer offer;
+  final String museumId;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final museum = AppServices.catalog.museums.firstWhere(
+      (item) => item.id == museumId,
+    );
+    final combo = offer.id == 'combo';
+    return MuseumPage(
+      back: true,
+      title: combo ? 'Vé và quyền\nđã sẵn sàng.' : 'Vé tham quan\ncủa bạn.',
+      eyebrow: 'Vé điện tử SMGS',
+      subtitle: museum.name,
+      children: [
+        Panel(
+          gold: true,
+          child: Column(
+            children: [
+              const Eyebrow('Vé hợp lệ'),
+              const SizedBox(height: 18),
+              Container(
+                width: 148,
+                height: 148,
+                decoration: BoxDecoration(
+                  color: AppColors.antiqueIvory,
+                  border: Border.all(color: AppColors.deepBurgundy),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.qr_code_2,
+                  size: 112,
+                  color: AppColors.deepBurgundy,
+                  semanticLabel: 'Mã vé điện tử mô phỏng',
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(offer.name, style: AppTextStyles.cardTitle),
+              const SizedBox(height: 8),
+              Text(
+                'Ngày tham quan: ${vietnameseDate(date)}',
+                style: AppTextStyles.bodyMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Mã đơn: SMGS-${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}-01',
+                style: AppTextStyles.caption,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Notice(
+          'Đưa mã này cho nhân viên tại cổng. Đây là vé mô phỏng, chưa có giá trị vào cửa thực tế.',
+          icon: Icons.info_outline,
+        ),
+        if (combo) ...[
+          const SizedBox(height: 18),
+          PrimaryButton(
+            label: 'Mở Hướng dẫn số',
+            icon: Icons.headphones_outlined,
+            onPressed: () {
+              final artifact = AppServices.catalog.inMuseum(museumId).first;
+              openPage(context, AiGuideScreen(artifact: artifact));
+            },
+          ),
+        ],
+      ],
+    );
+  }
 }
