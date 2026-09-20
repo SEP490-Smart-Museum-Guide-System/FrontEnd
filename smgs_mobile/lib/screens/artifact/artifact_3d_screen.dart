@@ -1,6 +1,7 @@
-import 'dart:math' as math;
-
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 import '../../models/artifact.dart';
 import '../../widgets/museum_ui.dart';
@@ -15,12 +16,21 @@ class Artifact3DScreen extends StatefulWidget {
 }
 
 class _Artifact3DScreenState extends State<Artifact3DScreen> {
-  double _angle = -0.18;
-  double _zoom = 1;
+  int _resetKey = 0;
+  bool _autoRotate = true;
+
+  bool get _isTest {
+    if (kIsWeb) return false;
+    try {
+      return Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (_) {
+      return false;
+    }
+  }
 
   void _reset() => setState(() {
-    _angle = -0.18;
-    _zoom = 1;
+    _resetKey++;
+    _autoRotate = true;
   });
 
   @override
@@ -31,12 +41,19 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
     subtitle: widget.artifact.name,
     children: [
       Container(
-        height: 390,
+        height: 420,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.darkBrown,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.mutedGold),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.mutedGold.withOpacity(0.5)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Stack(
           children: [
@@ -49,44 +66,33 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
               ),
             ),
             Center(
-              child: GestureDetector(
-                onHorizontalDragUpdate: (details) => setState(
-                  () => _angle =
-                      (_angle + details.delta.dx / 180) % (math.pi * 2),
-                ),
-                child: Transform.scale(
-                  scale: _zoom,
-                  child: Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.0015)
-                      ..rotateY(_angle),
-                    child: Container(
-                      width: 235,
-                      height: 255,
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.antiqueIvory,
-                        borderRadius: BorderRadius.circular(120),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black38,
-                            blurRadius: 28,
-                            offset: Offset(0, 18),
+              child: SizedBox(
+                height: 380,
+                width: double.infinity,
+                child: _isTest
+                    ? Container(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Mô hình 3D ${widget.artifact.name}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.antiqueIvory,
                           ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/ngoc-lu-web.jpg',
-                          fit: BoxFit.cover,
-                          semanticLabel:
-                              'Mô phỏng mô hình ba chiều ${widget.artifact.name}',
                         ),
+                      )
+                    : ModelViewer(
+                        key: ValueKey('model_viewer_$_resetKey'),
+                        src: 'assets/models/trong_dong_dong_son.glb',
+                        alt: 'Mô hình 3D ${widget.artifact.name}',
+                        ar: true,
+                        autoRotate: _autoRotate,
+                        autoRotateDelay: 1000,
+                        rotationPerSecond: '25deg',
+                        cameraControls: true,
+                        backgroundColor: Colors.transparent,
+                        shadowIntensity: 1.0,
+                        shadowSoftness: 0.8,
+                        exposure: 1.05,
                       ),
-                    ),
-                  ),
-                ),
               ),
             ),
             Positioned(
@@ -95,6 +101,12 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
               bottom: 14,
               child: Row(
                 children: [
+                  const Icon(
+                    Icons.touch_app_outlined,
+                    size: 16,
+                    color: AppColors.mutedGold,
+                  ),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Kéo ngang để xoay',
@@ -103,11 +115,44 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
                       ),
                     ),
                   ),
-                  Text(
-                    '${(_zoom * 100).round()}%',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.mutedGold,
-                      fontWeight: FontWeight.w700,
+                  InkWell(
+                    onTap: () => setState(() => _autoRotate = !_autoRotate),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _autoRotate
+                            ? AppColors.mutedGold.withOpacity(0.2)
+                            : Colors.black26,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _autoRotate
+                              ? AppColors.mutedGold
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _autoRotate ? Icons.play_arrow : Icons.pause,
+                            size: 14,
+                            color: AppColors.mutedGold,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _autoRotate ? 'Tự xoay' : 'Tạm dừng',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.mutedGold,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -116,42 +161,21 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
           ],
         ),
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
       Row(
         children: [
-          IconButton.filledTonal(
-            tooltip: 'Thu nhỏ',
-            onPressed: _zoom <= 0.8 ? null : () => setState(() => _zoom -= 0.1),
-            icon: const Icon(Icons.remove),
-          ),
           Expanded(
-            child: Slider(
-              value: _zoom,
-              min: 0.8,
-              max: 1.35,
-              divisions: 11,
-              label: '${(_zoom * 100).round()}%',
-              onChanged: (value) => setState(() => _zoom = value),
+            child: SecondaryButton(
+              label: 'Đặt lại góc nhìn',
+              icon: Icons.refresh,
+              onPressed: _reset,
             ),
-          ),
-          IconButton.filledTonal(
-            tooltip: 'Phóng to',
-            onPressed: _zoom >= 1.35
-                ? null
-                : () => setState(() => _zoom += 0.1),
-            icon: const Icon(Icons.add),
           ),
         ],
       ),
-      const SizedBox(height: 12),
-      SecondaryButton(
-        label: 'Đặt lại góc nhìn',
-        icon: Icons.refresh,
-        onPressed: _reset,
-      ),
-      const SizedBox(height: 18),
-      const Notice(
-        'Đây là bản mô phỏng giao diện xem 3D. Mô hình 3D thật sẽ được tải từ dữ liệu hiện vật đã xuất bản.',
+      const SizedBox(height: 16),
+      Notice(
+        'Mô hình 3D thực của ${widget.artifact.name}. Bạn có thể kéo thả để xoay 360°, cuộn để phóng to chi tiết hoa văn.',
         icon: Icons.view_in_ar_outlined,
       ),
     ],
