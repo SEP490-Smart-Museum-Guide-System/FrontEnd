@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
@@ -46,7 +47,7 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
         decoration: BoxDecoration(
           color: AppColors.darkBrown,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.mutedGold.withOpacity(0.5)),
+          border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
           boxShadow: const [
             BoxShadow(
               color: Colors.black26,
@@ -125,7 +126,7 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: _autoRotate
-                            ? AppColors.mutedGold.withOpacity(0.2)
+                            ? AppColors.mutedGold.withValues(alpha: 0.2)
                             : Colors.black26,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(

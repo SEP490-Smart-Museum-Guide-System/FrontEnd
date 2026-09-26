@@ -44,10 +44,7 @@ class _ManagementHomeScreenState extends State<ManagementHomeScreen> {
             Expanded(
               child: Column(
                 children: [
-                  _TopBar(
-                    isAdmin: _isAdmin,
-                    isMuseumStaff: _isMuseumStaff,
-                  ),
+                  _TopBar(isAdmin: _isAdmin, isMuseumStaff: _isMuseumStaff),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(32, 30, 32, 48),
