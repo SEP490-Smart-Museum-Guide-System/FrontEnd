@@ -1,0 +1,251 @@
+[
+  {
+    "file": "mobile-01.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Đăng nhập"
+  },
+  {
+    "file": "mobile-02.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Tạo tài khoản"
+  },
+  {
+    "file": "mobile-03.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Quên mật khẩu"
+  },
+  {
+    "file": "mobile-04.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Trang chủ"
+  },
+  {
+    "file": "mobile-05.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Khám phá"
+  },
+  {
+    "file": "mobile-06.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Chi tiết bảo tàng"
+  },
+  {
+    "file": "mobile-07.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Bắt đầu khám phá"
+  },
+  {
+    "file": "mobile-08.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Quét mã hiện vật"
+  },
+  {
+    "file": "mobile-09.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Nhận diện qua ảnh"
+  },
+  {
+    "file": "mobile-10.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Danh sách hiện vật"
+  },
+  {
+    "file": "mobile-11.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Chi tiết hiện vật"
+  },
+  {
+    "file": "mobile-12.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Hiện vật 3D"
+  },
+  {
+    "file": "mobile-13.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Hướng dẫn viên AI"
+  },
+  {
+    "file": "mobile-14.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Thuyết minh"
+  },
+  {
+    "file": "mobile-15.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Thử tài"
+  },
+  {
+    "file": "mobile-16.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Kết quả thử tài"
+  },
+  {
+    "file": "mobile-17.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Chọn hành trình"
+  },
+  {
+    "file": "mobile-18.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Lộ trình tham quan"
+  },
+  {
+    "file": "mobile-19.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Hành trình hoàn thành"
+  },
+  {
+    "file": "mobile-20.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Hồ sơ"
+  },
+  {
+    "file": "mobile-21.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Lịch sử khám phá"
+  },
+  {
+    "file": "mobile-22.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Chi tiết chuyến đi"
+  },
+  {
+    "file": "mobile-23.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Vé & Hướng dẫn số"
+  },
+  {
+    "file": "mobile-24.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Thanh toán mô phỏng"
+  },
+  {
+    "file": "mobile-25.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Kết quả thanh toán"
+  },
+  {
+    "file": "mobile-26.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Góp ý & đánh giá"
+  },
+  {
+    "file": "mobile-27.svg",
+    "page": "Khách tham quan · Mobile",
+    "screen": "Cài đặt"
+  },
+  {
+    "file": "curator-01.svg",
+    "page": "Kiểm duyệt viên · Web",
+    "screen": "Tổng quan",
+    "role": "KIỂM DUYỆT VIÊN"
+  },
+  {
+    "file": "curator-02.svg",
+    "page": "Kiểm duyệt viên · Web",
+    "screen": "Nội dung bảo tàng",
+    "role": "KIỂM DUYỆT VIÊN"
+  },
+  {
+    "file": "curator-03.svg",
+    "page": "Kiểm duyệt viên · Web",
+    "screen": "Nội dung AI",
+    "role": "KIỂM DUYỆT VIÊN"
+  },
+  {
+    "file": "curator-04.svg",
+    "page": "Kiểm duyệt viên · Web",
+    "screen": "Kiểm duyệt",
+    "role": "KIỂM DUYỆT VIÊN"
+  },
+  {
+    "file": "curator-05.svg",
+    "page": "Kiểm duyệt viên · Web",
+    "screen": "Xuất bản",
+    "role": "KIỂM DUYỆT VIÊN"
+  },
+  {
+    "file": "curator-06.svg",
+    "page": "Kiểm duyệt viên · Web",
+    "screen": "Phản hồi & báo cáo",
+    "role": "KIỂM DUYỆT VIÊN"
+  },
+  {
+    "file": "staff-01.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Tổng quan",
+    "role": "NHÂN VIÊN BẢO TÀNG"
+  },
+  {
+    "file": "staff-02.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Hiện vật",
+    "role": "NHÂN VIÊN BẢO TÀNG"
+  },
+  {
+    "file": "staff-03.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Hình ảnh & 3D",
+    "role": "NHÂN VIÊN BẢO TÀNG"
+  },
+  {
+    "file": "staff-04.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Phòng & bản đồ",
+    "role": "NHÂN VIÊN BẢO TÀNG"
+  },
+  {
+    "file": "staff-05.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Gửi kiểm duyệt",
+    "role": "NHÂN VIÊN BẢO TÀNG"
+  },
+  {
+    "file": "staff-06.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Phản hồi khách tham quan",
+    "role": "NHÂN VIÊN BẢO TÀNG"
+  },
+  {
+    "file": "admin-01.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Tổng quan",
+    "role": "QUẢN TRỊ VIÊN"
+  },
+  {
+    "file": "admin-02.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Người dùng",
+    "role": "QUẢN TRỊ VIÊN"
+  },
+  {
+    "file": "admin-03.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Vai trò & phân quyền",
+    "role": "QUẢN TRỊ VIÊN"
+  },
+  {
+    "file": "admin-04.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Bảo tàng & nhân sự",
+    "role": "QUẢN TRỊ VIÊN"
+  },
+  {
+    "file": "admin-05.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Thương mại",
+    "role": "QUẢN TRỊ VIÊN"
+  },
+  {
+    "file": "admin-06.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Nhật ký hệ thống",
+    "role": "QUẢN TRỊ VIÊN"
+  },
+  {
+    "file": "admin-07.svg",
+    "page": "Nhân viên bảo tàng · Web",
+    "screen": "Cài đặt",
+    "role": "QUẢN TRỊ VIÊN"
+  }
+]

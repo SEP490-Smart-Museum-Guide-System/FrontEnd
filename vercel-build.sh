@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
-echo "Starting Flutter Web Build..."
-cd smgs_mobile
-bash vercel-build.sh
+echo "Starting SMGS Web Portal Build (React + Vite)..."
+cd smgs_web
+npm install
+npm run build
+echo "Build completed successfully in smgs_web/dist"

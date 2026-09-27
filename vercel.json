@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd smgs_mobile && bash vercel-build.sh",
-  "outputDirectory": "smgs_mobile/build/web",
+  "buildCommand": "cd smgs_web && npm install && npm run build",
+  "outputDirectory": "smgs_web/dist",
   "headers": [
     {
       "source": "/assets/models/(.*).glb",
