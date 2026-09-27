@@ -13,12 +13,13 @@ import {
 } from 'lucide-react';
 
 export default function ReviewManager() {
-  const { reviews, replyToReview } = useApp();
+  const { reviews, replyToReview, currentMuseum } = useApp();
   const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'pending_reply' | 'replied'
   const [replyingId, setReplyingId] = useState(null);
   const [replyText, setReplyText] = useState('');
 
-  const filteredReviews = reviews.filter(r => {
+  const museumReviews = reviews.filter(r => r.museumName === currentMuseum.name);
+  const filteredReviews = museumReviews.filter(r => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     return true;
   });
@@ -30,8 +31,8 @@ export default function ReviewManager() {
     setReplyText('');
   };
 
-  const pendingCount = reviews.filter(r => r.status === 'pending_reply').length;
-  const avgRating = (reviews.reduce((acc, curr) => acc + curr.rating, 0) / (reviews.length || 1)).toFixed(1);
+  const pendingCount = museumReviews.filter(r => r.status === 'pending_reply').length;
+  const avgRating = (museumReviews.reduce((acc, curr) => acc + curr.rating, 0) / (museumReviews.length || 1)).toFixed(1);
 
   return (
     <div>
@@ -64,7 +65,7 @@ export default function ReviewManager() {
             <MessageSquare size={24} />
           </div>
           <div>
-            <div className="stat-value">{reviews.length}</div>
+            <div className="stat-value">{museumReviews.length}</div>
             <div className="stat-label">Tổng số lượt đánh giá</div>
           </div>
         </div>

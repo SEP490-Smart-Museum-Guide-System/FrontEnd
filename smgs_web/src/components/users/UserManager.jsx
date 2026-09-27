@@ -122,9 +122,9 @@ export default function UserManager() {
             onChange={(e) => setRoleFilter(e.target.value)}
           >
             <option value="all">Tất cả vai trò</option>
-            <option value="administrator">Quản trị viên (Admin)</option>
-            <option value="curator">Kiểm duyệt viên (Curator)</option>
-            <option value="museumStaff">Nhân viên bảo tàng (Staff)</option>
+            <option value="administrator">Quản trị viên</option>
+            <option value="curator">Kiểm duyệt viên</option>
+            <option value="museumStaff">Nhân viên bảo tàng</option>
           </select>
         </div>
       </div>
@@ -268,9 +268,9 @@ export default function UserManager() {
                       value={newUserForm.role}
                       onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
                     >
-                      <option value="museumStaff">Nhân viên bảo tàng (Staff)</option>
-                      <option value="curator">Kiểm duyệt viên (Curator)</option>
-                      <option value="administrator">Quản trị viên (Admin)</option>
+                      <option value="museumStaff">Nhân viên bảo tàng</option>
+                      <option value="curator">Kiểm duyệt viên</option>
+                      <option value="administrator">Quản trị viên</option>
                     </select>
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>

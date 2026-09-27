@@ -136,7 +136,7 @@ export const initialArtifacts = [
     theme: 'Đông Sơn & Thời đại Kim khí',
     period: 'Văn hóa Đông Sơn (Thế kỷ II - III TCN)',
     dating: 'Khoảng 2.500 năm trước',
-    material: 'Hợp kim Đồng (Bronze)',
+    material: 'Hợp kim đồng',
     dimensions: 'Đường kính mặt: 79.3 cm — Chiều cao: 63 cm — Trọng lượng: 86 kg',
     isNationalTreasure: true,
     has3DModel: true,
@@ -459,7 +459,7 @@ export const initialCurationQueue = [
     title: 'Thuyết minh AI Trẻ em: Trống đồng Ngọc Lũ',
     targetArtifactId: 'art-001',
     targetArtifactName: 'Trống đồng Ngọc Lũ',
-    submittedBy: 'Nguyễn Mai Anh (Museum Staff)',
+    submittedBy: 'Nguyễn Mai Anh (Nhân viên bảo tàng)',
     submittedDate: '2026-09-27 14:30',
     status: 'pending', // pending | approved | rejected | revision_requested
     priority: 'high',
@@ -469,16 +469,16 @@ export const initialCurationQueue = [
 Các bạn hãy nhìn vào chính giữa mặt trống này, đó là một ngôi sao 14 cánh sáng chói như Mặt Trời mùa hè vậy. Xung quanh là đàn chim Lạc đang giang rộng đôi cánh bay lượn!
 
 Đố các bạn biết trên mặt trống các bác người xưa đang làm gì? A, có bác đang giã gạo này, có bác đang gõ trống cắc tùng cắc tùng, và có cả những ngôi nhà sàn mái cong xinh xắn nữa đấy!`,
-    changesSummary: 'Thêm kịch bản thuyết minh phong cách sinh động dành riêng cho lứa tuổi thiếu nhi (6-12 tuổi) do AI Studio sinh tự động và đã được nhân viên hiệu chỉnh.',
+    changesSummary: 'Thêm kịch bản thuyết minh sinh động dành cho thiếu nhi (6–12 tuổi), được tạo trong xưởng nội dung AI và nhân viên hiệu chỉnh.',
     feedback: ''
   },
   {
     id: 'cur-002',
     type: 'quiz',
-    title: 'Bộ câu hỏi Quiz tương tác: Thạp đồng Đào Thịnh (4 câu)',
+    title: 'Bộ câu hỏi tương tác: Thạp đồng Đào Thịnh (4 câu)',
     targetArtifactId: 'art-002',
     targetArtifactName: 'Thạp đồng Đào Thịnh',
-    submittedBy: 'Lê Tuấn Kiệt (Museum Staff)',
+    submittedBy: 'Lê Tuấn Kiệt (Nhân viên bảo tàng)',
     submittedDate: '2026-09-27 11:15',
     status: 'pending',
     priority: 'medium',
@@ -497,7 +497,7 @@ Các bạn hãy nhìn vào chính giữa mặt trống này, đó là một ngô
         explanation: 'Khối tượng tròn nam nữ giao phối trên nắp thạp là biểu tượng phồn thực rõ nét nhất của văn hóa Đông Sơn.'
       }
     ], null, 2),
-    changesSummary: 'Thêm 2 câu hỏi trắc nghiệm mới vào kho quiz hiện vật để tăng điểm thưởng cho khách tham quan.',
+    changesSummary: 'Thêm 2 câu hỏi trắc nghiệm mới vào kho câu hỏi hiện vật để tăng điểm thưởng cho khách tham quan.',
     feedback: ''
   },
   {
@@ -506,7 +506,7 @@ Các bạn hãy nhìn vào chính giữa mặt trống này, đó là một ngô
     title: 'Cập nhật niên đại & bản dịch tiếng Anh: Tượng Phật Bà Quan Âm',
     targetArtifactId: 'art-003',
     targetArtifactName: 'Tượng Phật Bà Quan Âm Nghìn Mắt Nghìn Tay',
-    submittedBy: 'Nguyễn Mai Anh (Museum Staff)',
+    submittedBy: 'Nguyễn Mai Anh (Nhân viên bảo tàng)',
     submittedDate: '2026-09-26 16:40',
     status: 'pending',
     priority: 'low',
@@ -585,28 +585,28 @@ export const initialUsers = [
 export const initialPassPackages = [
   {
     id: 'pkg-01',
-    name: 'Gói Digital Guide Tiêu chuẩn',
+    name: 'Gói Hướng dẫn số Tiêu chuẩn',
     durationDays: 1,
     price: 29000,
-    features: ['Thuyết minh Audio đa ngôn ngữ tất cả hiện vật', 'Quét QR nhận diện hiện vật không giới hạn', 'Tham gia Mini Quiz nhận huy hiệu di sản'],
+    features: ['Nghe thuyết minh đa ngôn ngữ cho mọi hiện vật', 'Quét mã QR không giới hạn', 'Trả lời câu hỏi nhận huy hiệu di sản'],
     activePassesCount: 840,
     status: 'active'
   },
   {
     id: 'pkg-02',
-    name: 'Gói AI Heritage Tour Pro',
+    name: 'Gói Hành trình di sản nâng cao',
     durationDays: 3,
     price: 59000,
-    features: ['Toàn bộ quyền lợi gói Tiêu chuẩn', 'Hỏi đáp tương tác AI Guide không giới hạn', 'Tự động tạo lộ trình Tour cá nhân hóa theo sở thích & thời gian', 'Xem mô hình 3D AR tương tác cao cấp'],
+    features: ['Toàn bộ quyền lợi gói Tiêu chuẩn', 'Hỏi đáp với hướng dẫn viên AI không giới hạn', 'Tạo hành trình theo sở thích và thời gian', 'Xem mô hình 3D tương tác'],
     activePassesCount: 1420,
     status: 'active'
   },
   {
     id: 'pkg-03',
-    name: 'Gói Thẻ Gia đình & Nhóm (Family Pass)',
+    name: 'Gói Gia đình và Nhóm',
     durationDays: 7,
     price: 119000,
-    features: ['Dành cho nhóm tối đa 5 thiết bị', 'Bản thuyết minh riêng cho thiếu nhi & người lớn', 'Bộ Quiz gia đình cùng thi đua xếp hạng', 'Lưu nhật ký tham quan & kỷ yếu số lưu niệm'],
+    features: ['Dành cho nhóm tối đa 5 thiết bị', 'Thuyết minh riêng cho thiếu nhi và người lớn', 'Bộ câu hỏi dành cho gia đình', 'Lưu nhật ký tham quan và kỷ yếu số'],
     activePassesCount: 310,
     status: 'active'
   }
@@ -617,7 +617,7 @@ export const initialTransactions = [
     id: 'TXN-98421',
     userEmail: 'tran.ngoc.anh@gmail.com',
     userName: 'Trần Ngọc Ánh',
-    packageName: 'Gói AI Heritage Tour Pro',
+    packageName: 'Gói Hành trình di sản nâng cao',
     amount: 59000,
     method: 'VNPay QR',
     status: 'completed', // completed | pending | refunded
@@ -628,7 +628,7 @@ export const initialTransactions = [
     id: 'TXN-98420',
     userEmail: 'le.minh.hoang@yahoo.com',
     userName: 'Lê Minh Hoàng',
-    packageName: 'Gói Digital Guide Tiêu chuẩn',
+    packageName: 'Gói Hướng dẫn số Tiêu chuẩn',
     amount: 29000,
     method: 'MoMo',
     status: 'completed',
@@ -639,7 +639,7 @@ export const initialTransactions = [
     id: 'TXN-98419',
     userEmail: 'john.smith92@hotmail.com',
     userName: 'John Smith',
-    packageName: 'Gói AI Heritage Tour Pro',
+    packageName: 'Gói Hành trình di sản nâng cao',
     amount: 59000,
     method: 'Visa / Mastercard',
     status: 'completed',
@@ -650,7 +650,7 @@ export const initialTransactions = [
     id: 'TXN-98418',
     userEmail: 'nguyen.van.hung@gmail.com',
     userName: 'Nguyễn Văn Hùng',
-    packageName: 'Gói Thẻ Gia đình & Nhóm',
+    packageName: 'Gói Gia đình và Nhóm',
     amount: 119000,
     method: 'ZaloPay',
     status: 'refunded',
@@ -661,7 +661,7 @@ export const initialTransactions = [
     id: 'TXN-98417',
     userEmail: 'dao.thi.thao@outlook.com',
     userName: 'Đào Thị Thảo',
-    packageName: 'Gói Digital Guide Tiêu chuẩn',
+    packageName: 'Gói Hướng dẫn số Tiêu chuẩn',
     amount: 29000,
     method: 'VNPay QR',
     status: 'completed',
@@ -720,7 +720,7 @@ export const initialAuditLogs = [
     id: 'log-101',
     timestamp: '2026-09-27 21:05',
     user: 'Vũ Hải Đăng (admin@smgs.vn)',
-    role: 'Administrator',
+    role: 'Quản trị viên',
     action: 'SYSTEM_SETTINGS_UPDATE',
     details: 'Cập nhật API Key Gemini 2.0 Flash cho tính năng AI Content Studio.'
   },
@@ -728,7 +728,7 @@ export const initialAuditLogs = [
     id: 'log-100',
     timestamp: '2026-09-27 20:30',
     user: 'Nguyễn Mai Anh (staff@smgs.vn)',
-    role: 'Museum Staff',
+    role: 'Nhân viên bảo tàng',
     action: 'AI_CONTENT_GENERATE',
     details: 'Tạo bản thuyết minh AI Thiếu nhi cho Trống đồng Ngọc Lũ và gửi kiểm duyệt.'
   },
@@ -736,7 +736,7 @@ export const initialAuditLogs = [
     id: 'log-099',
     timestamp: '2026-09-27 19:45',
     user: 'TS. Trần Văn Phong (curator@smgs.vn)',
-    role: 'Curator',
+    role: 'Kiểm duyệt viên',
     action: 'CURATION_APPROVE',
     details: 'Phê duyệt xuất bản bài thuyết minh nâng cao cho hiện vật Trống đồng Cảnh Thịnh.'
   },
@@ -744,7 +744,7 @@ export const initialAuditLogs = [
     id: 'log-098',
     timestamp: '2026-09-27 17:15',
     user: 'Lê Tuấn Kiệt (staff2@smgs.vn)',
-    role: 'Museum Staff',
+    role: 'Nhân viên bảo tàng',
     action: 'ARTIFACT_CREATE',
     details: 'Đăng tải thông tin & mã QR mẫu cho hiện vật mới: Bình gốm hoa nâu thời Lý.'
   },
@@ -752,7 +752,7 @@ export const initialAuditLogs = [
     id: 'log-097',
     timestamp: '2026-09-27 15:00',
     user: 'Vũ Hải Đăng (admin@smgs.vn)',
-    role: 'Administrator',
+    role: 'Quản trị viên',
     action: 'USER_ROLE_ASSIGN',
     details: 'Phân quyền kiểm duyệt viên cho ThS. Phạm Bích Ngọc tại Bảo tàng Mỹ thuật VN.'
   }

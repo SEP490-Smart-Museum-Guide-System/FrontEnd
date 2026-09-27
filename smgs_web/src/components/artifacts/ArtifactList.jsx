@@ -26,7 +26,6 @@ export default function ArtifactList({ onOpenAIStudio }) {
     updateArtifact,
     deleteArtifact,
     selectedMuseumId,
-    currentMuseum,
     currentRole
   } = useApp();
 
@@ -42,11 +41,8 @@ export default function ArtifactList({ onOpenAIStudio }) {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   // Filter artifacts
-  const filteredArtifacts = artifacts.filter(art => {
-    // Museum scope: if role is staff, filter by museum unless 'all'
-    if (selectedMuseumId !== 'all' && art.museumId !== selectedMuseumId) {
-      return false;
-    }
+  const scopedArtifacts = currentRole === 'administrator' ? artifacts : artifacts.filter(art => art.museumId === selectedMuseumId);
+  const filteredArtifacts = scopedArtifacts.filter(art => {
     if (selectedGallery !== 'all' && art.galleryName !== selectedGallery) {
       return false;
     }
@@ -69,11 +65,11 @@ export default function ArtifactList({ onOpenAIStudio }) {
   });
 
   // Unique galleries list for filter
-  const galleryList = Array.from(new Set(artifacts.map(a => a.galleryName))).filter(Boolean);
+  const galleryList = Array.from(new Set(scopedArtifacts.map(a => a.galleryName))).filter(Boolean);
 
-  const totalTreasureCount = artifacts.filter(a => a.isNationalTreasure).length;
-  const total3DCount = artifacts.filter(a => a.has3DModel).length;
-  const totalScans = artifacts.reduce((acc, curr) => acc + (curr.scansCount || 0), 0);
+  const totalTreasureCount = scopedArtifacts.filter(a => a.isNationalTreasure).length;
+  const total3DCount = scopedArtifacts.filter(a => a.has3DModel).length;
+  const totalScans = scopedArtifacts.reduce((acc, curr) => acc + (curr.scansCount || 0), 0);
 
   return (
     <div>
@@ -88,7 +84,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        {currentRole !== 'curator' && <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"
             onClick={() => setIsCreatingNew(true)}
@@ -96,7 +92,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
           >
             <Plus size={16} /> Thêm hiện vật mới
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Metrics Row */}
@@ -106,7 +102,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
             <Layers size={24} />
           </div>
           <div>
-            <div className="stat-value">{artifacts.length}</div>
+            <div className="stat-value">{scopedArtifacts.length}</div>
             <div className="stat-label">Tổng số hiện vật số hóa</div>
           </div>
         </div>
@@ -311,7 +307,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                             </span>
                           ) : (
                             <span title="Chưa có 3D" style={{ background: '#F1F5F9', color: '#94A3B8', padding: '4px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>
-                              No 3D
+                              Chưa có 3D
                             </span>
                           )}
 
@@ -321,7 +317,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
 
                           {art.quizzes && art.quizzes.length > 0 && (
                             <span title={`${art.quizzes.length} câu hỏi trắc nghiệm`} style={{ background: 'var(--color-gold-50)', color: 'var(--color-gold-700)', padding: '4px 6px', borderRadius: '4px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              Quiz: {art.quizzes.length}
+                              Câu hỏi: {art.quizzes.length}
                             </span>
                           )}
                         </div>
@@ -345,22 +341,22 @@ export default function ArtifactList({ onOpenAIStudio }) {
                           >
                             <Eye size={14} />
                           </button>
-                          <button
+                          {currentRole !== 'curator' && <button
                             type="button"
                             onClick={() => onOpenAIStudio(art)}
                             className="btn btn-gold btn-sm"
-                            title="Mở AI Content Studio"
+                            title="Mở xưởng nội dung AI"
                           >
                             <Sparkles size={14} />
-                          </button>
-                          <button
+                          </button>}
+                          {currentRole !== 'curator' && <button
                             type="button"
                             onClick={() => setEditingArtifact(art)}
                             className="btn btn-secondary btn-sm"
                             title="Chỉnh sửa"
                           >
                             <Edit2 size={14} />
-                          </button>
+                          </button>}
                           {currentRole === 'administrator' && (
                             <button
                               type="button"
@@ -457,22 +453,22 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   >
                     <Eye size={14} /> Xem chi tiết
                   </button>
-                  <button
+                  {currentRole !== 'curator' && <button
                     type="button"
                     onClick={() => onOpenAIStudio(art)}
                     className="btn btn-gold btn-sm"
-                    title="AI Studio"
+                    title="Xưởng nội dung AI"
                   >
                     <Sparkles size={14} />
-                  </button>
-                  <button
+                  </button>}
+                  {currentRole !== 'curator' && <button
                     type="button"
                     onClick={() => setEditingArtifact(art)}
                     className="btn btn-secondary btn-sm"
                     title="Sửa"
                   >
                     <Edit2 size={14} />
-                  </button>
+                  </button>}
                 </div>
               </div>
             </div>
@@ -484,6 +480,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
       {selectedArtifact && (
         <ArtifactDetailModal
           artifact={selectedArtifact}
+          readOnly={currentRole === 'curator'}
           onClose={() => setSelectedArtifact(null)}
           onOpenAIStudio={(art) => {
             setSelectedArtifact(null);

@@ -18,6 +18,8 @@ import {
 export default function CurationCenter() {
   const {
     curationQueue,
+    artifacts,
+    currentMuseum,
     approveCurationItem,
     rejectCurationItem,
     requestRevisionCurationItem
@@ -28,14 +30,15 @@ export default function CurationCenter() {
   const [reviewNote, setReviewNote] = useState('');
   const [actionType, setActionType] = useState(null); // 'revision' | 'reject'
 
-  const filteredQueue = curationQueue.filter(item => {
+  const museumQueue = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum.id);
+  const filteredQueue = museumQueue.filter(item => {
     if (filterStatus !== 'all' && item.status !== filterStatus) return false;
     return true;
   });
 
-  const pendingCount = curationQueue.filter(c => c.status === 'pending').length;
-  const approvedCount = curationQueue.filter(c => c.status === 'approved').length;
-  const revisionCount = curationQueue.filter(c => c.status === 'revision_requested').length;
+  const pendingCount = museumQueue.filter(c => c.status === 'pending').length;
+  const approvedCount = museumQueue.filter(c => c.status === 'approved').length;
+  const revisionCount = museumQueue.filter(c => c.status === 'revision_requested').length;
 
   const handleApprove = (id) => {
     approveCurationItem(id, reviewNote || 'Đã kiểm duyệt và chuẩn hóa theo tiêu chuẩn bảo tàng.');
@@ -75,7 +78,7 @@ export default function CurationCenter() {
             Trung Tâm Kiểm Duyệt & Phê Duyệt Nội Dung Di Sản
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Hội đồng chuyên môn thẩm định tính chính xác của các bài thuyết minh, câu hỏi quiz và tư liệu trước khi xuất bản
+            Hội đồng chuyên môn thẩm định tính chính xác của các bài thuyết minh, câu hỏi trắc nghiệm và tư liệu trước khi xuất bản
           </p>
         </div>
       </div>
@@ -280,7 +283,7 @@ export default function CurationCenter() {
                 {/* Right: Proposed New Revision */}
                 <div style={{ border: '1.5px solid var(--color-gold-500)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ background: 'var(--color-gold-50)', padding: '10px 14px', fontWeight: '700', fontSize: '0.8125rem', borderBottom: '1px solid var(--color-gold-300)', color: 'var(--color-gold-700)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Sparkles size={14} /> Nội dung mới đệ trình (Đã qua AI Studio)
+                    <Sparkles size={14} /> Nội dung mới đệ trình (Đã qua xưởng nội dung AI)
                   </div>
                   <div style={{ padding: '16px', fontSize: '0.8125rem', lineHeight: '1.7', color: 'var(--color-charcoal-900)', background: '#FFFFFF', maxHeight: '320px', overflowY: 'auto', whiteSpace: 'pre-line' }}>
                     {selectedItem.proposedContent}

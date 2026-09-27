@@ -119,8 +119,8 @@ export default function MuseumManager() {
       </div>
 
       {/* Museum Information Banner */}
-      <div className="card" style={{ padding: '24px', marginBottom: '28px', background: 'linear-gradient(135deg, #FAF7F2, #F4EFE6)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '24px', alignItems: 'center' }}>
+      <div className="card" style={{ padding: '24px', marginBottom: '28px', background: 'linear-gradient(135deg, var(--color-paper-card), var(--color-paper-bg))' }}>
+        <div className="museum-intro-grid" style={{ display: 'grid', gridTemplateColumns: '220px minmax(0, 1fr)', gap: '24px', alignItems: 'center' }}>
           <div style={{ height: '140px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-paper-border)' }}>
             <img
               src={activeMuseum.image || '/assets/images/national-museum-web.jpg'}

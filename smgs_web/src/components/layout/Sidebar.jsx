@@ -12,16 +12,15 @@ import {
   CreditCard,
   ShieldAlert,
   Landmark,
-  FileText,
-  HelpCircle,
-  LogOut
+  FileText
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { currentRole, activeTab, setActiveTab, curationQueue, reviews } = useApp();
+  const { currentRole, currentMuseum, activeTab, setActiveTab, curationQueue, reviews, artifacts } = useApp();
 
-  const pendingCuration = curationQueue.filter(c => c.status === 'pending').length;
-  const pendingReviews = reviews.filter(r => r.status === 'pending_reply').length;
+  const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id));
+  const pendingCuration = curationQueue.filter(c => c.status === 'pending' && museumArtifactIds.has(c.targetArtifactId)).length;
+  const pendingReviews = reviews.filter(r => r.status === 'pending_reply' && r.museumName === currentMuseum.name).length;
 
   // Navigation schema per role
   const getNavSections = () => {
@@ -30,22 +29,22 @@ export default function Sidebar() {
         {
           title: 'Quản trị hệ thống',
           items: [
-            { id: 'overview', label: 'Tổng quan & Thống kê', icon: LayoutDashboard },
+            { id: 'overview', label: 'Tổng quan hệ thống', icon: LayoutDashboard },
             { id: 'museums', label: 'Bảo tàng & Không gian', icon: Landmark },
-            { id: 'artifacts', label: 'Kho Hiện vật toàn hệ thống', icon: Layers },
+            { id: 'artifacts', label: 'Kho hiện vật', icon: Layers },
           ]
         },
         {
           title: 'Vận hành & Kinh doanh',
           items: [
             { id: 'users', label: 'Người dùng & Phân quyền', icon: Users },
-            { id: 'transactions', label: 'Gói số & Giao dịch', icon: CreditCard },
+            { id: 'transactions', label: 'Dịch vụ số & giao dịch', icon: CreditCard },
           ]
         },
         {
           title: 'Kiểm toán & Cấu hình',
           items: [
-            { id: 'audit', label: 'Nhật ký Hệ thống', icon: ShieldAlert },
+            { id: 'audit', label: 'Nhật ký hệ thống', icon: ShieldAlert },
           ]
         }
       ];
@@ -54,6 +53,7 @@ export default function Sidebar() {
         {
           title: 'Trung tâm Giám định & Duyệt',
           items: [
+            { id: 'overview', label: 'Tổng quan kiểm duyệt', icon: LayoutDashboard },
             { id: 'curation_queue', label: 'Hàng đợi Kiểm duyệt', icon: CheckSquare, badge: pendingCuration },
             { id: 'curation_artifacts', label: 'Hiện vật & Thuyết minh', icon: Layers },
             { id: 'reviews', label: 'Đánh giá từ Khách', icon: MessageSquare, badge: pendingReviews },
@@ -74,14 +74,14 @@ export default function Sidebar() {
           items: [
             { id: 'overview', label: 'Bàn làm việc', icon: LayoutDashboard },
             { id: 'artifacts', label: 'Quản lý Hiện vật & QR', icon: Layers },
-            { id: 'ai_studio', label: 'AI Content Studio', icon: Sparkles, highlight: true },
+            { id: 'ai_studio', label: 'Xưởng nội dung AI', icon: Sparkles, highlight: true },
           ]
         },
         {
           title: 'Không gian & Trải nghiệm',
           items: [
             { id: 'spaces', label: 'Cấu trúc Không gian', icon: Building2 },
-            { id: 'tours', label: 'Tour & Triển lãm', icon: Compass },
+            { id: 'tours', label: 'Hành trình & triển lãm', icon: Compass },
           ]
         }
       ];
@@ -98,8 +98,8 @@ export default function Sidebar() {
           <span>🏛</span>
         </div>
         <div className="sidebar-brand-text">
-          <h1>SMGS PORTAL</h1>
-          <p>Bảo tàng Thông minh</p>
+          <h1>SMGS · DI SẢN</h1>
+          <p>Không gian nghiệp vụ</p>
         </div>
       </div>
 
@@ -142,9 +142,8 @@ export default function Sidebar() {
               background: '#22C55E',
               boxShadow: '0 0 8px #22C55E'
             }} />
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-300)' }}>Máy chủ: Đang kết nối</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-gold-100)' }}>Bản giao diện thử nghiệm</span>
           </div>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-500)', fontWeight: '700' }}>v2.4</span>
         </div>
       </div>
     </aside>

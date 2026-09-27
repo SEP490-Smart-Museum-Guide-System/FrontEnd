@@ -41,7 +41,7 @@ export default function TransactionManager() {
             Gói Dịch Vụ Thuyết Minh Số & Nhật Ký Giao Dịch
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Quản lý các gói Digital Pass (Standard, AI Pro, Family Pass), theo dõi doanh thu thời gian thực và đối soát hoàn tiền
+            Quản lý các gói hướng dẫn số, theo dõi doanh thu và đối soát hoàn tiền
           </p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function TransactionManager() {
           </div>
           <div>
             <div className="stat-value">{totalRevenue.toLocaleString()} đ</div>
-            <div className="stat-label">Tổng doanh thu Digital Pass</div>
+            <div className="stat-label">Tổng doanh thu gói hướng dẫn số</div>
           </div>
         </div>
 
@@ -74,14 +74,14 @@ export default function TransactionManager() {
           </div>
           <div>
             <div className="stat-value">2.570</div>
-            <div className="stat-label">Pass đang kích hoạt sử dụng</div>
+            <div className="stat-label">Lượt kích hoạt đang sử dụng</div>
           </div>
         </div>
       </div>
 
       {/* Pass Packages Grid */}
       <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '16px', color: 'var(--color-charcoal-900)' }}>
-        Danh Mục Gói Dịch Vụ Số (Digital Passes)
+        Danh Mục Gói Dịch Vụ Số
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '36px' }}>
         {passPackages.map(pkg => (

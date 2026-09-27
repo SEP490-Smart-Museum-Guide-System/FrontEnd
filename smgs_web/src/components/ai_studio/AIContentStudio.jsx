@@ -17,10 +17,11 @@ import {
 } from 'lucide-react';
 
 export default function AIContentStudio({ initialArtifact }) {
-  const { artifacts, submitToCuration, showToast } = useApp();
+  const { artifacts, currentMuseum, submitToCuration, showToast } = useApp();
+  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
 
   const [selectedArtifactId, setSelectedArtifactId] = useState(
-    initialArtifact?.id || artifacts[0]?.id || ''
+    initialArtifact?.id || museumArtifacts[0]?.id || ''
   );
   const [activeMode, setActiveMode] = useState('narration'); // narration | quiz | multilingual | knowledge
   const [audience, setAudience] = useState('children'); // children | general | scholar
@@ -33,7 +34,7 @@ export default function AIContentStudio({ initialArtifact }) {
   const [generatedOutput, setGeneratedOutput] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const selectedArtifact = artifacts.find(a => a.id === selectedArtifactId) || artifacts[0];
+  const selectedArtifact = museumArtifacts.find(a => a.id === selectedArtifactId) || museumArtifacts[0];
 
   useEffect(() => {
     if (initialArtifact?.id) {
@@ -43,6 +44,10 @@ export default function AIContentStudio({ initialArtifact }) {
 
   // Generate content simulation
   const handleGenerate = () => {
+    if (!selectedArtifact) {
+      showToast('Bảo tàng này chưa có hiện vật để tạo nội dung.');
+      return;
+    }
     setIsGenerating(true);
     setGeneratedOutput('');
 
@@ -143,14 +148,14 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
 
     submitToCuration({
       type: activeMode === 'narration' ? 'audio_narration' : activeMode === 'quiz' ? 'quiz' : 'artifact_update',
-      title: `AI Studio: ${activeMode === 'narration' ? 'Thuyết minh' : activeMode === 'quiz' ? 'Bộ câu hỏi Quiz' : 'Tư liệu di sản'} — ${selectedArtifact.name} (${audience === 'children' ? 'Thiếu nhi' : audience === 'scholar' ? 'Học thuật' : 'Phổ thông'})`,
+      title: `Xưởng nội dung AI: ${activeMode === 'narration' ? 'Thuyết minh' : activeMode === 'quiz' ? 'Bộ câu hỏi' : 'Tư liệu di sản'} — ${selectedArtifact.name} (${audience === 'children' ? 'Thiếu nhi' : audience === 'scholar' ? 'Học thuật' : 'Phổ thông'})`,
       targetArtifactId: selectedArtifact.id,
       targetArtifactName: selectedArtifact.name,
-      submittedBy: 'Nguyễn Mai Anh (Museum Staff)',
+      submittedBy: 'Nguyễn Mai Anh (Nhân viên bảo tàng)',
       priority: 'high',
       currentVersion: selectedArtifact.shortDesc || 'Bản cơ bản',
       proposedContent: generatedOutput,
-      changesSummary: `Nội dung được tạo tự động bởi AI Content Studio với chế độ [${activeMode.toUpperCase()}] và phong cách [${audience}] dành riêng cho hiện vật ${selectedArtifact.name}.`,
+      changesSummary: `Nội dung được tạo tại xưởng nội dung AI dành cho hiện vật ${selectedArtifact.name}.`,
       feedback: ''
     });
   };
@@ -181,7 +186,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
           </div>
           <div>
             <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-              AI Content Studio — Sáng Tạo Thuyết Minh & Quiz Di Sản
+              Xưởng Nội Dung AI — Thuyết Minh Và Câu Hỏi Di Sản
             </h2>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '2px' }}>
               Trợ lý trí tuệ nhân tạo chuyên sâu giúp nhân viên tạo nhanh bài thuyết minh đa độ tuổi, trắc nghiệm tương tác và bản dịch đa ngữ
@@ -191,7 +196,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
       </div>
 
       {/* Main Studio Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '28px' }}>
+      <div className="workbench-grid" style={{ display: 'grid', gridTemplateColumns: '380px minmax(0, 1fr)', gap: '28px' }}>
         {/* Left Column: Configuration & Prompting */}
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '16px', color: 'var(--color-charcoal-900)' }}>
@@ -203,10 +208,11 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
             <label className="form-label">Chọn hiện vật mục tiêu *</label>
             <select
               className="form-select"
-              value={selectedArtifactId}
+              value={selectedArtifact?.id || ''}
               onChange={(e) => setSelectedArtifactId(e.target.value)}
             >
-              {artifacts.map(a => (
+              {museumArtifacts.length === 0 && <option value="">Chưa có hiện vật trong bảo tàng này</option>}
+              {museumArtifacts.map(a => (
                 <option key={a.id} value={a.id}>
                   {a.name} ({a.code}) {a.isNationalTreasure ? '⭐' : ''}
                 </option>
@@ -249,10 +255,10 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
             <label className="form-label">Chế độ tạo nội dung</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               {[
-                { id: 'narration', label: 'Thuyết minh Audio', icon: Volume2 },
-                { id: 'quiz', label: 'Bộ Quiz trắc nghiệm', icon: HelpCircle },
+                { id: 'narration', label: 'Thuyết minh âm thanh', icon: Volume2 },
+                { id: 'quiz', label: 'Bộ câu hỏi trắc nghiệm', icon: HelpCircle },
                 { id: 'multilingual', label: 'Dịch thuật đa ngữ', icon: Globe },
-                { id: 'knowledge', label: 'Tri thức AI Bot', icon: Bot },
+                { id: 'knowledge', label: 'Tri thức trợ lý AI', icon: Bot },
               ].map(m => {
                 const Icon = m.icon;
                 const isSelected = activeMode === m.id;
@@ -287,7 +293,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
           {activeMode === 'narration' && (
             <>
               <div className="form-group">
-                <label className="form-label">Đối tượng tiếp nhận (Target Audience)</label>
+                <label className="form-label">Đối tượng tiếp nhận</label>
                 <select
                   className="form-select"
                   value={audience}
@@ -300,13 +306,13 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
               </div>
 
               <div className="form-group">
-                <label className="form-label">Phong cách & Ngữ điệu (Tone)</label>
+                <label className="form-label">Phong cách và ngữ điệu</label>
                 <select
                   className="form-select"
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
                 >
-                  <option value="vivid">Sinh động, kể chuyện (Storytelling)</option>
+                  <option value="vivid">Sinh động, kể chuyện</option>
                   <option value="inspiring">Hào hùng, tôn vinh lịch sử dân tộc</option>
                   <option value="academic">Trang trọng, chuẩn mực bảo tàng</option>
                 </select>
@@ -351,9 +357,9 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
                 value={targetLang}
                 onChange={(e) => setTargetLang(e.target.value)}
               >
-                <option value="en">English (Tiếng Anh chuyên ngành di sản)</option>
-                <option value="fr">Français (Tiếng Pháp)</option>
-                <option value="ja">日本語 (Tiếng Nhật Bản)</option>
+                <option value="en">Tiếng Anh (chuyên ngành di sản)</option>
+                <option value="fr">Tiếng Pháp</option>
+                <option value="ja">Tiếng Nhật</option>
               </select>
             </div>
           )}
@@ -362,7 +368,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !selectedArtifact}
             className="btn btn-gold"
             style={{ width: '100%', padding: '12px', marginTop: '12px' }}
           >
@@ -470,7 +476,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
                   Sẵn sàng tạo nội dung di sản
                 </h4>
                 <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', maxWidth: '420px', marginTop: '6px' }}>
-                  Chọn cấu hình ở cột bên trái và nhấn nút <strong>"Sinh nội dung bằng AI"</strong> để bắt đầu tạo kịch bản thuyết minh hoặc câu hỏi quiz tự động.
+                  Chọn cấu hình ở cột bên trái và nhấn nút <strong>"Sinh nội dung bằng AI"</strong> để bắt đầu tạo kịch bản thuyết minh hoặc câu hỏi tự động.
                 </p>
               </div>
             )}

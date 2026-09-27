@@ -19,14 +19,14 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     theme: artifact?.theme || 'Đông Sơn & Thời đại Kim khí',
     period: artifact?.period || 'Văn hóa Đông Sơn (Thế kỷ II - III TCN)',
     dating: artifact?.dating || 'Khoảng 2.500 năm trước',
-    material: artifact?.material || 'Hợp kim Đồng (Bronze)',
+    material: artifact?.material || 'Hợp kim đồng',
     dimensions: artifact?.dimensions || '',
     isNationalTreasure: artifact?.isNationalTreasure || false,
     has3DModel: artifact?.has3DModel || false,
     modelUrl: artifact?.modelUrl || '/assets/models/trong_dong_dong_son.glb',
     image: artifact?.image || '/assets/images/ngoc-lu-web.jpg',
     audioDuration: artifact?.audioDuration || '03:30',
-    status: artifact?.status || 'published',
+    status: artifact?.status || 'draft',
     shortDesc: artifact?.shortDesc || '',
     fullDesc: artifact?.fullDesc || ''
   });
@@ -90,7 +90,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Tên quốc tế (English)</label>
+                <label className="form-label">Tên quốc tế (tiếng Anh)</label>
                 <input
                   type="text"
                   className="form-input"

@@ -16,8 +16,9 @@ const AppContext = createContext();
 
 export function AppProvider({ children }) {
   // Current active staff/admin role
-  const [currentRole, setCurrentRole] = useState(() => {
-    return localStorage.getItem('smgs_web_role') || 'administrator';
+  const [currentRole, setRoleState] = useState(() => {
+    const savedRole = localStorage.getItem('smgs_web_role');
+    return ['administrator', 'curator', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
   });
 
   // Active selected museum for staff/curator/admin scope
@@ -25,6 +26,12 @@ export function AppProvider({ children }) {
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState('overview');
+
+  const setCurrentRole = (role) => {
+    if (!['administrator', 'curator', 'museumStaff'].includes(role)) return;
+    setRoleState(role);
+    setActiveTab('overview');
+  };
 
   // Core data states
   const [museums, setMuseums] = useState(initialMuseums);
@@ -60,7 +67,7 @@ export function AppProvider({ children }) {
       id: `log-${Date.now()}`,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
       user: `${currentUser.name} (${currentUser.email})`,
-      role: currentRole === 'administrator' ? 'Administrator' : currentRole === 'curator' ? 'Curator' : 'Museum Staff',
+      role: currentRole === 'administrator' ? 'Quản trị viên' : currentRole === 'curator' ? 'Kiểm duyệt viên' : 'Nhân viên bảo tàng',
       action,
       details
     };
@@ -149,7 +156,7 @@ export function AppProvider({ children }) {
       status: 'published'
     };
     setTours(prev => [tourWithId, ...prev]);
-    logAction('TOUR_CREATE', `Tạo lộ trình Tour mới: ${tourWithId.title}`);
+    logAction('TOUR_CREATE', `Tạo lộ trình tham quan mới: ${tourWithId.title}`);
     showToast(`Đã tạo tour "${tourWithId.title}" thành công!`);
   };
 

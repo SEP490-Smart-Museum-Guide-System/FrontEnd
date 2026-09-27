@@ -5,83 +5,56 @@ import {
   ShieldCheck,
   UserCheck,
   Sparkles,
-  Search,
-  Bell,
-  ChevronDown,
-  User
+  Bell
 } from 'lucide-react';
 
 export default function Header() {
   const {
     currentRole,
     setCurrentRole,
+    setActiveTab,
     museums,
     selectedMuseumId,
     setSelectedMuseumId,
-    currentMuseum,
-    curationQueue
+    curationQueue,
+    artifacts,
+    currentMuseum
   } = useApp();
 
-  const pendingCurationCount = curationQueue.filter(c => c.status === 'pending').length;
+  const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id));
+  const pendingCurationCount = curationQueue.filter(c => c.status === 'pending' && museumArtifactIds.has(c.targetArtifactId)).length;
 
   const roleLabels = {
-    administrator: { label: 'Quản trị viên (Admin)', icon: ShieldCheck, badgeClass: 'role-badge-admin' },
-    museumStaff: { label: 'Nhân viên Bảo tàng (Staff)', icon: UserCheck, badgeClass: 'role-badge-staff' },
-    curator: { label: 'Kiểm duyệt viên (Curator)', icon: Sparkles, badgeClass: 'role-badge-curator' }
+    administrator: { label: 'Quản trị viên', icon: ShieldCheck, badgeClass: 'role-badge-admin' },
+    museumStaff: { label: 'Nhân viên bảo tàng', icon: UserCheck, badgeClass: 'role-badge-staff' },
+    curator: { label: 'Kiểm duyệt viên', icon: Sparkles, badgeClass: 'role-badge-curator' }
   };
 
   const currentRoleInfo = roleLabels[currentRole] || roleLabels.administrator;
-  const RoleIcon = currentRoleInfo.icon;
 
   return (
     <header className="topbar">
       <div className="topbar-left">
-        {/* Museum Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Landmark size={18} color="var(--color-burgundy-700)" />
-          <select
-            value={selectedMuseumId}
-            onChange={(e) => setSelectedMuseumId(e.target.value)}
-            className="form-select"
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              borderColor: 'var(--color-paper-border)',
-              background: 'var(--color-paper-accent)',
-              cursor: 'pointer',
-              maxWidth: '260px'
-            }}
-          >
-            {museums.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Global Search Hint */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          background: '#F5F2EB',
-          padding: '6px 14px',
-          borderRadius: '8px',
-          border: '1px solid var(--color-paper-border)',
-          color: 'var(--color-charcoal-500)',
-          fontSize: '0.8125rem',
-          minWidth: '220px'
-        }}>
-          <Search size={15} />
-          <span>Tìm nhanh hiện vật, mã QR...</span>
+          {currentRole === 'administrator' ? (
+            <span className="museum-select-badge">Toàn hệ thống</span>
+          ) : (
+            <select
+              value={selectedMuseumId}
+              onChange={(e) => setSelectedMuseumId(e.target.value)}
+              className="form-select"
+              aria-label="Chọn bảo tàng"
+              style={{ width: 'auto', maxWidth: '280px', background: 'var(--color-paper-accent)' }}
+            >
+              {museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          )}
         </div>
       </div>
 
       <div className="topbar-right">
-        {/* Role Switcher with instant click */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8F5EE', padding: '4px 6px', borderRadius: '10px', border: '1px solid var(--color-paper-border)' }}>
+        <div className="role-switcher" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-paper-accent)', padding: '4px 6px', borderRadius: '10px', border: '1px solid var(--color-paper-border)' }}>
           <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-charcoal-500)', padding: '0 6px' }}>Vai trò:</span>
           <button
             type="button"
@@ -89,7 +62,7 @@ export default function Header() {
             className={`btn btn-sm ${currentRole === 'administrator' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
           >
-            <ShieldCheck size={14} /> Admin
+            <ShieldCheck size={14} /> Quản trị
           </button>
           <button
             type="button"
@@ -97,7 +70,7 @@ export default function Header() {
             className={`btn btn-sm ${currentRole === 'museumStaff' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
           >
-            <UserCheck size={14} /> Staff
+            <UserCheck size={14} /> Nhân viên
           </button>
           <button
             type="button"
@@ -105,15 +78,15 @@ export default function Header() {
             className={`btn btn-sm ${currentRole === 'curator' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
           >
-            <Sparkles size={14} /> Curator
+            <Sparkles size={14} /> Kiểm duyệt
           </button>
         </div>
 
-        {/* Notification bell */}
-        <div style={{ position: 'relative' }}>
+        {currentRole === 'curator' && <div className="topbar-alert" style={{ position: 'relative' }}>
           <button
             type="button"
             className="btn btn-secondary"
+            onClick={() => setActiveTab('curation_queue')}
             style={{ padding: '8px', borderRadius: '50%', width: '38px', height: '38px' }}
             title={`${pendingCurationCount} mục đang chờ duyệt`}
           >
@@ -139,7 +112,7 @@ export default function Header() {
               </span>
             )}
           </button>
-        </div>
+        </div>}
 
         {/* User profile avatar */}
         <div style={{
@@ -163,7 +136,7 @@ export default function Header() {
             fontWeight: '700',
             fontSize: '0.85rem'
           }}>
-            {currentRole === 'administrator' ? 'A' : currentRole === 'curator' ? 'C' : 'S'}
+              {currentRole === 'administrator' ? 'Q' : currentRole === 'curator' ? 'K' : 'N'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-charcoal-900)' }}>

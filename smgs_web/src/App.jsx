@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from './context/AppContext';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
-import AdminDashboard from './components/analytics/AdminDashboard';
+import RoleDashboard from './components/analytics/RoleDashboard';
 import ArtifactList from './components/artifacts/ArtifactList';
 import AIContentStudio from './components/ai_studio/AIContentStudio';
 import CurationCenter from './components/curation/CurationCenter';
@@ -15,7 +15,7 @@ import AuditLogs from './components/logs/AuditLogs';
 import ToastContainer from './components/common/ToastContainer';
 
 export default function App() {
-  const { activeTab, setActiveTab, currentRole } = useApp();
+  const { activeTab, setActiveTab } = useApp();
   const [selectedStudioArtifact, setSelectedStudioArtifact] = useState(null);
 
   const handleOpenAIStudio = (artifact) => {
@@ -26,7 +26,7 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <AdminDashboard onNavigate={setActiveTab} />;
+        return <RoleDashboard onNavigate={setActiveTab} />;
       case 'museums':
       case 'spaces':
         return <MuseumManager />;
@@ -48,7 +48,7 @@ export default function App() {
       case 'audit':
         return <AuditLogs />;
       default:
-        return <AdminDashboard onNavigate={setActiveTab} />;
+        return <RoleDashboard onNavigate={setActiveTab} />;
     }
   };
 

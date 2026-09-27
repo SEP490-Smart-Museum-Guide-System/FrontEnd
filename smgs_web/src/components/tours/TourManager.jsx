@@ -16,6 +16,9 @@ import {
 
 export default function TourManager() {
   const { tours, addTour, exhibitions, artifacts, currentMuseum } = useApp();
+  const museumTours = tours.filter(item => item.museumId === currentMuseum.id);
+  const museumExhibitions = exhibitions.filter(item => item.museumId === currentMuseum.id);
+  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
   const [activeSection, setActiveSection] = useState('tours'); // 'tours' | 'exhibitions'
   const [isCreatingTour, setIsCreatingTour] = useState(false);
 
@@ -32,7 +35,7 @@ export default function TourManager() {
   const handleCreateTour = (e) => {
     e.preventDefault();
     if (!tourForm.title) {
-      alert('Vui lòng nhập tên lộ trình Tour');
+      alert('Vui lòng nhập tên hành trình tham quan');
       return;
     }
     addTour({
@@ -76,7 +79,7 @@ export default function TourManager() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-            Quản Lý Lộ Trình Tour & Triển Lãm Chuyên Đề
+            Quản Lý Hành Trình & Triển Lãm Chuyên Đề
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
             Thiết kế các lộ trình tham quan mẫu có thuyết minh tự động và quản lý lịch sự kiện trưng bày chuyên đề
@@ -89,7 +92,7 @@ export default function TourManager() {
             onClick={() => setIsCreatingTour(true)}
             className="btn btn-primary"
           >
-            <Plus size={16} /> Tạo Lộ Trình Tour Mới
+            <Plus size={16} /> Tạo Hành Trình Mới
           </button>
         </div>
       </div>
@@ -113,7 +116,7 @@ export default function TourManager() {
             transition: 'all var(--transition-fast)'
           }}
         >
-          <Compass size={16} /> Lộ Trình Tour Tham Quan ({tours.length})
+          <Compass size={16} /> Hành Trình Tham Quan ({museumTours.length})
         </button>
 
         <button
@@ -133,14 +136,14 @@ export default function TourManager() {
             transition: 'all var(--transition-fast)'
           }}
         >
-          <Calendar size={16} /> Triển Lãm Chuyên Đề ({exhibitions.length})
+          <Calendar size={16} /> Triển Lãm Chuyên Đề ({museumExhibitions.length})
         </button>
       </div>
 
       {/* Tour List View */}
       {activeSection === 'tours' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
-          {tours.map(tour => (
+          {museumTours.map(tour => (
             <div key={tour.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
               <div className="card-header" style={{ background: '#FAF7F2' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -197,7 +200,7 @@ export default function TourManager() {
       {/* Exhibition List View */}
       {activeSection === 'exhibitions' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {exhibitions.map(exh => (
+          {museumExhibitions.map(exh => (
             <div key={exh.id} className="card" style={{ padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
@@ -238,13 +241,13 @@ export default function TourManager() {
         <div className="modal-overlay" onClick={() => setIsCreatingTour(false)}>
           <div className="modal-dialog" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title font-serif">Tạo Lộ Trình Tour Mới</h3>
+              <h3 className="modal-title font-serif">Tạo Hành Trình Mới</h3>
               <button type="button" onClick={() => setIsCreatingTour(false)} className="btn btn-secondary btn-sm">✕</button>
             </div>
             <form onSubmit={handleCreateTour}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Tên lộ trình Tour *</label>
+                  <label className="form-label">Tên hành trình *</label>
                   <input
                     type="text"
                     className="form-input"
@@ -286,7 +289,7 @@ export default function TourManager() {
                       checked={tourForm.isPaidGuide}
                       onChange={(e) => setTourForm(prev => ({ ...prev, isPaidGuide: e.target.checked }))}
                     />
-                    <span>Yêu cầu gói Digital Pass / Thu phí thuyết minh chuyên gia AI</span>
+                    <span>Yêu cầu gói hướng dẫn số / Thu phí thuyết minh chuyên gia AI</span>
                   </label>
                   {tourForm.isPaidGuide && (
                     <input
@@ -304,7 +307,7 @@ export default function TourManager() {
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Chọn các hiện vật thuộc lộ trình tour:</label>
                   <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--color-paper-border)', borderRadius: '8px', padding: '8px' }}>
-                    {artifacts.map(art => (
+                    {museumArtifacts.map(art => (
                       <label key={art.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', fontSize: '0.8125rem' }}>
                         <input
                           type="checkbox"
@@ -332,7 +335,7 @@ export default function TourManager() {
 
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsCreatingTour(false)} className="btn btn-secondary">Hủy</button>
-                <button type="submit" className="btn btn-primary">Tạo Tour</button>
+                <button type="submit" className="btn btn-primary">Tạo hành trình</button>
               </div>
             </form>
           </div>

@@ -17,7 +17,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 
-export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit }) {
+export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit, readOnly = false }) {
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copiedQR, setCopiedQR] = useState(false);
@@ -71,7 +71,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
               </svg>
             </div>
             <div class="code">${artifact.qrCode}</div>
-            <div class="footer">Quét mã bằng ứng dụng SMGS Mobile để nghe thuyết minh tự động và trả lời quiz nhận huy hiệu di sản.</div>
+            <div class="footer">Quét mã bằng ứng dụng SMGS để nghe thuyết minh và trả lời câu hỏi nhận huy hiệu di sản.</div>
           </div>
           <script>window.print();</script>
         </body>
@@ -119,7 +119,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         </div>
 
         {/* Navigation Tabs */}
-        <div style={{
+        <div className="artifact-modal-tabs" style={{
           display: 'flex',
           borderBottom: '1px solid var(--color-paper-border)',
           background: '#FDFCF9',
@@ -130,7 +130,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
             { id: '3d', label: 'Xem Mô hình 3D (AR)', icon: Box, badge: artifact.has3DModel ? 'Sẵn sàng' : 'Chưa có' },
             { id: 'qr', label: 'Mã QR & Nhận diện', icon: QrCode },
             { id: 'multilingual', label: 'Đa ngôn ngữ', icon: Globe },
-            { id: 'quizzes', label: `Quiz tương tác (${artifact.quizzes?.length || 0})`, icon: HelpCircle }
+            { id: 'quizzes', label: `Câu hỏi tương tác (${artifact.quizzes?.length || 0})`, icon: HelpCircle }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -173,7 +173,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         {/* Modal Body */}
         <div className="modal-body">
           {activeTab === 'overview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '28px' }}>
+            <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '28px' }}>
               {/* Left Column: Image & Audio */}
               <div>
                 <div style={{
@@ -203,7 +203,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Volume2 size={16} color="var(--color-burgundy-700)" />
-                      <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Thuyết minh Audio</span>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Thuyết minh âm thanh</span>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)', fontWeight: '500' }}>
                       {artifact.audioDuration || '03:45'}
@@ -278,7 +278,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                {!readOnly && <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -288,7 +288,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     className="btn btn-gold"
                     style={{ flex: 1 }}
                   >
-                    <Sparkles size={16} /> Tạo thêm Thuyết minh / Quiz bằng AI
+                    <Sparkles size={16} /> Tạo thêm thuyết minh / câu hỏi bằng AI
                   </button>
                   <button
                     type="button"
@@ -300,7 +300,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   >
                     Chỉnh sửa thông số
                   </button>
-                </div>
+                </div>}
               </div>
             </div>
           )}
@@ -356,9 +356,9 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', maxWidth: '440px', margin: '0 auto 20px' }}>
                     Hiện vật này đang trong quá trình scan 3D và số hóa không gian. Nhân viên có thể tải lên tệp .glb bất cứ lúc nào.
                   </p>
-                  <button type="button" onClick={() => onEdit(artifact)} className="btn btn-primary btn-sm">
+                  {!readOnly && <button type="button" onClick={() => onEdit(artifact)} className="btn btn-primary btn-sm">
                     Tải lên file 3D (.glb / .gltf)
-                  </button>
+                  </button>}
                 </div>
               )}
             </div>
@@ -366,7 +366,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
           {/* QR Code Tab */}
           {activeTab === 'qr' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '28px', alignItems: 'center' }}>
+            <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '28px', alignItems: 'center' }}>
               <div style={{
                 background: '#FFFFFF',
                 padding: '20px',
@@ -401,7 +401,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
               <div>
                 <h4 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '8px', color: 'var(--color-burgundy-900)' }}>
-                  Mã QR Gắn Hiện Vật (Physical & Digital)
+                  Mã QR gắn hiện vật và hồ sơ số
                 </h4>
                 <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-700)', lineHeight: '1.6', marginBottom: '16px' }}>
                   Khách tham quan dùng ứng dụng di động quét mã này ngay tại tủ kính trưng bày để:
@@ -410,7 +410,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <li>Tự động ghi nhận lượt tham quan vào lịch sử và bản đồ hành trình.</li>
                   <li>Kích hoạt thuyết minh âm thanh đa ngôn ngữ theo sở thích.</li>
                   <li>Mở giao diện hỏi đáp tương tác với Trợ lý AI Bảo tàng.</li>
-                  <li>Mở câu hỏi mini quiz tương tác để tích điểm huy hiệu.</li>
+                  <li>Mở câu hỏi tương tác để tích điểm huy hiệu.</li>
                 </ul>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -433,7 +433,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }}>
                   Bản dịch thuyết minh đa ngôn ngữ
                 </h4>
-                <button
+                {!readOnly && <button
                   type="button"
                   onClick={() => {
                     onClose();
@@ -441,8 +441,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   }}
                   className="btn btn-gold btn-sm"
                 >
-                  <Sparkles size={14} /> Dịch tự động bằng AI Studio
-                </button>
+                  <Sparkles size={14} /> Dịch tự động bằng xưởng nội dung AI
+                </button>}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -451,7 +451,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '1.25rem' }}>🇬🇧</span>
                     <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-900)' }}>
-                      English — {artifact.multilingual?.en?.name || artifact.altName || artifact.name}
+                      Tiếng Anh — {artifact.multilingual?.en?.name || artifact.altName || artifact.name}
                     </strong>
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', lineHeight: '1.6' }}>
@@ -493,9 +493,9 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }}>
-                  Kho câu hỏi Quiz tương tác ({artifact.quizzes?.length || 0} câu)
+                  Kho câu hỏi tương tác ({artifact.quizzes?.length || 0} câu)
                 </h4>
-                <button
+                {!readOnly && <button
                   type="button"
                   onClick={() => {
                     onClose();
@@ -503,8 +503,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   }}
                   className="btn btn-gold btn-sm"
                 >
-                  <Sparkles size={14} /> Sinh thêm câu hỏi Quiz bằng AI
-                </button>
+                  <Sparkles size={14} /> Tạo thêm câu hỏi bằng AI
+                </button>}
               </div>
 
               {artifact.quizzes && artifact.quizzes.length > 0 ? (
@@ -544,9 +544,9 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 <div style={{ padding: '40px 20px', textAlign: 'center', background: '#F8F5EE', borderRadius: '12px' }}>
                   <HelpCircle size={40} color="var(--color-charcoal-400)" style={{ margin: '0 auto 12px' }} />
                   <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-600)', marginBottom: '16px' }}>
-                    Hiện vật này chưa có bộ câu hỏi Quiz tương tác. Hãy dùng AI Studio để tạo nhanh bộ trắc nghiệm hấp dẫn!
+                    Hiện vật này chưa có bộ câu hỏi tương tác. Hãy dùng xưởng nội dung AI để tạo bộ trắc nghiệm!
                   </p>
-                  <button
+                  {!readOnly && <button
                     type="button"
                     onClick={() => {
                       onClose();
@@ -554,8 +554,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     }}
                     className="btn btn-gold btn-sm"
                   >
-                    <Sparkles size={14} /> Mở AI Quiz Studio
-                  </button>
+                    <Sparkles size={14} /> Mở xưởng câu hỏi AI
+                  </button>}
                 </div>
               )}
             </div>
