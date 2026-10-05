@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect x="0" y="0" width="1440" height="900" rx="0" fill="#F4EBDD"/>
+<rect x="0" y="0" width="270" height="900" rx="0" fill="#3B302A"/>
+<rect x="20" y="18" width="40" height="40" rx="10" fill="#6B2E2E" stroke="#B38B59" stroke-width="1"/>
+<text x="31" y="46" fill="#F4EBDD" font-family="Noto Sans" font-size="22" font-weight="400" letter-spacing="0">▣</text>
+<text x="72" y="37" fill="#F4EBDD" font-family="Noto Serif" font-size="18" font-weight="700" letter-spacing="0">SMGS · DI SẢN</text>
+<text x="72" y="55" fill="#D9BFA0" font-family="Noto Sans" font-size="10" font-weight="700" letter-spacing="1">KHÔNG GIAN NGHIỆP VỤ</text>
+<line x1="0" y1="72" x2="270" y2="72" stroke="#705B50"/>
+<text x="24" y="119" fill="#D9BFA0" font-family="Noto Sans" font-size="10" font-weight="700" letter-spacing="1">KHÔNG GIAN KIỂM DUYỆT</text>
+<rect x="14" y="137" width="242" height="38" rx="8" fill="#6B2E2E"/>
+<circle cx="35" cy="156" r="7" fill="#B38B59"/>
+<text x="54" y="161" fill="#F4EBDD" font-family="Noto Sans" font-size="13" font-weight="600" letter-spacing="0">Tổng quan kiểm duyệt</text>
+<circle cx="35" cy="206" r="7" fill="#D9BFA0"/>
+<text x="54" y="211" fill="#F4EBDD" font-family="Noto Sans" font-size="13" font-weight="400" letter-spacing="0">Hàng đợi kiểm duyệt</text>
+<circle cx="35" cy="256" r="7" fill="#D9BFA0"/>
+<text x="54" y="261" fill="#F4EBDD" font-family="Noto Sans" font-size="13" font-weight="400" letter-spacing="0">Hiện vật &amp; Thuyết minh</text>
+<circle cx="35" cy="306" r="7" fill="#D9BFA0"/>
+<text x="54" y="311" fill="#F4EBDD" font-family="Noto Sans" font-size="13" font-weight="400" letter-spacing="0">Đánh giá từ khách</text>
+<circle cx="35" cy="356" r="7" fill="#D9BFA0"/>
+<text x="54" y="361" fill="#F4EBDD" font-family="Noto Sans" font-size="13" font-weight="400" letter-spacing="0">Lịch sử phê duyệt</text>
+<line x1="0" y1="850" x2="270" y2="850" stroke="#705B50"/>
+<text x="25" y="878" fill="#D9BFA0" font-family="Noto Sans" font-size="11" font-weight="400" letter-spacing="0">Bản giao diện thử nghiệm</text>
+<rect x="270" y="0" width="1170" height="68" rx="0" fill="#F8F1E7"/>
+<line x1="270" y1="68" x2="1440" y2="68" stroke="#DACBB5"/>
+<text x="302" y="39" fill="#6B2E2E" font-family="Noto Sans" font-size="13" font-weight="700" letter-spacing="0">Kiểm duyệt viên</text>
+<rect x="1183" y="16" width="225" height="38" rx="19" fill="#F4EBDD" stroke="#DACBB5" stroke-width="1"/>
+<circle cx="1204" cy="35" r="13" fill="#6B2E2E"/>
+<text x="1228" y="39" fill="#3B302A" font-family="Noto Sans" font-size="12" font-weight="600" letter-spacing="0">Kiểm duyệt viên</text>
+<rect x="304" y="96" width="1100" height="220" rx="12" fill="#6B2E2E"/>
+<text x="338" y="133" fill="#D9BFA0" font-family="Noto Sans" font-size="11" font-weight="700" letter-spacing="1">KHÔNG GIAN KIỂM DUYỆT</text>
+<text x="338" y="181" fill="#F4EBDD" font-family="Noto Serif" font-size="30" font-weight="700" letter-spacing="0">Đưa nội dung tốt đến khách tham quan</text>
+<text x="338" y="211" fill="#EEE0CC" font-family="Noto Sans" font-size="14" font-weight="400" letter-spacing="0">Xem bản nháp, phản hồi và tiến độ phê duyệt trước khi xuất bản.</text>
+<rect x="338" y="241" width="210" height="42" rx="7" fill="#F4EBDD"/>
+<text x="359" y="268" fill="#3B302A" font-family="Noto Sans" font-size="13" font-weight="700" letter-spacing="0">Hàng đợi kiểm duyệt</text>
+<circle cx="1354" cy="109" r="99" fill="none" stroke="#987447" stroke-width="1"/>
+<rect x="304" y="342" width="260" height="121" rx="10" fill="#F8F1E7" stroke="#DACBB5" stroke-width="1"/>
+<rect x="322" y="367" width="43" height="43" rx="9" fill="#EEDBD4"/>
+<text x="335" y="395" fill="#6B2E2E" font-family="Noto Sans" font-size="17" font-weight="400" letter-spacing="0">◆</text>
+<text x="380" y="385" fill="#3B302A" font-family="Noto Sans" font-size="22" font-weight="700" letter-spacing="0">2</text>
+<text x="380" y="407" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Chờ duyệt</text>
+<text x="380" y="427" fill="#826E63" font-family="Noto Sans" font-size="10" font-weight="400" letter-spacing="0">Cần xem nội dung</text>
+<rect x="584" y="342" width="260" height="121" rx="10" fill="#F8F1E7" stroke="#DACBB5" stroke-width="1"/>
+<rect x="602" y="367" width="43" height="43" rx="9" fill="#EEDBD4"/>
+<text x="615" y="395" fill="#6B2E2E" font-family="Noto Sans" font-size="17" font-weight="400" letter-spacing="0">◆</text>
+<text x="660" y="385" fill="#3B302A" font-family="Noto Sans" font-size="22" font-weight="700" letter-spacing="0">0</text>
+<text x="660" y="407" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Đã phê duyệt</text>
+<text x="660" y="427" fill="#826E63" font-family="Noto Sans" font-size="10" font-weight="400" letter-spacing="0">Nội dung sẵn sàng</text>
+<rect x="864" y="342" width="260" height="121" rx="10" fill="#F8F1E7" stroke="#DACBB5" stroke-width="1"/>
+<rect x="882" y="367" width="43" height="43" rx="9" fill="#EEDBD4"/>
+<text x="895" y="395" fill="#6B2E2E" font-family="Noto Sans" font-size="17" font-weight="400" letter-spacing="0">◆</text>
+<text x="940" y="385" fill="#3B302A" font-family="Noto Sans" font-size="22" font-weight="700" letter-spacing="0">0</text>
+<text x="940" y="407" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Cần hiệu đính</text>
+<text x="940" y="427" fill="#826E63" font-family="Noto Sans" font-size="10" font-weight="400" letter-spacing="0">Đã gửi góp ý</text>
+<rect x="1144" y="342" width="260" height="121" rx="10" fill="#F8F1E7" stroke="#DACBB5" stroke-width="1"/>
+<rect x="1162" y="367" width="43" height="43" rx="9" fill="#EEDBD4"/>
+<text x="1175" y="395" fill="#6B2E2E" font-family="Noto Sans" font-size="17" font-weight="400" letter-spacing="0">◆</text>
+<text x="1220" y="385" fill="#3B302A" font-family="Noto Sans" font-size="22" font-weight="700" letter-spacing="0">1</text>
+<text x="1220" y="407" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Phản hồi mới</text>
+<text x="1220" y="427" fill="#826E63" font-family="Noto Sans" font-size="10" font-weight="400" letter-spacing="0">Khách đang chờ trả lời</text>
+<rect x="304" y="489" width="740" height="358" rx="10" fill="#F8F1E7" stroke="#DACBB5" stroke-width="1"/>
+<text x="330" y="531" fill="#3B302A" font-family="Noto Serif" font-size="21" font-weight="700" letter-spacing="0">Việc cần xử lý</text>
+<line x1="304" y1="550" x2="1044" y2="550" stroke="#DACBB5"/>
+<text x="330" y="580" fill="#3B302A" font-family="Noto Sans" font-size="14" font-weight="700" letter-spacing="0">Thuyết minh thiếu nhi: Trống đồng Ngọc Lũ</text>
+<text x="330" y="600" fill="#5F4D44" font-family="Noto Sans" font-size="11" font-weight="400" letter-spacing="0">Nguyễn Mai Anh · 27/09/2026</text>
+<rect x="900" y="559" width="110" height="27" rx="13" fill="#EEE0CC"/>
+<text x="915" y="577" fill="#6B2E2E" font-family="Noto Sans" font-size="11" font-weight="700" letter-spacing="0">Chờ duyệt</text>
+<line x1="304" y1="617" x2="1044" y2="617" stroke="#DACBB5"/>
+<text x="330" y="655" fill="#3B302A" font-family="Noto Sans" font-size="14" font-weight="700" letter-spacing="0">Câu hỏi tương tác: Thạp đồng Đào Thịnh</text>
+<text x="330" y="675" fill="#5F4D44" font-family="Noto Sans" font-size="11" font-weight="400" letter-spacing="0">Lê Tuấn Kiệt · 27/09/2026</text>
+<rect x="900" y="634" width="110" height="27" rx="13" fill="#EEE0CC"/>
+<text x="915" y="652" fill="#6B2E2E" font-family="Noto Sans" font-size="11" font-weight="700" letter-spacing="0">Chờ duyệt</text>
+<line x1="304" y1="692" x2="1044" y2="692" stroke="#DACBB5"/>
+<text x="330" y="730" fill="#3B302A" font-family="Noto Sans" font-size="14" font-weight="700" letter-spacing="0">Đánh giá trải nghiệm tham quan</text>
+<text x="330" y="750" fill="#5F4D44" font-family="Noto Sans" font-size="11" font-weight="400" letter-spacing="0">Khách tham quan · 27/09/2026</text>
+<rect x="900" y="709" width="110" height="27" rx="13" fill="#EEE0CC"/>
+<text x="915" y="727" fill="#6B2E2E" font-family="Noto Sans" font-size="11" font-weight="700" letter-spacing="0">Cần trả lời</text>
+<line x1="304" y1="767" x2="1044" y2="767" stroke="#DACBB5"/>
+<rect x="1064" y="489" width="340" height="358" rx="10" fill="#F8F1E7" stroke="#DACBB5" stroke-width="1"/>
+<text x="1090" y="530" fill="#3B302A" font-family="Noto Serif" font-size="21" font-weight="700" letter-spacing="0">Ghi chú nghiệp vụ</text>
+<text x="1090" y="570" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Đọc bản nháp và đối chiếu tư liệu.</text>
+<text x="1090" y="595" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Yêu cầu sửa hoặc phê duyệt.</text>
+<text x="1090" y="620" fill="#5F4D44" font-family="Noto Sans" font-size="12" font-weight="400" letter-spacing="0">Theo dõi phản hồi của khách.</text>
+<rect x="1090" y="763" width="224" height="44" rx="7" fill="#6B2E2E"/>
+<text x="1109" y="792" fill="#F4EBDD" font-family="Noto Sans" font-size="12" font-weight="700" letter-spacing="0">Mở không gian làm việc →</text>
+</svg>
