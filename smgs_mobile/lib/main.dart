@@ -5,7 +5,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'screens/auth/auth_screen.dart';
-import 'models/experience.dart';
 import 'services/app_services.dart';
 import 'services/app_preferences.dart';
 import 'widgets/heritage_decoration.dart';
@@ -30,11 +29,6 @@ class SMGSApp extends StatelessWidget {
     builder: (context, child) => ListenableBuilder(
       listenable: Listenable.merge([AppPreferences.instance, AppServices.auth]),
       builder: (context, _) {
-        final role = AppServices.auth.user?.role;
-        final isManagement =
-            role == UserRole.museumStaff ||
-            role == UserRole.staff ||
-            role == UserRole.administrator;
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             disableAnimations:
@@ -47,16 +41,12 @@ class SMGSApp extends StatelessWidget {
             ),
           ),
           child: ColoredBox(
-            color: isManagement ? const Color(0xFFE8E0D4) : AppColors.darkBrown,
+            color: AppColors.darkBrown,
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isManagement ? 1440 : 500,
-                ),
+                constraints: const BoxConstraints(maxWidth: 500),
                 child: ClipRect(
-                  child: isManagement
-                      ? (child ?? const SizedBox.shrink())
-                      : HeritagePaper(child: child ?? const SizedBox.shrink()),
+                  child: HeritagePaper(child: child ?? const SizedBox.shrink()),
                 ),
               ),
             ),

@@ -24,21 +24,6 @@ class MockAuthService extends AuthService {
       password: 'smgs123',
       role: UserRole.visitor,
     ),
-    'curator@smgs.vn': (
-      name: 'Lê Thu Hà',
-      password: 'smgs123',
-      role: UserRole.staff,
-    ),
-    'museumstaff@smgs.vn': (
-      name: 'Nguyễn Minh Khoa',
-      password: 'smgs123',
-      role: UserRole.museumStaff,
-    ),
-    'admin@smgs.vn': (
-      name: 'Quản trị SMGS',
-      password: 'smgs123',
-      role: UserRole.administrator,
-    ),
   };
   @override
   VisitorUser? get user => _user;

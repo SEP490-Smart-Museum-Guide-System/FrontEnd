@@ -1,17 +1,15 @@
-# smgs_mobile
+# SMGS · Ứng dụng khách tham quan
 
-A new Flutter project.
+Ứng dụng Flutter này dành cho **Visitor (Khách tham quan)**. Ba vai trò còn lại của hệ thống — Admin, Museum Staff và System Staff — sử dụng cổng React + Vite tại `../smgs_web`.
 
-## Getting Started
+Bản FE hiện dùng dữ liệu và đăng nhập mô phỏng, chưa nối backend. Tài khoản trải nghiệm của Visitor: `khach@smgs.vn` / `smgs123`; khách cũng có thể tạo tài khoản mô phỏng trong phiên.
 
-This project is a starting point for a Flutter application.
+## Chạy trên web khi chưa có simulator
 
-A few resources to get you started if this is your first Flutter project:
+```powershell
+cd D:\SEP409\FrontEnd\smgs_mobile
+flutter pub get
+flutter run -d chrome
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Kiểm tra bằng `flutter analyze` và `flutter test test/main_flows_test.dart`.

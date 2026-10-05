@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { X, Save, Layers, Landmark } from 'lucide-react';
 
 export default function ArtifactEditModal({ artifact, onClose, onSave }) {
-  const { currentMuseum, museums } = useApp();
+  const { currentMuseum, museums, currentRole } = useApp();
 
   const isNew = !artifact || !artifact.id;
 
@@ -16,6 +16,11 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     buildingName: artifact?.buildingName || 'Tòa nhà A',
     floorName: artifact?.floorName || 'Tầng 1',
     galleryName: artifact?.galleryName || 'Phòng Văn hóa Đông Sơn',
+    qrCode: artifact?.qrCode || '',
+    mapPosition: artifact?.mapPosition || '',
+    mapIcon: artifact?.mapIcon || 'Hiện vật',
+    mapX: artifact?.mapX ?? 50,
+    mapY: artifact?.mapY ?? 50,
     theme: artifact?.theme || 'Đông Sơn & Thời đại Kim khí',
     period: artifact?.period || 'Văn hóa Đông Sơn (Thế kỷ II - III TCN)',
     dating: artifact?.dating || 'Khoảng 2.500 năm trước',
@@ -25,6 +30,9 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     has3DModel: artifact?.has3DModel || false,
     modelUrl: artifact?.modelUrl || '/assets/models/trong_dong_dong_son.glb',
     image: artifact?.image || '/assets/images/ngoc-lu-web.jpg',
+    referenceImages: artifact?.referenceImages || [],
+    audioUrl: artifact?.audioUrl || '',
+    accessLevel: artifact?.accessLevel || 'free',
     audioDuration: artifact?.audioDuration || '03:30',
     status: artifact?.status || 'draft',
     shortDesc: artifact?.shortDesc || '',
@@ -90,7 +98,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Tên quốc tế (tiếng Anh)</label>
+                <label className="form-label">Tên gọi khác</label>
                 <input
                   type="text"
                   className="form-input"
@@ -117,7 +125,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                     }));
                   }}
                 >
-                  {museums.map(m => (
+                  {(currentRole === 'museumStaff' ? [currentMuseum] : museums).map(m => (
                     <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
                 </select>
@@ -169,7 +177,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Chủ đề (Theme)</label>
+                <label className="form-label">Chủ đề</label>
                 <input
                   type="text"
                   className="form-input"
@@ -200,10 +208,25 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                   onChange={(e) => handleChange('status', e.target.value)}
                 >
                   <option value="published">Đã xuất bản (Khách có thể xem và quét QR)</option>
-                  <option value="pending">Chờ kiểm duyệt viên duyệt (Pending Review)</option>
-                  <option value="draft">Bản nháp nội bộ (Draft)</option>
+                  <option value="pending">Chờ kiểm tra nội dung</option>
+                  <option value="draft">Bản nháp nội bộ</option>
                 </select>
               </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px', display: 'grid', gap: '14px' }}>
+              <strong style={{ color: 'var(--color-burgundy-900)' }}>Mã QR, bản đồ & tư liệu số</strong>
+              <div className="artifact-edit-grid">
+                <label className="form-group"><span className="form-label">Mã QR</span><input className="form-input" value={formData.qrCode} onChange={e => handleChange('qrCode', e.target.value)} placeholder="Tự tạo nếu để trống" /></label>
+                <label className="form-group"><span className="form-label">Vị trí trên bản đồ</span><input className="form-input" value={formData.mapPosition} onChange={e => handleChange('mapPosition', e.target.value)} placeholder="Ví dụ: Tầng 1, phòng Đông Sơn, tọa độ A3" /></label>
+                <label className="form-group"><span className="form-label">Biểu tượng trên bản đồ</span><input className="form-input" value={formData.mapIcon} onChange={e => handleChange('mapIcon', e.target.value)} placeholder="Ví dụ: Trống đồng" /></label>
+                <label className="form-group"><span className="form-label">Quyền truy cập nội dung</span><select className="form-select" value={formData.accessLevel} onChange={e => handleChange('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Cần gói nâng cao</option></select></label>
+                <label className="form-group"><span className="form-label">Ảnh đại diện</span><input className="form-input" value={formData.image} onChange={e => handleChange('image', e.target.value)} placeholder="Đường dẫn ảnh" /></label>
+                <label className="form-group"><span className="form-label">Âm thanh thuyết minh</span><input className="form-input" value={formData.audioUrl} onChange={e => handleChange('audioUrl', e.target.value)} placeholder="Đường dẫn âm thanh" /></label>
+              </div>
+              <label className="form-group"><span className="form-label">Ảnh tư liệu bổ sung (mỗi dòng một đường dẫn)</span><textarea className="form-textarea" rows={3} value={formData.referenceImages.join('\n')} onChange={e => handleChange('referenceImages', e.target.value.split('\n').map(value => value.trim()).filter(Boolean))} /></label>
+              <label className="form-group"><span className="form-label">Mô hình 3D</span><input className="form-input" value={formData.modelUrl} onChange={e => handleChange('modelUrl', e.target.value)} placeholder="Đường dẫn mô hình 3D" /></label>
+              <div><span className="form-label">Đặt biểu tượng trên sơ đồ phòng</span><div className="artifact-map-preview" role="button" tabIndex={0} aria-label="Chọn vị trí hiện vật trên sơ đồ phòng" onClick={event => { const rect = event.currentTarget.getBoundingClientRect(); setFormData(prev => ({ ...prev, mapX: Math.round((event.clientX - rect.left) / rect.width * 100), mapY: Math.round((event.clientY - rect.top) / rect.height * 100) })); }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setFormData(prev => ({ ...prev, mapX: 50, mapY: 50 })); } }}><div className="artifact-map-marker" style={{ left: `${formData.mapX}%`, top: `${formData.mapY}%` }}>{formData.mapIcon || 'Hiện vật'}</div></div><small>Chạm vào sơ đồ để đặt vị trí · {formData.mapX}%, {formData.mapY}%</small></div>
             </div>
 
             {/* Checkboxes: National treasure & 3D model */}

@@ -75,10 +75,10 @@ export default function CurationCenter() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-            Trung Tâm Kiểm Duyệt & Phê Duyệt Nội Dung Di Sản
+            Kiểm Tra & Xuất Bản Nội Dung AI
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Hội đồng chuyên môn thẩm định tính chính xác của các bài thuyết minh, câu hỏi trắc nghiệm và tư liệu trước khi xuất bản
+            Nhân viên bảo tàng kiểm tra thuyết minh, câu hỏi và tư liệu AI của bảo tàng mình trước khi xuất bản.
           </p>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function CurationCenter() {
           { id: 'pending', label: 'Chờ kiểm duyệt', count: pendingCount, color: 'var(--color-warning)' },
           { id: 'approved', label: 'Đã xuất bản', count: approvedCount, color: 'var(--color-success)' },
           { id: 'revision_requested', label: 'Yêu cầu hiệu chỉnh', count: revisionCount, color: 'var(--color-burgundy-700)' },
-          { id: 'all', label: 'Tất cả mục', count: curationQueue.length, color: 'var(--color-charcoal-700)' }
+          { id: 'all', label: 'Tất cả mục', count: museumQueue.length, color: 'var(--color-charcoal-700)' }
         ].map(tab => (
           <button
             key={tab.id}

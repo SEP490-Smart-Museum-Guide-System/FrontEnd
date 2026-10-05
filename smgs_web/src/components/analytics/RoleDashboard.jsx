@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import {
-  ArrowRight, Building2, CheckCheck, ClipboardCheck, CreditCard,
+  ArrowRight, Building2, ClipboardCheck, CreditCard,
   Layers, MessageSquare, QrCode, ShieldCheck, Sparkles, Users
 } from 'lucide-react';
 
@@ -11,16 +11,17 @@ const formatMoney = value => `${formatNumber(value)} đ`;
 export default function RoleDashboard({ onNavigate }) {
   const {
     currentRole, currentMuseum, artifacts, museums, tours,
-    curationQueue, transactions, users, reviews
+    curationQueue, transactions, users, reviews, systemCases
   } = useApp();
 
   const museumQueue = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum.id);
-  const curatorQueue = currentRole === 'curator' ? museumQueue : curationQueue;
-  const pending = curatorQueue.filter(item => item.status === 'pending');
+  const pending = curationQueue.filter(item => item.status === 'pending');
   const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
   const museumTours = tours.filter(item => item.museumId === currentMuseum.id);
   const museumReviews = reviews.filter(item => item.museumName === currentMuseum.name);
   const revenue = transactions.filter(item => item.status === 'completed').reduce((sum, item) => sum + item.amount, 0);
+  const museumRevenue = transactions.filter(item => item.status === 'completed' && item.museumCode === currentMuseum.code).reduce((sum, item) => sum + item.amount, 0);
+  const openCases = systemCases.filter(item => item.status !== 'resolved');
   const scans = museumArtifacts.reduce((sum, item) => sum + (item.scansCount || 0), 0);
 
   const config = currentRole === 'administrator' ? {
@@ -46,39 +47,39 @@ export default function RoleDashboard({ onNavigate }) {
     asideTitle: 'Việc cần theo dõi',
     asideText: `${pending.length} nội dung chờ duyệt và ${transactions.filter(item => item.status === 'pending').length} giao dịch đang xử lý.`,
     asideAction: ['Mở nhật ký hệ thống', 'audit']
-  } : currentRole === 'curator' ? {
-    eyebrow: 'Không gian kiểm duyệt',
-    title: 'Đưa nội dung tốt đến khách tham quan',
-    description: 'Xem bản nháp, phản hồi và tiến độ phê duyệt trước khi xuất bản.',
-    primary: ['Mở hàng đợi', 'curation_queue'],
-    secondary: ['Xem phản hồi', 'reviews'],
+  } : currentRole === 'systemStaff' ? {
+    eyebrow: 'Vận hành toàn hệ thống',
+    title: 'Hỗ trợ khách, giữ hệ thống thông suốt',
+    description: 'Theo dõi khiếu nại, hoàn tiền, giao dịch, feedback và chất lượng AI trên toàn hệ thống.',
+    primary: ['Xử lý yêu cầu', 'support'],
+    secondary: ['Đối soát giao dịch', 'transactions'],
     metrics: [
-      [ClipboardCheck, formatNumber(pending.length), 'Chờ duyệt', 'Cần xem nội dung', 'burgundy'],
-      [CheckCheck, formatNumber(curatorQueue.filter(item => item.status === 'approved').length), 'Đã phê duyệt', 'Nội dung sẵn sàng', 'green'],
-      [Layers, formatNumber(curatorQueue.filter(item => item.status === 'revision_requested').length), 'Cần hiệu đính', 'Đã gửi góp ý', 'gold'],
-      [MessageSquare, formatNumber(museumReviews.filter(item => item.status === 'pending_reply').length), 'Phản hồi mới', 'Khách đang chờ trả lời', 'blue']
+      [ClipboardCheck, formatNumber(openCases.length), 'Yêu cầu mở', 'Cần theo dõi', 'burgundy'],
+      [CreditCard, formatNumber(systemCases.filter(item => item.type === 'refund' && item.status !== 'resolved').length), 'Hoàn tiền', 'Chờ đối soát', 'gold'],
+      [Layers, formatNumber(systemCases.filter(item => ['operations', 'ai_quality'].includes(item.type) && item.status !== 'resolved').length), 'Lỗi & chất lượng AI', 'Toàn hệ thống', 'blue'],
+      [MessageSquare, formatNumber(reviews.filter(item => !item.hidden).length), 'Feedback hiển thị', 'Cần giám sát', 'green']
     ],
-    listTitle: 'Nội dung cần kiểm duyệt',
-    listAction: ['Xem hàng đợi', 'curation_queue'],
-    rows: pending.slice(0, 5).map(item => ({
+    listTitle: 'Việc cần xử lý',
+    listAction: ['Mở trung tâm hỗ trợ', 'support'],
+    rows: openCases.slice(0, 5).map(item => ({
       title: item.title,
-      subtitle: `${item.submittedBy} · ${item.submittedDate}`,
-      badge: 'Chờ duyệt', status: 'pending'
+      subtitle: `${item.museum} · ${item.createdAt}`,
+      badge: item.status === 'new' ? 'Mới' : 'Đang xử lý', status: 'pending'
     })),
-    asideTitle: 'Quy trình hôm nay',
-    asideText: 'Đọc bản nháp, đối chiếu hồ sơ hiện vật, yêu cầu sửa hoặc phê duyệt nội dung.',
-    asideAction: ['Xem đánh giá của khách', 'reviews']
+    asideTitle: 'Chất lượng vận hành',
+    asideText: 'Theo dõi lỗi ứng dụng, chất lượng câu trả lời AI và phản hồi không phù hợp.',
+    asideAction: ['Xem lỗi & AI', 'operations']
   } : {
     eyebrow: currentMuseum.name,
     title: 'Bàn làm việc bảo tàng',
-    description: 'Cập nhật hiện vật, tạo nội dung số và chuẩn bị hành trình tham quan.',
+    description: 'Quản lý nội dung, bản đồ, tour, kiểm duyệt AI và doanh thu của bảo tàng mình.',
     primary: ['Quản lý hiện vật', 'artifacts'],
     secondary: ['Xưởng nội dung AI', 'ai_studio'],
     metrics: [
       [Layers, formatNumber(museumArtifacts.length), 'Hiện vật', 'Trong bảo tàng đã chọn', 'burgundy'],
       [QrCode, formatNumber(scans), 'Lượt quét mã', 'Từ các hiện vật', 'green'],
-      [Sparkles, formatNumber(museumQueue.filter(item => item.status === 'pending' && item.submittedBy?.includes('Nhân viên bảo tàng')).length), 'Bản gửi duyệt', 'Đang trong quy trình', 'gold'],
-      [Building2, formatNumber(museumTours.length), 'Hành trình mẫu', 'Tại bảo tàng đã chọn', 'blue']
+      [Sparkles, formatNumber(museumQueue.filter(item => item.status === 'pending').length), 'AI chờ kiểm tra', 'Trước khi xuất bản', 'gold'],
+      [CreditCard, formatMoney(museumRevenue), 'Doanh thu mô phỏng', 'Chỉ bảo tàng này', 'blue']
     ],
     listTitle: 'Hiện vật đang quản lý',
     listAction: ['Xem kho hiện vật', 'artifacts'],
@@ -89,8 +90,8 @@ export default function RoleDashboard({ onNavigate }) {
       status: item.status === 'published' ? 'published' : 'draft'
     })),
     asideTitle: 'Tiếp tục công việc',
-    asideText: 'Hoàn thiện hồ sơ, hình ảnh và thuyết minh trước khi gửi kiểm duyệt.',
-    asideAction: ['Tạo nội dung AI', 'ai_studio']
+    asideText: `${museumTours.length} tour và ${museumReviews.length} phản hồi tại bảo tàng. Kiểm tra nội dung AI trước khi xuất bản.`,
+    asideAction: ['Mở kiểm duyệt AI', 'curation_queue']
   };
 
   return (

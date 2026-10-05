@@ -14,7 +14,6 @@ import 'package:smgs_mobile/screens/profile/history_screen.dart';
 import 'package:smgs_mobile/screens/profile/services_screen.dart';
 import 'package:smgs_mobile/screens/tours/tours_screen.dart';
 import 'package:smgs_mobile/screens/explore/explore_screen.dart';
-import 'package:smgs_mobile/screens/management/management_home_screen.dart';
 import 'package:smgs_mobile/widgets/primary_button.dart';
 import 'package:smgs_mobile/widgets/narration_player.dart';
 import 'package:smgs_mobile/widgets/museum_route_map.dart';
@@ -80,86 +79,24 @@ void main() {
     },
   );
 
-  testWidgets('Sample accounts open all internal role workspaces', (
-    tester,
-  ) async {
+  testWidgets('Mobile only opens visitor workspace', (tester) async {
     await screenSize(tester, const Size(390, 844));
     await tester.pumpWidget(const SMGSApp());
     await tester.pumpAndSettle();
-
-    await tester.enterText(field('Email'), 'curator@smgs.vn');
-    await tester.enterText(field('Mật khẩu'), 'smgs123');
-    await tapText(tester, 'Đăng nhập');
-    expect(find.byType(ManagementHomeScreen), findsOneWidget);
-    expect(
-      tester
-          .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
-          .role,
-      UserRole.staff,
-    );
-    AppServices.auth.logout();
-    await tester.pumpAndSettle();
-
-    await tester.enterText(field('Email'), 'museumstaff@smgs.vn');
-    await tester.enterText(field('Mật khẩu'), 'smgs123');
-    await tapText(tester, 'Đăng nhập');
-    expect(find.byType(ManagementHomeScreen), findsOneWidget);
-    expect(
-      tester
-          .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
-          .role,
-      UserRole.museumStaff,
-    );
-    expect(find.text('Chăm chút từng\nhiện vật.'), findsOneWidget);
-    AppServices.auth.logout();
-    await tester.pumpAndSettle();
-
+    expect(find.text('Kiểm duyệt viên'), findsNothing);
+    expect(find.textContaining('dùng cổng web'), findsOneWidget);
     await tester.enterText(field('Email'), 'admin@smgs.vn');
     await tester.enterText(field('Mật khẩu'), 'smgs123');
     await tapText(tester, 'Đăng nhập');
-    expect(find.byType(ManagementHomeScreen), findsOneWidget);
+    expect(find.byType(AuthScreen), findsOneWidget);
     expect(
-      tester
-          .widget<ManagementHomeScreen>(find.byType(ManagementHomeScreen))
-          .role,
-      UserRole.administrator,
+      find.textContaining('Email hoặc mật khẩu chưa đúng'),
+      findsOneWidget,
     );
-  });
-
-  testWidgets(
-    'Administrator uses a wide web dashboard with working navigation',
-    (tester) async {
-      await screenSize(tester, const Size(1280, 800));
-      await tester.pumpWidget(const SMGSApp());
-      await tester.pumpAndSettle();
-      await tester.enterText(field('Email'), 'admin@smgs.vn');
-      await tester.enterText(field('Mật khẩu'), 'smgs123');
-      await tapText(tester, 'Đăng nhập');
-
-      expect(find.text('Cổng quản trị'), findsOneWidget);
-      expect(find.text('Tổng quan hệ thống'), findsOneWidget);
-      expect(find.text('Hệ thống ổn định'), findsOneWidget);
-      await tester.tap(find.text('Người dùng').first);
-      await tester.pumpAndSettle();
-      expect(find.text('Danh sách làm việc'), findsOneWidget);
-      expect(find.text('PHỤ TRÁCH'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('Curator studio stays readable in a narrow browser', (
-    tester,
-  ) async {
-    await screenSize(tester, const Size(390, 844));
-    await tester.pumpWidget(const SMGSApp());
-    await tester.pumpAndSettle();
-    await tester.enterText(field('Email'), 'curator@smgs.vn');
-    await tester.enterText(field('Mật khẩu'), 'smgs123');
+    await tester.enterText(field('Email'), 'khach@smgs.vn');
     await tapText(tester, 'Đăng nhập');
-    expect(find.text('Kể câu chuyện\ndi sản thật hay.'), findsOneWidget);
-    expect(find.text('Dòng chảy nội dung'), findsOneWidget);
+    expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
   });
-
   testWidgets('QR and recognition handle match, no match and museum context', (
     tester,
   ) async {

@@ -1,4 +1,4 @@
-// Mock Data Store for SMGS Web Portal (Staff, Curator, Admin)
+// Dữ liệu mẫu cho cổng nghiệp vụ SMGS (bảo tàng, hệ thống, quản trị)
 
 export const initialMuseums = [
   {
@@ -522,7 +522,7 @@ export const initialUsers = [
     id: 'usr-001',
     name: 'Vũ Hải Đăng',
     email: 'admin@smgs.vn',
-    role: 'administrator', // administrator | museumStaff | curator | visitor
+    role: 'administrator', // administrator | museumStaff | systemStaff | visitor
     museumId: 'all',
     museumName: 'Toàn hệ thống',
     phone: '0912 345 678',
@@ -532,27 +532,27 @@ export const initialUsers = [
   },
   {
     id: 'usr-002',
-    name: 'TS. Trần Văn Phong',
-    email: 'curator@smgs.vn',
-    role: 'curator',
-    museumId: 'mus-01',
-    museumName: 'Bảo tàng Lịch sử Quốc gia',
+    name: 'Trần Minh Châu',
+    email: 'system@smgs.vn',
+    role: 'systemStaff',
+    museumId: 'all',
+    museumName: 'Toàn hệ thống',
     phone: '0988 765 432',
     status: 'active',
     lastLogin: '2026-09-27 19:45',
-    permissions: ['curate_content', 'approve_publish', 'moderate_reviews', 'view_reports']
+    permissions: ['visitor_support', 'complaints', 'refund_requests', 'transaction_reconciliation', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality']
   },
   {
     id: 'usr-003',
-    name: 'ThS. Phạm Bích Ngọc',
-    email: 'curator2@smgs.vn',
-    role: 'curator',
-    museumId: 'mus-03',
-    museumName: 'Bảo tàng Mỹ thuật Việt Nam',
+    name: 'Lê Bích Ngọc',
+    email: 'system2@smgs.vn',
+    role: 'systemStaff',
+    museumId: 'all',
+    museumName: 'Toàn hệ thống',
     phone: '0977 123 987',
     status: 'active',
     lastLogin: '2026-09-27 15:20',
-    permissions: ['curate_content', 'approve_publish', 'moderate_reviews']
+    permissions: ['visitor_support', 'complaints', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality']
   },
   {
     id: 'usr-004',
@@ -565,7 +565,7 @@ export const initialUsers = [
     phone: '0904 555 123',
     status: 'active',
     lastLogin: '2026-09-27 20:30',
-    permissions: ['manage_artifacts', 'create_ai_content', 'submit_curation', 'edit_tours']
+    permissions: ['manage_museum', 'manage_artifacts', 'manage_media', 'manage_qr', 'edit_tours', 'create_ai_content', 'approve_publish', 'configure_premium', 'view_museum_reports']
   },
   {
     id: 'usr-005',
@@ -579,6 +579,18 @@ export const initialUsers = [
     status: 'active',
     lastLogin: '2026-09-27 17:00',
     permissions: ['manage_artifacts', 'create_ai_content', 'submit_curation']
+  },
+  {
+    id: 'usr-006',
+    name: 'Trần Ngọc Ánh',
+    email: 'tran.ngoc.anh@gmail.com',
+    role: 'visitor',
+    museumId: null,
+    museumName: 'Ứng dụng di động',
+    phone: '0902 123 456',
+    status: 'active',
+    lastLogin: '2026-10-05 08:30',
+    permissions: ['browse_museums', 'scan_artifacts', 'purchase_pass']
   }
 ];
 
@@ -715,6 +727,14 @@ export const initialReviews = [
   }
 ];
 
+export const initialSystemCases = [
+  { id: 'YC-101', type: 'support', title: 'Không mở được hướng dẫn số', visitor: 'Trần Ngọc Ánh', museum: 'Bảo tàng Lịch sử Quốc gia', detail: 'Ứng dụng báo vé chưa kích hoạt sau khi thanh toán.', status: 'new', priority: 'high', createdAt: '2026-10-05 09:20' },
+  { id: 'YC-102', type: 'complaint', title: 'Nội dung thuyết minh chưa chính xác', visitor: 'Lê Minh Hoàng', museum: 'Bảo tàng Lịch sử Quốc gia', detail: 'Khách yêu cầu kiểm tra niên đại hiển thị ở trang hiện vật.', status: 'in_progress', priority: 'medium', createdAt: '2026-10-05 08:45' },
+  { id: 'YC-103', type: 'refund', title: 'Yêu cầu hoàn tiền gói hướng dẫn số', visitor: 'Trần Ngọc Ánh', museum: 'Bảo tàng Lịch sử Quốc gia', transactionId: 'TXN-98421', detail: 'Khách báo không sử dụng được gói sau khi mua.', status: 'new', priority: 'high', createdAt: '2026-10-05 09:05' },
+  { id: 'YC-104', type: 'operations', title: 'Mã QR tại phòng trưng bày không mở', visitor: 'Đội vận hành', museum: 'Bảo tàng Lịch sử Quốc gia', detail: 'Theo dõi lỗi đọc mã QR tại khu Đông Sơn.', status: 'in_progress', priority: 'high', createdAt: '2026-10-05 07:30' },
+  { id: 'YC-105', type: 'ai_quality', title: 'AI trả lời thiếu nguồn tham khảo', visitor: 'Đội chất lượng AI', museum: 'Bảo tàng Mỹ thuật Việt Nam', detail: 'Kiểm tra câu trả lời về Tượng Phật Quan Âm trước khi chuyển cho bảo tàng hiệu đính.', status: 'new', priority: 'medium', createdAt: '2026-10-05 08:10' }
+];
+
 export const initialAuditLogs = [
   {
     id: 'log-101',
@@ -735,8 +755,8 @@ export const initialAuditLogs = [
   {
     id: 'log-099',
     timestamp: '2026-09-27 19:45',
-    user: 'TS. Trần Văn Phong (curator@smgs.vn)',
-    role: 'Kiểm duyệt viên',
+    user: 'Nguyễn Mai Anh (staff@smgs.vn)',
+    role: 'Nhân viên bảo tàng',
     action: 'CURATION_APPROVE',
     details: 'Phê duyệt xuất bản bài thuyết minh nâng cao cho hiện vật Trống đồng Cảnh Thịnh.'
   },
@@ -754,6 +774,6 @@ export const initialAuditLogs = [
     user: 'Vũ Hải Đăng (admin@smgs.vn)',
     role: 'Quản trị viên',
     action: 'USER_ROLE_ASSIGN',
-    details: 'Phân quyền kiểm duyệt viên cho ThS. Phạm Bích Ngọc tại Bảo tàng Mỹ thuật VN.'
+    details: 'Phân quyền Nhân viên hệ thống cho Lê Bích Ngọc.'
   }
 ];

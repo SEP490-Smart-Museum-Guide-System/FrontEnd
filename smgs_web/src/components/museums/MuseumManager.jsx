@@ -13,9 +13,11 @@ import {
 } from 'lucide-react';
 
 export default function MuseumManager() {
-  const { museums, setMuseums, artifacts, showToast, logAction } = useApp();
+  const { museums, setMuseums, artifacts, showToast, logAction, currentRole, currentMuseum } = useApp();
   const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || 'mus-01');
   const [isAddingGallery, setIsAddingGallery] = useState(false);
+  const [isEditingMuseum, setIsEditingMuseum] = useState(false);
+  const [museumForm, setMuseumForm] = useState({});
   const [newGalleryData, setNewGalleryData] = useState({
     buildingId: '',
     floorId: '',
@@ -24,7 +26,15 @@ export default function MuseumManager() {
     theme: ''
   });
 
-  const activeMuseum = museums.find(m => m.id === selectedMuseumId) || museums[0];
+  const activeMuseum = currentRole === 'museumStaff' ? currentMuseum : museums.find(m => m.id === selectedMuseumId) || museums[0];
+
+  const saveMuseumInfo = (event) => {
+    event.preventDefault();
+    setMuseums(prev => prev.map(item => item.id === activeMuseum.id ? { ...item, ...museumForm } : item));
+    logAction('MUSEUM_UPDATE', `Cập nhật thông tin ${activeMuseum.name}`);
+    showToast('Đã lưu thông tin bảo tàng.');
+    setIsEditingMuseum(false);
+  };
 
   const handleAddGallery = (e) => {
     e.preventDefault();
@@ -75,7 +85,7 @@ export default function MuseumManager() {
             Cấu Trúc Không Gian & Phòng Trưng Bày
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Phân cấp không gian số hóa: Bảo tàng → Tòa nhà (Building) → Tầng (Floor) → Phòng/Khu trưng bày (Gallery)
+            Quản lý thông tin bảo tàng, tòa nhà, tầng, phòng trưng bày và vị trí trên bản đồ.
           </p>
         </div>
 
@@ -89,7 +99,7 @@ export default function MuseumManager() {
       </div>
 
       {/* Museum Selector Tab Strip */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      {currentRole !== 'museumStaff' && <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
         {museums.map(m => {
           const isSelected = m.id === activeMuseum.id;
           return (
@@ -116,7 +126,7 @@ export default function MuseumManager() {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {/* Museum Information Banner */}
       <div className="card" style={{ padding: '24px', marginBottom: '28px', background: 'linear-gradient(135deg, var(--color-paper-card), var(--color-paper-bg))' }}>
@@ -142,6 +152,7 @@ export default function MuseumManager() {
             <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', lineHeight: '1.5' }}>
               {activeMuseum.description}
             </p>
+            {currentRole === 'museumStaff' && <button className="btn btn-secondary btn-sm" type="button" style={{ marginTop: '12px' }} onClick={() => { setMuseumForm({ name: activeMuseum.name, address: activeMuseum.address, description: activeMuseum.description, image: activeMuseum.image }); setIsEditingMuseum(true); }}>Chỉnh sửa thông tin bảo tàng</button>}
           </div>
         </div>
       </div>
@@ -224,6 +235,8 @@ export default function MuseumManager() {
           </div>
         ))}
       </div>
+
+      {isEditingMuseum && <div className="modal-overlay" onClick={() => setIsEditingMuseum(false)}><div className="modal-dialog" style={{ maxWidth: '620px' }} onClick={event => event.stopPropagation()}><div className="modal-header"><h3 className="modal-title font-serif">Thông tin bảo tàng</h3><button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsEditingMuseum(false)}>Đóng</button></div><form onSubmit={saveMuseumInfo}><div className="modal-body" style={{ display: 'grid', gap: '14px' }}>{[['name', 'Tên bảo tàng'], ['address', 'Địa chỉ'], ['image', 'Đường dẫn ảnh đại diện']].map(([field, label]) => <label className="form-group" key={field}><span className="form-label">{label}</span><input className="form-input" value={museumForm[field] || ''} onChange={event => setMuseumForm(prev => ({ ...prev, [field]: event.target.value }))} required={field !== 'image'} /></label>)}<label className="form-group"><span className="form-label">Giới thiệu</span><textarea className="form-textarea" rows={4} value={museumForm.description || ''} onChange={event => setMuseumForm(prev => ({ ...prev, description: event.target.value }))} /></label></div><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setIsEditingMuseum(false)}>Hủy</button><button type="submit" className="btn btn-primary">Lưu thông tin</button></div></form></div></div>}
 
       {/* Add Gallery Modal */}
       {isAddingGallery && (

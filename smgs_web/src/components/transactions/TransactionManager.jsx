@@ -12,10 +12,11 @@ import {
 } from 'lucide-react';
 
 export default function TransactionManager() {
-  const { passPackages, transactions, refundTransaction } = useApp();
+  const { passPackages, transactions: allTransactions, refundTransaction, currentRole, currentMuseum, setActiveTab } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  const transactions = currentRole === 'museumStaff' ? allTransactions.filter(t => t.museumCode === currentMuseum.code) : allTransactions;
   const filteredTxns = transactions.filter(t => {
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
     if (searchTerm.trim()) {
@@ -38,10 +39,10 @@ export default function TransactionManager() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-            Gói Dịch Vụ Thuyết Minh Số & Nhật Ký Giao Dịch
+            {currentRole === 'museumStaff' ? 'Doanh Thu & Giao Dịch Bảo Tàng' : 'Đối Soát Giao Dịch Toàn Hệ Thống'}
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Quản lý các gói hướng dẫn số, theo dõi doanh thu và đối soát hoàn tiền
+            {currentRole === 'museumStaff' ? `Số liệu mô phỏng chỉ của ${currentMuseum.name}.` : 'Theo dõi doanh thu, đối soát giao dịch và yêu cầu hoàn tiền.'}
           </p>
         </div>
       </div>
@@ -73,14 +74,14 @@ export default function TransactionManager() {
             <TrendingUp size={24} />
           </div>
           <div>
-            <div className="stat-value">2.570</div>
-            <div className="stat-label">Lượt kích hoạt đang sử dụng</div>
+            <div className="stat-value">{currentRole === 'museumStaff' ? refundedCount : passPackages.reduce((sum, item) => sum + item.activePassesCount, 0).toLocaleString('vi-VN')}</div>
+            <div className="stat-label">{currentRole === 'museumStaff' ? 'Giao dịch đã hoàn tiền' : 'Lượt kích hoạt đang sử dụng'}</div>
           </div>
         </div>
       </div>
 
       {/* Pass Packages Grid */}
-      <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '16px', color: 'var(--color-charcoal-900)' }}>
+      {currentRole !== 'museumStaff' && <><h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '16px', color: 'var(--color-charcoal-900)' }}>
         Danh Mục Gói Dịch Vụ Số
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '36px' }}>
@@ -109,7 +110,7 @@ export default function TransactionManager() {
             </div>
           </div>
         ))}
-      </div>
+      </div></>}
 
       {/* Transaction History Section */}
       <div className="card">
@@ -181,11 +182,11 @@ export default function TransactionManager() {
                   </td>
                   <td>
                     <span className={`badge-status badge-${t.status}`}>
-                      {t.status === 'completed' ? 'Thành công' : 'Đã hoàn tiền'}
+                      {t.status === 'completed' ? 'Thành công' : t.status === 'refunded' ? 'Đã hoàn tiền' : 'Đang xử lý'}
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    {t.status === 'completed' && (
+                    {currentRole === 'administrator' && t.status === 'completed' && (
                       <button
                         type="button"
                         onClick={() => {
@@ -199,6 +200,7 @@ export default function TransactionManager() {
                         <RefreshCcw size={12} /> Hoàn tiền
                       </button>
                     )}
+                    {currentRole === 'systemStaff' && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveTab('refunds')}>Xem yêu cầu</button>}
                   </td>
                 </tr>
               ))}

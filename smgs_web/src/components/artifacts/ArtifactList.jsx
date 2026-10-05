@@ -84,7 +84,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
           </p>
         </div>
 
-        {currentRole !== 'curator' && <div style={{ display: 'flex', gap: '12px' }}>
+        {currentRole !== 'systemStaff' && <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"
             onClick={() => setIsCreatingNew(true)}
@@ -341,7 +341,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                           >
                             <Eye size={14} />
                           </button>
-                          {currentRole !== 'curator' && <button
+                          {currentRole !== 'systemStaff' && <button
                             type="button"
                             onClick={() => onOpenAIStudio(art)}
                             className="btn btn-gold btn-sm"
@@ -349,7 +349,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                           >
                             <Sparkles size={14} />
                           </button>}
-                          {currentRole !== 'curator' && <button
+                          {currentRole !== 'systemStaff' && <button
                             type="button"
                             onClick={() => setEditingArtifact(art)}
                             className="btn btn-secondary btn-sm"
@@ -453,7 +453,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   >
                     <Eye size={14} /> Xem chi tiết
                   </button>
-                  {currentRole !== 'curator' && <button
+                  {currentRole !== 'systemStaff' && <button
                     type="button"
                     onClick={() => onOpenAIStudio(art)}
                     className="btn btn-gold btn-sm"
@@ -461,7 +461,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   >
                     <Sparkles size={14} />
                   </button>}
-                  {currentRole !== 'curator' && <button
+                  {currentRole !== 'systemStaff' && <button
                     type="button"
                     onClick={() => setEditingArtifact(art)}
                     className="btn btn-secondary btn-sm"
@@ -480,7 +480,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
       {selectedArtifact && (
         <ArtifactDetailModal
           artifact={selectedArtifact}
-          readOnly={currentRole === 'curator'}
+          readOnly={currentRole === 'systemStaff'}
           onClose={() => setSelectedArtifact(null)}
           onOpenAIStudio={(art) => {
             setSelectedArtifact(null);

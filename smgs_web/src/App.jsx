@@ -12,6 +12,7 @@ import ReviewManager from './components/reviews/ReviewManager';
 import UserManager from './components/users/UserManager';
 import TransactionManager from './components/transactions/TransactionManager';
 import AuditLogs from './components/logs/AuditLogs';
+import SystemOperations from './components/operations/SystemOperations';
 import ToastContainer from './components/common/ToastContainer';
 
 export default function App() {
@@ -41,6 +42,11 @@ export default function App() {
         return <TourManager />;
       case 'reviews':
         return <ReviewManager />;
+      case 'support':
+      case 'refunds':
+      case 'review_moderation':
+      case 'operations':
+        return <SystemOperations mode={activeTab} />;
       case 'users':
         return <UserManager />;
       case 'transactions':

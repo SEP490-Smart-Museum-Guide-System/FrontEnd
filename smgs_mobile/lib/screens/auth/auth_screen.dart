@@ -5,7 +5,6 @@ import '../../services/app_services.dart';
 import '../../data/visit_store.dart';
 import '../../models/experience.dart';
 import '../../navigation/main_navigation.dart';
-import '../management/management_home_screen.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -53,18 +52,23 @@ class _AuthGateState extends State<AuthGate> {
             builder: (context, _) {
               final user = AppServices.auth.user;
               if (user == null) return const AuthScreen();
-              return switch (user.role) {
-                UserRole.museumStaff => const ManagementHomeScreen(
-                  role: UserRole.museumStaff,
+              if (user.role == UserRole.visitor) {
+                return MainNavigation(key: ValueKey(user.email));
+              }
+              return Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Vai trò này sử dụng cổng nghiệp vụ web.'),
+                      TextButton(
+                        onPressed: AppServices.auth.logout,
+                        child: const Text('Quay lại đăng nhập'),
+                      ),
+                    ],
+                  ),
                 ),
-                UserRole.staff => const ManagementHomeScreen(
-                  role: UserRole.staff,
-                ),
-                UserRole.administrator => const ManagementHomeScreen(
-                  role: UserRole.administrator,
-                ),
-                UserRole.visitor => MainNavigation(key: ValueKey(user.email)),
-              };
+              );
             },
           ),
   );
@@ -266,11 +270,10 @@ class _AuthScreenState extends State<AuthScreen> {
                     child: const Text('Điền tài khoản mẫu'),
                   ),
                   const SizedBox(height: 8),
-                  _RoleAccountPanel(
-                    onSelected: (email) {
-                      _email.text = email;
-                      _password.text = 'smgs123';
-                    },
+                  const Text(
+                    'Nhân viên bảo tàng, nhân viên hệ thống và quản trị viên dùng cổng web.',
+                    style: AppTextStyles.caption,
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   TextButton(
@@ -289,82 +292,6 @@ class _AuthScreenState extends State<AuthScreen> {
               ],
             ),
           ),
-      ],
-    ),
-  );
-}
-
-class _RoleAccountPanel extends StatelessWidget {
-  const _RoleAccountPanel({required this.onSelected});
-
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) => Panel(
-    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Eyebrow('Xem thử giao diện theo vai trò'),
-        const SizedBox(height: 8),
-        Text('Mật khẩu chung: smgs123', style: AppTextStyles.bodySmall),
-        const SizedBox(height: 8),
-        _RoleAccount(
-          icon: Icons.badge_outlined,
-          label: 'Kiểm duyệt viên',
-          email: 'curator@smgs.vn',
-          onTap: onSelected,
-        ),
-        _RoleAccount(
-          icon: Icons.museum_outlined,
-          label: 'Nhân viên bảo tàng',
-          email: 'museumstaff@smgs.vn',
-          onTap: onSelected,
-        ),
-        _RoleAccount(
-          icon: Icons.admin_panel_settings_outlined,
-          label: 'Quản trị viên',
-          email: 'admin@smgs.vn',
-          onTap: onSelected,
-        ),
-      ],
-    ),
-  );
-}
-
-class _RoleAccount extends StatelessWidget {
-  const _RoleAccount({
-    required this.icon,
-    required this.label,
-    required this.email,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label, email;
-  final ValueChanged<String> onTap;
-
-  @override
-  Widget build(BuildContext context) => TextButton(
-    style: TextButton.styleFrom(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
-      alignment: Alignment.centerLeft,
-    ),
-    onPressed: () => onTap(email),
-    child: Row(
-      children: [
-        Icon(icon, color: AppColors.deepBurgundy),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: AppTextStyles.bodyMedium),
-              Text(email, style: AppTextStyles.caption),
-            ],
-          ),
-        ),
-        const Icon(Icons.login, size: 20),
       ],
     ),
   );

@@ -12,7 +12,10 @@ import {
   CreditCard,
   ShieldAlert,
   Landmark,
-  FileText
+  FileText,
+  LifeBuoy,
+  Activity,
+  RotateCcw
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -48,21 +51,23 @@ export default function Sidebar() {
           ]
         }
       ];
-    } else if (currentRole === 'curator') {
+  } else if (currentRole === 'systemStaff') {
       return [
         {
-          title: 'Trung tâm Giám định & Duyệt',
+        title: 'Hỗ trợ & vận hành hệ thống',
           items: [
-            { id: 'overview', label: 'Tổng quan kiểm duyệt', icon: LayoutDashboard },
-            { id: 'curation_queue', label: 'Hàng đợi Kiểm duyệt', icon: CheckSquare, badge: pendingCuration },
-            { id: 'curation_artifacts', label: 'Hiện vật & Thuyết minh', icon: Layers },
-            { id: 'reviews', label: 'Đánh giá từ Khách', icon: MessageSquare, badge: pendingReviews },
+          { id: 'overview', label: 'Tổng quan vận hành', icon: LayoutDashboard },
+          { id: 'support', label: 'Hỗ trợ & khiếu nại', icon: LifeBuoy },
+          { id: 'refunds', label: 'Yêu cầu hoàn tiền', icon: RotateCcw },
+          { id: 'transactions', label: 'Đối soát giao dịch', icon: CreditCard },
+          { id: 'review_moderation', label: 'Kiểm duyệt phản hồi', icon: MessageSquare },
+          { id: 'operations', label: 'Lỗi vận hành & chất lượng AI', icon: Activity },
           ]
         },
         {
-          title: 'Báo cáo & Lịch sử',
+        title: 'Theo dõi toàn hệ thống',
           items: [
-            { id: 'audit', label: 'Lịch sử Phê duyệt', icon: FileText },
+          { id: 'audit', label: 'Nhật ký vận hành', icon: FileText },
           ]
         }
       ];
@@ -73,15 +78,18 @@ export default function Sidebar() {
           title: 'Bàn làm việc Nghiệp vụ',
           items: [
             { id: 'overview', label: 'Bàn làm việc', icon: LayoutDashboard },
+            { id: 'spaces', label: 'Thông tin & bản đồ bảo tàng', icon: Building2 },
             { id: 'artifacts', label: 'Quản lý Hiện vật & QR', icon: Layers },
             { id: 'ai_studio', label: 'Xưởng nội dung AI', icon: Sparkles, highlight: true },
+            { id: 'curation_queue', label: 'Kiểm tra & xuất bản AI', icon: CheckSquare, badge: pendingCuration },
           ]
         },
         {
-          title: 'Không gian & Trải nghiệm',
+          title: 'Trải nghiệm & báo cáo bảo tàng',
           items: [
-            { id: 'spaces', label: 'Cấu trúc Không gian', icon: Building2 },
-            { id: 'tours', label: 'Hành trình & triển lãm', icon: Compass },
+            { id: 'tours', label: 'Tour & nội dung free/premium', icon: Compass },
+            { id: 'reviews', label: 'Feedback bảo tàng', icon: MessageSquare, badge: pendingReviews },
+            { id: 'transactions', label: 'Doanh thu bảo tàng', icon: CreditCard },
           ]
         }
       ];
@@ -145,6 +153,7 @@ export default function Sidebar() {
             <span style={{ fontSize: '0.75rem', color: 'var(--color-gold-100)' }}>Bản giao diện thử nghiệm</span>
           </div>
         </div>
+        <small style={{ display: 'block', marginTop: '8px', color: 'var(--color-gold-100)' }}>Khách tham quan sử dụng ứng dụng di động.</small>
       </div>
     </aside>
   );

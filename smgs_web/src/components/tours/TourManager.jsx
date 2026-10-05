@@ -15,12 +15,13 @@ import {
 } from 'lucide-react';
 
 export default function TourManager() {
-  const { tours, addTour, exhibitions, artifacts, currentMuseum } = useApp();
+  const { tours, addTour, updateTour, exhibitions, artifacts, currentMuseum } = useApp();
   const museumTours = tours.filter(item => item.museumId === currentMuseum.id);
   const museumExhibitions = exhibitions.filter(item => item.museumId === currentMuseum.id);
   const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
   const [activeSection, setActiveSection] = useState('tours'); // 'tours' | 'exhibitions'
   const [isCreatingTour, setIsCreatingTour] = useState(false);
+  const [editingTour, setEditingTour] = useState(null);
 
   const [tourForm, setTourForm] = useState({
     title: '',
@@ -38,7 +39,7 @@ export default function TourManager() {
       alert('Vui lòng nhập tên hành trình tham quan');
       return;
     }
-    addTour({
+    const data = {
       title: tourForm.title,
       duration: tourForm.duration,
       theme: tourForm.theme,
@@ -49,8 +50,11 @@ export default function TourManager() {
       description: tourForm.description,
       stopsCount: tourForm.selectedArtifacts.length || 4,
       artifacts: tourForm.selectedArtifacts
-    });
+    };
+    if (editingTour) updateTour({ ...data, id: editingTour.id });
+    else addTour(data);
     setIsCreatingTour(false);
+    setEditingTour(null);
     setTourForm({
       title: '',
       duration: '60 phút',
@@ -60,6 +64,12 @@ export default function TourManager() {
       description: '',
       selectedArtifacts: []
     });
+  };
+
+  const openTourEditor = (tour) => {
+    setEditingTour(tour);
+    setTourForm({ title: tour.title, duration: tour.duration, theme: tour.theme, isPaidGuide: tour.isPaidGuide, price: tour.price || 0, description: tour.description || '', selectedArtifacts: tour.artifacts || [] });
+    setIsCreatingTour(true);
   };
 
   const toggleArtifactInTour = (artId) => {
@@ -89,7 +99,7 @@ export default function TourManager() {
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"
-            onClick={() => setIsCreatingTour(true)}
+            onClick={() => { setEditingTour(null); setTourForm({ title: '', duration: '60 phút', theme: 'Bảo vật & Lịch sử', isPaidGuide: false, price: 0, description: '', selectedArtifacts: [] }); setIsCreatingTour(true); }}
             className="btn btn-primary"
           >
             <Plus size={16} /> Tạo Hành Trình Mới
@@ -154,7 +164,7 @@ export default function TourManager() {
                 </div>
                 {tour.isPaidGuide ? (
                   <span className="badge-status badge-treasure">
-                    Gói VIP: {tour.price.toLocaleString()} đ
+                    Nội dung nâng cao: {(tour.price || 0).toLocaleString('vi-VN')} đ
                   </span>
                 ) : (
                   <span className="badge-status badge-published">Miễn phí</span>
@@ -189,7 +199,7 @@ export default function TourManager() {
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
                     Bảo tàng: {tour.museumName}
                   </span>
-                  <span className="badge-status badge-published">Đang phát hành</span>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>Chỉnh sửa tour</button>
                 </div>
               </div>
             </div>
@@ -241,7 +251,7 @@ export default function TourManager() {
         <div className="modal-overlay" onClick={() => setIsCreatingTour(false)}>
           <div className="modal-dialog" style={{ maxWidth: '700px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title font-serif">Tạo Hành Trình Mới</h3>
+              <h3 className="modal-title font-serif">{editingTour ? 'Chỉnh sửa tour' : 'Tạo hành trình mới'}</h3>
               <button type="button" onClick={() => setIsCreatingTour(false)} className="btn btn-secondary btn-sm">✕</button>
             </div>
             <form onSubmit={handleCreateTour}>
@@ -270,7 +280,7 @@ export default function TourManager() {
                     />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Chủ đề (Theme)</label>
+                    <label className="form-label">Chủ đề</label>
                     <input
                       type="text"
                       className="form-input"
@@ -289,7 +299,7 @@ export default function TourManager() {
                       checked={tourForm.isPaidGuide}
                       onChange={(e) => setTourForm(prev => ({ ...prev, isPaidGuide: e.target.checked }))}
                     />
-                    <span>Yêu cầu gói hướng dẫn số / Thu phí thuyết minh chuyên gia AI</span>
+                    <span>Nội dung nâng cao cần gói trả phí</span>
                   </label>
                   {tourForm.isPaidGuide && (
                     <input
@@ -335,7 +345,7 @@ export default function TourManager() {
 
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsCreatingTour(false)} className="btn btn-secondary">Hủy</button>
-                <button type="submit" className="btn btn-primary">Tạo hành trình</button>
+                <button type="submit" className="btn btn-primary">{editingTour ? 'Lưu thay đổi' : 'Tạo hành trình'}</button>
               </div>
             </form>
           </div>

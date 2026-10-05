@@ -4,7 +4,7 @@ import {
   Landmark,
   ShieldCheck,
   UserCheck,
-  Sparkles,
+  Headset,
   Bell
 } from 'lucide-react';
 
@@ -13,9 +13,6 @@ export default function Header() {
     currentRole,
     setCurrentRole,
     setActiveTab,
-    museums,
-    selectedMuseumId,
-    setSelectedMuseumId,
     curationQueue,
     artifacts,
     currentMuseum
@@ -27,7 +24,7 @@ export default function Header() {
   const roleLabels = {
     administrator: { label: 'Quản trị viên', icon: ShieldCheck, badgeClass: 'role-badge-admin' },
     museumStaff: { label: 'Nhân viên bảo tàng', icon: UserCheck, badgeClass: 'role-badge-staff' },
-    curator: { label: 'Kiểm duyệt viên', icon: Sparkles, badgeClass: 'role-badge-curator' }
+    systemStaff: { label: 'Nhân viên hệ thống', icon: Headset, badgeClass: 'role-badge-system' }
   };
 
   const currentRoleInfo = roleLabels[currentRole] || roleLabels.administrator;
@@ -37,25 +34,17 @@ export default function Header() {
       <div className="topbar-left">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Landmark size={18} color="var(--color-burgundy-700)" />
-          {currentRole === 'administrator' ? (
+          {currentRole !== 'museumStaff' ? (
             <span className="museum-select-badge">Toàn hệ thống</span>
           ) : (
-            <select
-              value={selectedMuseumId}
-              onChange={(e) => setSelectedMuseumId(e.target.value)}
-              className="form-select"
-              aria-label="Chọn bảo tàng"
-              style={{ width: 'auto', maxWidth: '280px', background: 'var(--color-paper-accent)' }}
-            >
-              {museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            <span className="museum-select-badge">{currentMuseum.name}</span>
           )}
         </div>
       </div>
 
       <div className="topbar-right">
         <div className="role-switcher" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--color-paper-accent)', padding: '4px 6px', borderRadius: '10px', border: '1px solid var(--color-paper-border)' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-charcoal-500)', padding: '0 6px' }}>Vai trò:</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-charcoal-500)', padding: '0 6px' }}>Giao diện web:</span>
           <button
             type="button"
             onClick={() => setCurrentRole('administrator')}
@@ -70,19 +59,19 @@ export default function Header() {
             className={`btn btn-sm ${currentRole === 'museumStaff' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
           >
-            <UserCheck size={14} /> Nhân viên
+            <UserCheck size={14} /> Bảo tàng
           </button>
           <button
             type="button"
-            onClick={() => setCurrentRole('curator')}
-            className={`btn btn-sm ${currentRole === 'curator' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setCurrentRole('systemStaff')}
+            className={`btn btn-sm ${currentRole === 'systemStaff' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
           >
-            <Sparkles size={14} /> Kiểm duyệt
+            <Headset size={14} /> Hệ thống
           </button>
         </div>
 
-        {currentRole === 'curator' && <div className="topbar-alert" style={{ position: 'relative' }}>
+        {currentRole === 'museumStaff' && <div className="topbar-alert" style={{ position: 'relative' }}>
           <button
             type="button"
             className="btn btn-secondary"
@@ -136,11 +125,11 @@ export default function Header() {
             fontWeight: '700',
             fontSize: '0.85rem'
           }}>
-              {currentRole === 'administrator' ? 'Q' : currentRole === 'curator' ? 'K' : 'N'}
+              {currentRole === 'administrator' ? 'Q' : currentRole === 'systemStaff' ? 'H' : 'B'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-charcoal-900)' }}>
-              {currentRole === 'administrator' ? 'Vũ Hải Đăng' : currentRole === 'curator' ? 'TS. Trần Văn Phong' : 'Nguyễn Mai Anh'}
+              {currentRole === 'administrator' ? 'Vũ Hải Đăng' : currentRole === 'systemStaff' ? 'Trần Minh Châu' : 'Nguyễn Mai Anh'}
             </span>
             <span style={{ fontSize: '0.675rem', color: 'var(--color-burgundy-700)', fontWeight: '600' }}>
               {currentRoleInfo.label}

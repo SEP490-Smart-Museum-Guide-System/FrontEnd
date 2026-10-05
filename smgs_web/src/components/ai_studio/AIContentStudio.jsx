@@ -457,7 +457,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
                   border: '1px solid var(--color-paper-border)'
                 }}>
                   <div style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)' }}>
-                    💡 Nhân viên có thể chỉnh sửa trực tiếp nội dung trên trước khi gửi sang Kiểm duyệt viên.
+                    💡 Chỉnh sửa bản AI trước khi gửi vào hàng đợi để bảo tàng kiểm tra và xuất bản.
                   </div>
 
                   <button

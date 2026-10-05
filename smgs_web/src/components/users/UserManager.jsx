@@ -51,10 +51,10 @@ export default function UserManager() {
       email: newUserForm.email,
       phone: newUserForm.phone || '0900 000 000',
       role: newUserForm.role,
-      museumId: newUserForm.museumId,
-      museumName: m ? m.name : 'Bảo tàng Lịch sử Quốc gia',
+      museumId: newUserForm.role === 'museumStaff' ? newUserForm.museumId : newUserForm.role === 'visitor' ? null : 'all',
+      museumName: newUserForm.role === 'museumStaff' ? (m?.name || 'Bảo tàng Lịch sử Quốc gia') : newUserForm.role === 'visitor' ? 'Ứng dụng di động' : 'Toàn hệ thống',
       assignedGalleries: newUserForm.assignedGalleries ? newUserForm.assignedGalleries.split(',').map(s => s.trim()) : [],
-      permissions: ['manage_artifacts', 'create_ai_content']
+      permissions: newUserForm.role === 'systemStaff' ? ['visitor_support', 'refund_requests', 'transaction_reconciliation', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality'] : newUserForm.role === 'museumStaff' ? ['manage_museum', 'manage_artifacts', 'create_ai_content', 'approve_publish', 'edit_tours', 'view_museum_reports'] : newUserForm.role === 'visitor' ? ['browse_museums', 'scan_artifacts', 'purchase_pass'] : ['all_access']
     });
     setIsAddingUser(false);
     setNewUserForm({
@@ -71,8 +71,10 @@ export default function UserManager() {
     switch (role) {
       case 'administrator':
         return <span className="badge-status role-badge-admin" style={{ fontSize: '0.75rem' }}><ShieldCheck size={13} /> Quản trị viên</span>;
-      case 'curator':
-        return <span className="badge-status role-badge-curator" style={{ fontSize: '0.75rem' }}><Sparkles size={13} /> Kiểm duyệt viên</span>;
+      case 'systemStaff':
+        return <span className="badge-status role-badge-system" style={{ fontSize: '0.75rem' }}><Sparkles size={13} /> Nhân viên hệ thống</span>;
+      case 'visitor':
+        return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}>Khách tham quan · di động</span>;
       default:
         return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}><UserCheck size={13} /> Nhân viên bảo tàng</span>;
     }
@@ -87,7 +89,7 @@ export default function UserManager() {
             Quản Lý Nhân Sự & Phân Quyền Hệ Thống
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Phân bổ quyền hạn truy cập cho Quản trị viên, Kiểm duyệt viên và Nhân viên phụ trách từng bảo tàng
+            Bốn vai trò: Quản trị viên, Nhân viên bảo tàng, Nhân viên hệ thống và Khách tham quan. Khách sử dụng ứng dụng di động.
           </p>
         </div>
 
@@ -123,8 +125,9 @@ export default function UserManager() {
           >
             <option value="all">Tất cả vai trò</option>
             <option value="administrator">Quản trị viên</option>
-            <option value="curator">Kiểm duyệt viên</option>
+            <option value="systemStaff">Nhân viên hệ thống</option>
             <option value="museumStaff">Nhân viên bảo tàng</option>
+            <option value="visitor">Khách tham quan</option>
           </select>
         </div>
       </div>
@@ -219,7 +222,7 @@ export default function UserManager() {
         <div className="modal-overlay" onClick={() => setIsAddingUser(false)}>
           <div className="modal-dialog" style={{ maxWidth: '580px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title font-serif">Tạo Tài Khoản Nhân Viên / Quản Trị</h3>
+              <h3 className="modal-title font-serif">Tạo tài khoản mẫu</h3>
               <button type="button" onClick={() => setIsAddingUser(false)} className="btn btn-secondary btn-sm">✕</button>
             </div>
             <form onSubmit={handleAddUserSubmit}>
@@ -269,11 +272,12 @@ export default function UserManager() {
                       onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
                     >
                       <option value="museumStaff">Nhân viên bảo tàng</option>
-                      <option value="curator">Kiểm duyệt viên</option>
+                      <option value="systemStaff">Nhân viên hệ thống</option>
                       <option value="administrator">Quản trị viên</option>
+                      <option value="visitor">Khách tham quan · di động</option>
                     </select>
                   </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
+                  {newUserForm.role === 'museumStaff' && <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Bảo tàng phụ trách</label>
                     <select
                       className="form-select"
@@ -284,7 +288,7 @@ export default function UserManager() {
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                     </select>
-                  </div>
+                  </div>}
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>

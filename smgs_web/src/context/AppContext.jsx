@@ -9,7 +9,8 @@ import {
   initialPassPackages,
   initialTransactions,
   initialReviews,
-  initialAuditLogs
+  initialAuditLogs,
+  initialSystemCases
 } from '../data/mockData';
 
 const AppContext = createContext();
@@ -18,17 +19,17 @@ export function AppProvider({ children }) {
   // Current active staff/admin role
   const [currentRole, setRoleState] = useState(() => {
     const savedRole = localStorage.getItem('smgs_web_role');
-    return ['administrator', 'curator', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
+    return savedRole === 'curator' ? 'museumStaff' : ['administrator', 'systemStaff', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
   });
 
-  // Active selected museum for staff/curator/admin scope
+  // Bảo tàng mẫu đang được nhân viên bảo tàng phụ trách
   const [selectedMuseumId, setSelectedMuseumId] = useState('mus-01');
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState('overview');
 
   const setCurrentRole = (role) => {
-    if (!['administrator', 'curator', 'museumStaff'].includes(role)) return;
+    if (!['administrator', 'systemStaff', 'museumStaff'].includes(role)) return;
     setRoleState(role);
     setActiveTab('overview');
   };
@@ -44,6 +45,7 @@ export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState(initialTransactions);
   const [reviews, setReviews] = useState(initialReviews);
   const [auditLogs, setAuditLogs] = useState(initialAuditLogs);
+  const [systemCases, setSystemCases] = useState(initialSystemCases);
 
   // Global Toast Notifications
   const [toasts, setToasts] = useState([]);
@@ -67,7 +69,7 @@ export function AppProvider({ children }) {
       id: `log-${Date.now()}`,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
       user: `${currentUser.name} (${currentUser.email})`,
-      role: currentRole === 'administrator' ? 'Quản trị viên' : currentRole === 'curator' ? 'Kiểm duyệt viên' : 'Nhân viên bảo tàng',
+      role: currentRole === 'administrator' ? 'Quản trị viên' : currentRole === 'systemStaff' ? 'Nhân viên hệ thống' : 'Nhân viên bảo tàng',
       action,
       details
     };
@@ -80,7 +82,7 @@ export function AppProvider({ children }) {
       ...newArt,
       id: `art-${String(Date.now()).slice(-4)}`,
       code: `SMGS-ART-${String(artifacts.length + 1).padStart(3, '0')}`,
-      qrCode: `SMGS-QR-VNMH-${String(artifacts.length + 1).padStart(3, '0')}`,
+      qrCode: newArt.qrCode?.trim() || `SMGS-QR-${String(artifacts.length + 1).padStart(3, '0')}`,
       viewsCount: 0,
       scansCount: 0,
       quizPassRate: '0%',
@@ -123,6 +125,13 @@ export function AppProvider({ children }) {
     if (!item) return;
 
     setCurationQueue(prev => prev.map(c => c.id === id ? { ...c, status: 'approved', feedback: note } : c));
+    if (item.targetArtifactId) {
+      setArtifacts(prev => prev.map(artifact => artifact.id === item.targetArtifactId ? {
+        ...artifact,
+        status: 'published',
+        approvedAiContent: [...(artifact.approvedAiContent || []), { type: item.type, title: item.title, content: item.proposedContent }]
+      } : artifact));
+    }
     logAction('CURATION_APPROVE', `Phê duyệt và xuất bản: ${item.title}`);
     showToast(`Đã phê duyệt và xuất bản thành công!`);
   };
@@ -160,6 +169,12 @@ export function AppProvider({ children }) {
     showToast(`Đã tạo tour "${tourWithId.title}" thành công!`);
   };
 
+  const updateTour = (updatedTour) => {
+    setTours(prev => prev.map(item => item.id === updatedTour.id ? { ...item, ...updatedTour } : item));
+    logAction('TOUR_UPDATE', `Cập nhật tour ${updatedTour.title}`);
+    showToast(`Đã cập nhật tour "${updatedTour.title}".`);
+  };
+
   // Review Replies
   const replyToReview = (reviewId, replyText) => {
     setReviews(prev => prev.map(r => {
@@ -182,6 +197,23 @@ export function AppProvider({ children }) {
     setTransactions(prev => prev.map(t => t.id === txnId ? { ...t, status: 'refunded' } : t));
     logAction('TRANSACTION_REFUND', `Hoàn tiền cho giao dịch: ${txnId}`);
     showToast(`Giao dịch ${txnId} đã được hoàn tiền thành công!`);
+  };
+
+  const updateSystemCase = (caseId, status, note = '') => {
+    const target = systemCases.find(item => item.id === caseId);
+    if (!target) return;
+    if (target.type === 'refund' && status === 'resolved' && target.transactionId) {
+      refundTransaction(target.transactionId);
+    }
+    setSystemCases(prev => prev.map(item => item.id === caseId ? { ...item, status, note } : item));
+    logAction('SYSTEM_CASE_UPDATE', `${caseId}: ${status}${note ? ` · ${note}` : ''}`);
+    showToast(`Đã cập nhật yêu cầu ${caseId}.`);
+  };
+
+  const moderateReview = (reviewId, hidden) => {
+    setReviews(prev => prev.map(item => item.id === reviewId ? { ...item, hidden } : item));
+    logAction('REVIEW_MODERATE', `${hidden ? 'Ẩn' : 'Hiện lại'} phản hồi ${reviewId}`);
+    showToast(hidden ? 'Đã ẩn phản hồi không phù hợp.' : 'Đã hiện lại phản hồi.');
   };
 
   // Users
@@ -229,6 +261,7 @@ export function AppProvider({ children }) {
       deleteArtifact,
       tours,
       addTour,
+      updateTour,
       exhibitions,
       curationQueue,
       submitToCuration,
@@ -241,8 +274,11 @@ export function AppProvider({ children }) {
       passPackages,
       transactions,
       refundTransaction,
+      systemCases,
+      updateSystemCase,
       reviews,
       replyToReview,
+      moderateReview,
       auditLogs,
       logAction,
       toasts,
