@@ -22,7 +22,6 @@ export function AppProvider({ children }) {
     return savedRole === 'curator' ? 'museumStaff' : ['administrator', 'systemStaff', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
   });
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('smgs_web_authenticated') === 'true');
-  const [isVisitorPreview, setIsVisitorPreview] = useState(false);
 
   // Bảo tàng mẫu đang được nhân viên bảo tàng phụ trách
   const [selectedMuseumId, setSelectedMuseumId] = useState('mus-01');
@@ -61,8 +60,7 @@ export function AppProvider({ children }) {
     const account = users.find(user => user.email.toLowerCase() === email.trim().toLowerCase() && user.status === 'active');
     if (!account || password !== 'smgs123') return false;
     if (account.role === 'visitor') {
-      setIsAuthenticated(false);
-      setIsVisitorPreview(true);
+      window.location.assign('/visitor/?seed=khach');
       return true;
     }
     setRoleState(account.role);
@@ -74,14 +72,8 @@ export function AppProvider({ children }) {
 
   const logout = () => {
     setIsAuthenticated(false);
-    setIsVisitorPreview(false);
     localStorage.removeItem('smgs_web_authenticated');
   };
-
-  const openVisitorPreview = () => {
-    window.location.assign('/visitor/');
-  };
-  const closeVisitorPreview = () => setIsVisitorPreview(false);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -300,9 +292,6 @@ export function AppProvider({ children }) {
       isAuthenticated,
       login,
       logout,
-      isVisitorPreview,
-      openVisitorPreview,
-      closeVisitorPreview,
       selectedMuseumId,
       setSelectedMuseumId,
       currentMuseum,

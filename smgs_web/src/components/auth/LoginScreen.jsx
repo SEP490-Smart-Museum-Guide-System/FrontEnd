@@ -10,7 +10,7 @@ const accounts = [
 ];
 
 export default function LoginScreen() {
-  const { login, openVisitorPreview } = useApp();
+  const { login } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,10 +21,9 @@ export default function LoginScreen() {
     setError('Email hoặc mật khẩu chưa đúng. Dùng một tài khoản mẫu bên dưới với mật khẩu smgs123.');
   };
 
-  const chooseAccount = (account) => {
-    setEmail(account.email);
-    setPassword('smgs123');
+  const loginSeedAccount = (account) => {
     setError('');
+    if (!login(account.email, 'smgs123')) setError('Không thể mở tài khoản mẫu này.');
   };
 
   return <main className="login-page">
@@ -45,9 +44,8 @@ export default function LoginScreen() {
       </form>
       <div className="login-demo-heading"><span /> Hoặc chọn tài khoản mẫu <span /></div>
       <div className="login-account-grid">
-        {accounts.map(account => { const Icon = account.icon; return <button key={account.email} type="button" onClick={() => chooseAccount(account)} className="login-account"><Icon size={18} /><span><strong>{account.role}</strong><small>{account.email}</small></span></button>; })}
+        {accounts.map(account => { const Icon = account.icon; return <button key={account.email} type="button" onClick={() => loginSeedAccount(account)} className="login-account"><Icon size={18} /><span><strong>{account.role}</strong><small>{account.email}</small></span></button>; })}
       </div>
-      <button type="button" className="login-visitor-preview" onClick={openVisitorPreview}><MapPinned size={18} /><span><strong>Xem trước giao diện Khách trên web</strong><small>Chỉ để xem UI mobile và kiểm tra nút chỉ đường; Khách vẫn dùng Flutter mobile.</small></span><ArrowRight size={16} /></button>
       <p className="login-hint">Mật khẩu chung: <strong>smgs123</strong></p>
     </section>
   </main>;

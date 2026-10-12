@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -8,9 +9,17 @@ import 'screens/auth/auth_screen.dart';
 import 'services/app_services.dart';
 import 'services/app_preferences.dart';
 import 'widgets/heritage_decoration.dart';
+import 'models/experience.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Chỉ dùng cho luồng demo từ cổng web khi backend chưa triển khai.
+  // Mở /visitor/ trực tiếp vẫn đi qua màn đăng nhập Flutter bình thường.
+  if (kIsWeb && Uri.base.queryParameters['seed'] == 'khach') {
+    AppServices.auth = MockAuthService(
+      initialUser: const VisitorUser(name: 'Minh An', email: 'khach@smgs.vn'),
+    );
+  }
   // Keep web controls available to assistive technology for the app lifetime.
   SemanticsBinding.instance.ensureSemantics();
   runApp(const SMGSApp());

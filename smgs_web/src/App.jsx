@@ -15,10 +15,9 @@ import AuditLogs from './components/logs/AuditLogs';
 import SystemOperations from './components/operations/SystemOperations';
 import ToastContainer from './components/common/ToastContainer';
 import LoginScreen from './components/auth/LoginScreen';
-import VisitorMapPage from './components/visitor/VisitorMapPage';
 
 export default function App() {
-  const { activeTab, setActiveTab, isAuthenticated, isVisitorPreview } = useApp();
+  const { activeTab, setActiveTab, isAuthenticated } = useApp();
   const [selectedStudioArtifact, setSelectedStudioArtifact] = useState(null);
 
   const handleOpenAIStudio = (artifact) => {
@@ -60,7 +59,6 @@ export default function App() {
     }
   };
 
-  if (isVisitorPreview) return <VisitorMapPage />;
   if (!isAuthenticated) return <LoginScreen />;
 
   return (
