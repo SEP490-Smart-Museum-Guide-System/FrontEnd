@@ -60,8 +60,8 @@ export default function App() {
     }
   };
 
-  if (!isAuthenticated) return <LoginScreen />;
   if (isVisitorPreview) return <VisitorMapPage />;
+  if (!isAuthenticated) return <LoginScreen />;
 
   return (
     <div className="app-container">
