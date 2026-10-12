@@ -5,7 +5,8 @@ import {
   ShieldCheck,
   UserCheck,
   Headset,
-  Bell
+  Bell,
+  LogOut
 } from 'lucide-react';
 
 export default function Header() {
@@ -15,7 +16,8 @@ export default function Header() {
     setActiveTab,
     curationQueue,
     artifacts,
-    currentMuseum
+    currentMuseum,
+    logout
   } = useApp();
 
   const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id));
@@ -136,6 +138,9 @@ export default function Header() {
             </span>
           </div>
         </div>
+        <button type="button" className="btn btn-secondary btn-sm topbar-logout" onClick={logout} title="Đăng xuất">
+          <LogOut size={15} /> <span>Đăng xuất</span>
+        </button>
       </div>
     </header>
   );

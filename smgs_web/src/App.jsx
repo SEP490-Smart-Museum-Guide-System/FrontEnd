@@ -14,9 +14,11 @@ import TransactionManager from './components/transactions/TransactionManager';
 import AuditLogs from './components/logs/AuditLogs';
 import SystemOperations from './components/operations/SystemOperations';
 import ToastContainer from './components/common/ToastContainer';
+import LoginScreen from './components/auth/LoginScreen';
+import VisitorMapPage from './components/visitor/VisitorMapPage';
 
 export default function App() {
-  const { activeTab, setActiveTab } = useApp();
+  const { activeTab, setActiveTab, isAuthenticated, isVisitorPreview } = useApp();
   const [selectedStudioArtifact, setSelectedStudioArtifact] = useState(null);
 
   const handleOpenAIStudio = (artifact) => {
@@ -57,6 +59,9 @@ export default function App() {
         return <RoleDashboard onNavigate={setActiveTab} />;
     }
   };
+
+  if (!isAuthenticated) return <LoginScreen />;
+  if (isVisitorPreview) return <VisitorMapPage />;
 
   return (
     <div className="app-container">

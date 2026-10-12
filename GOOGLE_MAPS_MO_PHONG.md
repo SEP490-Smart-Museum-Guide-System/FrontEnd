@@ -6,6 +6,7 @@
 - Quản trị viên bật hoặc tắt trạng thái công khai từng bảo tàng. Bản đồ mô phỏng chỉ vẽ ghim của các bảo tàng đang công khai.
 - Nhân viên bảo tàng xem được trạng thái công khai và dùng nút **Chỉ đường** để kiểm tra liên kết.
 - Ứng dụng Flutter của **Khách tham quan** có nút **Chỉ đường đến bảo tàng**. Nút chỉ xuất hiện khi `googleMapsVisible = true` và mở Google Maps bằng tọa độ của bảo tàng.
+- Cổng web chỉ có ba role nghiệp vụ: Quản trị viên, Nhân viên bảo tàng và Nhân viên hệ thống. Màn hình đăng nhập có nút **Xem trước giao diện Khách trên web** để kiểm tra UI mobile/chỉ đường khi chưa có simulator; đây không phải role web.
 - Hiện vật, phòng trưng bày, vị trí/icon trong nhà và dữ liệu vận hành không được đưa lên bản đồ công khai.
 
 ## Dữ liệu mô phỏng hiện tại

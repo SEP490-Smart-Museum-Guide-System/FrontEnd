@@ -21,6 +21,8 @@ export function AppProvider({ children }) {
     const savedRole = localStorage.getItem('smgs_web_role');
     return savedRole === 'curator' ? 'museumStaff' : ['administrator', 'systemStaff', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
   });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('smgs_web_authenticated') === 'true');
+  const [isVisitorPreview, setIsVisitorPreview] = useState(false);
 
   // Bảo tàng mẫu đang được nhân viên bảo tàng phụ trách
   const [selectedMuseumId, setSelectedMuseumId] = useState('mus-01');
@@ -54,6 +56,25 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('smgs_web_role', currentRole);
   }, [currentRole]);
+
+  const login = (email, password) => {
+    const account = users.find(user => user.email.toLowerCase() === email.trim().toLowerCase() && user.status === 'active');
+    if (!account || password !== 'smgs123') return false;
+    setRoleState(account.role);
+    setActiveTab('overview');
+    setIsAuthenticated(true);
+    localStorage.setItem('smgs_web_authenticated', 'true');
+    return true;
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setIsVisitorPreview(false);
+    localStorage.removeItem('smgs_web_authenticated');
+  };
+
+  const openVisitorPreview = () => setIsVisitorPreview(true);
+  const closeVisitorPreview = () => setIsVisitorPreview(false);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -269,6 +290,12 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentRole,
       setCurrentRole,
+      isAuthenticated,
+      login,
+      logout,
+      isVisitorPreview,
+      openVisitorPreview,
+      closeVisitorPreview,
       selectedMuseumId,
       setSelectedMuseumId,
       currentMuseum,
