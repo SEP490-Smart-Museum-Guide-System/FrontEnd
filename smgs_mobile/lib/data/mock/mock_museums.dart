@@ -10,6 +10,9 @@ const List<Museum> mockMuseums = [
     openingHours: '08:00 – 17:00',
     category: 'Lịch sử',
     shortIntro: 'Một hành trình qua những dấu mốc văn hóa và lịch sử Việt Nam.',
+    googleMapsVisible: true,
+    latitude: 21.02591,
+    longitude: 105.85794,
   ),
   Museum(
     id: 'museum_ho_chi_minh',
@@ -20,5 +23,8 @@ const List<Museum> mockMuseums = [
     openingHours: '08:00 – 16:30',
     category: 'Văn hóa',
     shortIntro: 'Những câu chuyện về một cuộc đời gắn liền với dân tộc.',
+    googleMapsVisible: true,
+    latitude: 21.03674,
+    longitude: 105.83289,
   ),
 ];

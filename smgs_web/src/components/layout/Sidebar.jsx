@@ -33,7 +33,7 @@ export default function Sidebar() {
           title: 'Quản trị hệ thống',
           items: [
             { id: 'overview', label: 'Tổng quan hệ thống', icon: LayoutDashboard },
-            { id: 'museums', label: 'Bảo tàng & Không gian', icon: Landmark },
+            { id: 'museums', label: 'Bảo tàng & Google Maps', icon: Landmark },
             { id: 'artifacts', label: 'Kho hiện vật', icon: Layers },
           ]
         },

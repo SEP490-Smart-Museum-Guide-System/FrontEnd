@@ -11,9 +11,10 @@ import {
   CheckCircle,
   FolderTree
 } from 'lucide-react';
+import MuseumMapPreview from './MuseumMapPreview';
 
 export default function MuseumManager() {
-  const { museums, setMuseums, artifacts, showToast, logAction, currentRole, currentMuseum } = useApp();
+  const { museums, setMuseums, artifacts, showToast, logAction, currentRole, currentMuseum, toggleMuseumGoogleMapsVisibility } = useApp();
   const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || 'mus-01');
   const [isAddingGallery, setIsAddingGallery] = useState(false);
   const [isEditingMuseum, setIsEditingMuseum] = useState(false);
@@ -85,7 +86,7 @@ export default function MuseumManager() {
             Cấu Trúc Không Gian & Phòng Trưng Bày
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Quản lý thông tin bảo tàng, tòa nhà, tầng, phòng trưng bày và vị trí trên bản đồ.
+            Quản lý thông tin bảo tàng, không gian trưng bày và trạng thái hiển thị cho khách trên Google Maps.
           </p>
         </div>
 
@@ -127,6 +128,12 @@ export default function MuseumManager() {
           );
         })}
       </div>}
+
+      <MuseumMapPreview
+        museums={museums}
+        currentRole={currentRole}
+        onToggleVisibility={toggleMuseumGoogleMapsVisibility}
+      />
 
       {/* Museum Information Banner */}
       <div className="card" style={{ padding: '24px', marginBottom: '28px', background: 'linear-gradient(135deg, var(--color-paper-card), var(--color-paper-bg))' }}>

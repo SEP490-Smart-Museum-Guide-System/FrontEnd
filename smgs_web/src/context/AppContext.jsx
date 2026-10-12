@@ -241,6 +241,27 @@ export function AppProvider({ children }) {
     showToast('Đã cập nhật trạng thái tài khoản!');
   };
 
+  // Google Maps công khai: chỉ Quản trị viên mới được thay đổi danh sách bảo tàng hiển thị cho khách.
+  const toggleMuseumGoogleMapsVisibility = (museumId) => {
+    if (currentRole !== 'administrator') {
+      showToast('Chỉ Quản trị viên mới được thay đổi trạng thái hiển thị Google Maps.', 'warning');
+      return;
+    }
+
+    const target = museums.find(museum => museum.id === museumId);
+    if (!target) return;
+
+    const nextVisible = !target.googleMapsVisible;
+    setMuseums(prev => prev.map(museum => museum.id === museumId
+      ? { ...museum, googleMapsVisible: nextVisible }
+      : museum));
+    logAction(
+      'MUSEUM_GOOGLE_MAPS_VISIBILITY',
+      `${nextVisible ? 'Công khai' : 'Ẩn'} ${target.name} trên Google Maps cho khách tham quan`,
+    );
+    showToast(nextVisible ? `Đã cho phép khách tìm ${target.shortName} trên Google Maps.` : `Đã ẩn ${target.shortName} khỏi bản đồ công khai.`, 'success');
+  };
+
   // Active museum helper
   const currentMuseum = museums.find(m => m.id === selectedMuseumId) || museums[0];
 
@@ -271,6 +292,7 @@ export function AppProvider({ children }) {
       users,
       addUser,
       toggleUserStatus,
+      toggleMuseumGoogleMapsVisibility,
       passPackages,
       transactions,
       refundTransaction,

@@ -8,6 +8,9 @@ class Museum {
     required this.openingHours,
     required this.category,
     required this.shortIntro,
+    required this.googleMapsVisible,
+    required this.latitude,
+    required this.longitude,
   });
 
   final String id;
@@ -18,4 +21,7 @@ class Museum {
   final String openingHours;
   final String category;
   final String shortIntro;
+  final bool googleMapsVisible;
+  final double latitude;
+  final double longitude;
 }

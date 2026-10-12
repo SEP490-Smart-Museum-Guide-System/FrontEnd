@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
@@ -14,6 +15,20 @@ class MuseumDetailScreen extends StatelessWidget {
   const MuseumDetailScreen({super.key, required this.museum, this.heroTag});
   final Museum museum;
   final Object? heroTag;
+
+  Future<void> _openDirections(BuildContext context) async {
+    final destination = '${museum.latitude},${museum.longitude}';
+    final url = Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'destination': destination,
+      'travelmode': 'driving',
+    });
+    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!context.mounted || opened) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Không thể mở Google Maps trên thiết bị này.')),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final artifacts = mockArtifacts
@@ -106,17 +121,13 @@ class MuseumDetailScreen extends StatelessWidget {
         ),
         ...artifacts.map((a) => ScrollReveal(child: ArtifactCard(artifact: a))),
         const SectionHeading('Chuẩn bị chuyến tham quan'),
-        ActionTile(
-          title: 'Chỉ đường đến bảo tàng',
-          subtitle: 'Mở vị trí bảo tàng trên Google Maps.',
-          icon: Icons.directions_outlined,
-          onTap: () => showReading(
-            context,
+        if (museum.googleMapsVisible)
+          ActionTile(
             title: 'Chỉ đường đến bảo tàng',
-            text:
-                '${museum.name}\n${museum.location}\n\nBản trải nghiệm chưa mở liên kết bên ngoài. Khi kết nối thật, nút này sẽ chuyển sang Google Maps để dẫn đường đến bảo tàng.',
+            subtitle: 'Mở Google Maps để dẫn đường đến đúng địa điểm.',
+            icon: Icons.directions_outlined,
+            onTap: () => _openDirections(context),
           ),
-        ),
         ActionTile(
           title: 'Hành trình dành cho bạn',
           subtitle: 'Chọn thời gian và sở thích để bắt đầu.',

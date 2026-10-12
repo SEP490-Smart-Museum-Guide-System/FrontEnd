@@ -11,6 +11,8 @@ export const initialMuseums = [
     artifactCount: 142,
     visitorCountToday: 1280,
     status: 'active',
+    googleMapsVisible: true,
+    mapPosition: { x: 64, y: 42 },
     description: 'Nơi lưu giữ, bảo tồn và phát huy di sản văn hóa, lịch sử hàng nghìn năm của dân tộc Việt Nam với hơn 200.000 hiện vật quý hiếm.',
     buildings: [
       {
@@ -66,6 +68,8 @@ export const initialMuseums = [
     artifactCount: 86,
     visitorCountToday: 2450,
     status: 'active',
+    googleMapsVisible: true,
+    mapPosition: { x: 42, y: 59 },
     description: 'Trung tâm nghiên cứu, giới thiệu về cuộc đời, sự nghiệp của Chủ tịch Hồ Chí Minh và lịch sử đấu tranh giải phóng dân tộc.',
     buildings: [
       {
@@ -96,6 +100,8 @@ export const initialMuseums = [
     artifactCount: 65,
     visitorCountToday: 730,
     status: 'active',
+    googleMapsVisible: false,
+    mapPosition: { x: 27, y: 29 },
     description: 'Bảo tàng lưu giữ các tác phẩm nghệ thuật tạo hình, điêu khắc, hội họa tiêu biểu của mỹ thuật Việt Nam qua các thời kỳ.',
     buildings: [
       {
