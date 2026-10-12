@@ -60,6 +60,11 @@ export function AppProvider({ children }) {
   const login = (email, password) => {
     const account = users.find(user => user.email.toLowerCase() === email.trim().toLowerCase() && user.status === 'active');
     if (!account || password !== 'smgs123') return false;
+    if (account.role === 'visitor') {
+      setIsAuthenticated(false);
+      setIsVisitorPreview(true);
+      return true;
+    }
     setRoleState(account.role);
     setActiveTab('overview');
     setIsAuthenticated(true);

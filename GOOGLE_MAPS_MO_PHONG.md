@@ -7,6 +7,7 @@
 - Nhân viên bảo tàng xem được trạng thái công khai và dùng nút **Chỉ đường** để kiểm tra liên kết.
 - Ứng dụng Flutter của **Khách tham quan** có nút **Chỉ đường đến bảo tàng**. Nút chỉ xuất hiện khi `googleMapsVisible = true` và mở Google Maps bằng tọa độ của bảo tàng.
 - Cổng web chỉ có ba role nghiệp vụ: Quản trị viên, Nhân viên bảo tàng và Nhân viên hệ thống. Màn hình đăng nhập có nút **Xem trước giao diện Khách trên web** để kiểm tra UI mobile/chỉ đường khi chưa có simulator; đây không phải role web.
+- Tài khoản Khách mô phỏng: `tran.ngoc.anh@gmail.com / smgs123`. Khi đăng nhập trên web, tài khoản này chỉ mở bản xem trước giao diện Flutter/mobile, không có quyền vào portal nghiệp vụ.
 - Hiện vật, phòng trưng bày, vị trí/icon trong nhà và dữ liệu vận hành không được đưa lên bản đồ công khai.
 
 ## Dữ liệu mô phỏng hiện tại

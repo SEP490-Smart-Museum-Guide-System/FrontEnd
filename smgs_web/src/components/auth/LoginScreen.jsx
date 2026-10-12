@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowRight, Landmark, MapPinned, ShieldCheck, UserCheck } from 'lucide-react';
+import { ArrowRight, Landmark, MapPinned, ShieldCheck, UserCheck, UsersRound } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 const accounts = [
   { email: 'admin@smgs.vn', role: 'Quản trị viên', icon: ShieldCheck },
   { email: 'staff@smgs.vn', role: 'Nhân viên bảo tàng', icon: Landmark },
   { email: 'system@smgs.vn', role: 'Nhân viên hệ thống', icon: UserCheck },
+  { email: 'tran.ngoc.anh@gmail.com', role: 'Khách tham quan · mobile', icon: UsersRound },
 ];
 
 export default function LoginScreen() {
