@@ -78,7 +78,9 @@ export function AppProvider({ children }) {
     localStorage.removeItem('smgs_web_authenticated');
   };
 
-  const openVisitorPreview = () => setIsVisitorPreview(true);
+  const openVisitorPreview = () => {
+    window.location.assign('/visitor/');
+  };
   const closeVisitorPreview = () => setIsVisitorPreview(false);
 
   const showToast = (message, type = 'success') => {

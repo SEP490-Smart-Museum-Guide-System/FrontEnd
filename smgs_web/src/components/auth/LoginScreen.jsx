@@ -6,7 +6,7 @@ const accounts = [
   { email: 'admin@smgs.vn', role: 'Quản trị viên', icon: ShieldCheck },
   { email: 'staff@smgs.vn', role: 'Nhân viên bảo tàng', icon: Landmark },
   { email: 'system@smgs.vn', role: 'Nhân viên hệ thống', icon: UserCheck },
-  { email: 'tran.ngoc.anh@gmail.com', role: 'Khách tham quan · mobile', icon: UsersRound },
+  { email: 'khach@smgs.vn', role: 'Khách tham quan · mobile', icon: UsersRound },
 ];
 
 export default function LoginScreen() {

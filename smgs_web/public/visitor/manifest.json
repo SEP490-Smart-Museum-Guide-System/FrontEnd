@@ -1,0 +1,20 @@
+{
+  "name": "SMGS · Cẩm nang bảo tàng",
+  "short_name": "SMGS",
+  "lang": "vi",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F4EBDD",
+  "theme_color": "#6B2E2E",
+  "description": "Khám phá bảo tàng và những câu chuyện di sản Việt Nam.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -589,7 +589,7 @@ export const initialUsers = [
   {
     id: 'usr-006',
     name: 'Trần Ngọc Ánh',
-    email: 'tran.ngoc.anh@gmail.com',
+    email: 'khach@smgs.vn',
     role: 'visitor',
     museumId: null,
     museumName: 'Ứng dụng di động',
