@@ -76,7 +76,7 @@ export default function UserManager() {
       case 'visitor':
         return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}>Khách tham quan · di động</span>;
       case 'curator':
-        return <span className="badge-status" style={{ fontSize: '0.75rem', background: 'var(--color-gold-50)', color: 'var(--color-gold-700)', border: '1px solid var(--color-gold-300)' }}><ShieldCheck size={13} /> Giám tuyển · cổng riêng</span>;
+        return <span className="badge-status" style={{ fontSize: '0.75rem', background: 'var(--color-gold-50)', color: 'var(--color-gold-700)', border: '1px solid var(--color-gold-300)' }}><ShieldCheck size={13} /> Giám tuyển</span>;
       default:
         return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}><UserCheck size={13} /> Nhân viên bảo tàng</span>;
     }
@@ -91,7 +91,7 @@ export default function UserManager() {
             Quản Lý Nhân Sự & Phân Quyền Hệ Thống
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Năm vai trò: Quản trị viên, Nhân viên bảo tàng, Giám tuyển, Nhân viên hệ thống và Khách tham quan. Giám tuyển dùng cổng kiểm duyệt riêng.
+            Năm vai trò: Quản trị viên, Nhân viên bảo tàng, Giám tuyển, Nhân viên hệ thống và Khách tham quan. Bốn role nghiệp vụ dùng chung portal web.
           </p>
         </div>
 
@@ -275,7 +275,7 @@ export default function UserManager() {
                       onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
                     >
                       <option value="museumStaff">Nhân viên bảo tàng</option>
-                      <option value="curator">Giám tuyển · cổng riêng</option>
+                      <option value="curator">Giám tuyển</option>
                       <option value="systemStaff">Nhân viên hệ thống</option>
                       <option value="administrator">Quản trị viên</option>
                       <option value="visitor">Khách tham quan · di động</option>

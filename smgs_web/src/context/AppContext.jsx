@@ -19,7 +19,7 @@ export function AppProvider({ children }) {
   // Current active staff/admin role
   const [currentRole, setRoleState] = useState(() => {
     const savedRole = localStorage.getItem('smgs_web_role');
-    return ['administrator', 'systemStaff', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
+    return ['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(savedRole) ? savedRole : 'administrator';
   });
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('smgs_web_authenticated') === 'true');
 
@@ -30,7 +30,7 @@ export function AppProvider({ children }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   const setCurrentRole = (role) => {
-    if (!['administrator', 'systemStaff', 'museumStaff'].includes(role)) return;
+    if (!['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(role)) return;
     setRoleState(role);
     setActiveTab('overview');
   };
@@ -59,7 +59,6 @@ export function AppProvider({ children }) {
   const login = (email, password) => {
     const account = users.find(user => user.email.toLowerCase() === email.trim().toLowerCase() && user.status === 'active');
     if (!account || password !== 'smgs123') return false;
-    if (account.role === 'curator') return false;
     if (account.role === 'visitor') {
       window.location.assign('/visitor/?seed=khach');
       return true;
@@ -90,7 +89,7 @@ export function AppProvider({ children }) {
       id: `log-${Date.now()}`,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
       user: `${currentUser.name} (${currentUser.email})`,
-      role: currentRole === 'administrator' ? 'Quản trị viên' : currentRole === 'systemStaff' ? 'Nhân viên hệ thống' : 'Nhân viên bảo tàng',
+      role: currentRole === 'administrator' ? 'Quản trị viên' : currentRole === 'systemStaff' ? 'Nhân viên hệ thống' : currentRole === 'curator' ? 'Giám tuyển' : 'Nhân viên bảo tàng',
       action,
       details
     };
@@ -139,6 +138,40 @@ export function AppProvider({ children }) {
     setCurationQueue(prev => [newItem, ...prev]);
     logAction('CURATION_SUBMIT', `Gửi nội dung vào hàng đợi kiểm duyệt: ${newItem.title}`);
     showToast(`Nội dung đã được gửi vào hàng đợi kiểm duyệt!`);
+  };
+
+  const approveCurationItem = (id, note = '') => {
+    if (currentRole !== 'curator') return showToast('Chỉ Giám tuyển được phê duyệt nội dung.', 'warning');
+    const item = curationQueue.find(entry => entry.id === id);
+    if (!item) return;
+    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'approved', feedback: note } : entry));
+    if (item.targetArtifactId) {
+      setArtifacts(prev => prev.map(artifact => artifact.id === item.targetArtifactId ? {
+        ...artifact,
+        status: 'published',
+        approvedAiContent: [...(artifact.approvedAiContent || []), { type: item.type, title: item.title, content: item.proposedContent }]
+      } : artifact));
+    }
+    logAction('CURATION_APPROVE', `Phê duyệt và xuất bản: ${item.title}`);
+    showToast('Đã phê duyệt và xuất bản nội dung.');
+  };
+
+  const rejectCurationItem = (id, feedback) => {
+    if (currentRole !== 'curator') return showToast('Chỉ Giám tuyển được từ chối nội dung.', 'warning');
+    const item = curationQueue.find(entry => entry.id === id);
+    if (!item) return;
+    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'rejected', feedback } : entry));
+    logAction('CURATION_REJECT', `Từ chối nội dung: ${item.title}. ${feedback}`);
+    showToast('Đã gửi lý do từ chối.', 'warning');
+  };
+
+  const requestRevisionCurationItem = (id, feedback) => {
+    if (currentRole !== 'curator') return showToast('Chỉ Giám tuyển được yêu cầu hiệu đính.', 'warning');
+    const item = curationQueue.find(entry => entry.id === id);
+    if (!item) return;
+    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'revision_requested', feedback } : entry));
+    logAction('CURATION_REVISION_REQUEST', `Yêu cầu hiệu đính: ${item.title}. ${feedback}`);
+    showToast('Đã gửi yêu cầu hiệu đính.', 'warning');
   };
 
   // Tour Actions
@@ -276,6 +309,9 @@ export function AppProvider({ children }) {
       exhibitions,
       curationQueue,
       submitToCuration,
+      approveCurationItem,
+      rejectCurationItem,
+      requestRevisionCurationItem,
       users,
       addUser,
       toggleUserStatus,

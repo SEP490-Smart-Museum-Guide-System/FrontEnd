@@ -6,7 +6,7 @@ const accounts = [
   { email: 'admin@smgs.vn', role: 'Quản trị viên', icon: ShieldCheck },
   { email: 'staff@smgs.vn', role: 'Nhân viên bảo tàng', icon: Landmark },
   { email: 'system@smgs.vn', role: 'Nhân viên hệ thống', icon: UserCheck },
-  { email: 'curator@smgs.vn', role: 'Giám tuyển · cổng riêng', icon: BookOpenCheck, href: '/curator/' },
+  { email: 'curator@smgs.vn', role: 'Giám tuyển', icon: BookOpenCheck },
   { email: 'khach@smgs.vn', role: 'Khách tham quan · mobile', icon: UsersRound },
 ];
 
@@ -18,20 +18,12 @@ export default function LoginScreen() {
 
   const submit = (event) => {
     event.preventDefault();
-    if (email.trim().toLowerCase() === 'curator@smgs.vn') {
-      window.location.assign('/curator/');
-      return;
-    }
     if (login(email, password)) return;
     setError('Email hoặc mật khẩu chưa đúng. Dùng một tài khoản mẫu bên dưới với mật khẩu smgs123.');
   };
 
   const loginSeedAccount = (account) => {
     setError('');
-    if (account.href) {
-      window.location.assign(account.href);
-      return;
-    }
     if (!login(account.email, 'smgs123')) setError('Không thể mở tài khoản mẫu này.');
   };
 
@@ -40,7 +32,7 @@ export default function LoginScreen() {
       <div className="login-seal"><Landmark size={28} /></div>
       <p className="login-eyebrow">SMGS · DI SẢN VIỆT</p>
       <h1>Đi vào một không gian<br />được thiết kế cho từng vai trò.</h1>
-      <p>Khách tham quan có thể mở Google Maps để chỉ đường. Ba vai trò nghiệp vụ sử dụng cổng web để quản lý và vận hành; Giám tuyển có cổng thẩm định riêng.</p>
+      <p>Khách tham quan có thể mở Google Maps để chỉ đường. Bốn vai trò nghiệp vụ cùng sử dụng cổng web để quản lý, thẩm định và vận hành.</p>
       <div className="login-feature"><MapPinned size={19} /><span><strong>Khách tham quan</strong><br />Mở phần chỉ đường Google Maps ngay trên web.</span></div>
     </section>
     <section className="login-panel">
@@ -55,7 +47,6 @@ export default function LoginScreen() {
       <div className="login-account-grid">
         {accounts.map(account => { const Icon = account.icon; return <button key={account.email} type="button" onClick={() => loginSeedAccount(account)} className="login-account"><Icon size={18} /><span><strong>{account.role}</strong><small>{account.email}</small></span></button>; })}
       </div>
-      <p className="login-hint">Giám tuyển: <strong>curator@smgs.vn</strong> · mở tại <strong>/curator/</strong>.</p>
       <p className="login-hint">Mật khẩu chung: <strong>smgs123</strong></p>
     </section>
   </main>;

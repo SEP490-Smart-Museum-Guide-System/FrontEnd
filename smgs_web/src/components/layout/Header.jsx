@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   UserCheck,
   Headset,
+  BookOpenCheck,
   Bell,
   LogOut
 } from 'lucide-react';
@@ -26,7 +27,8 @@ export default function Header() {
   const roleLabels = {
     administrator: { label: 'Quản trị viên', icon: ShieldCheck, badgeClass: 'role-badge-admin' },
     museumStaff: { label: 'Nhân viên bảo tàng', icon: UserCheck, badgeClass: 'role-badge-staff' },
-    systemStaff: { label: 'Nhân viên hệ thống', icon: Headset, badgeClass: 'role-badge-system' }
+    systemStaff: { label: 'Nhân viên hệ thống', icon: Headset, badgeClass: 'role-badge-system' },
+    curator: { label: 'Giám tuyển', icon: BookOpenCheck, badgeClass: 'role-badge-staff' }
   };
 
   const currentRoleInfo = roleLabels[currentRole] || roleLabels.administrator;
@@ -36,7 +38,7 @@ export default function Header() {
       <div className="topbar-left">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Landmark size={18} color="var(--color-burgundy-700)" />
-          {currentRole !== 'museumStaff' ? (
+          {!['museumStaff', 'curator'].includes(currentRole) ? (
             <span className="museum-select-badge">Toàn hệ thống</span>
           ) : (
             <span className="museum-select-badge">{currentMuseum.name}</span>
@@ -57,6 +59,14 @@ export default function Header() {
           </button>
           <button
             type="button"
+            onClick={() => setCurrentRole('curator')}
+            className={`btn btn-sm ${currentRole === 'curator' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
+          >
+            <BookOpenCheck size={14} /> Giám tuyển
+          </button>
+          <button
+            type="button"
             onClick={() => setCurrentRole('museumStaff')}
             className={`btn btn-sm ${currentRole === 'museumStaff' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
@@ -73,11 +83,11 @@ export default function Header() {
           </button>
         </div>
 
-        {currentRole === 'museumStaff' && <div className="topbar-alert" style={{ position: 'relative' }}>
+        {['museumStaff', 'curator'].includes(currentRole) && <div className="topbar-alert" style={{ position: 'relative' }}>
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => setActiveTab('curation_queue')}
+            onClick={() => setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'submission_status')}
             style={{ padding: '8px', borderRadius: '50%', width: '38px', height: '38px' }}
             title={`${pendingCurationCount} mục đang chờ Giám tuyển thẩm định`}
           >
@@ -127,11 +137,11 @@ export default function Header() {
             fontWeight: '700',
             fontSize: '0.85rem'
           }}>
-              {currentRole === 'administrator' ? 'Q' : currentRole === 'systemStaff' ? 'H' : 'B'}
+              {currentRole === 'administrator' ? 'Q' : currentRole === 'systemStaff' ? 'H' : currentRole === 'curator' ? 'G' : 'B'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-charcoal-900)' }}>
-              {currentRole === 'administrator' ? 'Vũ Hải Đăng' : currentRole === 'systemStaff' ? 'Trần Minh Châu' : 'Nguyễn Mai Anh'}
+              {currentRole === 'administrator' ? 'Vũ Hải Đăng' : currentRole === 'systemStaff' ? 'Trần Minh Châu' : currentRole === 'curator' ? 'TS. Trần Văn Phong' : 'Nguyễn Mai Anh'}
             </span>
             <span style={{ fontSize: '0.675rem', color: 'var(--color-burgundy-700)', fontWeight: '600' }}>
               {currentRoleInfo.label}

@@ -108,3 +108,6 @@ $RECYCLE.BIN/
 .buildlog/
 .svn/
 migrate_working_dir/
+
+# Cổng Curator tách riêng đã được gộp vào smgs_web.
+smgs_curator/

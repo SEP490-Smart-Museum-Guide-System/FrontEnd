@@ -69,6 +69,29 @@ export default function RoleDashboard({ onNavigate }) {
     asideTitle: 'Chất lượng vận hành',
     asideText: 'Theo dõi lỗi ứng dụng, chất lượng câu trả lời AI và phản hồi không phù hợp.',
     asideAction: ['Xem lỗi & AI', 'operations']
+  } : currentRole === 'curator' ? {
+    eyebrow: `Giám tuyển · ${currentMuseum.name}`,
+    title: 'Kiểm định nội dung di sản',
+    description: 'Thẩm định thông tin hiện vật, bản dịch, thuyết minh và quiz AI trước khi công bố cho Khách tham quan.',
+    primary: ['Mở hàng đợi thẩm định', 'curation_queue'],
+    secondary: ['Tra cứu hiện vật', 'artifacts'],
+    metrics: [
+      [ClipboardCheck, formatNumber(museumQueue.filter(item => item.status === 'pending').length), 'Chờ thẩm định', 'Cần quyết định', 'burgundy'],
+      [MessageSquare, formatNumber(museumQueue.filter(item => item.status === 'revision_requested').length), 'Chờ hiệu đính', 'Đã phản hồi', 'gold'],
+      [CheckSquare, formatNumber(museumQueue.filter(item => item.status === 'approved').length), 'Đã xuất bản', 'Qua kiểm định', 'green'],
+      [Layers, formatNumber(museumArtifacts.length), 'Hiện vật tham chiếu', 'Theo bảo tàng phân công', 'blue']
+    ],
+    listTitle: 'Nội dung ưu tiên',
+    listAction: ['Mở hàng đợi', 'curation_queue'],
+    rows: museumQueue.slice(0, 5).map(item => ({
+      title: item.title,
+      subtitle: `${item.targetArtifactName} · ${item.submittedDate}`,
+      badge: item.status === 'pending' ? 'Chờ thẩm định' : item.status === 'approved' ? 'Đã xuất bản' : item.status === 'revision_requested' ? 'Chờ hiệu đính' : 'Từ chối',
+      status: item.status
+    })),
+    asideTitle: 'Nguyên tắc thẩm định',
+    asideText: 'Chỉ phê duyệt nội dung có nguồn đáng tin cậy, thuật ngữ đúng và phù hợp với nhóm khách tham quan.',
+    asideAction: ['Xem nhật ký thẩm định', 'audit']
   } : {
     eyebrow: currentMuseum.name,
     title: 'Bàn làm việc bảo tàng',
@@ -91,7 +114,7 @@ export default function RoleDashboard({ onNavigate }) {
     })),
     asideTitle: 'Tiếp tục công việc',
     asideText: `${museumTours.length} tour và ${museumReviews.length} phản hồi tại bảo tàng. Theo dõi phản hồi của Giám tuyển cho các nội dung đã đệ trình.`,
-    asideAction: ['Xem trạng thái đệ trình', 'curation_queue']
+    asideAction: ['Xem trạng thái đệ trình', 'submission_status']
   };
 
   return (

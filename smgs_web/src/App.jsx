@@ -5,6 +5,7 @@ import Sidebar from './components/layout/Sidebar';
 import RoleDashboard from './components/analytics/RoleDashboard';
 import ArtifactList from './components/artifacts/ArtifactList';
 import AIContentStudio from './components/ai_studio/AIContentStudio';
+import CurationCenter from './components/curation/CurationCenter';
 import SubmissionStatus from './components/curation/SubmissionStatus';
 import MuseumManager from './components/museums/MuseumManager';
 import TourManager from './components/tours/TourManager';
@@ -38,6 +39,8 @@ export default function App() {
       case 'ai_studio':
         return <AIContentStudio initialArtifact={selectedStudioArtifact} />;
       case 'curation_queue':
+        return <CurationCenter />;
+      case 'submission_status':
         return <SubmissionStatus />;
       case 'tours':
         return <TourManager />;

@@ -71,6 +71,23 @@ export default function Sidebar() {
           ]
         }
       ];
+    } else if (currentRole === 'curator') {
+      return [
+        {
+          title: 'Thẩm định nội dung bảo tàng',
+          items: [
+            { id: 'overview', label: 'Tổng quan thẩm định', icon: LayoutDashboard },
+            { id: 'curation_queue', label: 'Hàng đợi phê duyệt', icon: CheckSquare, badge: pendingCuration, highlight: true },
+            { id: 'artifacts', label: 'Tra cứu hiện vật', icon: Layers },
+          ]
+        },
+        {
+          title: 'Theo dõi',
+          items: [
+            { id: 'audit', label: 'Nhật ký thẩm định', icon: FileText },
+          ]
+        }
+      ];
     } else {
       // museumStaff
       return [
@@ -81,7 +98,7 @@ export default function Sidebar() {
             { id: 'spaces', label: 'Thông tin & bản đồ bảo tàng', icon: Building2 },
             { id: 'artifacts', label: 'Quản lý Hiện vật & QR', icon: Layers },
             { id: 'ai_studio', label: 'Xưởng nội dung AI', icon: Sparkles, highlight: true },
-            { id: 'curation_queue', label: 'Đệ trình & phản hồi Giám tuyển', icon: CheckSquare, badge: pendingCuration },
+            { id: 'submission_status', label: 'Đệ trình & phản hồi Giám tuyển', icon: CheckSquare, badge: pendingCuration },
           ]
         },
         {
