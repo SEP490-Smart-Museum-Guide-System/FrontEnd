@@ -12,8 +12,8 @@ npm run dev
 
 Tài khoản mô phỏng: `curator@smgs.vn / smgs123`.
 
-## Deploy Vercel riêng
+## Mở trên Vercel
 
-Tạo một Vercel Project mới từ cùng repository và đặt **Root Directory** là `smgs_curator`. Giữ Build Command là `npm run build`, Output Directory là `dist`.
+Khi deploy repository bằng cấu hình gốc, portal này được build tự động và phục vụ ở đường dẫn **`/curator/`** của domain chính. Ví dụ: `https://smgs-web.vercel.app/curator/`.
 
 Portal này không dùng chung runtime với `smgs_web`. Khi backend có API, hai portal sẽ dùng chung API xác thực/RBAC; backend phải trả về `museumId` của Curator để giới hạn dữ liệu theo bảo tàng được phân công.

@@ -8,7 +8,7 @@ Frontend của **Smart Museum Guide System (SMGS)**. Dự án hỗ trợ hành t
 | --- | --- | --- | --- |
 | [`smgs_mobile`](./smgs_mobile) | Flutter | Khách tham quan | Tra cứu bảo tàng, khám phá hiện vật, quét QR, AI Guide, tour, quiz và chỉ đường Google Maps. |
 | [`smgs_web`](./smgs_web) | React + Vite | Quản trị viên, Nhân viên bảo tàng, Nhân viên hệ thống | Cổng nghiệp vụ quản lý, vận hành và hỗ trợ khách. |
-| [`smgs_curator`](./smgs_curator) | React + Vite | Giám tuyển | Cổng thẩm định nội dung riêng, có phạm vi theo bảo tàng được phân công. |
+| [`smgs_curator`](./smgs_curator) | React + Vite | Giám tuyển | Cổng thẩm định nội dung riêng tại `/curator/`, có phạm vi theo bảo tàng được phân công. |
 
 ## Vai trò và ranh giới quyền hạn
 
@@ -59,7 +59,12 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 8091
 ```
 
-Mở `http://127.0.0.1:8091` và đăng nhập bằng `curator@smgs.vn`.
+Chạy lệnh build bên dưới một lần để tạo portal trong `smgs_web/public/curator`, sau đó mở `http://127.0.0.1:8090/curator/` và đăng nhập bằng `curator@smgs.vn`.
+
+```powershell
+cd D:\SEP409\FrontEnd\smgs_curator
+npm run build
+```
 
 ### 3. Ứng dụng Khách tham quan khi chưa có simulator
 
@@ -101,13 +106,7 @@ Vercel Project hiện tại dùng cấu hình gốc [`vercel.json`](./vercel.jso
 
 ### Cổng Giám tuyển
 
-Tạo **Vercel Project riêng** từ cùng repository, sau đó đặt:
-
-| Thiết lập | Giá trị |
-| --- | --- |
-| Root Directory | `smgs_curator` |
-| Build Command | `npm run build` |
-| Output Directory | `dist` |
+Lệnh build của `smgs_web` tự build `smgs_curator` trước rồi đưa portal vào `/curator/`. Sau khi Vercel deploy, mở `https://smgs-web.vercel.app/curator/` hoặc chọn ô **Giám tuyển · cổng riêng** ở màn đăng nhập. Không cần tạo Vercel Project thứ hai cho bản demo này.
 
 Khi có backend, cả hai portal web cần dùng chung API xác thực/RBAC. API của Giám tuyển phải trả về `museumId` để chỉ hiển thị các nội dung thuộc bảo tàng được phân công.
 

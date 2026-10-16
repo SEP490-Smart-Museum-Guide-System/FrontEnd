@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowRight, Landmark, MapPinned, ShieldCheck, UserCheck, UsersRound } from 'lucide-react';
+import { ArrowRight, BookOpenCheck, Landmark, MapPinned, ShieldCheck, UserCheck, UsersRound } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 const accounts = [
   { email: 'admin@smgs.vn', role: 'Quản trị viên', icon: ShieldCheck },
   { email: 'staff@smgs.vn', role: 'Nhân viên bảo tàng', icon: Landmark },
   { email: 'system@smgs.vn', role: 'Nhân viên hệ thống', icon: UserCheck },
+  { email: 'curator@smgs.vn', role: 'Giám tuyển · cổng riêng', icon: BookOpenCheck, href: '/curator/' },
   { email: 'khach@smgs.vn', role: 'Khách tham quan · mobile', icon: UsersRound },
 ];
 
@@ -18,7 +19,7 @@ export default function LoginScreen() {
   const submit = (event) => {
     event.preventDefault();
     if (email.trim().toLowerCase() === 'curator@smgs.vn') {
-      setError('Tài khoản Giám tuyển sử dụng Cổng Giám tuyển riêng. Dùng website smgs_curator để đăng nhập.');
+      window.location.assign('/curator/');
       return;
     }
     if (login(email, password)) return;
@@ -27,6 +28,10 @@ export default function LoginScreen() {
 
   const loginSeedAccount = (account) => {
     setError('');
+    if (account.href) {
+      window.location.assign(account.href);
+      return;
+    }
     if (!login(account.email, 'smgs123')) setError('Không thể mở tài khoản mẫu này.');
   };
 
@@ -35,7 +40,7 @@ export default function LoginScreen() {
       <div className="login-seal"><Landmark size={28} /></div>
       <p className="login-eyebrow">SMGS · DI SẢN VIỆT</p>
       <h1>Đi vào một không gian<br />được thiết kế cho từng vai trò.</h1>
-      <p>Khách tham quan có thể mở Google Maps để chỉ đường. Ba vai trò nghiệp vụ sử dụng cổng web để quản lý và vận hành; Giám tuyển làm việc tại cổng thẩm định riêng.</p>
+      <p>Khách tham quan có thể mở Google Maps để chỉ đường. Ba vai trò nghiệp vụ sử dụng cổng web để quản lý và vận hành; Giám tuyển có cổng thẩm định riêng.</p>
       <div className="login-feature"><MapPinned size={19} /><span><strong>Khách tham quan</strong><br />Mở phần chỉ đường Google Maps ngay trên web.</span></div>
     </section>
     <section className="login-panel">
@@ -50,7 +55,7 @@ export default function LoginScreen() {
       <div className="login-account-grid">
         {accounts.map(account => { const Icon = account.icon; return <button key={account.email} type="button" onClick={() => loginSeedAccount(account)} className="login-account"><Icon size={18} /><span><strong>{account.role}</strong><small>{account.email}</small></span></button>; })}
       </div>
-      <p className="login-hint">Giám tuyển: <strong>curator@smgs.vn</strong> · đăng nhập tại Cổng Giám tuyển riêng.</p>
+      <p className="login-hint">Giám tuyển: <strong>curator@smgs.vn</strong> · mở tại <strong>/curator/</strong>.</p>
       <p className="login-hint">Mật khẩu chung: <strong>smgs123</strong></p>
     </section>
   </main>;
