@@ -597,6 +597,18 @@ export const initialUsers = [
     status: 'active',
     lastLogin: '2026-10-05 08:30',
     permissions: ['browse_museums', 'scan_artifacts', 'purchase_pass']
+  },
+  {
+    id: 'usr-007',
+    name: 'TS. Trần Văn Phong',
+    email: 'curator@smgs.vn',
+    role: 'curator',
+    museumId: 'mus-01',
+    museumName: 'Bảo tàng Lịch sử Quốc gia',
+    phone: '0903 246 810',
+    status: 'active',
+    lastLogin: '2026-10-16 09:15',
+    permissions: ['review_artifact', 'review_translation', 'review_narration', 'review_quiz', 'approve_publish']
   }
 ];
 

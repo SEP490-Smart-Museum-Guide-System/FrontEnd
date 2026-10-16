@@ -90,8 +90,8 @@ export default function RoleDashboard({ onNavigate }) {
       status: item.status === 'published' ? 'published' : 'draft'
     })),
     asideTitle: 'Tiếp tục công việc',
-    asideText: `${museumTours.length} tour và ${museumReviews.length} phản hồi tại bảo tàng. Kiểm tra nội dung AI trước khi xuất bản.`,
-    asideAction: ['Mở kiểm duyệt AI', 'curation_queue']
+    asideText: `${museumTours.length} tour và ${museumReviews.length} phản hồi tại bảo tàng. Theo dõi phản hồi của Giám tuyển cho các nội dung đã đệ trình.`,
+    asideAction: ['Xem trạng thái đệ trình', 'curation_queue']
   };
 
   return (

@@ -79,7 +79,7 @@ export default function Header() {
             className="btn btn-secondary"
             onClick={() => setActiveTab('curation_queue')}
             style={{ padding: '8px', borderRadius: '50%', width: '38px', height: '38px' }}
-            title={`${pendingCurationCount} mục đang chờ duyệt`}
+            title={`${pendingCurationCount} mục đang chờ Giám tuyển thẩm định`}
           >
             <Bell size={18} />
             {pendingCurationCount > 0 && (

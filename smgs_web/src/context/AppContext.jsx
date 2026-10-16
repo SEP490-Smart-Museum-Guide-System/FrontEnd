@@ -19,7 +19,7 @@ export function AppProvider({ children }) {
   // Current active staff/admin role
   const [currentRole, setRoleState] = useState(() => {
     const savedRole = localStorage.getItem('smgs_web_role');
-    return savedRole === 'curator' ? 'museumStaff' : ['administrator', 'systemStaff', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
+    return ['administrator', 'systemStaff', 'museumStaff'].includes(savedRole) ? savedRole : 'administrator';
   });
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('smgs_web_authenticated') === 'true');
 
@@ -59,6 +59,7 @@ export function AppProvider({ children }) {
   const login = (email, password) => {
     const account = users.find(user => user.email.toLowerCase() === email.trim().toLowerCase() && user.status === 'active');
     if (!account || password !== 'smgs123') return false;
+    if (account.role === 'curator') return false;
     if (account.role === 'visitor') {
       window.location.assign('/visitor/?seed=khach');
       return true;
@@ -138,40 +139,6 @@ export function AppProvider({ children }) {
     setCurationQueue(prev => [newItem, ...prev]);
     logAction('CURATION_SUBMIT', `Gửi nội dung vào hàng đợi kiểm duyệt: ${newItem.title}`);
     showToast(`Nội dung đã được gửi vào hàng đợi kiểm duyệt!`);
-  };
-
-  const approveCurationItem = (id, note = '') => {
-    const item = curationQueue.find(c => c.id === id);
-    if (!item) return;
-
-    setCurationQueue(prev => prev.map(c => c.id === id ? { ...c, status: 'approved', feedback: note } : c));
-    if (item.targetArtifactId) {
-      setArtifacts(prev => prev.map(artifact => artifact.id === item.targetArtifactId ? {
-        ...artifact,
-        status: 'published',
-        approvedAiContent: [...(artifact.approvedAiContent || []), { type: item.type, title: item.title, content: item.proposedContent }]
-      } : artifact));
-    }
-    logAction('CURATION_APPROVE', `Phê duyệt và xuất bản: ${item.title}`);
-    showToast(`Đã phê duyệt và xuất bản thành công!`);
-  };
-
-  const rejectCurationItem = (id, reason) => {
-    const item = curationQueue.find(c => c.id === id);
-    if (!item) return;
-
-    setCurationQueue(prev => prev.map(c => c.id === id ? { ...c, status: 'rejected', feedback: reason } : c));
-    logAction('CURATION_REJECT', `Từ chối nội dung: ${item.title}. Lý do: ${reason}`);
-    showToast(`Đã từ chối nội dung!`, 'warning');
-  };
-
-  const requestRevisionCurationItem = (id, feedback) => {
-    const item = curationQueue.find(c => c.id === id);
-    if (!item) return;
-
-    setCurationQueue(prev => prev.map(c => c.id === id ? { ...c, status: 'revision_requested', feedback } : c));
-    logAction('CURATION_REVISION_REQUEST', `Yêu cầu hiệu đính: ${item.title}. Góp ý: ${feedback}`);
-    showToast(`Đã gửi yêu cầu hiệu chỉnh tới nhân viên!`, 'warning');
   };
 
   // Tour Actions
@@ -309,9 +276,6 @@ export function AppProvider({ children }) {
       exhibitions,
       curationQueue,
       submitToCuration,
-      approveCurationItem,
-      rejectCurationItem,
-      requestRevisionCurationItem,
       users,
       addUser,
       toggleUserStatus,

@@ -17,6 +17,10 @@ export default function LoginScreen() {
 
   const submit = (event) => {
     event.preventDefault();
+    if (email.trim().toLowerCase() === 'curator@smgs.vn') {
+      setError('Tài khoản Giám tuyển sử dụng Cổng Giám tuyển riêng. Dùng website smgs_curator để đăng nhập.');
+      return;
+    }
     if (login(email, password)) return;
     setError('Email hoặc mật khẩu chưa đúng. Dùng một tài khoản mẫu bên dưới với mật khẩu smgs123.');
   };
@@ -31,7 +35,7 @@ export default function LoginScreen() {
       <div className="login-seal"><Landmark size={28} /></div>
       <p className="login-eyebrow">SMGS · DI SẢN VIỆT</p>
       <h1>Đi vào một không gian<br />được thiết kế cho từng vai trò.</h1>
-      <p>Khách tham quan có thể mở Google Maps để chỉ đường. Ba vai trò nghiệp vụ sử dụng cổng web để quản lý, kiểm duyệt và vận hành.</p>
+      <p>Khách tham quan có thể mở Google Maps để chỉ đường. Ba vai trò nghiệp vụ sử dụng cổng web để quản lý và vận hành; Giám tuyển làm việc tại cổng thẩm định riêng.</p>
       <div className="login-feature"><MapPinned size={19} /><span><strong>Khách tham quan</strong><br />Mở phần chỉ đường Google Maps ngay trên web.</span></div>
     </section>
     <section className="login-panel">
@@ -46,6 +50,7 @@ export default function LoginScreen() {
       <div className="login-account-grid">
         {accounts.map(account => { const Icon = account.icon; return <button key={account.email} type="button" onClick={() => loginSeedAccount(account)} className="login-account"><Icon size={18} /><span><strong>{account.role}</strong><small>{account.email}</small></span></button>; })}
       </div>
+      <p className="login-hint">Giám tuyển: <strong>curator@smgs.vn</strong> · đăng nhập tại Cổng Giám tuyển riêng.</p>
       <p className="login-hint">Mật khẩu chung: <strong>smgs123</strong></p>
     </section>
   </main>;

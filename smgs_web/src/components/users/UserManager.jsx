@@ -51,10 +51,10 @@ export default function UserManager() {
       email: newUserForm.email,
       phone: newUserForm.phone || '0900 000 000',
       role: newUserForm.role,
-      museumId: newUserForm.role === 'museumStaff' ? newUserForm.museumId : newUserForm.role === 'visitor' ? null : 'all',
-      museumName: newUserForm.role === 'museumStaff' ? (m?.name || 'Bảo tàng Lịch sử Quốc gia') : newUserForm.role === 'visitor' ? 'Ứng dụng di động' : 'Toàn hệ thống',
+      museumId: ['museumStaff', 'curator'].includes(newUserForm.role) ? newUserForm.museumId : newUserForm.role === 'visitor' ? null : 'all',
+      museumName: ['museumStaff', 'curator'].includes(newUserForm.role) ? (m?.name || 'Bảo tàng Lịch sử Quốc gia') : newUserForm.role === 'visitor' ? 'Ứng dụng di động' : 'Toàn hệ thống',
       assignedGalleries: newUserForm.assignedGalleries ? newUserForm.assignedGalleries.split(',').map(s => s.trim()) : [],
-      permissions: newUserForm.role === 'systemStaff' ? ['visitor_support', 'refund_requests', 'transaction_reconciliation', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality'] : newUserForm.role === 'museumStaff' ? ['manage_museum', 'manage_artifacts', 'create_ai_content', 'approve_publish', 'edit_tours', 'view_museum_reports'] : newUserForm.role === 'visitor' ? ['browse_museums', 'scan_artifacts', 'purchase_pass'] : ['all_access']
+      permissions: newUserForm.role === 'systemStaff' ? ['visitor_support', 'refund_requests', 'transaction_reconciliation', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality'] : newUserForm.role === 'museumStaff' ? ['manage_museum', 'manage_artifacts', 'create_ai_content', 'edit_tours', 'view_museum_reports'] : newUserForm.role === 'curator' ? ['review_artifact', 'review_translation', 'review_narration', 'review_quiz', 'approve_publish'] : newUserForm.role === 'visitor' ? ['browse_museums', 'scan_artifacts', 'purchase_pass'] : ['all_access']
     });
     setIsAddingUser(false);
     setNewUserForm({
@@ -75,6 +75,8 @@ export default function UserManager() {
         return <span className="badge-status role-badge-system" style={{ fontSize: '0.75rem' }}><Sparkles size={13} /> Nhân viên hệ thống</span>;
       case 'visitor':
         return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}>Khách tham quan · di động</span>;
+      case 'curator':
+        return <span className="badge-status" style={{ fontSize: '0.75rem', background: 'var(--color-gold-50)', color: 'var(--color-gold-700)', border: '1px solid var(--color-gold-300)' }}><ShieldCheck size={13} /> Giám tuyển · cổng riêng</span>;
       default:
         return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}><UserCheck size={13} /> Nhân viên bảo tàng</span>;
     }
@@ -89,7 +91,7 @@ export default function UserManager() {
             Quản Lý Nhân Sự & Phân Quyền Hệ Thống
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Bốn vai trò: Quản trị viên, Nhân viên bảo tàng, Nhân viên hệ thống và Khách tham quan. Khách sử dụng ứng dụng di động.
+            Năm vai trò: Quản trị viên, Nhân viên bảo tàng, Giám tuyển, Nhân viên hệ thống và Khách tham quan. Giám tuyển dùng cổng kiểm duyệt riêng.
           </p>
         </div>
 
@@ -127,6 +129,7 @@ export default function UserManager() {
             <option value="administrator">Quản trị viên</option>
             <option value="systemStaff">Nhân viên hệ thống</option>
             <option value="museumStaff">Nhân viên bảo tàng</option>
+            <option value="curator">Giám tuyển</option>
             <option value="visitor">Khách tham quan</option>
           </select>
         </div>
@@ -272,12 +275,13 @@ export default function UserManager() {
                       onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
                     >
                       <option value="museumStaff">Nhân viên bảo tàng</option>
+                      <option value="curator">Giám tuyển · cổng riêng</option>
                       <option value="systemStaff">Nhân viên hệ thống</option>
                       <option value="administrator">Quản trị viên</option>
                       <option value="visitor">Khách tham quan · di động</option>
                     </select>
                   </div>
-                  {newUserForm.role === 'museumStaff' && <div className="form-group" style={{ marginBottom: 0 }}>
+                  {['museumStaff', 'curator'].includes(newUserForm.role) && <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Bảo tàng phụ trách</label>
                     <select
                       className="form-select"
