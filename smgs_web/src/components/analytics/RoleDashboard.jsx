@@ -15,7 +15,7 @@ export default function RoleDashboard({ onNavigate }) {
   } = useApp();
 
   const museumQueue = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum.id);
-  const pending = curationQueue.filter(item => item.status === 'pending');
+  const pending = curationQueue.filter(item => item.status === 'pending_review');
   const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
   const museumTours = tours.filter(item => item.museumId === currentMuseum.id);
   const museumReviews = reviews.filter(item => item.museumName === currentMuseum.name);
@@ -76,9 +76,9 @@ export default function RoleDashboard({ onNavigate }) {
     primary: ['Mở hàng đợi thẩm định', 'curation_queue'],
     secondary: ['Tra cứu hiện vật', 'artifacts'],
     metrics: [
-      [ClipboardCheck, formatNumber(museumQueue.filter(item => item.status === 'pending').length), 'Chờ thẩm định', 'Cần quyết định', 'burgundy'],
-      [MessageSquare, formatNumber(museumQueue.filter(item => item.status === 'revision_requested').length), 'Chờ hiệu đính', 'Đã phản hồi', 'gold'],
-      [CheckSquare, formatNumber(museumQueue.filter(item => item.status === 'approved').length), 'Đã xuất bản', 'Qua kiểm định', 'green'],
+      [ClipboardCheck, formatNumber(museumQueue.filter(item => item.status === 'pending_review').length), 'Chờ thẩm định', 'Cần quyết định', 'burgundy'],
+      [MessageSquare, formatNumber(museumQueue.filter(item => item.status === 'draft').length), 'Chờ hiệu đính', 'Đã phản hồi', 'gold'],
+      [CheckSquare, formatNumber(museumQueue.filter(item => item.status === 'published').length), 'Đã xuất bản', 'Qua kiểm định', 'green'],
       [Layers, formatNumber(museumArtifacts.length), 'Hiện vật tham chiếu', 'Theo bảo tàng phân công', 'blue']
     ],
     listTitle: 'Nội dung ưu tiên',
@@ -86,7 +86,7 @@ export default function RoleDashboard({ onNavigate }) {
     rows: museumQueue.slice(0, 5).map(item => ({
       title: item.title,
       subtitle: `${item.targetArtifactName} · ${item.submittedDate}`,
-      badge: item.status === 'pending' ? 'Chờ thẩm định' : item.status === 'approved' ? 'Đã xuất bản' : item.status === 'revision_requested' ? 'Chờ hiệu đính' : 'Từ chối',
+      badge: item.status === 'pending_review' ? 'Chờ thẩm định' : item.status === 'published' ? 'Đã xuất bản' : item.status === 'draft' ? 'Chờ hiệu đính' : 'Từ chối',
       status: item.status
     })),
     asideTitle: 'Nguyên tắc thẩm định',
@@ -101,7 +101,7 @@ export default function RoleDashboard({ onNavigate }) {
     metrics: [
       [Layers, formatNumber(museumArtifacts.length), 'Hiện vật', 'Trong bảo tàng đã chọn', 'burgundy'],
       [QrCode, formatNumber(scans), 'Lượt quét mã', 'Từ các hiện vật', 'green'],
-      [Sparkles, formatNumber(museumQueue.filter(item => item.status === 'pending').length), 'AI chờ kiểm tra', 'Trước khi xuất bản', 'gold'],
+      [Sparkles, formatNumber(museumQueue.filter(item => item.status === 'pending_review').length), 'AI chờ kiểm tra', 'Trước khi xuất bản', 'gold'],
       [CreditCard, formatMoney(museumRevenue), 'Doanh thu mô phỏng', 'Chỉ bảo tàng này', 'blue']
     ],
     listTitle: 'Hiện vật đang quản lý',

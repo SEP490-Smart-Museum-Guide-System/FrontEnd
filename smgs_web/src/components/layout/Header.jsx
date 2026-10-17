@@ -22,7 +22,7 @@ export default function Header() {
   } = useApp();
 
   const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id));
-  const pendingCurationCount = curationQueue.filter(c => c.status === 'pending' && museumArtifactIds.has(c.targetArtifactId)).length;
+  const pendingCurationCount = curationQueue.filter(c => c.status === 'pending_review' && museumArtifactIds.has(c.targetArtifactId)).length;
 
   const roleLabels = {
     administrator: { label: 'Quản trị viên', icon: ShieldCheck, badgeClass: 'role-badge-admin' },

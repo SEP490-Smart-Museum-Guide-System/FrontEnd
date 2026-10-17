@@ -3,15 +3,15 @@ import { Check, CheckSquare, Eye, MessageSquare, Send, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 const statusLabel = {
-  pending: 'Chờ thẩm định',
-  approved: 'Đã xuất bản',
-  revision_requested: 'Yêu cầu hiệu đính',
+  pending_review: 'Chờ thẩm định',
+  published: 'Đã xuất bản',
+  draft: 'Yêu cầu hiệu đính',
   rejected: 'Từ chối',
 };
 
 export default function CurationCenter() {
   const { curationQueue, artifacts, currentMuseum, approveCurationItem, rejectCurationItem, requestRevisionCurationItem } = useApp();
-  const [filter, setFilter] = useState('pending');
+  const [filter, setFilter] = useState('pending_review');
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState('');
   const [decision, setDecision] = useState('');
@@ -43,7 +43,7 @@ export default function CurationCenter() {
 
     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
       {[
-        ['pending', 'Chờ thẩm định'], ['revision_requested', 'Chờ gửi lại'], ['approved', 'Đã xuất bản'], ['rejected', 'Từ chối'], ['all', 'Tất cả'],
+        ['pending_review', 'Chờ thẩm định'], ['draft', 'Yêu cầu hiệu đính'], ['published', 'Đã xuất bản'], ['rejected', 'Từ chối'], ['all', 'Tất cả'],
       ].map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`btn btn-sm ${filter === value ? 'btn-primary' : 'btn-secondary'}`}>
         {label} <span style={{ marginLeft: '5px' }}>{value === 'all' ? queue.length : count(value)}</span>
       </button>)}
@@ -68,12 +68,12 @@ export default function CurationCenter() {
             <article style={{ border: '1px solid var(--color-paper-border)', borderRadius: '8px', padding: '14px' }}><strong>Bản hiện tại</strong><p style={{ marginTop: '9px', whiteSpace: 'pre-line', fontSize: '.83rem', lineHeight: 1.6 }}>{selected.currentVersion || 'Chưa có nội dung.'}</p></article>
             <article style={{ border: '1px solid var(--color-gold-300)', borderRadius: '8px', padding: '14px', background: '#FFFCF6' }}><strong>Nội dung đệ trình</strong><p style={{ marginTop: '9px', whiteSpace: 'pre-line', fontSize: '.83rem', lineHeight: 1.6 }}>{selected.proposedContent}</p></article>
           </div>
-          {selected.status === 'pending' && <div><label className="form-label">Ghi chú thẩm định</label><textarea className="form-textarea" rows={3} value={note} onChange={event => setNote(event.target.value)} placeholder="Nhập góp ý khi yêu cầu hiệu đính hoặc từ chối…" /></div>}
-          {selected.status !== 'pending' && selected.feedback && <div style={{ padding: '12px', background: 'var(--color-paper-accent)', borderRadius: '8px' }}><MessageSquare size={15} /> Phản hồi: {selected.feedback}</div>}
+          {selected.status === 'pending_review' && <div><label className="form-label">Ghi chú thẩm định</label><textarea className="form-textarea" rows={3} value={note} onChange={event => setNote(event.target.value)} placeholder="Nhập góp ý khi yêu cầu hiệu đính hoặc từ chối…" /></div>}
+          {selected.status !== 'pending_review' && selected.feedback && <div style={{ padding: '12px', background: 'var(--color-paper-accent)', borderRadius: '8px' }}><MessageSquare size={15} /> Phản hồi: {selected.feedback}</div>}
         </div>
         <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
           <button type="button" className="btn btn-secondary" onClick={closeItem}>Đóng</button>
-          {selected.status === 'pending' && <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {selected.status === 'pending_review' && <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-secondary btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => setDecision('reject')}><X size={14} /> Từ chối</button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setDecision('revision')}><Send size={14} /> Yêu cầu sửa</button>
             <button type="button" className="btn btn-primary btn-sm" onClick={() => setDecision('approve')}><Check size={14} /> Phê duyệt</button>

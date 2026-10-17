@@ -154,7 +154,7 @@ export const initialArtifacts = [
     ],
     audioDuration: '04:15',
     audioUrl: '/assets/audio/ngoc_lu_vn.mp3',
-    status: 'published', // published | pending | draft
+    status: 'published', // content_status: draft | pending_review | published | rejected | archived
     viewsCount: 14250,
     scansCount: 4890,
     quizPassRate: '88.5%',
@@ -467,7 +467,7 @@ export const initialCurationQueue = [
     targetArtifactName: 'Trống đồng Ngọc Lũ',
     submittedBy: 'Nguyễn Mai Anh (Nhân viên bảo tàng)',
     submittedDate: '2026-09-27 14:30',
-    status: 'pending', // pending | approved | rejected | revision_requested
+    status: 'pending_review', // content_status: draft | pending_review | published | rejected | archived
     priority: 'high',
     currentVersion: 'Bản thuyết minh chuẩn người lớn (04:15)',
     proposedContent: `Chào các bạn nhỏ! Hôm nay chúng mình cùng bước vào cỗ máy thời gian trở về hơn 2.500 năm trước để gặp "Ông Vua Trống Đồng" Ngọc Lũ nhé!
@@ -486,7 +486,7 @@ Các bạn hãy nhìn vào chính giữa mặt trống này, đó là một ngô
     targetArtifactName: 'Thạp đồng Đào Thịnh',
     submittedBy: 'Lê Tuấn Kiệt (Nhân viên bảo tàng)',
     submittedDate: '2026-09-27 11:15',
-    status: 'pending',
+    status: 'pending_review',
     priority: 'medium',
     currentVersion: 'Chưa có bộ câu hỏi tương tác trên hệ thống',
     proposedContent: JSON.stringify([
@@ -514,7 +514,7 @@ Các bạn hãy nhìn vào chính giữa mặt trống này, đó là một ngô
     targetArtifactName: 'Tượng Phật Bà Quan Âm Nghìn Mắt Nghìn Tay',
     submittedBy: 'Nguyễn Mai Anh (Nhân viên bảo tàng)',
     submittedDate: '2026-09-26 16:40',
-    status: 'pending',
+    status: 'pending_review',
     priority: 'low',
     currentVersion: 'Niên đại ghi: Thế kỷ XVII',
     proposedContent: 'Cập nhật chính xác năm hoàn thành tác phẩm là Năm Bính Thân (1656) theo minh văn trên tượng do Trương Thọ Nam tạc, đồng thời bổ sung thông tin 42 tay lớn và 952 tay nhỏ.',
@@ -571,7 +571,7 @@ export const initialUsers = [
     phone: '0904 555 123',
     status: 'active',
     lastLogin: '2026-09-27 20:30',
-    permissions: ['manage_museum', 'manage_artifacts', 'manage_media', 'manage_qr', 'edit_tours', 'create_ai_content', 'approve_publish', 'configure_premium', 'view_museum_reports']
+    permissions: ['manage_museum', 'manage_artifacts', 'manage_media', 'manage_qr', 'edit_tours', 'create_ai_content', 'submit_curation', 'configure_premium', 'view_museum_reports']
   },
   {
     id: 'usr-005',
@@ -775,8 +775,8 @@ export const initialAuditLogs = [
     timestamp: '2026-09-27 19:45',
     user: 'Nguyễn Mai Anh (staff@smgs.vn)',
     role: 'Nhân viên bảo tàng',
-    action: 'CURATION_APPROVE',
-    details: 'Phê duyệt xuất bản bài thuyết minh nâng cao cho hiện vật Trống đồng Cảnh Thịnh.'
+    action: 'CURATION_PUBLISH',
+    details: 'Giám tuyển phê duyệt xuất bản bài thuyết minh nâng cao cho hiện vật Trống đồng Cảnh Thịnh.'
   },
   {
     id: 'log-098',

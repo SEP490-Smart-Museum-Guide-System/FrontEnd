@@ -208,7 +208,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                   onChange={(e) => handleChange('status', e.target.value)}
                 >
                   <option value="published">Đã xuất bản (Khách có thể xem và quét QR)</option>
-                  <option value="pending">Chờ kiểm tra nội dung</option>
+                  <option value="pending_review">Chờ kiểm tra nội dung</option>
                   <option value="draft">Bản nháp nội bộ</option>
                 </select>
               </div>

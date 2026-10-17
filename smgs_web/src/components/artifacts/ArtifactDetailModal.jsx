@@ -105,7 +105,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <span className="badge-status badge-treasure">⭐ Bảo vật Quốc gia</span>
                 )}
                 <span className={`badge-status badge-${artifact.status}`}>
-                  {artifact.status === 'published' ? 'Đã xuất bản' : artifact.status === 'pending' ? 'Chờ duyệt' : 'Bản nháp'}
+                  {artifact.status === 'published' ? 'Đã xuất bản' : artifact.status === 'pending_review' ? 'Chờ duyệt' : 'Bản nháp'}
                 </span>
               </div>
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', marginTop: '2px' }}>

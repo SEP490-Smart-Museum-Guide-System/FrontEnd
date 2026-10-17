@@ -176,7 +176,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="published">Đã xuất bản</option>
-            <option value="pending">Chờ kiểm duyệt</option>
+            <option value="pending_review">Chờ kiểm duyệt</option>
             <option value="draft">Bản nháp</option>
           </select>
 
@@ -326,7 +326,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                       {/* Status */}
                       <td>
                         <span className={`badge-status badge-${art.status}`}>
-                          {art.status === 'published' ? 'Đã xuất bản' : art.status === 'pending' ? 'Chờ duyệt' : 'Bản nháp'}
+                          {art.status === 'published' ? 'Đã xuất bản' : art.status === 'pending_review' ? 'Chờ duyệt' : 'Bản nháp'}
                         </span>
                       </td>
 

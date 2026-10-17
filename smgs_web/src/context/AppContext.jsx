@@ -133,7 +133,8 @@ export function AppProvider({ children }) {
       ...item,
       id: `cur-${String(Date.now()).slice(-3)}`,
       submittedDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      status: 'pending'
+      // Khớp Enum content_status trong smgs_schema.dbml.
+      status: 'pending_review'
     };
     setCurationQueue(prev => [newItem, ...prev]);
     logAction('CURATION_SUBMIT', `Gửi nội dung vào hàng đợi kiểm duyệt: ${newItem.title}`);
@@ -144,7 +145,7 @@ export function AppProvider({ children }) {
     if (currentRole !== 'curator') return showToast('Chỉ Giám tuyển được phê duyệt nội dung.', 'warning');
     const item = curationQueue.find(entry => entry.id === id);
     if (!item) return;
-    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'approved', feedback: note } : entry));
+    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'published', feedback: note } : entry));
     if (item.targetArtifactId) {
       setArtifacts(prev => prev.map(artifact => artifact.id === item.targetArtifactId ? {
         ...artifact,
@@ -169,7 +170,8 @@ export function AppProvider({ children }) {
     if (currentRole !== 'curator') return showToast('Chỉ Giám tuyển được yêu cầu hiệu đính.', 'warning');
     const item = curationQueue.find(entry => entry.id === id);
     if (!item) return;
-    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'revision_requested', feedback } : entry));
+    // Bản bị yêu cầu hiệu đính quay về draft; review_note giữ ở feedback.
+    setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'draft', feedback } : entry));
     logAction('CURATION_REVISION_REQUEST', `Yêu cầu hiệu đính: ${item.title}. ${feedback}`);
     showToast('Đã gửi yêu cầu hiệu đính.', 'warning');
   };

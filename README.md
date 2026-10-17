@@ -78,6 +78,10 @@ flutter test test/main_flows_test.dart
 - Hiện vật 3D dùng định dạng `.glb`; model mẫu nằm tại [`trong_ong_ong_son_-_viet_nam.glb`](./trong_ong_ong_son_-_viet_nam.glb).
 - Tài liệu chi tiết về phạm vi mô phỏng Google Maps: [`GOOGLE_MAPS_MO_PHONG.md`](./GOOGLE_MAPS_MO_PHONG.md).
 
+## Schema backend và hợp đồng dữ liệu
+
+FE đối chiếu với schema PostgreSQL tại `../BackEnd/project-docs/smgs_schema.dbml`. Mapping role, bảng và luồng API dự kiến nằm trong [`DBML_FE_MAPPING.md`](./DBML_FE_MAPPING.md).
+
 ## Deploy Vercel
 
 ### Portal nghiệp vụ và bản xem Flutter Web

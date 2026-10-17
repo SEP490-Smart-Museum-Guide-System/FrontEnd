@@ -489,7 +489,7 @@ button {
   border: 1px solid #BBF7D0;
 }
 
-.badge-pending, .badge-pending_reply, .badge-upcoming {
+.badge-pending, .badge-pending_review, .badge-pending_reply, .badge-upcoming {
   background: #FEF3C7;
   color: #92400E;
   border: 1px solid #FDE68A;
