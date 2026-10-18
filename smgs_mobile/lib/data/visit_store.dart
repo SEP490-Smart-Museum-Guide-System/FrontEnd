@@ -9,12 +9,70 @@ class VisitStore extends ChangeNotifier {
   static final instance = VisitStore._();
   final List<Artifact> viewed = [];
   final Set<String> saved = {};
+  final Set<String> deferredQuizArtifactIds = {};
+  final List<SupportTicket> supportTickets = [];
   final Map<String, int> quizScores = {};
   final List<QuizResult> quizResults = [];
   final List<FeedbackEntry> feedback = [];
   final List<VisitRecord> history = [];
   final List<ServicePurchase> purchases = [];
   int completedTours = 0;
+
+  List<String> get todayScannedArtifactIds {
+    final now = DateTime.now();
+    final todayRecords = history.where(
+      (h) => h.date.year == now.year && h.date.month == now.month && h.date.day == now.day,
+    );
+    final scanned = todayRecords.expand((r) => r.artifactIds).toSet();
+    for (final a in viewed) {
+      scanned.add(a.id);
+    }
+    // If empty in fresh session, prefill with artifact_1 & artifact_2 for great demo experience
+    if (scanned.isEmpty) {
+      return ['artifact_1', 'artifact_2'];
+    }
+    return scanned.toList();
+  }
+
+  void deferQuiz(String artifactId) {
+    deferredQuizArtifactIds.add(artifactId);
+    notifyListeners();
+  }
+
+  bool isQuizDeferred(String artifactId) => deferredQuizArtifactIds.contains(artifactId);
+
+  void submitSupportTicket({
+    required String orderId,
+    required String category,
+    required String reason,
+    required String description,
+    int refundPercent = 100,
+  }) {
+    final now = DateTime.now();
+    final ticket = SupportTicket(
+      id: 'TCK-${now.millisecondsSinceEpoch.toString().substring(7)}',
+      orderId: orderId,
+      category: category,
+      reason: reason,
+      description: description,
+      status: 'Đang tiếp nhận',
+      date: now,
+      refundPercent: refundPercent,
+    );
+    supportTickets.insert(0, ticket);
+    notifyListeners();
+  }
+
+  Artifact? getNextArtifact(Artifact current) {
+    final sameMuseum = mockArtifacts.where((a) => a.museumId == current.museumId).toList();
+    if (sameMuseum.isEmpty) return null;
+    final currentIndex = sameMuseum.indexWhere((a) => a.id == current.id);
+    if (currentIndex >= 0 && currentIndex < sameMuseum.length - 1) {
+      return sameMuseum[currentIndex + 1];
+    }
+    return sameMuseum.firstWhere((a) => a.id != current.id, orElse: () => sameMuseum.first);
+  }
+
   int get visitedCount =>
       history.expand((record) => record.artifactIds).toSet().length;
   int get points => quizScores.values.fold(0, (sum, value) => sum + value * 10);
@@ -128,6 +186,8 @@ class VisitStore extends ChangeNotifier {
     feedback.clear();
     history.clear();
     purchases.clear();
+    deferredQuizArtifactIds.clear();
+    supportTickets.clear();
     completedTours = 0;
     notifyListeners();
   }

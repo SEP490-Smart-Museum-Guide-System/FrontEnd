@@ -8,6 +8,8 @@ import 'quiz_screen.dart';
 import '../../widgets/narration_player.dart';
 import '../profile/profile_screen.dart';
 import 'artifact_3d_screen.dart';
+import '../museum/indoor_guidance_screen.dart';
+import 'daily_quiz_screen.dart';
 
 class ArtifactDetailScreen extends StatefulWidget {
   const ArtifactDetailScreen({
@@ -120,12 +122,105 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         const SectionHeading('Những điều còn lưu lại'),
         ScrollReveal(child: Text(a.story, style: AppTextStyles.bodyLarge)),
         const SizedBox(height: 24),
-        ActionTile(
-          title: 'Bạn đã khám phá được gì?',
-          subtitle: 'Thử sức với hai câu hỏi ngắn.',
-          icon: Icons.quiz_outlined,
-          onTap: () => openPage(context, QuizScreen(artifact: a)),
+        // Khối quyết định sau khi đọc xong theo bối cảnh U2
+        ListenableBuilder(
+          listenable: VisitStore.instance,
+          builder: (context, _) {
+            final store = VisitStore.instance;
+            final isDeferred = store.isQuizDeferred(a.id);
+            final isCompleted = store.quizScores.containsKey(a.id);
+            final nextArtifact = store.getNextArtifact(a);
+
+            return Panel(
+              gold: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.school_outlined, color: AppColors.deepBurgundy, size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'BẠN ĐÃ TÌM HIỂU XONG HIỆN VẬT',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.deepBurgundy,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isCompleted
+                        ? 'Bạn đã hoàn thành bài thử tài cho hiện vật này (Đạt ${store.quizScores[a.id]}/2 câu).'
+                        : isDeferred
+                        ? 'Câu đố đã được lưu vào "Danh sách Quiz tích lũy trong ngày". Bạn có thể làm ngay hoặc để đến cuối ngày.'
+                        : 'Bạn có thể thử sức ngay với 2 câu trắc nghiệm nhanh để tích điểm, hoặc lưu lại để cuối ngày làm.',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  if (isCompleted)
+                    SecondaryButton(
+                      label: 'Làm lại câu đố khác',
+                      icon: Icons.refresh,
+                      onPressed: () => openPage(context, QuizScreen(artifact: a)),
+                    )
+                  else ...[
+                    PrimaryButton(
+                      label: 'Làm Quiz ngay (+20 điểm)',
+                      icon: Icons.play_arrow,
+                      onPressed: () => openPage(context, QuizScreen(artifact: a)),
+                    ),
+                    const SizedBox(height: 8),
+                    if (!isDeferred)
+                      SecondaryButton(
+                        label: 'Để khi rảnh làm sau (Tích lũy cuối ngày)',
+                        icon: Icons.alarm_add_outlined,
+                        onPressed: () {
+                          store.deferQuiz(a.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Đã lưu câu đố vào mục Quiz tích lũy cuối ngày.'),
+                              backgroundColor: AppColors.deepBurgundy,
+                            ),
+                          );
+                        },
+                      )
+                    else
+                      TextButton.icon(
+                        onPressed: () => openPage(context, const DailyQuizScreen()),
+                        icon: const Icon(Icons.check_circle_outline, color: Color(0xFF2E6B3E), size: 18),
+                        label: const Text(
+                          'Đã lưu · Xem danh sách Quiz trong ngày',
+                          style: TextStyle(color: Color(0xFF2E6B3E), fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                  ],
+                  if (nextArtifact != null) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    SecondaryButton(
+                      label: 'Chỉ đường tới: ${nextArtifact.name}',
+                      icon: Icons.directions_walk,
+                      onPressed: () => openPage(
+                        context,
+                        IndoorGuidanceScreen(
+                          currentArtifact: a,
+                          nextArtifact: nextArtifact,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
         ),
+        const SizedBox(height: 16),
         ActionTile(
           title: 'Góp ý về hiện vật',
           subtitle: 'Chia sẻ cảm nhận về câu chuyện này.',

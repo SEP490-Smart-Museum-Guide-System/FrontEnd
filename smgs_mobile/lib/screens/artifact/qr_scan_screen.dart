@@ -146,14 +146,61 @@ class _QRScanScreenState extends State<QRScanScreen> {
       if (_error != null) ...[Notice(_error!), const SizedBox(height: 16)],
       if (_done && _match != null) ...[
         Panel(
+          gold: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Eyebrow('Kết quả mẫu phù hợp'),
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Color(0xFF2E6B3E), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'NHẬN DIỆN THÀNH CÔNG',
+                      style: AppTextStyles.caption.copyWith(
+                        color: const Color(0xFF2E6B3E),
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Text(_match!.name, style: AppTextStyles.cardTitle),
-              const SizedBox(height: 8),
-              Text(_match!.location, style: AppTextStyles.bodyMedium),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 16, color: AppColors.deepBurgundy),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Vị trí của bạn: ${_match!.location}',
+                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.antiqueIvory,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.quiz_outlined, size: 16, color: AppColors.deepBurgundy),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Câu đố hiện vật đã được thêm vào "Danh sách Quiz trong ngày" để bạn làm khi rảnh.',
+                        style: AppTextStyles.caption,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

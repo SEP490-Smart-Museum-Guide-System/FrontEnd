@@ -6,6 +6,8 @@ import '../../data/visit_store.dart';
 import '../../data/mock/mock_artifacts.dart';
 import 'services_screen.dart';
 import 'history_screen.dart';
+import 'support_refund_screen.dart';
+import '../artifact/daily_quiz_screen.dart';
 import '../../services/app_services.dart';
 import '../../services/app_preferences.dart';
 
@@ -88,6 +90,12 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           ActionTile(
+            title: 'Quiz tích lũy trong ngày',
+            subtitle: '${store.todayScannedArtifactIds.length} hiện vật đã mở · Làm bài để nhận điểm.',
+            icon: Icons.quiz_outlined,
+            onTap: () => openPage(context, const DailyQuizScreen()),
+          ),
+          ActionTile(
             title: 'Kết quả thử tài',
             subtitle: 'Nhìn lại những điều đã ghi nhớ.',
             icon: Icons.workspace_premium_outlined,
@@ -111,6 +119,12 @@ class ProfileScreen extends StatelessWidget {
             subtitle: 'Xem vé, quyền sử dụng và lịch sử thanh toán.',
             icon: Icons.receipt_long_outlined,
             onTap: () => openPage(context, const PurchasedServicesScreen()),
+          ),
+          ActionTile(
+            title: 'Hỗ trợ & Yêu cầu hoàn tiền',
+            subtitle: 'Tiếp nhận khiếu nại và hoàn trả theo quy định.',
+            icon: Icons.support_agent_outlined,
+            onTap: () => openPage(context, const SupportRefundScreen()),
           ),
           const SectionHeading('Đồng hành cùng bạn'),
           const Panel(

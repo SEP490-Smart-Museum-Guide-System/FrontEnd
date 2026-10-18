@@ -111,3 +111,13 @@ migrate_working_dir/
 
 # Cổng Curator tách riêng đã được gộp vào smgs_web.
 smgs_curator/
+
+# --------------------------------------------------------------------
+# AI Agent Skills & Customizations (Local)
+# --------------------------------------------------------------------
+.agents/
+.agent/
+.agent-skills/
+.taste-skill/
+.gemini/
+.claude/

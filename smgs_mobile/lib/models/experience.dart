@@ -1,4 +1,20 @@
-enum UserRole { visitor, museumStaff, systemStaff, administrator }
+enum UserRole { visitor, museumStaff, systemStaff, administrator, curator }
+
+class SupportTicket {
+  const SupportTicket({
+    required this.id,
+    required this.orderId,
+    required this.category,
+    required this.reason,
+    required this.description,
+    required this.status,
+    required this.date,
+    this.refundPercent = 100,
+  });
+  final String id, orderId, category, reason, description, status;
+  final DateTime date;
+  final int refundPercent;
+}
 
 class VisitorUser {
   const VisitorUser({
