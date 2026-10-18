@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import {
   Users,
@@ -221,15 +222,15 @@ export default function UserManager() {
       </div>
 
       {/* Add User Modal */}
-      {isAddingUser && (
+      {isAddingUser && typeof document !== 'undefined' && createPortal(
         <div className="modal-overlay" onClick={() => setIsAddingUser(false)}>
-          <div className="modal-dialog" style={{ maxWidth: '580px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog" style={{ maxWidth: '580px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title font-serif">Tạo tài khoản mẫu</h3>
               <button type="button" onClick={() => setIsAddingUser(false)} className="btn btn-secondary btn-sm">✕</button>
             </div>
-            <form onSubmit={handleAddUserSubmit}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleAddUserSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Họ và tên *</label>
                   <input
@@ -307,13 +308,14 @@ export default function UserManager() {
                 </div>
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer" style={{ flexShrink: 0 }}>
                 <button type="button" onClick={() => setIsAddingUser(false)} className="btn btn-secondary">Hủy</button>
                 <button type="submit" className="btn btn-primary">Tạo tài khoản</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

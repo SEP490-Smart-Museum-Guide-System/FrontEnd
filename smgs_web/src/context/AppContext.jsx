@@ -16,23 +16,58 @@ import {
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  // Current active staff/admin role
+  // Current active staff/admin user account
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedEmail = localStorage.getItem('smgs_web_user_email');
+    const user = initialUsers.find(u => u.email === savedEmail);
+    return user || initialUsers[0]; // defaults to admin@smgs.vn
+  });
+
   const [currentRole, setRoleState] = useState(() => {
+    const savedEmail = localStorage.getItem('smgs_web_user_email');
+    const user = initialUsers.find(u => u.email === savedEmail);
+    if (user && ['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(user.role)) {
+      return user.role;
+    }
     const savedRole = localStorage.getItem('smgs_web_role');
     return ['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(savedRole) ? savedRole : 'administrator';
   });
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('smgs_web_authenticated') === 'true');
 
   // Bảo tàng mẫu đang được nhân viên bảo tàng phụ trách
-  const [selectedMuseumId, setSelectedMuseumId] = useState('mus-01');
+  const [selectedMuseumId, setSelectedMuseumId] = useState(() => {
+    const savedEmail = localStorage.getItem('smgs_web_user_email');
+    const user = initialUsers.find(u => u.email === savedEmail);
+    return user?.museumId && user.museumId !== 'all' ? user.museumId : 'mus-01';
+  });
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState('overview');
 
   const setCurrentRole = (role) => {
     if (!['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(role)) return;
+    const targetUser = users.find(u => u.role === role) || users[0];
+    setCurrentUser(targetUser);
     setRoleState(role);
+    if (targetUser.museumId && targetUser.museumId !== 'all') {
+      setSelectedMuseumId(targetUser.museumId);
+    }
     setActiveTab('overview');
+  };
+
+  const loginAccount = (account) => {
+    if (!account) return;
+    setCurrentUser(account);
+    setRoleState(account.role);
+    if (account.museumId && account.museumId !== 'all') {
+      setSelectedMuseumId(account.museumId);
+    }
+    setActiveTab('overview');
+    setIsAuthenticated(true);
+    localStorage.setItem('smgs_web_authenticated', 'true');
+    localStorage.setItem('smgs_web_user_email', account.email);
+    localStorage.setItem('smgs_web_role', account.role);
+    showToast(`Đã chuyển sang tài khoản: ${account.name} (${account.email})`);
   };
 
   // Core data states
@@ -63,16 +98,24 @@ export function AppProvider({ children }) {
       window.location.assign('/visitor/?seed=khach');
       return true;
     }
+    setCurrentUser(account);
     setRoleState(account.role);
+    if (account.museumId && account.museumId !== 'all') {
+      setSelectedMuseumId(account.museumId);
+    }
     setActiveTab('overview');
     setIsAuthenticated(true);
     localStorage.setItem('smgs_web_authenticated', 'true');
+    localStorage.setItem('smgs_web_user_email', account.email);
+    localStorage.setItem('smgs_web_role', account.role);
     return true;
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('smgs_web_authenticated');
+    localStorage.removeItem('smgs_web_user_email');
+    setActiveTab('overview');
   };
 
   const showToast = (message, type = 'success') => {
@@ -289,8 +332,10 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
+      currentUser,
       currentRole,
       setCurrentRole,
+      loginAccount,
       isAuthenticated,
       login,
       logout,

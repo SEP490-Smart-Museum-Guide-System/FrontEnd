@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import {
-  ArrowRight, Building2, ClipboardCheck, CreditCard,
+  ArrowRight, Building2, CheckSquare, ClipboardCheck, CreditCard,
   Layers, MessageSquare, QrCode, ShieldCheck, Sparkles, Users
 } from 'lucide-react';
 

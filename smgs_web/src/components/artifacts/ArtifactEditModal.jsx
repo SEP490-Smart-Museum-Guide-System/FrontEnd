@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
-import { X, Save, Layers, Landmark } from 'lucide-react';
+import { X, Save, Layers } from 'lucide-react';
 
 export default function ArtifactEditModal({ artifact, onClose, onSave }) {
   const { currentMuseum, museums, currentRole } = useApp();
@@ -53,9 +54,9 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     onClose();
   };
 
-  return (
+  const modalContent = (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog" style={{ maxWidth: '840px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-dialog" style={{ maxWidth: '840px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -275,7 +276,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="modal-footer">
+          <div className="modal-footer" style={{ flexShrink: 0 }}>
             <button type="button" onClick={onClose} className="btn btn-secondary">
               Hủy bỏ
             </button>
@@ -287,4 +288,6 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

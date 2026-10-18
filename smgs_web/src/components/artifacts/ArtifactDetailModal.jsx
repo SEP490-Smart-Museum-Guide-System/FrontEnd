@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import '@google/model-viewer';
 import {
   X,
@@ -7,7 +8,6 @@ import {
   Volume2,
   Globe,
   Award,
-  Calendar,
   Layers,
   Sparkles,
   Printer,
@@ -80,9 +80,9 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     printWindow.document.close();
   };
 
-  return (
+  const modalContent = (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog" style={{ maxWidth: '980px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-dialog" style={{ maxWidth: '980px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -571,4 +571,6 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

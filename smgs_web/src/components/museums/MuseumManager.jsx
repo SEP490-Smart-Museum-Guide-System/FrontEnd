@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import {
   Landmark,
@@ -243,20 +244,58 @@ export default function MuseumManager() {
         ))}
       </div>
 
-      {isEditingMuseum && <div className="modal-overlay" onClick={() => setIsEditingMuseum(false)}><div className="modal-dialog" style={{ maxWidth: '620px' }} onClick={event => event.stopPropagation()}><div className="modal-header"><h3 className="modal-title font-serif">Thông tin bảo tàng</h3><button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsEditingMuseum(false)}>Đóng</button></div><form onSubmit={saveMuseumInfo}><div className="modal-body" style={{ display: 'grid', gap: '14px' }}>{[['name', 'Tên bảo tàng'], ['address', 'Địa chỉ'], ['image', 'Đường dẫn ảnh đại diện']].map(([field, label]) => <label className="form-group" key={field}><span className="form-label">{label}</span><input className="form-input" value={museumForm[field] || ''} onChange={event => setMuseumForm(prev => ({ ...prev, [field]: event.target.value }))} required={field !== 'image'} /></label>)}<label className="form-group"><span className="form-label">Giới thiệu</span><textarea className="form-textarea" rows={4} value={museumForm.description || ''} onChange={event => setMuseumForm(prev => ({ ...prev, description: event.target.value }))} /></label></div><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setIsEditingMuseum(false)}>Hủy</button><button type="submit" className="btn btn-primary">Lưu thông tin</button></div></form></div></div>}
+      {isEditingMuseum && typeof document !== 'undefined' && createPortal(
+        <div className="modal-overlay" onClick={() => setIsEditingMuseum(false)}>
+          <div className="modal-dialog" style={{ maxWidth: '620px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title font-serif">Thông tin bảo tàng</h3>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsEditingMuseum(false)}>Đóng</button>
+            </div>
+            <form onSubmit={saveMuseumInfo} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ display: 'grid', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                {[['name', 'Tên bảo tàng'], ['address', 'Địa chỉ'], ['image', 'Đường dẫn ảnh đại diện']].map(([field, label]) => (
+                  <label className="form-group" key={field} style={{ marginBottom: 0 }}>
+                    <span className="form-label">{label}</span>
+                    <input
+                      className="form-input"
+                      value={museumForm[field] || ''}
+                      onChange={event => setMuseumForm(prev => ({ ...prev, [field]: event.target.value }))}
+                      required={field !== 'image'}
+                    />
+                  </label>
+                ))}
+                <label className="form-group" style={{ marginBottom: 0 }}>
+                  <span className="form-label">Giới thiệu</span>
+                  <textarea
+                    className="form-textarea"
+                    rows={4}
+                    value={museumForm.description || ''}
+                    onChange={event => setMuseumForm(prev => ({ ...prev, description: event.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="modal-footer" style={{ flexShrink: 0 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditingMuseum(false)}>Hủy</button>
+                <button type="submit" className="btn btn-primary">Lưu thông tin</button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Add Gallery Modal */}
-      {isAddingGallery && (
+      {isAddingGallery && typeof document !== 'undefined' && createPortal(
         <div className="modal-overlay" onClick={() => setIsAddingGallery(false)}>
-          <div className="modal-dialog" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-dialog" style={{ maxWidth: '540px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title font-serif">Thêm Phòng / Khu Trưng Bày</h3>
               <button type="button" onClick={() => setIsAddingGallery(false)} className="btn btn-secondary btn-sm">
                 ✕
               </button>
             </div>
-            <form onSubmit={handleAddGallery}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleAddGallery} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Chọn Tòa nhà *</label>
                   <select
@@ -331,7 +370,7 @@ export default function MuseumManager() {
                 </div>
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer" style={{ flexShrink: 0 }}>
                 <button type="button" onClick={() => setIsAddingGallery(false)} className="btn btn-secondary">
                   Hủy
                 </button>
@@ -341,7 +380,8 @@ export default function MuseumManager() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
