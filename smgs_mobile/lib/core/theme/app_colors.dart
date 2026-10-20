@@ -8,6 +8,12 @@ class AppColors {
   static const Color darkBrown = Color(0xFF3B302A);
   static const Color mutedGold = Color(0xFFB38B59);
 
+  // Convenient Aliases for Heritage Design System
+  static const Color imperialGold = mutedGold;
+  static const Color charcoalBrown = darkBrown;
+  static const Color parchmentBorder = border;
+  static const Color softSand = card;
+
   static const Color surface = antiqueIvory;
   static const Color onSurface = darkBrown;
   static const Color card = Color(0xFFF8F1E7);

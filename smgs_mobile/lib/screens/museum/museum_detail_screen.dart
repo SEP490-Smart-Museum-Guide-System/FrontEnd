@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../data/mock/mock_artifacts.dart';
 import '../../models/museum.dart';
+import '../../widgets/route_preview_sheet.dart';
+import '../../services/location_service.dart';
 import '../artifact/artifact_discovery_screen.dart';
 import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
@@ -17,18 +18,16 @@ class MuseumDetailScreen extends StatelessWidget {
   final Object? heroTag;
 
   Future<void> _openDirections(BuildContext context) async {
-    final destination = '${museum.latitude},${museum.longitude}';
-    final url = Uri.https('www.google.com', '/maps/dir/', {
-      'api': '1',
-      'destination': destination,
-      'travelmode': 'driving',
-    });
-    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (!context.mounted || opened) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Không thể mở Google Maps trên thiết bị này.')),
+    final loc = await LocationService.getCurrentUserLocation();
+    if (!context.mounted) return;
+    RoutePreviewSheet.show(
+      context,
+      museum: museum,
+      userLat: loc.latitude,
+      userLng: loc.longitude,
     );
   }
+
   @override
   Widget build(BuildContext context) {
     final artifacts = mockArtifacts
@@ -123,8 +122,8 @@ class MuseumDetailScreen extends StatelessWidget {
         const SectionHeading('Chuẩn bị chuyến tham quan'),
         if (museum.googleMapsVisible)
           ActionTile(
-            title: 'Chỉ đường đến bảo tàng',
-            subtitle: 'Mở Google Maps để dẫn đường đến đúng địa điểm.',
+            title: 'Chỉ đường & Lộ trình đến bảo tàng',
+            subtitle: 'Xem trước cự ly, thời gian và dẫn đường bằng Google Maps.',
             icon: Icons.directions_outlined,
             onTap: () => _openDirections(context),
           ),

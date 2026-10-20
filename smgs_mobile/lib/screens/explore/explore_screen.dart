@@ -4,6 +4,7 @@ import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../data/mock/mock_museums.dart';
 import '../../data/mock/mock_artifacts.dart';
+import 'museum_discovery_map_screen.dart';
 
 String _searchKey(String text) {
   var value = text.toLowerCase();
@@ -248,6 +249,72 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
           const SizedBox(height: 16),
         ],
+
+        // BẢN ĐỒ KHÁM PHÁ & DẪN ĐƯỜNG (MUSEUM DISCOVERY BANNER)
+        if (!_artifacts) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.deepBurgundy,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.deepBurgundy.withOpacity(0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.imperialGold.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.map_outlined, color: AppColors.imperialGold, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bản đồ Khám phá & Dẫn đường',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Xem vị trí trên bản đồ, lọc bảo tàng gần tôi nhất và chỉ đường ngoài trời.',
+                        style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.imperialGold,
+                    foregroundColor: AppColors.charcoalBrown,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => openPage(context, const MuseumDiscoveryMapScreen()),
+                  child: const Text('Mở bản đồ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         Wrap(
           spacing: 8,
           runSpacing: 4,

@@ -29,6 +29,13 @@ class AppTextStyles {
     color: AppColors.darkBrown,
     height: 1.4,
   );
+  static const titleMedium = TextStyle(
+    fontFamily: serifFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: AppColors.darkBrown,
+    height: 1.35,
+  );
   static const cardTitle = TextStyle(
     fontFamily: serifFamily,
     fontSize: 24,
@@ -54,6 +61,13 @@ class AppTextStyles {
     fontSize: 15,
     color: AppColors.secondaryText,
     height: 1.5,
+  );
+  static const label = TextStyle(
+    fontFamily: sansFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: AppColors.secondaryText,
+    letterSpacing: 0.5,
   );
   static const buttonText = TextStyle(
     fontFamily: sansFamily,
