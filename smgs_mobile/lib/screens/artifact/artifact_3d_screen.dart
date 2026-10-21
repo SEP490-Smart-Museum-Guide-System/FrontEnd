@@ -82,7 +82,9 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
                       )
                     : ModelViewer(
                         key: ValueKey('model_viewer_$_resetKey'),
-                        src: 'assets/models/trong_dong_dong_son.glb',
+                        src: widget.artifact.modelUrl?.trim().isNotEmpty == true
+                            ? widget.artifact.modelUrl!.trim()
+                            : 'assets/models/trong_dong_dong_son.glb',
                         alt: 'Mô hình 3D ${widget.artifact.name}',
                         ar: true,
                         autoRotate: _autoRotate,
