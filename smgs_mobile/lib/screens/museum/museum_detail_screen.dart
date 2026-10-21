@@ -36,7 +36,11 @@ class MuseumDetailScreen extends StatelessWidget {
     return StoryScaffold(
       title: museum.name,
       heroTag: heroTag,
-      photo: MuseumPhoto(museumId: museum.id, height: 300),
+      photo: MuseumPhoto(
+        museumId: museum.id,
+        imageUrl: museum.imageUrl,
+        height: 300,
+      ),
       children: [
         Text(
           museum.id == 'museum_national'
@@ -98,32 +102,36 @@ class MuseumDetailScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 22),
-        PrimaryButton(
-          label: 'Khám phá hiện vật',
-          icon: Icons.explore_outlined,
-          onPressed: () => openPage(
-            context,
-            ArtifactDiscoveryScreen(museum: museum, artifact: artifacts.first),
+        if (artifacts.isNotEmpty) ...[
+          PrimaryButton(
+            label: 'Khám phá hiện vật',
+            icon: Icons.explore_outlined,
+            onPressed: () => openPage(
+              context,
+              ArtifactDiscoveryScreen(museum: museum, artifact: artifacts.first),
+            ),
           ),
-        ),
+        ],
         const SectionHeading('Câu chuyện bảo tàng'),
         ScrollReveal(
           child: Text(museum.description, style: AppTextStyles.bodyLarge),
         ),
-        SectionHeading(
-          'Hiện vật tiêu biểu',
-          action: 'Xem tất cả',
-          onTap: () => openPage(
-            context,
-            ExploreScreen(standalone: true, museumId: museum.id),
+        if (artifacts.isNotEmpty) ...[
+          SectionHeading(
+            'Hiện vật tiêu biểu',
+            action: 'Xem tất cả',
+            onTap: () => openPage(
+              context,
+              ExploreScreen(standalone: true, museumId: museum.id),
+            ),
           ),
-        ),
-        ...artifacts.map((a) => ScrollReveal(child: ArtifactCard(artifact: a))),
+          ...artifacts.map((a) => ScrollReveal(child: ArtifactCard(artifact: a))),
+        ],
         const SectionHeading('Chuẩn bị chuyến tham quan'),
         if (museum.googleMapsVisible)
           ActionTile(
             title: 'Chỉ đường & Lộ trình đến bảo tàng',
-            subtitle: 'Xem trước cự ly, thời gian và dẫn đường bằng Google Maps.',
+            subtitle: 'Xem trước cự ly, thời gian và dẫn đường ngoài trời.',
             icon: Icons.directions_outlined,
             onTap: () => _openDirections(context),
           ),

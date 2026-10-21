@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/theme/app_theme.dart';
-import 'core/theme/app_colors.dart';
 import 'screens/auth/auth_screen.dart';
 import 'services/app_services.dart';
 import 'services/app_preferences.dart';
+import 'services/token_manager.dart';
+import 'services/backend_auth_service.dart';
 import 'widgets/heritage_decoration.dart';
-import 'models/experience.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Chỉ dùng cho luồng demo từ cổng web khi backend chưa triển khai.
-  // Mở /visitor/ trực tiếp vẫn đi qua màn đăng nhập Flutter bình thường.
-  if (kIsWeb && Uri.base.queryParameters['seed'] == 'khach') {
-    AppServices.auth = MockAuthService(
-      initialUser: const VisitorUser(name: 'Minh An', email: 'khach@smgs.vn'),
-    );
-  }
+
+  // Khởi tạo lưu trữ phiên Token JWT
+  await TokenManager.init();
+
+  // Khởi tạo dịch vụ Authentication kết nối trực tiếp Backend
+  AppServices.auth = BackendAuthService();
+
   // Keep web controls available to assistive technology for the app lifetime.
   SemanticsBinding.instance.ensureSemantics();
   runApp(const SMGSApp());
@@ -49,20 +48,10 @@ class SMGSApp extends StatelessWidget {
                   (AppPreferences.instance.largeText ? 1.15 : 1),
             ),
           ),
-          child: ColoredBox(
-            color: AppColors.darkBrown,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: ClipRect(
-                  child: HeritagePaper(child: child ?? const SizedBox.shrink()),
-                ),
-              ),
-            ),
-          ),
+          child: child ?? const SizedBox.shrink(),
         );
       },
     ),
-    home: const AuthGate(),
+    home: const HeritagePaper(child: AuthGate()),
   );
 }

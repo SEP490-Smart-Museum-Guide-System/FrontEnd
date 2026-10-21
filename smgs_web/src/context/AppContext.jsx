@@ -91,30 +91,113 @@ export function AppProvider({ children }) {
     localStorage.setItem('smgs_web_role', currentRole);
   }, [currentRole]);
 
-  const login = (email, password) => {
-    const account = users.find(user => user.email.toLowerCase() === email.trim().toLowerCase() && user.status === 'active');
-    if (!account || password !== 'smgs123') return false;
-    if (account.role === 'visitor') {
-      window.location.assign('/visitor/?seed=khach');
-      return true;
+  const login = async (email, password) => {
+    const cleanEmail = email.trim();
+    try {
+      const response = await fetch('http://localhost:5169/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+
+      const result = await response.json();
+      if (response.ok && result.data?.accessToken) {
+        const { accessToken, fullName, email: resEmail } = result.data;
+        let role = 'administrator';
+        try {
+          const payload = JSON.parse(atob(accessToken.split('.')[1]));
+          const roleClaim =
+            payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+            payload.role;
+          const rawRole = Array.isArray(roleClaim) ? roleClaim[0] : roleClaim;
+          if (rawRole === 'Admin') role = 'administrator';
+          else if (rawRole === 'Museum Staff' || rawRole === 'MuseumStaff') role = 'museumStaff';
+          else if (rawRole === 'Staff') role = 'systemStaff';
+          else if (rawRole === 'Curator') role = 'curator';
+          else if (rawRole === 'Visitor') role = 'visitor';
+        } catch (_) {}
+
+        if (role === 'visitor') {
+          return {
+            success: false,
+            error: 'Tài khoản này là Khách tham quan (Visitor). Cổng web chỉ dành cho Quản trị viên (Admin) và Nhân viên nghiệp vụ (Staff/Curator). Vui lòng sử dụng app SMGS Mobile.'
+          };
+        }
+
+        const activeUser = {
+          id: resEmail,
+          name: fullName || resEmail,
+          email: resEmail,
+          role: role,
+          status: 'active',
+          museumId: 'mus-01',
+        };
+
+        setCurrentUser(activeUser);
+        setRoleState(role);
+        if (activeUser.museumId && activeUser.museumId !== 'all') {
+          setSelectedMuseumId(activeUser.museumId);
+        }
+        setActiveTab('overview');
+        setIsAuthenticated(true);
+        localStorage.setItem('smgs_web_authenticated', 'true');
+        localStorage.setItem('smgs_web_user_email', resEmail);
+        localStorage.setItem('smgs_web_role', role);
+        localStorage.setItem('smgs_web_jwt_token', accessToken);
+        showToast(`Đăng nhập thành công: ${fullName} (${role})`);
+        return { success: true };
+      } else {
+        // Fallback kiểm tra tài khoản mẫu nếu chưa có trong DB
+        const account = users.find(
+          (user) =>
+            user.email.toLowerCase() === cleanEmail.toLowerCase() &&
+            user.status === 'active'
+        );
+        if (account && password === 'smgs123') {
+          if (account.role === 'visitor') {
+            window.location.assign('/visitor/?seed=khach');
+            return { success: true };
+          }
+          loginAccount(account);
+          return { success: true };
+        }
+        return {
+          success: false,
+          error: result.message || 'Email hoặc mật khẩu không chính xác.',
+        };
+      }
+    } catch (err) {
+      console.warn('Backend API connection failed, checking mock accounts...', err);
+      const account = users.find(
+        (user) =>
+          user.email.toLowerCase() === cleanEmail.toLowerCase() &&
+          user.status === 'active'
+      );
+      if (account && password === 'smgs123') {
+        if (account.role === 'visitor') {
+          window.location.assign('/visitor/?seed=khach');
+          return { success: true };
+        }
+        loginAccount(account);
+        return { success: true };
+      }
+      return {
+        success: false,
+        error:
+          'Không thể kết nối đến máy chủ Backend (http://localhost:5169). Vui lòng kiểm tra Backend đang chạy.',
+      };
     }
-    setCurrentUser(account);
-    setRoleState(account.role);
-    if (account.museumId && account.museumId !== 'all') {
-      setSelectedMuseumId(account.museumId);
-    }
-    setActiveTab('overview');
-    setIsAuthenticated(true);
-    localStorage.setItem('smgs_web_authenticated', 'true');
-    localStorage.setItem('smgs_web_user_email', account.email);
-    localStorage.setItem('smgs_web_role', account.role);
-    return true;
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('smgs_web_authenticated');
     localStorage.removeItem('smgs_web_user_email');
+    localStorage.removeItem('smgs_web_role');
+    localStorage.removeItem('smgs_web_jwt_token');
     setActiveTab('overview');
   };
 
@@ -176,7 +259,6 @@ export function AppProvider({ children }) {
       ...item,
       id: `cur-${String(Date.now()).slice(-3)}`,
       submittedDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      // Khớp Enum content_status trong smgs_schema.dbml.
       status: 'pending_review'
     };
     setCurationQueue(prev => [newItem, ...prev]);
@@ -213,7 +295,6 @@ export function AppProvider({ children }) {
     if (currentRole !== 'curator') return showToast('Chỉ Giám tuyển được yêu cầu hiệu đính.', 'warning');
     const item = curationQueue.find(entry => entry.id === id);
     if (!item) return;
-    // Bản bị yêu cầu hiệu đính quay về draft; review_note giữ ở feedback.
     setCurationQueue(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'draft', feedback } : entry));
     logAction('CURATION_REVISION_REQUEST', `Yêu cầu hiệu đính: ${item.title}. ${feedback}`);
     showToast('Đã gửi yêu cầu hiệu đính.', 'warning');
@@ -257,7 +338,6 @@ export function AppProvider({ children }) {
     showToast('Đã gửi phản hồi chính thức từ bảo tàng!');
   };
 
-  // Transactions / Refund
   const refundTransaction = (txnId) => {
     setTransactions(prev => prev.map(t => t.id === txnId ? { ...t, status: 'refunded' } : t));
     logAction('TRANSACTION_REFUND', `Hoàn tiền cho giao dịch: ${txnId}`);
@@ -306,7 +386,7 @@ export function AppProvider({ children }) {
     showToast('Đã cập nhật trạng thái tài khoản!');
   };
 
-  // Google Maps công khai: chỉ Quản trị viên mới được thay đổi danh sách bảo tàng hiển thị cho khách.
+  // Google Maps công khai
   const toggleMuseumGoogleMapsVisibility = (museumId) => {
     if (currentRole !== 'administrator') {
       showToast('Chỉ Quản trị viên mới được thay đổi trạng thái hiển thị Google Maps.', 'warning');

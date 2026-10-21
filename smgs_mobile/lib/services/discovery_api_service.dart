@@ -1,38 +1,31 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/network/api_config.dart';
 import '../models/city.dart';
 import '../models/museum.dart';
 import '../models/outdoor_route.dart';
-import '../data/mock/mock_museums.dart';
 import 'location_service.dart';
+import 'token_manager.dart';
 
 class DiscoveryApiService {
-  // Thay đổi IP này cho phù hợp với máy chủ Backend của bạn (10.0.2.2 cho Android Emulator, localhost cho iOS/Web)
-  static String baseUrl = 'http://10.0.2.2:5000';
-  static String? authToken;
-
-  /// Lấy danh mục 34 tỉnh/thành phố theo quy chuẩn hành chính mới
+  /// Lấy danh mục 34 tỉnh/thành phố từ Backend (chuẩn QĐ 19/2025/QĐ-TTg)
   static Future<List<CityItem>> fetchCities() async {
     try {
-      final uri = Uri.parse('$baseUrl/api/museums/cities');
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          if (authToken != null) 'Authorization': 'Bearer $authToken',
-        },
-      ).timeout(const Duration(seconds: 4));
+      final uri = Uri.parse(ApiConfig.citiesUrl);
+      final response = await http
+          .get(uri, headers: TokenManager.authHeaders)
+          .timeout(const Duration(seconds: 5));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = json.decode(response.body);
         final List items = body['data'] as List? ?? [];
         return items.map((e) => CityItem.fromJson(e)).toList();
       }
     } catch (_) {
-      // Fallback khi chưa kết nối backend trực tiếp
+      // Bỏ qua lỗi mạng
     }
 
-    // Danh mục tiêu biểu theo QĐ 19/2025/QĐ-TTg
+    // Danh mục tiêu biểu fallback nếu có sự cố
     return const [
       CityItem(code: '79', name: 'TP. Hồ Chí Minh'),
       CityItem(code: '01', name: 'TP. Hà Nội'),
@@ -47,7 +40,7 @@ class DiscoveryApiService {
     ];
   }
 
-  /// Lấy danh sách bảo tàng theo bộ lọc, tìm kiếm và khoảng cách
+  /// Lấy danh sách bảo tàng theo bộ lọc, tìm kiếm và khoảng cách từ Backend
   static Future<List<Museum>> fetchMuseums({
     String? keyword,
     String? cityCode,
@@ -57,88 +50,54 @@ class DiscoveryApiService {
     int page = 1,
     int pageSize = 20,
   }) async {
-    try {
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'pageSize': pageSize.toString(),
-        if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
-        if (cityCode != null && cityCode.isNotEmpty) 'cityCode': cityCode,
-        if (latitude != null && longitude != null) ...{
-          'latitude': latitude.toString(),
-          'longitude': longitude.toString(),
-        },
-        if (sortBy != null && sortBy.isNotEmpty) 'sortBy': sortBy,
-      };
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'pageSize': pageSize.toString(),
+      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      if (cityCode != null && cityCode.isNotEmpty) 'cityCode': cityCode,
+      if (latitude != null && longitude != null) ...{
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+      },
+      if (sortBy != null && sortBy.isNotEmpty) 'sortBy': sortBy,
+    };
 
-      final uri = Uri.parse('$baseUrl/api/museums').replace(queryParameters: queryParams);
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          if (authToken != null) 'Authorization': 'Bearer $authToken',
-        },
-      ).timeout(const Duration(seconds: 5));
+    final uri = Uri.parse(ApiConfig.museumsUrl).replace(queryParameters: queryParams);
+    final response = await http
+        .get(uri, headers: TokenManager.authHeaders)
+        .timeout(const Duration(seconds: 8));
 
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        final List items = body['data']?['items'] as List? ?? [];
-        return items.map((e) => Museum.fromBackendJson(e)).toList();
-      }
-    } catch (_) {
-      // Khi offline hoặc chưa chạy BE, dùng dữ liệu mẫu chất lượng cao
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = json.decode(response.body);
+      final List items = body['data']?['items'] as List? ?? [];
+      return items.map((e) => Museum.fromBackendJson(e)).toList();
+    } else if (response.statusCode == 401) {
+      throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    } else {
+      final body = json.decode(response.body);
+      final msg = body['message'] as String? ?? 'Không thể tải danh sách bảo tàng (${response.statusCode})';
+      throw Exception(msg);
     }
-
-    return _getFilteredMockMuseums(
-      keyword: keyword,
-      cityCode: cityCode,
-      userLat: latitude,
-      userLng: longitude,
-      sortByDistance: sortBy == 'distance',
-    );
   }
 
-  /// Lọc và tính khoảng cách trên danh sách bảo tàng sẵn có trong app
-  static List<Museum> _getFilteredMockMuseums({
-    String? keyword,
-    String? cityCode,
-    double? userLat,
-    double? userLng,
-    bool sortByDistance = false,
-  }) {
-    var list = mockMuseums.map((m) {
-      double? dist;
-      if (userLat != null && userLng != null && m.latitude != 0.0) {
-        dist = LocationService.calculateDistanceKm(
-          lat1: userLat,
-          lon1: userLng,
-          lat2: m.latitude,
-          lon2: m.longitude,
-        );
-      }
-      // Gán mã tỉnh mẫu nếu chưa có
-      final code = m.location.toLowerCase().contains('hồ chí minh') || m.location.toLowerCase().contains('hcm')
-          ? '79'
-          : '01';
-      return m.copyWith(distanceKm: dist, cityCode: code);
-    }).toList();
+  /// Lấy chi tiết bảo tàng từ Backend theo ID
+  static Future<Museum> fetchMuseumDetail(dynamic id) async {
+    final uri = Uri.parse(ApiConfig.museumDetailUrl(id));
+    final response = await http
+        .get(uri, headers: TokenManager.authHeaders)
+        .timeout(const Duration(seconds: 8));
 
-    if (keyword != null && keyword.trim().isNotEmpty) {
-      final term = keyword.trim().toLowerCase();
-      list = list.where((m) => m.name.toLowerCase().contains(term) || m.location.toLowerCase().contains(term)).toList();
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = json.decode(response.body);
+      return Museum.fromBackendJson(body['data']);
+    } else if (response.statusCode == 401) {
+      throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    } else {
+      throw Exception('Không tìm thấy thông tin bảo tàng (${response.statusCode})');
     }
-
-    if (cityCode != null && cityCode.isNotEmpty) {
-      list = list.where((m) => m.cityCode == cityCode).toList();
-    }
-
-    if (sortByDistance && userLat != null && userLng != null) {
-      list.sort((a, b) => (a.distanceKm ?? 99999).compareTo(b.distanceKm ?? 99999));
-    }
-
-    return list;
   }
 
-  /// Gọi API Outdoor Navigation để lấy cự ly, thời gian và encoded polyline
+  /// Gọi API Outdoor Navigation để lấy cự ly, thời gian và encoded polyline từ Backend
   static Future<OutdoorRoutePreview> fetchOutdoorRoute({
     required dynamic museumId,
     required double originLat,
@@ -147,41 +106,34 @@ class DiscoveryApiService {
     required double destinationLng,
     String travelMode = 'DRIVE',
   }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/navigation/outdoor/routes');
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          if (authToken != null) 'Authorization': 'Bearer $authToken',
-        },
-        body: json.encode({
-          'museumId': int.tryParse(museumId.toString()) ?? 1,
-          'origin': {'latitude': originLat, 'longitude': originLng},
-          'travelMode': travelMode,
-        }),
-      ).timeout(const Duration(seconds: 6));
+    final uri = Uri.parse(ApiConfig.outdoorRoutesUrl);
+    final response = await http
+        .post(
+          uri,
+          headers: TokenManager.authHeaders,
+          body: json.encode({
+            'museumId': int.tryParse(museumId.toString()) ?? 1,
+            'origin': {'latitude': originLat, 'longitude': originLng},
+            'travelMode': travelMode,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        if (body['data'] != null) {
-          return OutdoorRoutePreview.fromJson(body['data']);
-        }
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = json.decode(response.body);
+      if (body['data'] != null) {
+        return OutdoorRoutePreview.fromJson(body['data']);
       }
-    } catch (_) {
-      // Backend chưa có Google Routes key hoặc mất kết nối
     }
 
-    // Mô phỏng lộ trình mượt mà (Mock Fallback Route)
+    // Nếu Google Routes API chưa có key hợp lệ hoặc lỗi, fallback tính cự ly mượt mà
     final distanceKm = LocationService.calculateDistanceKm(
       lat1: originLat,
       lon1: originLng,
       lat2: destinationLat,
       lon2: destinationLng,
     );
-
     final distanceMeters = (distanceKm * 1000).round();
-    // Vận tốc ước lượng: Ô tô: 30km/h, Xe máy: 25km/h, Đi bộ: 4km/h
     final speedKmH = travelMode == 'WALK' ? 4.5 : (travelMode == 'TWO_WHEELER' ? 24.0 : 28.0);
     final durationSeconds = (distanceKm / speedKmH) * 3600;
 
@@ -192,9 +144,9 @@ class DiscoveryApiService {
       travelMode: travelMode,
       distanceMeters: distanceMeters,
       durationSeconds: durationSeconds,
-      encodedPolyline: '', // Sẽ được vẽ bằng interpolation thông minh nếu chuỗi rỗng
+      encodedPolyline: '',
       warning: travelMode != 'DRIVE'
-          ? 'Tuyến đi xe máy / đi bộ có thể bao gồm hẻm nhỏ hoặc đường cấm xe một chiều. Hãy quan sát thực địa.'
+          ? 'Tuyến xe máy / đi bộ có thể qua đường hẹp hoặc cấm một chiều. Hãy quan sát thực địa.'
           : null,
     );
   }

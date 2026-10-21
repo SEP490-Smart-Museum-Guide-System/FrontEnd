@@ -168,30 +168,52 @@ class ChapterHeading extends StatelessWidget {
 }
 
 class MuseumPhoto extends StatelessWidget {
-  const MuseumPhoto({super.key, required this.museumId, this.height = 220});
+  const MuseumPhoto({
+    super.key,
+    required this.museumId,
+    this.imageUrl,
+    this.height = 220,
+  });
   final String museumId;
+  final String? imageUrl;
   final double height;
+
   @override
-  Widget build(BuildContext context) => Image.asset(
-    museumId == 'museum_national'
-        ? 'assets/images/national-museum-web.jpg'
-        : 'assets/images/ho-chi-minh-museum-web.jpg',
-    height: height,
-    width: double.infinity,
-    fit: BoxFit.cover,
-    alignment: const Alignment(0, 0.35),
-    semanticLabel: museumId == 'museum_national'
-        ? 'Kiến trúc Bảo tàng Lịch sử Quốc gia tại Hà Nội'
-        : 'Bảo tàng Hồ Chí Minh tại Hà Nội',
-    errorBuilder: (context, error, stack) => Container(
+  Widget build(BuildContext context) {
+    if (imageUrl != null && imageUrl!.startsWith('http')) {
+      return Image.network(
+        imageUrl!,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stack) => _buildPlaceholder(),
+      );
+    }
+    return Image.asset(
+      imageUrl != null && !imageUrl!.startsWith('http') && imageUrl!.isNotEmpty
+          ? imageUrl!
+          : (museumId == 'museum_national'
+              ? 'assets/images/national-museum-web.jpg'
+              : 'assets/images/ho-chi-minh-museum-web.jpg'),
       height: height,
-      color: AppColors.border,
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.account_balance_outlined,
-        size: 48,
-        color: AppColors.deepBurgundy,
-      ),
+      width: double.infinity,
+      fit: BoxFit.cover,
+      alignment: const Alignment(0, 0.35),
+      semanticLabel: museumId == 'museum_national'
+          ? 'Kiến trúc Bảo tàng Lịch sử Quốc gia tại Hà Nội'
+          : 'Bảo tàng Hồ Chí Minh tại Hà Nội',
+      errorBuilder: (context, error, stack) => _buildPlaceholder(),
+    );
+  }
+
+  Widget _buildPlaceholder() => Container(
+    height: height,
+    color: AppColors.border,
+    alignment: Alignment.center,
+    child: const Icon(
+      Icons.account_balance_outlined,
+      size: 48,
+      color: AppColors.deepBurgundy,
     ),
   );
 }

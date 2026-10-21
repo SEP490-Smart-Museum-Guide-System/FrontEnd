@@ -13,6 +13,32 @@ class MuseumCard extends StatelessWidget {
   final bool featured;
   String get _heroTag =>
       'museum-photo:${featured ? 'home' : 'collection'}:${museum.id}';
+
+  String get _displayCity {
+    if (museum.cityCode == '01' || museum.location.toLowerCase().contains('hà nội')) {
+      return 'HÀ NỘI';
+    }
+    if (museum.cityCode == '79' ||
+        museum.location.toLowerCase().contains('hồ chí minh') ||
+        museum.location.toLowerCase().contains('hcm')) {
+      return 'TP. HỒ CHÍ MINH';
+    }
+    if (museum.cityCode == '48' || museum.location.toLowerCase().contains('đà nẵng')) {
+      return 'ĐÀ NẴNG';
+    }
+    if (museum.cityCode == '46' || museum.location.toLowerCase().contains('huế')) {
+      return 'THỪA THIÊN HUẾ';
+    }
+    if (museum.cityCode == '31' || museum.location.toLowerCase().contains('hải phòng')) {
+      return 'HẢI PHÒNG';
+    }
+    if (museum.location.isNotEmpty) {
+      final parts = museum.location.split(',');
+      if (parts.isNotEmpty) return parts.last.trim().toUpperCase();
+    }
+    return 'VIỆT NAM';
+  }
+
   @override
   Widget build(BuildContext context) => HoverLift(
     child: Material(
@@ -42,11 +68,16 @@ class MuseumCard extends StatelessWidget {
                       direction,
                       from,
                       to,
-                    ) => MuseumPhoto(museumId: museum.id, height: 300),
+                    ) => MuseumPhoto(
+                      museumId: museum.id,
+                      imageUrl: museum.imageUrl,
+                      height: 300,
+                    ),
                     child: ParallaxPhoto(
                       height: featured ? 238 : 200,
                       child: MuseumPhoto(
                         museumId: museum.id,
+                        imageUrl: museum.imageUrl,
                         height: featured ? 238 : 200,
                       ),
                     ),
@@ -71,13 +102,31 @@ class MuseumCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          'HÀ NỘI',
+                          _displayCity,
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.deepBurgundy,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1,
                           ),
                         ),
+                        if (museum.distanceKm != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.softSand,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              museum.formattedDistance,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.deepBurgundy,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

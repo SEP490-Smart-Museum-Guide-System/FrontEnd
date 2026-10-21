@@ -14,7 +14,7 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late final Future<void> _ready = Future<void>.delayed(
-    const Duration(milliseconds: 350),
+    const Duration(milliseconds: 250),
   );
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
@@ -104,6 +104,7 @@ class _AuthScreenState extends State<AuthScreen> {
     _recovered = false;
     _form.currentState?.reset();
   });
+
   Future<void> _submit() async {
     if (_busy || !_form.currentState!.validate()) return;
     setState(() {
@@ -126,11 +127,10 @@ class _AuthScreenState extends State<AuthScreen> {
           await AppServices.auth.login(_email.text.trim(), _password.text);
         }
       }
-    } on FormatException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        setState(() => _error = 'Chưa thể thực hiện. Bạn vui lòng thử lại.');
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        setState(() => _error = msg);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -149,7 +149,7 @@ class _AuthScreenState extends State<AuthScreen> {
       subtitle: _mode == 'register'
           ? 'Lưu những câu chuyện bạn muốn giữ lại.'
           : _mode == 'recover'
-          ? 'Nhập email của tài khoản trải nghiệm.'
+          ? 'Nhập email để gửi yêu cầu đặt lại mật khẩu.'
           : 'Bắt đầu chuyến đi bằng một điều tò mò.',
       children: [
         if (_mode == 'login') ...[
@@ -165,13 +165,13 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
         ],
         const Notice(
-          'Đăng nhập để sử dụng SMGS. Tài khoản trải nghiệm chỉ tồn tại trong phiên này.',
+          'Đăng nhập để đồng bộ thông tin và bản đồ di sản từ máy chủ SMGS.',
         ),
         const SizedBox(height: 20),
         if (_recovered) ...[
           const Panel(
             child: Notice(
-              'Đã hoàn tất bước khôi phục mô phỏng. Không có thư nào được gửi. Bạn có thể quay lại và dùng tài khoản mẫu.',
+              'Yêu cầu khôi phục đã được gửi. Bạn vui lòng kiểm tra hòm thư và quay lại đăng nhập.',
               icon: Icons.check_circle_outline,
             ),
           ),
@@ -201,7 +201,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    hintText: 'khach@smgs.vn',
+                    hintText: 'user@domain.com',
                   ),
                   validator: (v) =>
                       v == null ||
@@ -253,23 +253,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   label: _busy
                       ? 'Đang xử lý…'
                       : _mode == 'register'
-                      ? 'Tạo tài khoản trải nghiệm'
+                      ? 'Đăng ký tài khoản'
                       : _mode == 'recover'
-                      ? 'Khôi phục mô phỏng'
+                      ? 'Gửi yêu cầu khôi phục'
                       : 'Đăng nhập',
                   onPressed: _busy ? null : _submit,
                 ),
                 if (_mode == 'login') ...[
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            _email.text = 'khach@smgs.vn';
-                            _password.text = 'smgs123';
-                          },
-                    child: const Text('Điền tài khoản mẫu'),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   const Text(
                     'Nhân viên bảo tàng, nhân viên hệ thống và quản trị viên dùng cổng web.',
                     style: AppTextStyles.caption,
