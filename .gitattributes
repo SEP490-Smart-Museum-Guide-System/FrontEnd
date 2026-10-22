@@ -1,0 +1,3 @@
+# Preserve Flutter-generated artifacts and upstream license formatting.
+smgs_web/public/visitor/assets/AssetManifest.bin binary
+smgs_web/public/visitor/assets/NOTICES -whitespace

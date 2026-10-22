@@ -20,62 +20,18 @@ import {
   deleteMuseumApi
 } from '../services/museumApi';
 
+import { clearWebSession, readWebSession, requestLogin, saveWebSession } from '../services/auth';
+
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  // Current active staff/admin user account
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedEmail = localStorage.getItem('smgs_web_user_email');
-    const user = initialUsers.find(u => u.email === savedEmail);
-    return user || initialUsers[0]; // defaults to admin@smgs.vn
-  });
-
-  const [currentRole, setRoleState] = useState(() => {
-    const savedEmail = localStorage.getItem('smgs_web_user_email');
-    const user = initialUsers.find(u => u.email === savedEmail);
-    if (user && ['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(user.role)) {
-      return user.role;
-    }
-    const savedRole = localStorage.getItem('smgs_web_role');
-    return ['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(savedRole) ? savedRole : 'administrator';
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('smgs_web_authenticated') === 'true');
-
-  // Bảo tàng mẫu đang được nhân viên bảo tàng phụ trách
-  const [selectedMuseumId, setSelectedMuseumId] = useState(() => {
-    const savedEmail = localStorage.getItem('smgs_web_user_email');
-    const user = initialUsers.find(u => u.email === savedEmail);
-    return user?.museumId && user.museumId !== 'all' ? user.museumId : 'mus-01';
-  });
-
+  const [session, setSession] = useState(readWebSession);
+  const currentUser = session?.user ?? null;
+  const currentRole = currentUser?.role ?? null;
+  const isAuthenticated = session !== null;
+  const [selectedMuseumId, setSelectedMuseumId] = useState('mus-01');
   // Navigation tab
   const [activeTab, setActiveTab] = useState('overview');
-
-  const setCurrentRole = (role) => {
-    if (!['administrator', 'systemStaff', 'museumStaff', 'curator'].includes(role)) return;
-    const targetUser = users.find(u => u.role === role) || users[0];
-    setCurrentUser(targetUser);
-    setRoleState(role);
-    if (targetUser.museumId && targetUser.museumId !== 'all') {
-      setSelectedMuseumId(targetUser.museumId);
-    }
-    setActiveTab('overview');
-  };
-
-  const loginAccount = (account) => {
-    if (!account) return;
-    setCurrentUser(account);
-    setRoleState(account.role);
-    if (account.museumId && account.museumId !== 'all') {
-      setSelectedMuseumId(account.museumId);
-    }
-    setActiveTab('overview');
-    setIsAuthenticated(true);
-    localStorage.setItem('smgs_web_authenticated', 'true');
-    localStorage.setItem('smgs_web_user_email', account.email);
-    localStorage.setItem('smgs_web_role', account.role);
-    showToast(`Đã chuyển sang tài khoản: ${account.name} (${account.email})`);
-  };
 
   // Core data states
   const [museums, setMuseums] = useState(initialMuseums);
@@ -93,121 +49,31 @@ export function AppProvider({ children }) {
   // Global Toast Notifications
   const [toasts, setToasts] = useState([]);
 
-  // Sync role to localStorage
   useEffect(() => {
-    localStorage.setItem('smgs_web_role', currentRole);
-  }, [currentRole]);
+    if (!session) return;
+    const timer = setTimeout(() => {
+      clearWebSession(); setSession(null);
+    }, Math.max(0, session.expiresAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [session]);
 
   const login = async (email, password) => {
-    const cleanEmail = email.trim();
     try {
-      const response = await fetch('http://localhost:5169/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ email: cleanEmail, password }),
-      });
-
-      const result = await response.json();
-      if (response.ok && result.data?.accessToken) {
-        const { accessToken, fullName, email: resEmail } = result.data;
-        let role = 'administrator';
-        try {
-          const payload = JSON.parse(atob(accessToken.split('.')[1]));
-          const roleClaim =
-            payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
-            payload.role;
-          const rawRole = Array.isArray(roleClaim) ? roleClaim[0] : roleClaim;
-          if (rawRole === 'Admin') role = 'administrator';
-          else if (rawRole === 'Museum Staff' || rawRole === 'MuseumStaff') role = 'museumStaff';
-          else if (rawRole === 'Staff') role = 'systemStaff';
-          else if (rawRole === 'Curator') role = 'curator';
-          else if (rawRole === 'Visitor') role = 'visitor';
-        } catch (_) {}
-
-        if (role === 'visitor') {
-          return {
-            success: false,
-            error: 'Tài khoản này là Khách tham quan (Visitor). Cổng web chỉ dành cho Quản trị viên (Admin) và Nhân viên nghiệp vụ (Staff/Curator). Vui lòng sử dụng app SMGS Mobile.'
-          };
-        }
-
-        const activeUser = {
-          id: resEmail,
-          name: fullName || resEmail,
-          email: resEmail,
-          role: role,
-          status: 'active',
-          museumId: 'mus-01',
-        };
-
-        setCurrentUser(activeUser);
-        setRoleState(role);
-        if (activeUser.museumId && activeUser.museumId !== 'all') {
-          setSelectedMuseumId(activeUser.museumId);
-        }
-        setActiveTab('overview');
-        setIsAuthenticated(true);
-        localStorage.setItem('smgs_web_authenticated', 'true');
-        localStorage.setItem('smgs_web_user_email', resEmail);
-        localStorage.setItem('smgs_web_role', role);
-        localStorage.setItem('smgs_web_jwt_token', accessToken);
-        showToast(`Đăng nhập thành công: ${fullName} (${role})`);
-        return { success: true };
-      } else {
-        // Fallback kiểm tra tài khoản mẫu nếu chưa có trong DB
-        const account = users.find(
-          (user) =>
-            user.email.toLowerCase() === cleanEmail.toLowerCase() &&
-            user.status === 'active'
-        );
-        if (account && password === 'smgs123') {
-          if (account.role === 'visitor') {
-            window.location.assign('/visitor/?seed=khach');
-            return { success: true };
-          }
-          loginAccount(account);
-          return { success: true };
-        }
-        return {
-          success: false,
-          error: result.message || 'Email hoặc mật khẩu không chính xác.',
-        };
-      }
-    } catch (err) {
-      console.warn('Backend API connection failed, checking mock accounts...', err);
-      const account = users.find(
-        (user) =>
-          user.email.toLowerCase() === cleanEmail.toLowerCase() &&
-          user.status === 'active'
-      );
-      if (account && password === 'smgs123') {
-        if (account.role === 'visitor') {
-          window.location.assign('/visitor/?seed=khach');
-          return { success: true };
-        }
-        loginAccount(account);
-        return { success: true };
-      }
-      return {
-        success: false,
-        error:
-          'Không thể kết nối đến máy chủ Backend (http://localhost:5169). Vui lòng kiểm tra Backend đang chạy.',
-      };
+      const data = await requestLogin(email, password);
+      setSession(saveWebSession(data));
+      setSelectedMuseumId('mus-01');
+      setActiveTab('overview');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message || 'Đăng nhập thất bại. Vui lòng thử lại.' };
     }
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('smgs_web_authenticated');
-    localStorage.removeItem('smgs_web_user_email');
-    localStorage.removeItem('smgs_web_role');
-    localStorage.removeItem('smgs_web_jwt_token');
+    clearWebSession();
+    setSession(null);
     setActiveTab('overview');
   };
-
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -217,7 +83,7 @@ export function AppProvider({ children }) {
   };
 
   const logAction = (action, details) => {
-    const currentUser = users.find(u => u.role === currentRole) || users[0];
+
     const newLog = {
       id: `log-${Date.now()}`,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
@@ -559,8 +425,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       currentUser,
       currentRole,
-      setCurrentRole,
-      loginAccount,
+
+
       isAuthenticated,
       login,
       logout,

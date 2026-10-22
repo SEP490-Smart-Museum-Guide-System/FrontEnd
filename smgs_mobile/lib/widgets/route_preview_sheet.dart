@@ -1,359 +1,200 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/app_text_styles.dart';
 import '../models/museum.dart';
 import '../models/outdoor_route.dart';
 import '../services/discovery_api_service.dart';
+import '../services/location_service.dart';
+import 'interactive_heritage_map.dart';
 
 class RoutePreviewSheet extends StatefulWidget {
-  final Museum museum;
-  final double userLat;
-  final double userLng;
-  final ValueChanged<OutdoorRoutePreview>? onRouteLoaded;
-
   const RoutePreviewSheet({
     super.key,
     required this.museum,
-    required this.userLat,
-    required this.userLng,
     this.onRouteLoaded,
   });
+  final Museum museum;
+  final ValueChanged<OutdoorRoutePreview>? onRouteLoaded;
 
   static Future<void> show(
     BuildContext context, {
     required Museum museum,
-    required double userLat,
-    required double userLng,
     ValueChanged<OutdoorRoutePreview>? onRouteLoaded,
-  }) {
-    return showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => RoutePreviewSheet(
-        museum: museum,
-        userLat: userLat,
-        userLng: userLng,
-        onRouteLoaded: onRouteLoaded,
-      ),
-    );
-  }
+  }) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) =>
+        RoutePreviewSheet(museum: museum, onRouteLoaded: onRouteLoaded),
+  );
 
   @override
   State<RoutePreviewSheet> createState() => _RoutePreviewSheetState();
 }
 
 class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
-  String _travelMode = 'TWO_WHEELER'; // DRIVE, TWO_WHEELER, WALK
-  bool _isLoading = true;
-  OutdoorRoutePreview? _routeData;
+  bool _loading = true, _opening = false;
+  String? _error;
+  OutdoorRoutePreview? _route;
+  UserLocationResult? _origin;
 
   @override
   void initState() {
     super.initState();
-    _loadRoute();
+    _load();
   }
 
-  Future<void> _loadRoute() async {
-    setState(() => _isLoading = true);
-    final route = await DiscoveryApiService.fetchOutdoorRoute(
-      museumId: widget.museum.id,
-      originLat: widget.userLat,
-      originLng: widget.userLng,
-      destinationLat: widget.museum.latitude,
-      destinationLng: widget.museum.longitude,
-      travelMode: _travelMode,
-    );
-
-    if (mounted) {
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _route = null;
+      _origin = null;
+    });
+    try {
+      if (!widget.museum.hasCoordinates) {
+        throw Exception('Bảo tàng chưa có tọa độ hợp lệ.');
+      }
+      final origin = await LocationService.getCurrentUserLocation();
+      if (!mounted) return;
+      setState(() => _origin = origin);
+      final route = await DiscoveryApiService.fetchOutdoorRoute(
+        museumId: widget.museum.id,
+        originLat: origin.latitude,
+        originLng: origin.longitude,
+      );
+      if (!mounted) return;
       setState(() {
-        _routeData = route;
-        _isLoading = false;
+        _route = route;
+        _loading = false;
       });
       widget.onRouteLoaded?.call(route);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = '$e'.replaceFirst('Exception: ', '');
+          _loading = false;
+        });
+      }
     }
   }
 
-  Future<void> _openExternalGoogleMaps() async {
-    final destination = '${widget.museum.latitude},${widget.museum.longitude}';
-    final googleTravelMode = _travelMode == 'WALK'
-        ? 'walking'
-        : (_travelMode == 'TWO_WHEELER' ? 'two-wheeler' : 'driving');
-
-    // Deep link Google Maps URL
+  Future<void> _openGoogleMaps() async {
+    setState(() => _opening = true);
     final url = Uri.https('www.google.com', '/maps/dir/', {
       'api': '1',
-      'origin': '${widget.userLat},${widget.userLng}',
-      'destination': destination,
-      'travelmode': googleTravelMode,
+      'destination': '${widget.museum.latitude},${widget.museum.longitude}',
+      'travelmode': 'driving',
       'dir_action': 'navigate',
     });
-
     try {
-      final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể kích hoạt ứng dụng Google Maps.')),
+      var opened = false;
+      try {
+        opened = await launchUrl(
+          url,
+          mode: LaunchMode.externalNonBrowserApplication,
         );
+      } catch (_) {
+        /* Fall back to the system browser. */
       }
-    } catch (e) {
+      if (!opened) {
+        opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+      if (!opened) throw Exception('Không thể mở Google Maps trên thiết bị.');
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi mở ứng dụng: $e')),
+          const SnackBar(
+            content: Text(
+              'Không thể mở Google Maps. Vui lòng kiểm tra trình duyệt.',
+            ),
+          ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _opening = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      decoration: const BoxDecoration(
-        color: AppColors.antiqueIvory,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 44,
-              height: 5,
-              decoration: BoxDecoration(
-                color: AppColors.charcoalBrown.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
+  Widget build(BuildContext context) => SizedBox(
+    height: MediaQuery.sizeOf(context).height * 0.86,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ListTile(
+          title: Text(widget.museum.name),
+          subtitle: Text(widget.museum.location),
+          trailing: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close),
           ),
-          const SizedBox(height: 14),
-
-          // Destination header
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.deepBurgundy.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.museum_outlined, color: AppColors.deepBurgundy, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.museum.name,
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: AppColors.deepBurgundy,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.museum.location,
-                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.charcoalBrown),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        ),
+        Expanded(
+          child: InteractiveHeritageMap(
+            museums: [widget.museum],
+            selectedMuseumId: widget.museum.id,
+            onMuseumSelected: (_) {},
+            userLocation: _origin == null
+                ? null
+                : LatLng(_origin!.latitude, _origin!.longitude),
+            polylinePoints: _route?.routePoints ?? const [],
           ),
-          const SizedBox(height: 16),
-
-          // Travel mode selector
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: AppColors.softSand,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.parchmentBorder),
-            ),
-            child: Row(
+        ),
+        if (_loading) const LinearProgressIndicator(),
+        if (_loading)
+          Text(
+            _origin == null ? 'Đang lấy vị trí GPS…' : 'Đang tính tuyến đường…',
+          ),
+        if (_origin?.isLastKnown == true)
+          const Text('Dùng vị trí gần nhất trong 2 phút, sai số tối đa 100 m.'),
+        Flexible(
+          fit: FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildModeTab('TWO_WHEELER', 'Xe máy', Icons.two_wheeler),
-                _buildModeTab('DRIVE', 'Ô tô', Icons.directions_car),
-                _buildModeTab('WALK', 'Đi bộ', Icons.directions_walk),
+                const Text('Ô tô · Xem trước tuyến đường trên OpenStreetMap'),
+                if (_route != null) ...[
+                  Text(
+                    '${_route!.distanceKmString} · ${_route!.durationMinutesString}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: AppColors.deepBurgundy,
+                    ),
+                  ),
+                  const Text(
+                    'Ước tính từ OSRM tại thời điểm yêu cầu, không theo dõi vị trí liên tục.',
+                  ),
+                ],
+                if (_error != null) ...[
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: AppColors.deepBurgundy),
+                  ),
+                  TextButton(
+                    onPressed: _load,
+                    child: const Text('Thử lại xem đường đi'),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: !widget.museum.hasCoordinates || _opening
+                      ? null
+                      : _openGoogleMaps,
+                  icon: const Icon(Icons.near_me),
+                  label: const Text('Chỉ đường bằng Google Maps'),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Route info card
-          if (_isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: CircularProgressIndicator(color: AppColors.deepBurgundy),
-              ),
-            )
-          else if (_routeData != null) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.parchmentBorder),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildMetric(
-                    Icons.straighten,
-                    _routeData!.distanceKmString,
-                    'Quãng đường dự kiến',
-                  ),
-                  Container(width: 1, height: 36, color: AppColors.parchmentBorder),
-                  _buildMetric(
-                    Icons.access_time,
-                    _routeData!.durationMinutesString,
-                    'Thời gian di chuyển',
-                  ),
-                ],
-              ),
-            ),
-
-            if (_routeData!.warning != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF9E6),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFFD166)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: Color(0xFFB7791F), size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _routeData!.warning!,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF744210)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-
-          const SizedBox(height: 20),
-
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.charcoalBrown),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Xem bản đồ', style: TextStyle(color: AppColors.charcoalBrown)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.deepBurgundy,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
-                  ),
-                  icon: const Icon(Icons.near_me, size: 20),
-                  label: const Text(
-                    'Chỉ đường Google Maps',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: _openExternalGoogleMaps,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeTab(String mode, String label, IconData icon) {
-    final isSelected = _travelMode == mode;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          if (_travelMode != mode) {
-            setState(() => _travelMode = mode);
-            _loadRoute();
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.deepBurgundy : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : AppColors.charcoalBrown,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.charcoalBrown,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetric(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: AppColors.imperialGold),
-            const SizedBox(width: 4),
-            Text(
-              value,
-              style: AppTextStyles.titleMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.deepBurgundy,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(color: AppColors.charcoalBrown.withOpacity(0.7)),
         ),
       ],
-    );
-  }
+    ),
+  );
 }

@@ -21,11 +21,15 @@ class MuseumDiscoveryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap ?? () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MuseumDetailScreen(museum: museum)),
-        );
-      },
+      onTap:
+          onTap ??
+          () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MuseumDetailScreen(museum: museum),
+              ),
+            );
+          },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         width: 310,
@@ -35,14 +39,16 @@ class MuseumDiscoveryCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.imperialGold : AppColors.parchmentBorder,
+            color: isSelected
+                ? AppColors.imperialGold
+                : AppColors.parchmentBorder,
             width: isSelected ? 2.0 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.imperialGold.withOpacity(0.25)
-                  : Colors.black.withOpacity(0.06),
+                  ? AppColors.imperialGold.withValues(alpha: 0.25)
+                  : Colors.black.withValues(alpha: 0.06),
               blurRadius: isSelected ? 12 : 8,
               offset: const Offset(0, 4),
             ),
@@ -79,24 +85,35 @@ class MuseumDiscoveryCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.softSand,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              museum.category,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.imperialGold,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.softSand,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                museum.category,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.imperialGold,
+                                ),
                               ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 6),
                           if (museum.distanceKm != null) ...[
-                            const Icon(Icons.near_me, size: 12, color: AppColors.deepBurgundy),
+                            const Icon(
+                              Icons.near_me,
+                              size: 12,
+                              color: AppColors.deepBurgundy,
+                            ),
                             const SizedBox(width: 2),
                             Text(
                               museum.formattedDistance,
@@ -130,7 +147,11 @@ class MuseumDiscoveryCard extends StatelessWidget {
             // Location
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 13, color: AppColors.charcoalBrown),
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 13,
+                  color: AppColors.charcoalBrown,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -150,16 +171,29 @@ class MuseumDiscoveryCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 4,
+                      ),
                       minimumSize: const Size(0, 34),
                       side: const BorderSide(color: AppColors.imperialGold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       visualDensity: VisualDensity.compact,
                     ),
-                    icon: const Icon(Icons.alt_route, size: 13, color: AppColors.imperialGold),
+                    icon: const Icon(
+                      Icons.alt_route,
+                      size: 13,
+                      color: AppColors.imperialGold,
+                    ),
                     label: const Text(
                       'Xem đường đi',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.imperialGold),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.imperialGold,
+                      ),
                     ),
                     onPressed: onDirectionsPressed,
                   ),
@@ -170,19 +204,32 @@ class MuseumDiscoveryCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.deepBurgundy,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 4,
+                      ),
                       minimumSize: const Size(0, 34),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       visualDensity: VisualDensity.compact,
                     ),
-                    onPressed: onTap ?? () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => MuseumDetailScreen(museum: museum)),
-                      );
-                    },
+                    onPressed:
+                        onTap ??
+                        () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MuseumDetailScreen(museum: museum),
+                            ),
+                          );
+                        },
                     child: const Text(
                       'Khám phá',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

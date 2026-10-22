@@ -24,10 +24,18 @@ class Museum {
   final String category;
   final String shortIntro;
   final bool googleMapsVisible;
-  final double latitude;
-  final double longitude;
+  final double? latitude;
+  final double? longitude;
   final String cityCode;
   final double? distanceKm;
+
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude!.isFinite &&
+      longitude!.isFinite &&
+      latitude!.abs() <= 90 &&
+      longitude!.abs() <= 180;
 
   String get formattedDistance {
     if (distanceKm == null) return '';
@@ -40,13 +48,17 @@ class Museum {
       name: json['name'] as String? ?? '',
       location: json['address'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      imageUrl: json['coverImageUrl'] as String? ?? 'assets/images/national-museum-web.jpg',
+      imageUrl:
+          json['coverImageUrl'] as String? ??
+          'assets/images/national-museum-web.jpg',
       openingHours: json['openingHours'] as String? ?? '08:00 - 17:00',
       category: json['category'] as String? ?? 'Lịch sử & Di sản',
-      shortIntro: json['shortIntro'] as String? ?? (json['description'] as String? ?? ''),
+      shortIntro:
+          json['shortIntro'] as String? ??
+          (json['description'] as String? ?? ''),
       googleMapsVisible: json['isActive'] as bool? ?? true,
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       cityCode: json['cityCode'] as String? ?? '',
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
     );

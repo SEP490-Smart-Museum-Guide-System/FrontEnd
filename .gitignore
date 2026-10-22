@@ -121,3 +121,6 @@ smgs_curator/
 .taste-skill/
 .gemini/
 .claude/
+
+# Kotlin build sessions
+smgs_mobile/android/.kotlin/

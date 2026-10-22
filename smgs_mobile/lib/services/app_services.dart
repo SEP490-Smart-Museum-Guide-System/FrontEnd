@@ -11,7 +11,7 @@ abstract class AuthService extends ChangeNotifier {
   Future<void> login(String email, String password);
   Future<void> register(String name, String email, String password);
   Future<void> recover(String email);
-  void logout();
+  Future<void> logout();
 }
 
 class MockAuthService extends AuthService {
@@ -63,7 +63,7 @@ class MockAuthService extends AuthService {
   Future<void> recover(String email) =>
       Future<void>.delayed(const Duration(milliseconds: 350));
   @override
-  void logout() {
+  Future<void> logout() async {
     _user = null;
     notifyListeners();
   }
@@ -157,7 +157,8 @@ class MockQuizService implements QuizService {
         'Không mang thông tin lịch sử',
       ],
       correctIndex: 1,
-      explanation: 'Hiện vật lưu giữ dấu vết về văn hóa, con người và xã hội trong quá khứ.',
+      explanation:
+          'Hiện vật lưu giữ dấu vết về văn hóa, con người và xã hội trong quá khứ.',
     ),
   ];
 }

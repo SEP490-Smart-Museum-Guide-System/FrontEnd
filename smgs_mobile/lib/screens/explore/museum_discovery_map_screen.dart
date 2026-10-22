@@ -1,495 +1,385 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../models/map_place.dart';
+import '../../widgets/place_search_field.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/city.dart';
 import '../../models/museum.dart';
 import '../../services/discovery_api_service.dart';
 import '../../services/location_service.dart';
-import '../../services/polyline_decoder.dart';
-import '../../widgets/city_filter_sheet.dart';
 import '../../widgets/interactive_heritage_map.dart';
 import '../../widgets/museum_discovery_card.dart';
 import '../../widgets/route_preview_sheet.dart';
+import '../museum/museum_detail_screen.dart';
 
 class MuseumDiscoveryMapScreen extends StatefulWidget {
   const MuseumDiscoveryMapScreen({super.key});
-
   @override
-  State<MuseumDiscoveryMapScreen> createState() => _MuseumDiscoveryMapScreenState();
+  State<MuseumDiscoveryMapScreen> createState() =>
+      _MuseumDiscoveryMapScreenState();
 }
 
 class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final ScrollController _cardScrollController = ScrollController();
-  Timer? _debounceTimer;
-
+  final _search = TextEditingController();
+  final _cards = ScrollController();
+  Timer? _debounce;
   List<Museum> _museums = [];
+  bool _world = true;
+  MapPlace? _place;
   List<CityItem> _cities = [];
-  CityItem? _selectedCity;
-  UserLocationResult? _userLocation;
-  bool _isNearMeActive = false;
-  bool _isLoading = true;
-  Museum? _selectedMuseum;
-  List<LatLng> _activePolyline = [];
-
-  // Dual mode: true nếu có Google Maps API key hợp lệ
-  bool _useNativeGoogleMap = false;
-  GoogleMapController? _mapController;
+  String? _cityCode, _selectedId, _error, _cityError;
+  UserLocationResult? _location;
+  List<LatLng> _route = [];
+  bool _nearMe = false, _loading = false, _locating = false;
+  int _request = 0, _page = 0, _totalPages = 0, _total = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _loadCities();
+    _load();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _cardScrollController.dispose();
-    _debounceTimer?.cancel();
-    _mapController?.dispose();
+    _debounce?.cancel();
+    _search.dispose();
+    _cards.dispose();
     super.dispose();
   }
 
-  Future<void> _loadInitialData() async {
-    setState(() => _isLoading = true);
-    final cities = await DiscoveryApiService.fetchCities();
-    final museums = await DiscoveryApiService.fetchMuseums();
-
-    if (mounted) {
-      setState(() {
-        _cities = cities;
-        _museums = museums;
-        if (museums.isNotEmpty) {
-          _selectedMuseum = museums.first;
-        }
-        _isLoading = false;
-      });
+  Future<void> _loadCities() async {
+    try {
+      final cities = await DiscoveryApiService.fetchCities();
+      if (mounted) {
+        setState(() {
+          _cities = cities;
+          _cityError = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _cityError = 'Không tải được tỉnh/thành');
     }
   }
 
-  Future<void> _applyFilters({String? keyword, CityItem? city, bool sortByDistance = false}) async {
-    setState(() => _isLoading = true);
-    final museums = await DiscoveryApiService.fetchMuseums(
-      keyword: keyword ?? _searchController.text,
-      cityCode: city?.code ?? _selectedCity?.code,
-      latitude: _userLocation?.latitude,
-      longitude: _userLocation?.longitude,
-      sortBy: sortByDistance ? 'distance' : null,
-    );
-
-    if (mounted) {
-      setState(() {
-        _museums = museums;
-        if (museums.isNotEmpty && !_museums.any((m) => m.id == _selectedMuseum?.id)) {
-          _selectedMuseum = museums.first;
-        }
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _onSearchChanged(String text) {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
-      _applyFilters(keyword: text, sortByDistance: _isNearMeActive);
+  Future<void> _load({bool more = false}) async {
+    final request = ++_request;
+    setState(() {
+      _loading = true;
+      _error = null;
+      if (!more) {
+        _route = [];
+        _museums = [];
+        _selectedId = null;
+        _total = 0;
+        _page = 0;
+        _totalPages = 0;
+      }
     });
+    try {
+      final result = await DiscoveryApiService.fetchMuseumPage(
+        keyword: _search.text,
+        cityCode: _cityCode,
+        latitude: _nearMe ? _location?.latitude : null,
+        longitude: _nearMe ? _location?.longitude : null,
+        sortBy: _nearMe ? 'distance' : null,
+        page: more ? _page + 1 : 1,
+      );
+      if (!mounted || request != _request) return;
+      setState(() {
+        _museums = more ? [..._museums, ...result.items] : result.items;
+        _page = result.page;
+        _totalPages = result.totalPages;
+        _total = result.totalCount;
+        _loading = false;
+      });
+    } catch (e) {
+      if (mounted && request == _request) {
+        setState(() {
+          _error = '$e'.replaceFirst('Exception: ', '');
+          _loading = false;
+        });
+      }
+    }
   }
 
-  Future<void> _toggleNearMe() async {
-    if (_isNearMeActive) {
-      // Tắt chế độ gần tôi
-      setState(() => _isNearMeActive = false);
-      _applyFilters(sortByDistance: false);
+  Future<void> _toggleNearby() async {
+    if (_nearMe) {
+      setState(() => _nearMe = false);
+      await _load();
       return;
     }
-
-    // Xin quyền và lấy tọa độ GPS
-    final loc = await LocationService.getCurrentUserLocation();
-    if (!mounted) return;
-
-    if (loc.isMockOrFallback && loc.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(loc.errorMessage!),
-          backgroundColor: AppColors.charcoalBrown,
-        ),
-      );
+    setState(() => _locating = true);
+    try {
+      final location = await LocationService.getCurrentUserLocation();
+      if (!mounted) return;
+      setState(() {
+        _location = location;
+        _nearMe = true;
+      });
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'.replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _locating = false);
     }
-
-    setState(() {
-      _userLocation = loc;
-      _isNearMeActive = true;
-    });
-
-    _applyFilters(sortByDistance: true);
   }
 
-  void _selectMuseum(Museum museum) {
+  void _select(Museum museum) {
     setState(() {
-      _selectedMuseum = museum;
+      _selectedId = museum.id;
+      _route = [];
     });
-
-    // Cuộn danh sách card đến vị trí bảo tàng này
     final index = _museums.indexOf(museum);
-    if (index >= 0 && _cardScrollController.hasClients) {
-      _cardScrollController.animateTo(
-        index * 322.0,
-        duration: const Duration(milliseconds: 300),
+    if (_cards.hasClients) {
+      _cards.animateTo(
+        (index * 322.0).clamp(0.0, _cards.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
       );
     }
-
-    // Di chuyển Google Map nếu đang ở chế độ Native
-    if (_useNativeGoogleMap && _mapController != null && museum.latitude != 0.0) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(LatLng(museum.latitude, museum.longitude), 14.5),
-      );
-    }
   }
 
-  void _openRoutePreview(Museum museum) {
-    final userLat = _userLocation?.latitude ?? LocationService.defaultLat;
-    final userLng = _userLocation?.longitude ?? LocationService.defaultLng;
-
+  void _preview(Museum museum) {
+    setState(() {
+      _selectedId = museum.id;
+      _route = [];
+    });
     RoutePreviewSheet.show(
       context,
       museum: museum,
-      userLat: userLat,
-      userLng: userLng,
       onRouteLoaded: (route) {
-        if (route.encodedPolyline.isNotEmpty) {
-          final points = PolylineDecoder.decode(route.encodedPolyline);
-          setState(() => _activePolyline = points);
-        } else {
-          // Sinh lộ trình mẫu nối điểm
-          setState(() {
-            _activePolyline = [
-              LatLng(userLat, userLng),
-              LatLng(
-                (userLat + museum.latitude) / 2 + 0.002,
-                (userLng + museum.longitude) / 2 - 0.003,
-              ),
-              LatLng(museum.latitude, museum.longitude),
-            ];
-          });
-        }
+        if (mounted) setState(() => _route = route.routePoints);
       },
     );
   }
 
+  Future<void> _navigateToPlace() async {
+    final place = _place;
+    if (place == null) return;
+    final uri = Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'destination': '${place.latitude},${place.longitude}',
+      'travelmode': 'driving',
+    });
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      /* Show a retryable error below. */
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không mở được ứng dụng bản đồ. Vui lòng thử lại.'),
+        ),
+      );
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.antiqueIvory,
-      body: Stack(
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.antiqueIvory,
+    appBar: AppBar(title: const Text('Khám phá bản đồ')),
+    body: SafeArea(
+      child: Column(
         children: [
-          // 1. LAYER BẢN ĐỒ (Google Map hoặc Heritage Canvas Fallback)
-          Positioned.fill(
-            child: _useNativeGoogleMap ? _buildNativeGoogleMap() : _buildHeritageMap(),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: true, label: Text('Mọi địa điểm')),
+              ButtonSegment(value: false, label: Text('Bảo tàng SMGS')),
+            ],
+            selected: {_world},
+            onSelectionChanged: (value) {
+              _debounce?.cancel();
+              FocusScope.of(context).unfocus();
+              setState(() {
+                _world = value.first;
+                _place = null;
+                _route = [];
+              });
+            },
           ),
-
-          // 2. LAYER THANH TÌM KIẾM & BỘ LỌC (TOP FLOATING BAR)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Back Button & Search Box
-                    Row(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back, color: AppColors.charcoalBrown),
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            tooltip: 'Quay lại',
-                          ),
+          if (_world)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: PlaceSearchField(
+                onSelected: (place) => setState(() => _place = place),
+              ),
+            ),
+          if (!_world) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: TextField(
+                controller: _search,
+                decoration: const InputDecoration(
+                  hintText: 'Tìm tên bảo tàng',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (_) {
+                  _debounce?.cancel();
+                  ++_request; // Invalidate any response for the previous search immediately.
+                  _debounce = Timer(
+                    const Duration(milliseconds: 400),
+                    () => _load(),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _cityCode,
+                      hint: const Text('Tất cả tỉnh/thành'),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Tất cả tỉnh/thành'),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: _onSearchChanged,
-                              decoration: InputDecoration(
-                                hintText: 'Tìm kiếm bảo tàng, di sản...',
-                                hintStyle: TextStyle(color: AppColors.charcoalBrown.withOpacity(0.5), fontSize: 13),
-                                prefixIcon: const Icon(Icons.search, color: AppColors.deepBurgundy),
-                                suffixIcon: _searchController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(Icons.clear, size: 18),
-                                        onPressed: () {
-                                          _searchController.clear();
-                                          _applyFilters(keyword: '', sortByDistance: _isNearMeActive);
-                                        },
-                                      )
-                                    : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              ),
-                            ),
+                        ..._cities.map(
+                          (c) => DropdownMenuItem(
+                            value: c.code,
+                            child: Text(c.name),
                           ),
                         ),
                       ],
+                      onChanged: (code) {
+                        _debounce?.cancel();
+                        setState(() => _cityCode = code);
+                        _load();
+                      },
                     ),
-                    const SizedBox(height: 10),
-
-                  // Filter Row
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        // City Filter Pill
-                        GestureDetector(
-                          onTap: () async {
-                            final chosen = await CityFilterSheet.show(
-                              context,
-                              cities: _cities,
-                              selectedCityCode: _selectedCity?.code,
-                            );
-                            setState(() => _selectedCity = chosen);
-                            _applyFilters(city: chosen, sortByDistance: _isNearMeActive);
+                  ),
+                  const SizedBox(width: 12),
+                  FilterChip(
+                    label: Text(_locating ? 'Đang lấy GPS…' : 'Gần tôi'),
+                    selected: _nearMe,
+                    onSelected: _locating
+                        ? null
+                        : (_) {
+                            _debounce?.cancel();
+                            _toggleNearby();
                           },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _selectedCity != null ? AppColors.deepBurgundy : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: _selectedCity != null
-                                    ? AppColors.deepBurgundy
-                                    : AppColors.parchmentBorder,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.location_city,
-                                  size: 15,
-                                  color: _selectedCity != null ? Colors.white : AppColors.charcoalBrown,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _selectedCity?.name ?? 'Tỉnh / Thành phố',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedCity != null ? Colors.white : AppColors.charcoalBrown,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.arrow_drop_down,
-                                  size: 16,
-                                  color: _selectedCity != null ? Colors.white : AppColors.charcoalBrown,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // "Gần tôi" Pill
-                        GestureDetector(
-                          onTap: _toggleNearMe,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _isNearMeActive ? AppColors.imperialGold : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: _isNearMeActive
-                                    ? AppColors.imperialGold
-                                    : AppColors.parchmentBorder,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.my_location,
-                                  size: 15,
-                                  color: _isNearMeActive ? Colors.white : AppColors.charcoalBrown,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Gần tôi nhất',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: _isNearMeActive ? Colors.white : AppColors.charcoalBrown,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Count pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.antiqueIvory.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.parchmentBorder),
-                          ),
-                          child: Text(
-                            '${_museums.length} bảo tàng',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.charcoalBrown,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
             ),
+            if (_cityError != null)
+              TextButton(
+                onPressed: _loadCities,
+                child: Text('$_cityError · Thử lại'),
+              ),
+          ],
+          Expanded(
+            child: InteractiveHeritageMap(
+              museums: _world ? const [] : _museums,
+              selectedMuseumId: _world ? null : _selectedId,
+              placeLocation: _world && _place != null
+                  ? LatLng(_place!.latitude, _place!.longitude)
+                  : null,
+              placeName: _place?.name,
+              onMuseumSelected: _select,
+              polylinePoints: _world ? const [] : _route,
+              userLocation: _location == null
+                  ? null
+                  : LatLng(_location!.latitude, _location!.longitude),
+            ),
           ),
-        ),
-
-          // 3. LAYER THẺ BẢO TÀNG TRƯỢT (BOTTOM CAROUSEL)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 24,
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.deepBurgundy))
-                : _museums.isEmpty
-                    ? Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10),
-                            ],
+          if (_world && _place != null)
+            ListTile(
+              title: Text(
+                _place!.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                _place!.address,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: IconButton(
+                tooltip: 'Chỉ đường bằng Google Maps',
+                icon: const Icon(Icons.directions),
+                onPressed: _navigateToPlace,
+              ),
+            ),
+          if (!_world) ...[
+            if (_loading) const LinearProgressIndicator(),
+            if (_error != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(_error!),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _load(more: _page > 0),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            if (!_loading && _error == null && _museums.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Không tìm thấy bảo tàng theo bộ lọc.'),
+              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text('${_museums.length}/$_total bảo tàng'),
+                  ),
+                ),
+                if (_page < _totalPages)
+                  TextButton(
+                    onPressed: _loading ? null : () => _load(more: true),
+                    child: const Text('Tải thêm'),
+                  ),
+              ],
+            ),
+            if (_museums.isNotEmpty)
+              SizedBox(
+                height: 195,
+                child: ListView.builder(
+                  controller: _cards,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _museums.length,
+                  itemBuilder: (context, index) {
+                    final museum = _museums[index];
+                    return MuseumDiscoveryCard(
+                      museum: museum,
+                      isSelected: museum.id == _selectedId,
+                      onTap: () {
+                        _select(museum);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MuseumDetailScreen(museum: museum),
                           ),
-                          child: const Text('Không tìm thấy bảo tàng nào theo bộ lọc.'),
-                        ),
-                      )
-                    : SizedBox(
-                        height: 195,
-                        child: ListView.builder(
-                          controller: _cardScrollController,
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          itemCount: _museums.length,
-                          itemBuilder: (context, index) {
-                            final museum = _museums[index];
-                            final isSelected = museum.id == _selectedMuseum?.id;
-                            return MuseumDiscoveryCard(
-                              museum: museum,
-                              isSelected: isSelected,
-                              onTap: () => _selectMuseum(museum),
-                              onDirectionsPressed: () => _openRoutePreview(museum),
-                            );
-                          },
-                        ),
-                      ),
-          ),
+                        );
+                      },
+                      onDirectionsPressed: museum.hasCoordinates
+                          ? () => _preview(museum)
+                          : null,
+                    );
+                  },
+                ),
+              ),
+          ],
         ],
       ),
-    );
-  }
-
-  Widget _buildHeritageMap() {
-    return InteractiveHeritageMap(
-      museums: _museums,
-      selectedMuseumId: _selectedMuseum?.id,
-      onMuseumSelected: _selectMuseum,
-      userLocation: _userLocation != null
-          ? LatLng(_userLocation!.latitude, _userLocation!.longitude)
-          : null,
-      polylinePoints: _activePolyline,
-    );
-  }
-
-  Widget _buildNativeGoogleMap() {
-    final markers = <Marker>{};
-    for (final m in _museums) {
-      if (m.latitude != 0.0 && m.longitude != 0.0) {
-        markers.add(
-          Marker(
-            markerId: MarkerId(m.id),
-            position: LatLng(m.latitude, m.longitude),
-            infoWindow: InfoWindow(title: m.name, snippet: m.location),
-            onTap: () => _selectMuseum(m),
-          ),
-        );
-      }
-    }
-
-    final polylines = <Polyline>{};
-    if (_activePolyline.isNotEmpty) {
-      polylines.add(
-        Polyline(
-          polylineId: const PolylineId('route_preview'),
-          points: _activePolyline,
-          color: AppColors.deepBurgundy,
-          width: 5,
-        ),
-      );
-    }
-
-    return GoogleMap(
-      initialCameraPosition: CameraPosition(
-        target: _selectedMuseum != null
-            ? LatLng(_selectedMuseum!.latitude, _selectedMuseum!.longitude)
-            : const LatLng(10.7769, 106.7009),
-        zoom: 13,
-      ),
-      markers: markers,
-      polylines: polylines,
-      myLocationEnabled: _isNearMeActive,
-      myLocationButtonEnabled: false,
-      zoomControlsEnabled: false,
-      onMapCreated: (controller) => _mapController = controller,
-    );
-  }
+    ),
+  );
 }

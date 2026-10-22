@@ -9,11 +9,6 @@
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
 
-        <!-- Google Maps API Key Placeholder (Điền Key thật vào đây khi có) -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="PLACEHOLDER_GOOGLE_MAPS_KEY"/>
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

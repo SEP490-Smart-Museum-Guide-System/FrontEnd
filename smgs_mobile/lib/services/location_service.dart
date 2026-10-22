@@ -1,96 +1,81 @@
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 
 class UserLocationResult {
-  final double latitude;
-  final double longitude;
-  final bool isMockOrFallback;
-  final String? errorMessage;
-
   const UserLocationResult({
     required this.latitude,
     required this.longitude,
-    this.isMockOrFallback = false,
-    this.errorMessage,
+    this.isLastKnown = false,
   });
+  final double latitude, longitude;
+  final bool isLastKnown;
 }
 
 class LocationService {
-  // Tọa độ mặc định tại trung tâm TP.HCM (Quận 1) dùng khi không cấp GPS hoặc chạy máy ảo
-  static const double defaultLat = 10.7769;
-  static const double defaultLng = 106.7009;
-
-  /// Xin quyền và lấy tọa độ GPS của thiết bị
   static Future<UserLocationResult> getCurrentUserLocation() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return const UserLocationResult(
-          latitude: defaultLat,
-          longitude: defaultLng,
-          isMockOrFallback: true,
-          errorMessage: 'Dịch vụ định vị GPS trên thiết bị chưa được bật.',
-        );
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return const UserLocationResult(
-            latitude: defaultLat,
-            longitude: defaultLng,
-            isMockOrFallback: true,
-            errorMessage: 'Bạn đã từ chối cấp quyền truy cập vị trí.',
-          );
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        return const UserLocationResult(
-          latitude: defaultLat,
-          longitude: defaultLng,
-          isMockOrFallback: true,
-          errorMessage: 'Quyền vị trí bị từ chối vĩnh viễn. Vui lòng mở Cài đặt để cấp quyền.',
-        );
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
-        ),
-      );
-
-      return UserLocationResult(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        isMockOrFallback: false,
-      );
-    } catch (e) {
-      return UserLocationResult(
-        latitude: defaultLat,
-        longitude: defaultLng,
-        isMockOrFallback: true,
-        errorMessage: 'Không thể lấy tọa độ thực tế: $e',
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      throw Exception('Vui lòng bật dịch vụ định vị GPS.');
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception(
+        'Quyền vị trí đã bị khóa. Vui lòng cấp quyền trong Cài đặt.',
       );
     }
-  }
-
-  /// Tính khoảng cách Haversine đường thẳng giữa 2 tọa độ (đơn vị: km)
-  static double calculateDistanceKm({
-    required double lat1,
-    required double lon1,
-    required double lat2,
-    required double lon2,
-  }) {
-    const double p = 0.017453292519943295; // Math.PI / 180
-    final a = 0.5 -
-        math.cos((lat2 - lat1) * p) / 2 +
-        math.cos(lat1 * p) *
-            math.cos(lat2 * p) *
-            (1 - math.cos((lon2 - lon1) * p)) /
-            2;
-    return 12742 * math.asin(math.sqrt(a)); // 2 * R; R = 6371 km
+    if (permission != LocationPermission.always &&
+        permission != LocationPermission.whileInUse &&
+        permission != LocationPermission.unableToDetermine) {
+      throw Exception(
+        'Chưa có quyền vị trí. Bạn vẫn có thể tìm kiếm và lọc tỉnh/thành.',
+      );
+    }
+    Position position;
+    var isLastKnown = false;
+    try {
+      position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 30),
+        ),
+      );
+    } on TimeoutException {
+      Position? recent;
+      try {
+        recent = await Geolocator.getLastKnownPosition().timeout(
+          const Duration(seconds: 2),
+        );
+      } catch (_) {
+        /* Last-known location is unavailable on some platforms. */
+      }
+      final age = recent == null
+          ? null
+          : DateTime.now().difference(recent.timestamp);
+      if (recent == null ||
+          age!.isNegative ||
+          age > const Duration(minutes: 2) ||
+          !recent.accuracy.isFinite ||
+          recent.accuracy < 0 ||
+          recent.accuracy > 100) {
+        throw Exception(
+          'Chưa lấy được vị trí GPS. Hãy bật Độ chính xác vị trí, ra nơi thoáng rồi nhấn Thử lại. Bạn vẫn có thể mở Google Maps.',
+        );
+      }
+      position = recent;
+      isLastKnown = true;
+    }
+    if (!position.latitude.isFinite ||
+        !position.longitude.isFinite ||
+        position.latitude.abs() > 90 ||
+        position.longitude.abs() > 180) {
+      throw Exception('Vị trí GPS không hợp lệ. Vui lòng thử lại.');
+    }
+    return UserLocationResult(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      isLastKnown: isLastKnown,
+    );
   }
 }

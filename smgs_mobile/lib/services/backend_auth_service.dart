@@ -1,162 +1,126 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/network/api_config.dart';
+import '../models/auth_session.dart';
 import '../models/experience.dart';
 import 'app_services.dart';
 import 'token_manager.dart';
 
 class BackendAuthService extends AuthService {
   BackendAuthService() {
-    // Khôi phục phiên đăng nhập nếu đã có token từ trước
-    if (TokenManager.hasToken) {
-      _user = VisitorUser(
-        name: TokenManager.fullName ?? 'Khách tham quan',
-        email: TokenManager.email ?? '',
-        role: UserRole.visitor,
-      );
+    final saved = TokenManager.session;
+    if (saved != null && saved.role == 'Visitor') {
+      _user = saved.user;
+      _scheduleExpiry(saved);
     }
   }
-
   VisitorUser? _user;
-
+  Timer? _expiryTimer;
   @override
   VisitorUser? get user => _user;
 
   @override
-  Future<void> login(String email, String password) async {
-    final cleanEmail = email.trim();
-    final cleanPass = password.trim();
-
-    if (cleanEmail.isEmpty || cleanPass.isEmpty) {
-      throw Exception('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+  Future<void> login(String email, String password) {
+    if (email.trim().isEmpty || password.isEmpty) {
+      throw Exception('Vui lòng nhập đầy đủ email và mật khẩu.');
     }
-
-    try {
-      final uri = Uri.parse(ApiConfig.loginUrl);
-      final response = await http
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
-            body: json.encode({
-              'email': cleanEmail,
-              'password': cleanPass,
-            }),
-          )
-          .timeout(const Duration(seconds: 8));
-
-      final Map<String, dynamic> body = json.decode(response.body);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = body['data'] as Map<String, dynamic>? ?? {};
-        final token = data['accessToken'] as String? ?? '';
-        final resEmail = data['email'] as String? ?? cleanEmail;
-        final resFullName = data['fullName'] as String? ?? 'Khách tham quan';
-
-        if (token.isEmpty) {
-          throw Exception('Không nhận được mã xác thực (Token) từ hệ thống.');
-        }
-
-        await TokenManager.saveSession(
-          token: token,
-          email: resEmail,
-          fullName: resFullName,
-        );
-
-        _user = VisitorUser(
-          name: resFullName,
-          email: resEmail,
-          role: UserRole.visitor,
-        );
-        notifyListeners();
-      } else {
-        final errorMsg = body['message'] as String? ??
-            'Đăng nhập không thành công (Mã lỗi: ${response.statusCode})';
-        throw Exception(errorMsg);
-      }
-    } on http.ClientException catch (_) {
-      throw Exception(
-        'Không thể kết nối tới máy chủ Backend (${ApiConfig.baseUrl}). Hãy chắc chắn máy chủ BE đang chạy.',
-      );
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Lỗi xử lý đăng nhập: $e');
-    }
+    return _authenticate(ApiConfig.loginUrl, {
+      'email': email.trim(),
+      'password': password,
+    });
   }
 
   @override
-  Future<void> register(String name, String email, String password) async {
-    final cleanName = name.trim();
-    final cleanEmail = email.trim();
-    final cleanPass = password.trim();
-
-    if (cleanName.isEmpty || cleanEmail.isEmpty || cleanPass.isEmpty) {
-      throw Exception('Vui lòng điền đầy đủ Họ tên, Email và Mật khẩu.');
-    }
-
-    if (cleanPass.length < 6) {
-      throw Exception('Mật khẩu cần tối thiểu 6 ký tự.');
-    }
-
-    try {
-      final uri = Uri.parse(ApiConfig.registerUrl);
-      final response = await http
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json; charset=UTF-8'},
-            body: json.encode({
-              'fullName': cleanName,
-              'email': cleanEmail,
-              'password': cleanPass,
-            }),
-          )
-          .timeout(const Duration(seconds: 8));
-
-      final Map<String, dynamic> body = json.decode(response.body);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = body['data'] as Map<String, dynamic>? ?? {};
-        final token = data['accessToken'] as String? ?? '';
-        final resEmail = data['email'] as String? ?? cleanEmail;
-        final resFullName = data['fullName'] as String? ?? cleanName;
-
-        if (token.isNotEmpty) {
-          await TokenManager.saveSession(
-            token: token,
-            email: resEmail,
-            fullName: resFullName,
-          );
-        }
-
-        _user = VisitorUser(
-          name: resFullName,
-          email: resEmail,
-          role: UserRole.visitor,
-        );
-        notifyListeners();
-      } else {
-        final errorMsg = body['message'] as String? ??
-            'Đăng ký không thành công (Mã lỗi: ${response.statusCode})';
-        throw Exception(errorMsg);
-      }
-    } on http.ClientException catch (_) {
+  Future<void> register(String name, String email, String password) {
+    if (name.trim().isEmpty || email.trim().isEmpty || password.length < 6) {
       throw Exception(
-        'Không thể kết nối tới máy chủ Backend (${ApiConfig.baseUrl}). Hãy chắc chắn máy chủ BE đang chạy.',
+        'Vui lòng nhập họ tên, email và mật khẩu tối thiểu 6 ký tự.',
       );
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Lỗi xử lý đăng ký: $e');
     }
+    return _authenticate(ApiConfig.registerUrl, {
+      'fullName': name.trim(),
+      'email': email.trim(),
+      'password': password,
+    });
+  }
+
+  Future<void> _authenticate(String url, Map<String, String> payload) async {
+    http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json; charset=UTF-8',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      throw Exception('Máy chủ phản hồi quá chậm. Vui lòng thử lại.');
+    } on http.ClientException {
+      throw Exception(
+        'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và địa chỉ API.',
+      );
+    }
+    Map<String, dynamic>? body;
+    try {
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is Map<String, dynamic>) body = decoded;
+    } on FormatException {
+      /* A proxy may return HTML on failure. */
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        body?['message'] is String
+            ? body!['message']
+            : 'Không thể xác thực (${response.statusCode}). Vui lòng thử lại.',
+      );
+    }
+    if (body?['data'] is! Map<String, dynamic>) {
+      throw const FormatException('Phản hồi xác thực từ máy chủ không hợp lệ.');
+    }
+    final session = AuthSession.fromJson(body!['data'] as Map<String, dynamic>);
+    if (session.role != 'Visitor') {
+      throw Exception(
+        'Tài khoản nhân viên và quản trị viên vui lòng đăng nhập cổng nghiệp vụ web.',
+      );
+    }
+    await TokenManager.saveSession(session);
+    _user = session.user;
+    _scheduleExpiry(session);
+    notifyListeners();
+  }
+
+  void _scheduleExpiry(AuthSession session) {
+    _expiryTimer?.cancel();
+    _expiryTimer = Timer(
+      session.expiresAt.difference(DateTime.now().toUtc()),
+      logout,
+    );
   }
 
   @override
   Future<void> recover(String email) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    throw Exception(
+      'Chức năng khôi phục mật khẩu chưa được hỗ trợ. Vui lòng liên hệ hỗ trợ.',
+    );
   }
 
   @override
-  void logout() {
-    TokenManager.clearSession();
+  Future<void> logout() async {
+    _expiryTimer?.cancel();
     _user = null;
+    final clearing = TokenManager.clearSession();
     notifyListeners();
+    await clearing;
+  }
+
+  @override
+  void dispose() {
+    _expiryTimer?.cancel();
+    super.dispose();
   }
 }

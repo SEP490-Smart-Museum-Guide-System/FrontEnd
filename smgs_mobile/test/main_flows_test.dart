@@ -31,7 +31,7 @@ void main() {
   });
 
   testWidgets(
-    'Splash, invalid login, sample login and logout form one complete flow',
+    'Splash, invalid login, visitor login and logout form one complete flow',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       await tester.pumpWidget(const SMGSApp());
@@ -40,7 +40,8 @@ void main() {
       expect(find.text('Tiếp tục với vai trò khách'), findsNothing);
       await tapText(tester, 'Đăng nhập');
       expect(find.text('Vui lòng nhập mật khẩu.'), findsOneWidget);
-      await tapText(tester, 'Điền tài khoản mẫu');
+      await tester.enterText(field('Email'), 'khach@smgs.vn');
+      await tester.enterText(field('Mật khẩu'), 'smgs123');
       await tapText(tester, 'Đăng nhập');
       expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
       expect(AppServices.auth.user!.name, 'Minh An');
@@ -54,25 +55,20 @@ void main() {
   );
 
   testWidgets(
-    'Registration validates confirmation and recovery sends no email',
+    'Registration validates password confirmation and opens the visitor workspace',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       await tester.pumpWidget(const SMGSApp());
       await tester.pumpAndSettle();
-      await tapText(tester, 'Quên mật khẩu?');
-      await tester.enterText(field('Email'), 'demo@example.com');
-      await tapText(tester, 'Khôi phục mô phỏng');
-      expect(find.textContaining('Không có thư nào được gửi'), findsOneWidget);
-      await tapText(tester, 'Về đăng nhập');
       await tapText(tester, 'Tạo tài khoản mới');
       await tester.enterText(field('Tên của bạn'), 'Ngọc An');
       await tester.enterText(field('Email'), 'ngocan@example.com');
       await tester.enterText(field('Mật khẩu'), 'demo123');
       await tester.enterText(field('Nhập lại mật khẩu'), 'khac');
-      await tapText(tester, 'Tạo tài khoản trải nghiệm');
+      await tapText(tester, 'Đăng ký tài khoản');
       expect(find.text('Hai mật khẩu chưa khớp.'), findsOneWidget);
       await tester.enterText(field('Nhập lại mật khẩu'), 'demo123');
-      await tapText(tester, 'Tạo tài khoản trải nghiệm');
+      await tapText(tester, 'Đăng ký tài khoản');
       expect(AppServices.auth.user!.name, 'Ngọc An');
       expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
       expect(tester.takeException(), isNull);

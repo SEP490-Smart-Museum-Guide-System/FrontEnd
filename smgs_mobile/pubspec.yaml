@@ -17,7 +17,8 @@ dependencies:
   url_launcher: ^6.3.2
   http: ^1.2.2
   geolocator: ^13.0.2
-  google_maps_flutter: ^2.10.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.9.1
   shared_preferences: ^2.3.2
 
 dev_dependencies:

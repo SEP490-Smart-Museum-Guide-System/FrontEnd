@@ -86,7 +86,9 @@ class _AuthScreenState extends State<AuthScreen> {
       _password = TextEditingController(),
       _name = TextEditingController(),
       _confirm = TextEditingController();
-  String _mode = 'login';
+  String _mode = Uri.base.queryParameters['mode'] == 'register'
+      ? 'register'
+      : 'login';
   String? _error;
   bool _busy = false, _hidden = true, _recovered = false;
   @override
@@ -116,7 +118,6 @@ class _AuthScreenState extends State<AuthScreen> {
         await AppServices.auth.recover(_email.text.trim());
         if (mounted) setState(() => _recovered = true);
       } else {
-        VisitStore.instance.reset();
         if (_mode == 'register') {
           await AppServices.auth.register(
             _name.text.trim(),
@@ -126,10 +127,13 @@ class _AuthScreenState extends State<AuthScreen> {
         } else {
           await AppServices.auth.login(_email.text.trim(), _password.text);
         }
+        VisitStore.instance.reset();
       }
     } catch (e) {
       if (mounted) {
-        final msg = e.toString().replaceFirst('Exception: ', '');
+        final msg = e is FormatException
+            ? e.message
+            : e.toString().replaceFirst('Exception: ', '');
         setState(() => _error = msg);
       }
     } finally {
@@ -189,6 +193,8 @@ class _AuthScreenState extends State<AuthScreen> {
                 if (_mode == 'register') ...[
                   TextFormField(
                     controller: _name,
+                    maxLength: 200,
+                    autofillHints: const [AutofillHints.name],
                     decoration: const InputDecoration(labelText: 'Tên của bạn'),
                     validator: (v) => v == null || v.trim().isEmpty
                         ? 'Vui lòng nhập tên.'
@@ -198,6 +204,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 ],
                 TextFormField(
                   controller: _email,
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email,
+                  ],
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
@@ -205,8 +215,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   validator: (v) =>
                       v == null ||
-                          !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                              .hasMatch(v.trim())
+                          !RegExp(
+                            r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                          ).hasMatch(v.trim())
                       ? 'Nhập địa chỉ email hợp lệ.'
                       : null,
                 ),
@@ -214,9 +225,17 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _password,
+                    autofillHints: [
+                      _mode == 'register'
+                          ? AutofillHints.newPassword
+                          : AutofillHints.password,
+                    ],
                     obscureText: _hidden,
                     decoration: InputDecoration(
                       labelText: 'Mật khẩu',
+                      helperText: _mode == 'register'
+                          ? 'Ít nhất 6 ký tự, có chữ thường và số.'
+                          : null,
                       suffixIcon: IconButton(
                         tooltip: _hidden ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                         onPressed: () => setState(() => _hidden = !_hidden),
@@ -227,9 +246,18 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                     ),
-                    validator: (v) => v == null || v.isEmpty
-                        ? 'Vui lòng nhập mật khẩu.'
-                        : null,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'Vui lòng nhập mật khẩu.';
+                      }
+                      if (_mode == 'register' &&
+                          (v.length < 6 ||
+                              !RegExp('[a-z]').hasMatch(v) ||
+                              !RegExp('[0-9]').hasMatch(v))) {
+                        return 'Mật khẩu cần ít nhất 6 ký tự, có chữ thường và số.';
+                      }
+                      return null;
+                    },
                   ),
                 ],
                 if (_mode == 'register') ...[

@@ -5,7 +5,7 @@ import '../../widgets/collection_cards.dart';
 import '../../data/mock/mock_artifacts.dart';
 import '../../models/museum.dart';
 import '../../widgets/route_preview_sheet.dart';
-import '../../services/location_service.dart';
+
 import '../artifact/artifact_discovery_screen.dart';
 import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
@@ -18,14 +18,8 @@ class MuseumDetailScreen extends StatelessWidget {
   final Object? heroTag;
 
   Future<void> _openDirections(BuildContext context) async {
-    final loc = await LocationService.getCurrentUserLocation();
     if (!context.mounted) return;
-    RoutePreviewSheet.show(
-      context,
-      museum: museum,
-      userLat: loc.latitude,
-      userLng: loc.longitude,
-    );
+    RoutePreviewSheet.show(context, museum: museum);
   }
 
   @override
@@ -108,7 +102,10 @@ class MuseumDetailScreen extends StatelessWidget {
             icon: Icons.explore_outlined,
             onPressed: () => openPage(
               context,
-              ArtifactDiscoveryScreen(museum: museum, artifact: artifacts.first),
+              ArtifactDiscoveryScreen(
+                museum: museum,
+                artifact: artifacts.first,
+              ),
             ),
           ),
         ],
@@ -125,10 +122,12 @@ class MuseumDetailScreen extends StatelessWidget {
               ExploreScreen(standalone: true, museumId: museum.id),
             ),
           ),
-          ...artifacts.map((a) => ScrollReveal(child: ArtifactCard(artifact: a))),
+          ...artifacts.map(
+            (a) => ScrollReveal(child: ArtifactCard(artifact: a)),
+          ),
         ],
         const SectionHeading('Chuẩn bị chuyến tham quan'),
-        if (museum.googleMapsVisible)
+        if (museum.hasCoordinates)
           ActionTile(
             title: 'Chỉ đường & Lộ trình đến bảo tàng',
             subtitle: 'Xem trước cự ly, thời gian và dẫn đường ngoài trời.',

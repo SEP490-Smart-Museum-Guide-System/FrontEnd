@@ -52,7 +52,7 @@ class CityFilterSheet extends StatelessWidget {
               width: 44,
               height: 5,
               decoration: BoxDecoration(
-                color: AppColors.charcoalBrown.withOpacity(0.2),
+                color: AppColors.charcoalBrown.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
