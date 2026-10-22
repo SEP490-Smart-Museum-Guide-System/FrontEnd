@@ -225,7 +225,12 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                 <label className="form-group"><span className="form-label">Ảnh đại diện</span><input className="form-input" value={formData.image} onChange={e => handleChange('image', e.target.value)} placeholder="Đường dẫn ảnh" /></label>
                 <label className="form-group"><span className="form-label">Âm thanh thuyết minh</span><input className="form-input" value={formData.audioUrl} onChange={e => handleChange('audioUrl', e.target.value)} placeholder="Đường dẫn âm thanh" /></label>
               </div>
-              <label className="form-group"><span className="form-label">Ảnh tư liệu bổ sung (mỗi dòng một đường dẫn)</span><textarea className="form-textarea" rows={3} value={formData.referenceImages.join('\n')} onChange={e => handleChange('referenceImages', e.target.value.split('\n').map(value => value.trim()).filter(Boolean))} /></label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <span className="form-label">Ảnh tham chiếu nhận diện</span>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-600)' }}>
+                  Quản lý ảnh trong chi tiết hiện vật → tab “Mã QR & Nhận diện”, để ảnh luôn được gắn với đúng hiện vật.
+                </p>
+              </div>
               <label className="form-group"><span className="form-label">Mô hình 3D</span><input className="form-input" value={formData.modelUrl} onChange={e => handleChange('modelUrl', e.target.value)} placeholder="Đường dẫn mô hình 3D" /></label>
               <div><span className="form-label">Đặt biểu tượng trên sơ đồ phòng</span><div className="artifact-map-preview" role="button" tabIndex={0} aria-label="Chọn vị trí hiện vật trên sơ đồ phòng" onClick={event => { const rect = event.currentTarget.getBoundingClientRect(); setFormData(prev => ({ ...prev, mapX: Math.round((event.clientX - rect.left) / rect.width * 100), mapY: Math.round((event.clientY - rect.top) / rect.height * 100) })); }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setFormData(prev => ({ ...prev, mapX: 50, mapY: 50 })); } }}><div className="artifact-map-marker" style={{ left: `${formData.mapX}%`, top: `${formData.mapY}%` }}>{formData.mapIcon || 'Hiện vật'}</div></div><small>Chạm vào sơ đồ để đặt vị trí · {formData.mapX}%, {formData.mapY}%</small></div>
             </div>

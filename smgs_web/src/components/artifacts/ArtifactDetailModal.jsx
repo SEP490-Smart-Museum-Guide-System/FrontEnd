@@ -21,6 +21,11 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copiedQR, setCopiedQR] = useState(false);
+  const [referenceImages, setReferenceImages] = useState(() =>
+    (artifact?.referenceImages || []).map((image, index) => typeof image === 'string'
+      ? { id: `existing-${index}`, url: image, name: `Ảnh tham chiếu ${index + 1}`, status: 'Chưa đồng bộ' }
+      : { ...image, status: image.status || 'Chưa đồng bộ' })
+  );
 
   if (!artifact) return null;
 
@@ -366,6 +371,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
           {/* QR Code Tab */}
           {activeTab === 'qr' && (
+            <div>
             <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '28px', alignItems: 'center' }}>
               <div style={{
                 background: '#FFFFFF',
@@ -423,6 +429,58 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   </button>
                 </div>
               </div>
+            </div>
+            <section className="card" style={{ marginTop: '24px', padding: '20px', background: '#FAF7F2' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                <div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--color-burgundy-900)', marginBottom: '6px' }}>Ảnh tham chiếu nhận diện</h4>
+                  <p style={{ fontSize: '0.8125rem', lineHeight: '1.5', color: 'var(--color-charcoal-600)', maxWidth: '650px' }}>
+                    Ảnh được gắn với hiện vật <strong>{artifact.name}</strong>. Chọn nhiều góc chụp rõ nét; ảnh khách gửi để nhận diện không tự động thêm vào bộ ảnh này.
+                  </p>
+                </div>
+                {!readOnly && <label className="btn btn-primary btn-sm" style={{ cursor: referenceImages.length >= 20 ? 'not-allowed' : 'pointer', opacity: referenceImages.length >= 20 ? 0.55 : 1 }}>
+                  + Tải ảnh tham chiếu
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    disabled={referenceImages.length >= 20}
+                    style={{ display: 'none' }}
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
+                      const remaining = Math.max(0, 20 - referenceImages.length);
+                      setReferenceImages(current => [...current, ...files.slice(0, remaining).map((file, index) => ({
+                        id: `${Date.now()}-${index}-${file.name}`,
+                        url: URL.createObjectURL(file),
+                        name: file.name,
+                        status: 'Chờ kết nối BE'
+                      }))]);
+                      event.target.value = '';
+                    }}
+                  />
+                </label>}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '12px', fontSize: '0.75rem', color: 'var(--color-charcoal-600)' }}>
+                <span>{referenceImages.length}/20 ảnh</span>
+                <span>•</span>
+                <span>Chỉ quản trị viên / nhân viên bảo tàng có quyền chỉnh sửa</span>
+              </div>
+              {referenceImages.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: '12px', marginTop: '16px' }}>
+                {referenceImages.map(image => <div key={image.id} style={{ overflow: 'hidden', border: '1px solid var(--color-paper-border)', borderRadius: '8px', background: 'white' }}>
+                  <img src={image.url} alt={image.name} style={{ width: '100%', height: '112px', objectFit: 'cover', display: 'block' }} />
+                  <div style={{ padding: '8px' }}>
+                    <div title={image.name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', fontWeight: 600 }}>{image.name}</div>
+                    <div style={{ marginTop: '4px', fontSize: '0.6875rem', color: 'var(--color-charcoal-500)' }}>{image.status || 'Đã index'}</div>
+                    {!readOnly && <button type="button" onClick={() => setReferenceImages(current => current.filter(item => item.id !== image.id))} style={{ marginTop: '6px', fontSize: '0.7rem', color: 'var(--color-burgundy-700)' }}>Gỡ khỏi danh sách</button>}
+                  </div>
+                </div>)}
+              </div> : <div style={{ marginTop: '16px', padding: '24px', textAlign: 'center', border: '1px dashed var(--color-paper-border)', borderRadius: '8px', color: 'var(--color-charcoal-500)', fontSize: '0.8125rem' }}>
+                Chưa có ảnh tham chiếu. Tải ảnh hiện vật đã được nhân viên kiểm duyệt để chuẩn bị lập chỉ mục nhận diện.
+              </div>}
+              <p style={{ marginTop: '12px', fontSize: '0.7rem', color: 'var(--color-charcoal-500)' }}>
+                Bản giao diện hiện chỉ tạo xem trước trong phiên này; chưa tải file lên backend hay gọi AI Vision.
+              </p>
+            </section>
             </div>
           )}
 
