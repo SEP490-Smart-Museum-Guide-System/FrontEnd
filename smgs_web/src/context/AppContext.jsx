@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   initialMuseums,
   initialArtifacts,
@@ -12,6 +12,13 @@ import {
   initialAuditLogs,
   initialSystemCases
 } from '../data/mockData';
+import {
+  getMuseumsApi,
+  getCitiesApi,
+  createMuseumApi,
+  updateMuseumApi,
+  deleteMuseumApi
+} from '../services/museumApi';
 
 const AppContext = createContext();
 
@@ -386,6 +393,144 @@ export function AppProvider({ children }) {
     showToast('Đã cập nhật trạng thái tài khoản!');
   };
 
+  // Cities & Backend Museum Synchronization
+  const [cities, setCities] = useState([]);
+  const [isLoadingMuseums, setIsLoadingMuseums] = useState(false);
+
+  const loadCities = useCallback(async () => {
+    try {
+      const res = await getCitiesApi();
+      if (res?.data) {
+        setCities(res.data);
+      }
+    } catch (err) {
+      console.warn('Backend cities API offline, using fallback:', err.message);
+    }
+  }, []);
+
+  const loadMuseums = useCallback(async () => {
+    setIsLoadingMuseums(true);
+    try {
+      const res = await getMuseumsApi({ page: 1, pageSize: 50 });
+      const items = res?.data?.items;
+      if (items && items.length > 0) {
+        setMuseums(prevMuseums => {
+          return items.map((item) => {
+            const match = prevMuseums.find(
+              m => m.id === item.id || m.backendId === item.id || m.name.toLowerCase() === item.name.toLowerCase()
+            ) || initialMuseums.find(
+              m => m.name.toLowerCase() === item.name.toLowerCase()
+            );
+
+            return {
+              id: item.id,
+              backendId: item.id,
+              name: item.name,
+              shortName: match?.shortName || item.name,
+              code: match?.code || `MUS-${String(item.id).padStart(2, '0')}`,
+              address: item.address || '',
+              cityCode: item.cityCode || '01',
+              latitude: item.latitude !== null && item.latitude !== undefined ? Number(item.latitude) : (match?.latitude || 21.0257),
+              longitude: item.longitude !== null && item.longitude !== undefined ? Number(item.longitude) : (match?.longitude || 105.8584),
+              openingHours: item.openingHours || match?.openingHours || '08:00 - 17:00 (Thứ 3 - Chủ nhật)',
+              image: item.coverImageUrl || match?.image || '/assets/images/national-museum-web.jpg',
+              description: item.description || match?.description || '',
+              artifactCount: match?.artifactCount || 0,
+              visitorCountToday: match?.visitorCountToday || 0,
+              status: item.isActive ? 'active' : 'inactive',
+              googleMapsVisible: item.isActive,
+              mapPosition: match?.mapPosition || { x: 50, y: 50 },
+              buildings: match?.buildings || [
+                {
+                  id: `bld-${item.id}-01`,
+                  name: 'Tòa nhà chính',
+                  code: 'A',
+                  floors: [
+                    {
+                      id: `flr-${item.id}-01`,
+                      name: 'Tầng 1 — Trưng bày chuyên đề',
+                      number: 1,
+                      galleries: [
+                        { id: `gal-${item.id}-01`, name: 'Phòng Trưng bày Trung tâm', code: 'A1-MAIN', artifactCount: 0, theme: 'Hiện vật tổng quan' }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            };
+          });
+        });
+      }
+    } catch (err) {
+      console.warn('Backend museums API unavailable, preserving current museums:', err.message);
+    } finally {
+      setIsLoadingMuseums(false);
+    }
+  }, []);
+
+  // Sync cities and museums when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadCities();
+      loadMuseums();
+    }
+  }, [isAuthenticated, loadCities, loadMuseums]);
+
+  // Admin CRUD for Museums connected to Backend
+  const createMuseum = async (formData) => {
+    try {
+      const res = await createMuseumApi(formData);
+      const createdItem = res?.data;
+      if (createdItem) {
+        logAction('MUSEUM_CREATE', `Tạo bảo tàng mới: ${createdItem.name} (ID: ${createdItem.id})`);
+        showToast(`Đã tạo bảo tàng "${createdItem.name}" thành công trên máy chủ!`);
+        await loadMuseums();
+        return { success: true, data: createdItem };
+      }
+      return { success: false, error: 'Không nhận được dữ liệu phản hồi từ máy chủ.' };
+    } catch (err) {
+      const msg = err.message || 'Lỗi khi tạo bảo tàng mới trên Backend';
+      showToast(msg, 'warning');
+      return { success: false, error: msg };
+    }
+  };
+
+  const updateMuseum = async (id, formData) => {
+    try {
+      const target = museums.find(m => m.id === id);
+      const backendId = target?.backendId || (typeof id === 'number' ? id : null);
+      if (backendId) {
+        await updateMuseumApi(backendId, formData);
+      }
+      setMuseums(prev => prev.map(m => m.id === id ? { ...m, ...formData, backendId: backendId || m.backendId } : m));
+      logAction('MUSEUM_UPDATE', `Cập nhật thông tin bảo tàng: ${formData.name || target?.name}`);
+      showToast(`Đã lưu thay đổi cho bảo tàng "${formData.name || target?.name}"!`);
+      return { success: true };
+    } catch (err) {
+      const msg = err.message || 'Lỗi khi cập nhật thông tin bảo tàng';
+      showToast(msg, 'warning');
+      return { success: false, error: msg };
+    }
+  };
+
+  const deleteMuseum = async (id) => {
+    try {
+      const target = museums.find(m => m.id === id);
+      const backendId = target?.backendId || (typeof id === 'number' ? id : null);
+      if (backendId) {
+        await deleteMuseumApi(backendId);
+      }
+      setMuseums(prev => prev.map(m => m.id === id ? { ...m, status: 'inactive', googleMapsVisible: false } : m));
+      logAction('MUSEUM_DELETE', `Vô hiệu hóa bảo tàng: ${target?.name}`);
+      showToast(`Đã vô hiệu hóa bảo tàng "${target?.name}" trên hệ thống!`, 'warning');
+      return { success: true };
+    } catch (err) {
+      const msg = err.message || 'Lỗi khi vô hiệu hóa bảo tàng';
+      showToast(msg, 'warning');
+      return { success: false, error: msg };
+    }
+  };
+
   // Google Maps công khai
   const toggleMuseumGoogleMapsVisibility = (museumId) => {
     if (currentRole !== 'administrator') {
@@ -426,6 +571,13 @@ export function AppProvider({ children }) {
       setActiveTab,
       museums,
       setMuseums,
+      cities,
+      isLoadingMuseums,
+      loadCities,
+      loadMuseums,
+      createMuseum,
+      updateMuseum,
+      deleteMuseum,
       artifacts,
       addArtifact,
       updateArtifact,
