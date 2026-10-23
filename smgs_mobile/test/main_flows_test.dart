@@ -121,20 +121,8 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(host(const QRScanScreen()));
     await tester.pumpAndSettle();
-    await tapText(tester, 'Bật đèn mô phỏng');
-    expect(find.text('Tắt đèn mô phỏng'), findsOneWidget);
-    await tapText(tester, 'Quét mã mô phỏng');
-    expect(
-      tester
-          .widget<ArtifactDetailScreen>(find.byType(ArtifactDetailScreen))
-          .artifact
-          .id,
-      'artifact_1',
-    );
-    expect(
-      VisitStore.instance.history.single.artifactIds,
-      contains('artifact_1'),
-    );
+    expect(find.text('Mở camera quét QR'), findsOneWidget);
+    expect(find.text('Mã QR hoặc URL trên mã QR'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

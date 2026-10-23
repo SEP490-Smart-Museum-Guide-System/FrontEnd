@@ -6,6 +6,7 @@ import '../../models/artifact.dart';
 import '../../data/visit_store.dart';
 import '../explore/explore_screen.dart';
 import 'artifact_detail_screen.dart';
+import 'artifact_qr_scanner.dart';
 
 class QRScanScreen extends StatefulWidget {
   const QRScanScreen({
@@ -66,7 +67,9 @@ class _QRScanScreenState extends State<QRScanScreen> {
     ),
   );
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    if (!widget.recognition) return const ArtifactQrScanner();
+    return MuseumPage(
     back: true,
     title: widget.recognition ? 'Nhận diện hiện vật' : 'Quét mã hiện vật',
     eyebrow: 'Khám phá tại bảo tàng',
@@ -255,4 +258,5 @@ class _QRScanScreenState extends State<QRScanScreen> {
       ),
     ],
   );
-}
+
+  }}

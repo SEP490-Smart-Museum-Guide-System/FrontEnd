@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import ArtifactDetailModal from './ArtifactDetailModal';
 import ArtifactEditModal from './ArtifactEditModal';
+import QrTestArtifact from './QrTestArtifact';
 
 export default function ArtifactList({ onOpenAIStudio }) {
   const {
@@ -73,6 +74,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
 
   return (
     <div>
+      {currentRole === 'museumStaff' && <QrTestArtifact />}
       {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
