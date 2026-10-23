@@ -19,6 +19,19 @@ export function parseStaffSession(data) {
     user: { id: data.email, name: data.fullName, email: data.email, role, status: 'active', museumId: 'mus-01' } };
 }
 
+export function getAuthToken(storage = globalThis.localStorage) {
+  const directToken = storage.getItem('smgs_web_jwt_token');
+  if (directToken) return directToken;
+  try {
+    const raw = storage.getItem(sessionKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.accessToken) return parsed.accessToken;
+    }
+  } catch (_) {}
+  return null;
+}
+
 export function clearWebSession(storage = globalThis.localStorage) {
   for (const key of [sessionKey, 'smgs_web_authenticated', 'smgs_web_user_email', 'smgs_web_role', 'smgs_web_jwt_token']) {
     storage.removeItem(key);
@@ -34,6 +47,12 @@ export function saveWebSession(data, storage = globalThis.localStorage) {
   const session = parseStaffSession(data);
   clearWebSession(storage);
   storage.setItem(sessionKey, JSON.stringify(data));
+  if (data?.accessToken) {
+    storage.setItem('smgs_web_jwt_token', data.accessToken);
+    storage.setItem('smgs_web_authenticated', 'true');
+    storage.setItem('smgs_web_user_email', data.email);
+    storage.setItem('smgs_web_role', session.user.role);
+  }
   return session;
 }
 

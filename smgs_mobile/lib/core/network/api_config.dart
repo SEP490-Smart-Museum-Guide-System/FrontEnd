@@ -34,4 +34,11 @@ class ApiConfig {
 
   // Navigation endpoints
   static String get outdoorRoutesUrl => '$baseUrl/navigation/outdoor/routes';
+
+  // Artifact endpoints
+  static String get artifactsUrl => '$baseUrl/artifacts';
+  static String artifactDetailUrl(dynamic id) => '$baseUrl/artifacts/$id';
+  static String artifactScanUrl(String code) => '$baseUrl/artifacts/scan/${Uri.encodeComponent(code)}';
+  static String publishedContentUrl(dynamic artifactId, {String lang = 'vi'}) =>
+      '$baseUrl/artifacts/$artifactId/contents/published?languageCode=$lang';
 }

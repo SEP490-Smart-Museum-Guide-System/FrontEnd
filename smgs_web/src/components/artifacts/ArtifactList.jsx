@@ -42,7 +42,9 @@ export default function ArtifactList({ onOpenAIStudio }) {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   // Filter artifacts
-  const scopedArtifacts = currentRole === 'administrator' ? artifacts : artifacts.filter(art => art.museumId === selectedMuseumId);
+  const scopedArtifacts = currentRole === 'administrator' 
+    ? artifacts 
+    : artifacts.filter(art => String(art.museumId) === String(selectedMuseumId) || art.museumId === selectedMuseumId);
   const filteredArtifacts = scopedArtifacts.filter(art => {
     if (selectedGallery !== 'all' && art.galleryName !== selectedGallery) {
       return false;

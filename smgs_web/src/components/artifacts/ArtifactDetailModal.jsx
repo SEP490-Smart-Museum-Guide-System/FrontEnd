@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '@google/model-viewer';
+import { useApp } from '../../context/AppContext';
+import { getArtifactQrImageUrl } from '../../services/artifactApi';
+import { getPublishedArtifactContentApi } from '../../services/contentSubmissionApi';
 import {
   X,
   QrCode,
@@ -14,71 +17,96 @@ import {
   Check,
   Play,
   Pause,
-  HelpCircle
+  HelpCircle,
+  Download,
+  RefreshCw
 } from 'lucide-react';
 
 export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit, readOnly = false }) {
+  const { downloadArtifactQr, regenerateArtifactQr, currentRole } = useApp();
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copiedQR, setCopiedQR] = useState(false);
+  const [qrImgError, setQrImgError] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [activeQrCode, setActiveQrCode] = useState(artifact?.qrCode || '');
+  const [publishedContent, setPublishedContent] = useState(null);
   const [referenceImages, setReferenceImages] = useState(() =>
     (artifact?.referenceImages || []).map((image, index) => typeof image === 'string'
       ? { id: `existing-${index}`, url: image, name: `Ảnh tham chiếu ${index + 1}`, status: 'Chưa đồng bộ' }
       : { ...image, status: image.status || 'Chưa đồng bộ' })
   );
 
+  useEffect(() => {
+    const backendId = typeof artifact?.id === 'number' ? artifact.id : artifact?.backendId;
+    if (backendId) {
+      getPublishedArtifactContentApi(backendId, 'vi')
+        .then(res => {
+          if (res?.data) {
+            setPublishedContent(res.data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [artifact]);
+
   if (!artifact) return null;
 
   const handleCopyQR = () => {
-    navigator.clipboard?.writeText(artifact.qrCode);
+    navigator.clipboard?.writeText(activeQrCode || artifact.qrCode);
     setCopiedQR(true);
     setTimeout(() => setCopiedQR(false), 2000);
   };
 
+  const handleRegenerateQR = async () => {
+    if (!window.confirm(`Bạn có chắc chắn muốn cấp mã QR mới cho "${artifact.name}"?\nKhách tham quan quét mã cũ sẽ không truy cập được nữa.`)) {
+      return;
+    }
+    setIsRegenerating(true);
+    try {
+      const res = await regenerateArtifactQr(artifact.id);
+      if (res?.qrCode) {
+        setActiveQrCode(res.qrCode);
+        setQrImgError(false);
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   const handlePrintQR = () => {
+    const qrSrc = !qrImgError ? getArtifactQrImageUrl(artifact.id) : '';
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
         <head>
-          <title>In Mã QR Tham Quan — ${artifact.name}</title>
+          <title>In Bảng Mã QR — ${artifact.name}</title>
           <style>
-            body { font-family: sans-serif; text-align: center; padding: 40px; }
-            .card { border: 2px solid #8B1E28; border-radius: 16px; padding: 30px; max-width: 400px; margin: 0 auto; }
-            h2 { color: #8B1E28; margin-bottom: 4px; }
-            p { color: #666; margin-top: 0; }
-            .code { font-family: monospace; font-size: 18px; font-weight: bold; background: #eee; padding: 8px 16px; border-radius: 8px; display: inline-block; margin: 15px 0; }
-            .qr-box { margin: 20px auto; width: 220px; height: 220px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; background: #fafafa; }
-            .footer { font-size: 12px; color: #888; margin-top: 20px; }
+            body { font-family: 'Times New Roman', serif; text-align: center; padding: 40px; background: #FFF; color: #1E232B; }
+            .card { border: 3px double #800020; border-radius: 12px; padding: 32px; max-width: 420px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .brand { font-size: 11px; text-transform: uppercase; color: #C5A059; font-weight: bold; letter-spacing: 2px; }
+            h2 { color: #800020; margin: 8px 0 4px; font-size: 22px; }
+            p { color: #555; margin: 0 0 16px; font-size: 13px; font-style: italic; }
+            .code { font-family: monospace; font-size: 16px; font-weight: bold; background: #FAF7F2; padding: 6px 14px; border-radius: 6px; display: inline-block; margin: 12px 0; border: 1px solid #E8E2D8; color: #800020; }
+            .qr-box { margin: 16px auto; width: 210px; height: 210px; border: 1px solid #E8E2D8; display: flex; align-items: center; justify-content: center; background: #FAF7F2; border-radius: 8px; }
+            .qr-box img { max-width: 190px; max-height: 190px; }
+            .footer { font-size: 11px; color: #777; margin-top: 16px; line-height: 1.5; }
           </style>
         </head>
         <body>
           <div class="card">
-            <div style="font-size: 13px; text-transform: uppercase; color: #B8860B; font-weight: bold;">Smart Museum Guide System</div>
+            <div class="brand">Smart Museum Guide System</div>
             <h2>${artifact.name}</h2>
-            <p>${artifact.museumName} — ${artifact.galleryName}</p>
+            <p>${artifact.museumName || ''} — ${artifact.galleryName || ''}</p>
             <div class="qr-box">
-              <svg viewBox="0 0 100 100" width="180" height="180">
-                <rect width="100" height="100" fill="#ffffff" />
-                <rect x="10" y="10" width="25" height="25" fill="#8B1E28" />
-                <rect x="15" y="15" width="15" height="15" fill="#ffffff" />
-                <rect x="18" y="18" width="9" height="9" fill="#8B1E28" />
-                <rect x="65" y="10" width="25" height="25" fill="#8B1E28" />
-                <rect x="70" y="15" width="15" height="15" fill="#ffffff" />
-                <rect x="73" y="18" width="9" height="9" fill="#8B1E28" />
-                <rect x="10" y="65" width="25" height="25" fill="#8B1E28" />
-                <rect x="15" y="70" width="15" height="15" fill="#ffffff" />
-                <rect x="18" y="73" width="9" height="9" fill="#8B1E28" />
-                <rect x="42" y="42" width="16" height="16" fill="#D4AF37" />
-                <rect x="42" y="15" width="6" height="16" fill="#14181E" />
-                <rect x="65" y="45" width="20" height="6" fill="#14181E" />
-                <rect x="45" y="70" width="15" height="15" fill="#14181E" />
-                <rect x="70" y="70" width="10" height="10" fill="#14181E" />
-              </svg>
+              ${qrSrc ? `<img src="${qrSrc}" alt="QR Code" />` : `<span style="font-family: monospace; font-weight: bold;">${activeQrCode || artifact.qrCode}</span>`}
             </div>
-            <div class="code">${artifact.qrCode}</div>
-            <div class="footer">Quét mã bằng ứng dụng SMGS để nghe thuyết minh và trả lời câu hỏi nhận huy hiệu di sản.</div>
+            <div class="code">${activeQrCode || artifact.qrCode}</div>
+            <div class="footer">Quét mã bằng ứng dụng di động SMGS để lắng nghe thuyết minh đa phương tiện và tương tác di sản.</div>
           </div>
-          <script>window.print();</script>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
         </body>
       </html>
     `);
@@ -267,9 +295,31 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ fontSize: '0.9375rem', fontWeight: '700', marginBottom: '8px', color: 'var(--color-burgundy-800)' }}>
-                    Nội dung Thuyết minh Chi tiết
-                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '0.9375rem', fontWeight: '700', color: 'var(--color-burgundy-800)', margin: 0 }}>
+                      Nội dung Thuyết minh Chi tiết
+                    </h4>
+                    {publishedContent && (
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: '600',
+                        color: '#166534',
+                        background: '#DCFCE7',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <Check size={12} /> Đã Giám tuyển duyệt (v{publishedContent.versionNo})
+                      </span>
+                    )}
+                  </div>
+                  {publishedContent && (
+                    <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--color-burgundy-900)', marginBottom: '6px' }}>
+                      {publishedContent.title}
+                    </div>
+                  )}
                   <div style={{
                     fontSize: '0.875rem',
                     lineHeight: '1.7',
@@ -279,7 +329,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     overflowY: 'auto',
                     paddingRight: '8px'
                   }}>
-                    {artifact.fullDesc}
+                    {publishedContent?.description || artifact.fullDesc}
                   </div>
                 </div>
 
@@ -381,27 +431,36 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 textAlign: 'center',
                 boxShadow: 'var(--shadow-md)'
               }}>
-                <div style={{ width: '200px', height: '200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg viewBox="0 0 100 100" width="190" height="190">
-                    <rect width="100" height="100" fill="#ffffff" />
-                    <rect x="10" y="10" width="25" height="25" fill="#8B1E28" />
-                    <rect x="15" y="15" width="15" height="15" fill="#ffffff" />
-                    <rect x="18" y="18" width="9" height="9" fill="#8B1E28" />
-                    <rect x="65" y="10" width="25" height="25" fill="#8B1E28" />
-                    <rect x="70" y="15" width="15" height="15" fill="#ffffff" />
-                    <rect x="73" y="18" width="9" height="9" fill="#8B1E28" />
-                    <rect x="10" y="65" width="25" height="25" fill="#8B1E28" />
-                    <rect x="15" y="70" width="15" height="15" fill="#ffffff" />
-                    <rect x="18" y="73" width="9" height="9" fill="#8B1E28" />
-                    <rect x="42" y="42" width="16" height="16" fill="#D4AF37" />
-                    <rect x="42" y="15" width="6" height="16" fill="#14181E" />
-                    <rect x="65" y="45" width="20" height="6" fill="#14181E" />
-                    <rect x="45" y="70" width="15" height="15" fill="#14181E" />
-                    <rect x="70" y="70" width="10" height="10" fill="#14181E" />
-                  </svg>
+                <div style={{ width: '200px', height: '200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF7F2', borderRadius: '8px', overflow: 'hidden' }}>
+                  {!qrImgError ? (
+                    <img
+                      src={getArtifactQrImageUrl(artifact.id)}
+                      alt={`Mã QR ${artifact.name}`}
+                      style={{ width: '190px', height: '190px', objectFit: 'contain' }}
+                      onError={() => setQrImgError(true)}
+                    />
+                  ) : (
+                    <svg viewBox="0 0 100 100" width="180" height="180">
+                      <rect width="100" height="100" fill="#ffffff" />
+                      <rect x="10" y="10" width="25" height="25" fill="#8B1E28" />
+                      <rect x="15" y="15" width="15" height="15" fill="#ffffff" />
+                      <rect x="18" y="18" width="9" height="9" fill="#8B1E28" />
+                      <rect x="65" y="10" width="25" height="25" fill="#8B1E28" />
+                      <rect x="70" y="15" width="15" height="15" fill="#ffffff" />
+                      <rect x="73" y="18" width="9" height="9" fill="#8B1E28" />
+                      <rect x="10" y="65" width="25" height="25" fill="#8B1E28" />
+                      <rect x="15" y="70" width="15" height="15" fill="#ffffff" />
+                      <rect x="18" y="73" width="9" height="9" fill="#8B1E28" />
+                      <rect x="42" y="42" width="16" height="16" fill="#D4AF37" />
+                      <rect x="42" y="15" width="6" height="16" fill="#14181E" />
+                      <rect x="65" y="45" width="20" height="6" fill="#14181E" />
+                      <rect x="45" y="70" width="15" height="15" fill="#14181E" />
+                      <rect x="70" y="70" width="10" height="10" fill="#14181E" />
+                    </svg>
+                  )}
                 </div>
                 <div style={{ marginTop: '12px', fontWeight: '700', fontSize: '0.875rem', fontFamily: 'monospace', color: 'var(--color-burgundy-800)' }}>
-                  {artifact.qrCode}
+                  {activeQrCode || artifact.qrCode}
                 </div>
               </div>
 
@@ -419,10 +478,30 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <li>Mở câu hỏi tương tác để tích điểm huy hiệu.</li>
                 </ul>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button type="button" onClick={handlePrintQR} className="btn btn-primary">
-                    <Printer size={16} /> In Mã QR & Bảng Nhãn
+                    <Printer size={16} /> In Bảng Mã QR
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadArtifactQr(artifact.id, artifact.name)}
+                    className="btn btn-secondary"
+                    title="Tải ảnh PNG từ Backend"
+                  >
+                    <Download size={16} /> Tải ảnh QR PNG
+                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      disabled={isRegenerating}
+                      onClick={handleRegenerateQR}
+                      className="btn btn-secondary"
+                      title="Cấp mã QR hoàn toàn mới từ Backend"
+                    >
+                      <RefreshCw size={16} className={isRegenerating ? 'spin-animation' : ''} />
+                      <span>{isRegenerating ? 'Đang cấp lại...' : 'Tạo lại mã QR'}</span>
+                    </button>
+                  )}
                   <button type="button" onClick={handleCopyQR} className="btn btn-secondary">
                     {copiedQR ? <Check size={16} color="var(--color-success)" /> : <QrCode size={16} />}
                     {copiedQR ? 'Đã sao chép mã!' : 'Sao chép chuỗi mã'}

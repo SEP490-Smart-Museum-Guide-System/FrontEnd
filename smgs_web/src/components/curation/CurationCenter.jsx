@@ -18,6 +18,7 @@ import {
   Search
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getCurationContentByIdApi } from '../../services/curationApi';
 
 const statusLabel = {
   pending_review: 'Chờ thẩm định',
@@ -64,34 +65,45 @@ export default function CurationCenter() {
   });
 
   const museumArtifacts = useMemo(
-    () => artifacts.filter(art => art.museumId === currentMuseum.id),
-    [artifacts, currentMuseum.id]
+    () => artifacts.filter(art => 
+      String(art.museumId) === String(currentMuseum?.id) || 
+      art.museumId === currentMuseum?.id ||
+      String(art.museumId) === String(currentMuseum?.backendId)
+    ),
+    [artifacts, currentMuseum]
   );
 
   const museumArtifactIds = useMemo(
-    () => new Set(museumArtifacts.map(item => item.id)),
+    () => new Set(museumArtifacts.map(item => String(item.id))),
     [museumArtifacts]
   );
 
   const queue = useMemo(
-    () => curationQueue.filter(item => museumArtifactIds.has(item.targetArtifactId)),
-    [curationQueue, museumArtifactIds]
+    () => curationQueue.filter(item => {
+      if (item.museumId && (currentMuseum?.id || currentMuseum?.backendId)) {
+        return String(item.museumId) === String(currentMuseum?.id) || String(item.museumId) === String(currentMuseum?.backendId);
+      }
+      if (!item.targetArtifactId) return true;
+      return museumArtifactIds.has(String(item.targetArtifactId));
+    }),
+    [curationQueue, currentMuseum, museumArtifactIds]
   );
 
   const filteredItems = useMemo(() => {
     return queue.filter(item => {
       const matchStatus = filter === 'all' || item.status === filter;
-      const matchSearch = searchTerm.trim() === '' ||
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.targetArtifactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.submittedBy.toLowerCase().includes(searchTerm.toLowerCase());
+      const artName = (item.targetArtifactName || item.artifactName || '').toLowerCase();
+      const title = (item.title || '').toLowerCase();
+      const submitter = (item.submittedBy || '').toLowerCase();
+      const term = searchTerm.trim().toLowerCase();
+      const matchSearch = term === '' || title.includes(term) || artName.includes(term) || submitter.includes(term);
       return matchStatus && matchSearch;
     });
   }, [queue, filter, searchTerm]);
 
   const countByStatus = (status) => queue.filter(item => item.status === status).length;
 
-  const openItem = (item) => {
+  const openItem = async (item) => {
     setSelected(item);
     setNote(item.feedback || '');
     setDecision('');
@@ -102,6 +114,23 @@ export default function CurationCenter() {
       ageAppropriate: true,
       sourceVerified: true
     });
+
+    const backendId = typeof item.id === 'number' ? item.id : item.backendId;
+    if (backendId) {
+      try {
+        const res = await getCurationContentByIdApi(backendId);
+        if (res?.data) {
+          setSelected(prev => (prev && prev.id === item.id) ? {
+            ...prev,
+            title: res.data.title || prev.title,
+            proposedContent: res.data.description || prev.proposedContent,
+            feedback: res.data.reviewNote || prev.feedback,
+            status: res.data.status || prev.status,
+            versionNo: res.data.versionNo ?? prev.versionNo
+          } : prev);
+        }
+      } catch (_) {}
+    }
   };
 
   const closeItem = () => {
@@ -282,7 +311,7 @@ export default function CurationCenter() {
                         )}
                       </div>
                       <small style={{ color: 'var(--color-charcoal-500)', display: 'block', marginTop: '2px' }}>
-                        Hiện vật: <strong style={{ color: 'var(--color-burgundy-700)' }}>{item.targetArtifactName}</strong> · Người nộp: {item.submittedBy} · {item.submittedDate}
+                        Hiện vật: <strong style={{ color: 'var(--color-burgundy-700)' }}>{item.targetArtifactName || item.artifactName || `Hiện vật #${item.targetArtifactId}`}</strong> · Người nộp: {item.submittedBy || 'Nhân viên bảo tàng'} · {item.submittedDate || 'Vừa xong'}
                       </small>
                       <p style={{ margin: '6px 0 0', color: 'var(--color-charcoal-700)', fontSize: '.82rem', lineHeight: 1.4 }}>
                         {item.changesSummary}
@@ -347,7 +376,7 @@ export default function CurationCenter() {
                   {selected.title}
                 </h2>
                 <p style={{ color: 'var(--color-charcoal-500)', fontSize: '.8rem', marginTop: '2px' }}>
-                  Hiện vật tham chiếu: <strong>{selected.targetArtifactName}</strong> (ID: {selected.targetArtifactId}) · Đệ trình bởi: {selected.submittedBy} ({selected.submittedDate})
+                  Hiện vật tham chiếu: <strong>{selected.targetArtifactName || selected.artifactName || `Hiện vật #${selected.targetArtifactId}`}</strong> (ID: {selected.targetArtifactId}) · Đệ trình bởi: {selected.submittedBy || 'Nhân viên bảo tàng'} ({selected.submittedDate || 'Vừa xong'})
                 </p>
               </div>
 

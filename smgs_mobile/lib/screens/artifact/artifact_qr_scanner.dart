@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/artifact_scan_service.dart';
+import '../../models/artifact.dart';
 import '../../widgets/museum_ui.dart';
+import 'artifact_detail_screen.dart';
 
 class ArtifactQrScanner extends StatefulWidget {
   const ArtifactQrScanner({super.key});
@@ -55,6 +57,37 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                   style: AppTextStyles.bodyLarge,
                 ),
               ],
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: 'Khám phá chi tiết hiện vật',
+                icon: Icons.auto_awesome,
+                onPressed: () {
+                  final contentsList = data['contents'] as List? ?? [];
+                  final firstContent = contentsList.isNotEmpty ? contentsList[0] as Map<String, dynamic> : null;
+                  final a = Artifact(
+                    id: data['id']?.toString() ?? '1',
+                    name: data['name'] as String,
+                    category: 'Hiện vật di sản',
+                    museumId: data['museumId']?.toString() ?? '1',
+                    imageUrl: 'assets/images/ngoc-lu-web.jpg',
+                    period: 'Thời kỳ lịch sử',
+                    location: data['galleryName'] as String? ?? 'Phòng trưng bày',
+                    summary: firstContent?['title'] as String? ?? data['name'] as String,
+                    story: firstContent?['description'] as String? ?? '',
+                    aiGuide: 'Hỏi Trợ lý AI về ${data['name']}',
+                    quizPrompt: 'Tìm hiểu về ${data['name']}',
+                    modelUrl: null,
+                  );
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ArtifactDetailScreen(
+                        artifact: a,
+                        museumName: data['museumName'] as String? ?? 'Bảo tàng',
+                      ),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),

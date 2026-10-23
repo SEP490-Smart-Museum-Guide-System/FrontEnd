@@ -1,7 +1,9 @@
-const API_BASE = 'http://localhost:5169/api';
+import { getAuthToken } from './auth';
+
+const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('smgs_web_jwt_token');
+  const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

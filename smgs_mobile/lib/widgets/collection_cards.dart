@@ -233,7 +233,10 @@ class ArtifactCard extends StatelessWidget {
             ArtifactDetailScreen(
               artifact: artifact,
               museumName: mockMuseums
-                  .firstWhere((m) => m.id == artifact.museumId)
+                  .firstWhere(
+                    (m) => m.id == artifact.museumId,
+                    orElse: () => mockMuseums.first,
+                  )
                   .name,
             ),
           ),

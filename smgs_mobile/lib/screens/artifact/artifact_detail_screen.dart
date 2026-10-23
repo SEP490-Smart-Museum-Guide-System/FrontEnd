@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../models/artifact.dart';
+import '../../services/discovery_api_service.dart';
 import '../../data/visit_store.dart';
 import '../ai_guide/ai_guide_screen.dart';
 import 'quiz_screen.dart';
@@ -24,6 +25,8 @@ class ArtifactDetailScreen extends StatefulWidget {
 }
 
 class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
+  Map<String, dynamic>? _publishedContent;
+
   @override
   void initState() {
     super.initState();
@@ -32,11 +35,26 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         VisitStore.instance.view(widget.artifact);
       }
     });
+    _loadPublishedContent();
+  }
+
+  Future<void> _loadPublishedContent() async {
+    final aId = int.tryParse(widget.artifact.id) ?? (widget.artifact.id == 'artifact_1' ? 1 : null);
+    if (aId != null) {
+      try {
+        final content = await DiscoveryApiService.fetchPublishedContent(aId);
+        if (mounted) {
+          setState(() => _publishedContent = content);
+        }
+      } catch (_) {}
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final a = widget.artifact;
+    final summary = _publishedContent?['title'] as String? ?? a.summary;
+    final story = _publishedContent?['description'] as String? ?? a.story;
     return StoryScaffold(
       title: a.name,
       photo: a.id == 'artifact_1'
@@ -98,7 +116,32 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           style: AppTextStyles.bodySmall,
         ),
         const Divider(),
-        Text(a.summary, style: AppTextStyles.bodyLarge),
+        if (_publishedContent != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.mutedGold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.mutedGold),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified, size: 14, color: AppColors.deepBurgundy),
+                SizedBox(width: 6),
+                Text(
+                  'Thuyết minh chính thức đã qua Giám tuyển duyệt',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.deepBurgundy,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Text(summary, style: AppTextStyles.bodyLarge),
         const SizedBox(height: 24),
         PrimaryButton(
           label: 'Hỏi hướng dẫn viên',
@@ -111,7 +154,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           icon: Icons.menu_book_outlined,
           onPressed: () => openPage(context, NarrationScreen(artifact: a)),
         ),
-        if (a.id == 'artifact_1') ...[
+        if (a.id == 'artifact_1' || a.id == '1') ...[
           const SizedBox(height: 12),
           SecondaryButton(
             label: 'Xem mô hình 3D',
@@ -120,7 +163,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           ),
         ],
         const SectionHeading('Những điều còn lưu lại'),
-        ScrollReveal(child: Text(a.story, style: AppTextStyles.bodyLarge)),
+        ScrollReveal(child: Text(story, style: AppTextStyles.bodyLarge)),
         const SizedBox(height: 24),
         // Khối quyết định sau khi đọc xong theo bối cảnh U2
         ListenableBuilder(

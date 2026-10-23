@@ -18,7 +18,11 @@ import {
 
 export default function AIContentStudio({ initialArtifact }) {
   const { artifacts, currentMuseum, submitToCuration, showToast } = useApp();
-  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
+  const museumArtifacts = artifacts.filter(item => 
+    String(item.museumId) === String(currentMuseum?.id) || 
+    item.museumId === currentMuseum?.id ||
+    String(item.museumId) === String(currentMuseum?.backendId)
+  );
 
   const [selectedArtifactId, setSelectedArtifactId] = useState(
     initialArtifact?.id || museumArtifacts[0]?.id || ''
@@ -31,10 +35,11 @@ export default function AIContentStudio({ initialArtifact }) {
   const [difficulty, setDifficulty] = useState('medium'); // easy | medium | hard
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedOutput, setGeneratedOutput] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const selectedArtifact = museumArtifacts.find(a => a.id === selectedArtifactId) || museumArtifacts[0];
+  const selectedArtifact = museumArtifacts.find(a => String(a.id) === String(selectedArtifactId)) || museumArtifacts[0];
 
   useEffect(() => {
     if (initialArtifact?.id) {
@@ -143,21 +148,27 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
   };
 
   // Submit to Curation Queue
-  const handleSubmitForReview = () => {
-    if (!generatedOutput) return;
+  const handleSubmitForReview = async () => {
+    if (!generatedOutput || !selectedArtifact) return;
 
-    submitToCuration({
-      type: activeMode === 'narration' ? 'audio_narration' : activeMode === 'quiz' ? 'quiz' : 'artifact_update',
-      title: `Xưởng nội dung AI: ${activeMode === 'narration' ? 'Thuyết minh' : activeMode === 'quiz' ? 'Bộ câu hỏi' : 'Tư liệu di sản'} — ${selectedArtifact.name} (${audience === 'children' ? 'Thiếu nhi' : audience === 'scholar' ? 'Học thuật' : 'Phổ thông'})`,
-      targetArtifactId: selectedArtifact.id,
-      targetArtifactName: selectedArtifact.name,
-      submittedBy: 'Nguyễn Mai Anh (Nhân viên bảo tàng)',
-      priority: 'high',
-      currentVersion: selectedArtifact.shortDesc || 'Bản cơ bản',
-      proposedContent: generatedOutput,
-      changesSummary: `Nội dung được tạo tại xưởng nội dung AI dành cho hiện vật ${selectedArtifact.name}.`,
-      feedback: ''
-    });
+    setIsSubmitting(true);
+    try {
+      await submitToCuration({
+        type: activeMode === 'narration' ? 'audio_narration' : activeMode === 'quiz' ? 'quiz' : 'artifact_update',
+        title: `Xưởng nội dung AI: ${activeMode === 'narration' ? 'Thuyết minh' : activeMode === 'quiz' ? 'Bộ câu hỏi' : 'Tư liệu di sản'} — ${selectedArtifact.name} (${audience === 'children' ? 'Thiếu nhi' : audience === 'scholar' ? 'Học thuật' : 'Phổ thông'})`,
+        targetArtifactId: selectedArtifact.id,
+        targetArtifactName: selectedArtifact.name,
+        languageCode: targetLang || 'vi',
+        submittedBy: 'Nhân viên bảo tàng',
+        priority: 'high',
+        currentVersion: selectedArtifact.shortDesc || 'Bản cơ bản',
+        proposedContent: generatedOutput,
+        changesSummary: `Nội dung được tạo tại xưởng nội dung AI dành cho hiện vật ${selectedArtifact.name}.`,
+        feedback: ''
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCopy = () => {
@@ -462,10 +473,11 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
 
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={handleSubmitForReview}
                     className="btn btn-primary"
                   >
-                    <Send size={16} /> Gửi sang Hàng đợi Kiểm duyệt
+                    <Send size={16} /> {isSubmitting ? 'Đang gửi...' : 'Gửi sang Hàng đợi Kiểm duyệt'}
                   </button>
                 </div>
               </div>
