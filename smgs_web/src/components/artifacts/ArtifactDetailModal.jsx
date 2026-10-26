@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import '@google/model-viewer';
 import { useApp } from '../../context/AppContext';
 import { getArtifactQrImageUrl } from '../../services/artifactApi';
 import { getPublishedArtifactContentApi } from '../../services/contentSubmissionApi';
+import { generateSpeechApi } from '../../services/ttsApi';
+import { uploadReferenceImageApi, deleteReferenceImagesApi, checkVisionHealthApi } from '../../services/visionApi';
+import { checkScanHealthApi, submitScanJobApi, getScanJobStatusApi, approveScanJobApi } from '../../services/scan3dApi';
 import {
   X,
   QrCode,
@@ -36,6 +39,240 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
       ? { id: `existing-${index}`, url: image, name: `Ảnh tham chiếu ${index + 1}`, status: 'Chưa đồng bộ' }
       : { ...image, status: image.status || 'Chưa đồng bộ' })
   );
+
+  const audioRef = useRef(null);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsAudioUrl, setTtsAudioUrl] = useState(null);
+  const [ttsProgress, setTtsProgress] = useState(0);
+  const [ttsDuration, setTtsDuration] = useState('00:00');
+  const [ttsCurrentTime, setTtsCurrentTime] = useState('00:00');
+  const [ttsSpeed, setTtsSpeed] = useState(1.0);
+  const [ttsError, setTtsError] = useState(null);
+  const [ttsVoice, setTtsVoice] = useState('');
+  const [ttsCacheHit, setTtsCacheHit] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const formatAudioTime = (sec) => {
+    if (!sec || isNaN(sec)) return '00:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleToggleAudio = async () => {
+    if (isPlayingAudio && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (audioRef.current && ttsAudioUrl) {
+      audioRef.current.playbackRate = ttsSpeed;
+      audioRef.current.play()
+        .then(() => setIsPlayingAudio(true))
+        .catch(err => setTtsError('Không thể phát âm thanh: ' + err.message));
+      return;
+    }
+
+    const narrationScript = (
+      publishedContent?.narration ||
+      publishedContent?.description ||
+      artifact?.audioNarration ||
+      artifact?.description ||
+      artifact?.historicalContext ||
+      `Hiện vật ${artifact?.name || ''}. Niên đại ${artifact?.period || 'chưa rõ'}. ${artifact?.historicalSignificance || ''}`
+    ).trim();
+
+    setTtsLoading(true);
+    setTtsError(null);
+    try {
+      const res = await generateSpeechApi({
+        text: narrationScript,
+        speed: ttsSpeed,
+        language: 'vi-VN'
+      });
+      setTtsAudioUrl(res.audioUrl);
+      setTtsVoice(res.voice);
+      setTtsCacheHit(res.cacheHit);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(res.audioUrl);
+      audio.playbackRate = ttsSpeed;
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        if (audio.duration) {
+          setTtsProgress((audio.currentTime / audio.duration) * 100);
+          setTtsCurrentTime(formatAudioTime(audio.currentTime));
+          setTtsDuration(formatAudioTime(audio.duration));
+        }
+      };
+
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        setTtsProgress(0);
+        setTtsCurrentTime('00:00');
+      };
+
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        setTtsError('Lỗi khi phát tệp âm thanh WAV từ microservice');
+      };
+
+      await audio.play();
+      setIsPlayingAudio(true);
+    } catch (err) {
+      setTtsError(err.message || 'Dịch vụ TTS AI (Port 8000) chưa kết nối.');
+      setIsPlayingAudio(false);
+    } finally {
+      setTtsLoading(false);
+    }
+  };
+
+  const handleChangeSpeed = (newSpeed) => {
+    setTtsSpeed(newSpeed);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = newSpeed;
+    }
+  };
+
+  const [visionHealth, setVisionHealth] = useState(null);
+  const [isSyncingVision, setIsSyncingVision] = useState(false);
+  const [visionSyncError, setVisionSyncError] = useState(null);
+
+  useEffect(() => {
+    checkVisionHealthApi().then(setVisionHealth).catch(() => {});
+  }, []);
+
+  const handleSyncReferenceToVision = async (imageItem) => {
+    if (!imageItem.file) {
+      alert('Ảnh này không có tệp nguồn trong phiên để đồng bộ lại.');
+      return;
+    }
+    const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
+    setReferenceImages(prev => prev.map(img => img.id === imageItem.id ? { ...img, status: 'Đang trích xuất vector 512d...' } : img));
+    try {
+      await uploadReferenceImageApi({ artifactId: targetArtifactId, file: imageItem.file });
+      setReferenceImages(prev => prev.map(img => img.id === imageItem.id ? { ...img, status: 'Đã index vào AI Vision' } : img));
+    } catch (err) {
+      setReferenceImages(prev => prev.map(img => img.id === imageItem.id ? { ...img, status: 'Lỗi: ' + err.message } : img));
+    }
+  };
+
+  const handleSyncAllReferences = async () => {
+    const unsynced = referenceImages.filter(img => img.file && !img.status?.includes('Đã index'));
+    if (!unsynced.length) {
+      alert('Tất cả ảnh tham chiếu mới đã được đồng bộ vào AI Vision.');
+      return;
+    }
+    setIsSyncingVision(true);
+    setVisionSyncError(null);
+    const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
+    for (const img of unsynced) {
+      setReferenceImages(prev => prev.map(item => item.id === img.id ? { ...item, status: 'Đang trích xuất vector 512d...' } : item));
+      try {
+        await uploadReferenceImageApi({ artifactId: targetArtifactId, file: img.file });
+        setReferenceImages(prev => prev.map(item => item.id === img.id ? { ...item, status: 'Đã index vào AI Vision' } : item));
+      } catch (err) {
+        setReferenceImages(prev => prev.map(item => item.id === img.id ? { ...item, status: 'Lỗi: ' + err.message } : item));
+        setVisionSyncError(err.message);
+      }
+    }
+    setIsSyncingVision(false);
+    checkVisionHealthApi().then(setVisionHealth).catch(() => {});
+  };
+
+  const handleClearAllReferences = async () => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa tất cả vector ảnh tham chiếu của hiện vật "${artifact.name}" trên AI Vision?`)) {
+      return;
+    }
+    const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
+    try {
+      await deleteReferenceImagesApi({ artifactId: targetArtifactId });
+      setReferenceImages(prev => prev.map(img => ({ ...img, status: 'Đã gỡ bỏ khỏi AI Vision' })));
+      alert('Đã gỡ bỏ toàn bộ vector tham chiếu trên AI Vision.');
+      checkVisionHealthApi().then(setVisionHealth).catch(() => {});
+    } catch (err) {
+      alert('Lỗi khi gỡ vector: ' + err.message);
+    }
+  };
+
+  const [scanHealth, setScanHealth] = useState(null);
+  const [scanFiles, setScanFiles] = useState([]);
+  const [scanJob, setScanJob] = useState(null);
+  const [isSubmittingScan, setIsSubmittingScan] = useState(false);
+  const [scanError, setScanError] = useState(null);
+  const [reconstructedGlbUrl, setReconstructedGlbUrl] = useState(null);
+  const pollTimerRef = useRef(null);
+
+  useEffect(() => {
+    checkScanHealthApi().then(setScanHealth).catch(() => {});
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  const handleStart3DScan = async () => {
+    if (scanFiles.length < 3) {
+      alert('Vui lòng chọn tối thiểu 3 ảnh nhiều góc (khuyến nghị 15-40 ảnh) để COLMAP tái tạo 3D.');
+      return;
+    }
+    setIsSubmittingScan(true);
+    setScanError(null);
+    const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
+    try {
+      const job = await submitScanJobApi({
+        artifactId: targetArtifactId,
+        files: scanFiles
+      });
+      setScanJob(job);
+      setIsSubmittingScan(false);
+
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const status = await getScanJobStatusApi(job.scanJobId);
+          setScanJob(status);
+          if (status.status === 'REVIEW_REQUIRED' || status.status === 'COMPLETED') {
+            clearInterval(pollTimerRef.current);
+            if (status.modelUrl) {
+              setReconstructedGlbUrl(status.modelUrl);
+            }
+          } else if (status.status === 'FAILED') {
+            clearInterval(pollTimerRef.current);
+            setScanError(status.errorMessage || 'Quá trình tái tạo 3D thất bại.');
+          }
+        } catch (e) {
+          clearInterval(pollTimerRef.current);
+        }
+      }, 3000);
+    } catch (err) {
+      setIsSubmittingScan(false);
+      setScanError(err.message || 'Không thể kết nối dịch vụ 3D Scan (Port 8002).');
+    }
+  };
+
+  const handleApprove3DModel = async () => {
+    if (!scanJob?.scanJobId) return;
+    try {
+      await approveScanJobApi(scanJob.scanJobId);
+      setScanJob(prev => prev ? { ...prev, status: 'COMPLETED' } : null);
+      alert('Đã phê duyệt mô hình 3D! Mô hình sẵn sàng xuất bản vào cơ sở dữ liệu di sản.');
+    } catch (err) {
+      alert('Lỗi phê duyệt: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     const backendId = typeof artifact?.id === 'number' ? artifact.id : artifact?.backendId;
@@ -231,34 +468,103 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   />
                 </div>
 
-                {/* Audio Guide Player Preview */}
-                <div className="card" style={{ padding: '16px', background: '#F8F5EE' }}>
+                {/* Audio Guide Player Preview (Connected to TTS AI Service) */}
+                <div className="card" style={{ padding: '16px', background: '#F8F5EE', border: '1px solid #EADCC8' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Volume2 size={16} color="var(--color-burgundy-700)" />
-                      <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Thuyết minh âm thanh</span>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Thuyết minh AI (TTS)</span>
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)', fontWeight: '500' }}>
-                      {artifact.audioDuration || '03:45'}
-                    </span>
+                    {ttsVoice && (
+                      <span style={{
+                        fontSize: '0.675rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: ttsCacheHit ? '#DCFCE7' : '#FEF3C7',
+                        color: ttsCacheHit ? '#166534' : '#92400E',
+                        fontWeight: '600'
+                      }}>
+                        {ttsCacheHit ? 'Cache HIT' : 'AI Speech'}
+                      </span>
+                    )}
                   </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <button
                       type="button"
-                      onClick={() => setIsPlayingAudio(!isPlayingAudio)}
+                      onClick={handleToggleAudio}
+                      disabled={ttsLoading}
                       className="btn btn-primary btn-sm"
-                      style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0 }}
+                      style={{
+                        borderRadius: '50%',
+                        width: '36px',
+                        height: '36px',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: ttsLoading ? 'wait' : 'pointer'
+                      }}
+                      title={isPlayingAudio ? 'Tạm dừng' : 'Phát thuyết minh âm thanh'}
                     >
-                      {isPlayingAudio ? <Pause size={16} /> : <Play size={16} />}
+                      {ttsLoading ? (
+                        <RefreshCw size={15} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : isPlayingAudio ? (
+                        <Pause size={16} />
+                      ) : (
+                        <Play size={16} />
+                      )}
                     </button>
-                    <div style={{ flex: 1, height: '6px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: isPlayingAudio ? '45%' : '0%', height: '100%', background: 'var(--color-burgundy-700)', transition: 'width 300ms' }} />
+                    <div
+                      style={{ flex: 1, height: '8px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+                      onClick={(e) => {
+                        if (audioRef.current && audioRef.current.duration) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const pos = (e.clientX - rect.left) / rect.width;
+                          audioRef.current.currentTime = pos * audioRef.current.duration;
+                        }
+                      }}
+                    >
+                      <div style={{ width: `${ttsProgress}%`, height: '100%', background: 'var(--color-burgundy-700)', transition: 'width 150ms' }} />
                     </div>
                   </div>
-                  {isPlayingAudio && (
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
+                    <span>{ttsCurrentTime} / {ttsDuration !== '00:00' ? ttsDuration : (artifact.audioDuration || '01:00')}</span>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem' }}>Tốc độ:</span>
+                      {[0.75, 1.0, 1.25].map(sp => (
+                        <button
+                          key={sp}
+                          type="button"
+                          onClick={() => handleChangeSpeed(sp)}
+                          style={{
+                            border: '1px solid ' + (ttsSpeed === sp ? 'var(--color-burgundy-700)' : '#CBD5E1'),
+                            background: ttsSpeed === sp ? 'var(--color-burgundy-700)' : '#FFF',
+                            color: ttsSpeed === sp ? '#FFF' : '#475569',
+                            borderRadius: '3px',
+                            fontSize: '0.65rem',
+                            padding: '1px 5px',
+                            cursor: 'pointer',
+                            fontWeight: ttsSpeed === sp ? '700' : '400'
+                          }}
+                        >
+                          {sp}x
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {ttsLoading && (
                     <p style={{ fontSize: '0.7rem', color: 'var(--color-burgundy-700)', marginTop: '6px', fontStyle: 'italic' }}>
-                      Đang phát mẫu âm thanh thuyết minh di sản...
+                      Đang kết nối microservice TTS AI (Port 8000) để tổng hợp giọng đọc...
                     </p>
+                  )}
+
+                  {ttsError && (
+                    <div style={{ marginTop: '8px', padding: '6px 8px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '4px', fontSize: '0.7rem', color: '#991B1B' }}>
+                      {ttsError}
+                    </div>
                   )}
                 </div>
 
@@ -362,8 +668,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
           {/* 3D Model Tab */}
           {activeTab === '3d' && (
-            <div style={{ textAlign: 'center' }}>
-              {artifact.has3DModel ? (
+            <div>
+              {(artifact.has3DModel || reconstructedGlbUrl) ? (
                 <div>
                   <div style={{
                     height: '420px',
@@ -374,7 +680,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     position: 'relative'
                   }}>
                     <model-viewer
-                      src={artifact.modelUrl || '/assets/models/trong_dong_dong_son.glb'}
+                      src={reconstructedGlbUrl || artifact.modelUrl || '/assets/models/trong_dong_dong_son.glb'}
                       alt={artifact.name}
                       auto-rotate
                       camera-controls
@@ -400,22 +706,129 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                       <span>Dùng chuột kéo để xoay 360° • Cuộn để phóng to/thu nhỏ • Hỗ trợ AR di động</span>
                     </div>
                   </div>
-                  <p style={{ marginTop: '12px', fontSize: '0.8125rem', color: 'var(--color-charcoal-500)' }}>
+                  <p style={{ marginTop: '12px', fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', textAlign: 'center' }}>
                     Mô hình 3D định dạng GLTF/GLB tương thích với WebGL và ứng dụng di động SMGS.
                   </p>
                 </div>
               ) : (
-                <div style={{ padding: '60px 20px', background: '#F8F5EE', borderRadius: '12px', border: '1px dashed var(--color-paper-border)' }}>
-                  <Box size={48} color="var(--color-charcoal-400)" style={{ margin: '0 auto 16px' }} />
-                  <h4 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '6px' }}>Chưa có mô hình 3D</h4>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', maxWidth: '440px', margin: '0 auto 20px' }}>
-                    Hiện vật này đang trong quá trình scan 3D và số hóa không gian. Nhân viên có thể tải lên tệp .glb bất cứ lúc nào.
+                <div style={{ padding: '40px 20px', background: '#F8F5EE', borderRadius: '12px', border: '1px dashed var(--color-paper-border)', textAlign: 'center' }}>
+                  <Box size={40} color="var(--color-charcoal-400)" style={{ margin: '0 auto 12px' }} />
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '600', marginBottom: '6px' }}>Chưa có mô hình 3D xuất bản</h4>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', maxWidth: '440px', margin: '0 auto 16px' }}>
+                    Hiện vật này có thể được tái tạo số hóa bằng bộ ảnh đa góc thông qua microservice 3D Scan (COLMAP) hoặc tải lên file GLB có sẵn.
                   </p>
-                  {!readOnly && <button type="button" onClick={() => onEdit(artifact)} className="btn btn-primary btn-sm">
-                    Tải lên file 3D (.glb / .gltf)
-                  </button>}
+                  {!readOnly && (
+                    <button type="button" onClick={() => onEdit(artifact)} className="btn btn-secondary btn-sm">
+                      Tải lên file GLB có sẵn
+                    </button>
+                  )}
                 </div>
               )}
+
+              {/* 3D Photogrammetry Scan Service Section */}
+              <section className="card" style={{ marginTop: '20px', padding: '18px', background: '#FAF7F2', border: '1px solid #EADCC8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: 0 }}>
+                        Tái tạo 3D bằng AI Photogrammetry (COLMAP)
+                      </h4>
+                      <span style={{
+                        fontSize: '0.675rem',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        background: scanHealth?.ok ? '#DCFCE7' : '#FEF3C7',
+                        color: scanHealth?.ok ? '#166534' : '#92400E',
+                        fontWeight: '600'
+                      }}>
+                        {scanHealth?.ok ? '3D Scan Service (Port 8002): Sẵn sàng' : '3D Scan: Ngoại tuyến'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.785rem', color: 'var(--color-charcoal-600)', margin: 0 }}>
+                      Tải lên tập hợp 10 - 80 ảnh chụp 360° quanh hiện vật. Thuật toán COLMAP sẽ trích xuất đặc trưng điểm, tái tạo lưới mesh và xuất tệp GLB chuẩn bảo tàng.
+                    </p>
+                  </div>
+
+                  {!readOnly && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                        + Chọn ảnh quét ({scanFiles.length} ảnh)
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
+                            setScanFiles(files);
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={isSubmittingScan || scanFiles.length < 3}
+                        onClick={handleStart3DScan}
+                        className="btn btn-gold btn-sm"
+                      >
+                        {isSubmittingScan ? (
+                          <>
+                            <RefreshCw size={13} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+                            <span>Đang khởi tạo...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Box size={13} />
+                            <span>Bắt đầu dựng 3D</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {scanError && (
+                  <div style={{ marginTop: '12px', padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '6px', fontSize: '0.75rem', color: '#991B1B' }}>
+                    {scanError}
+                  </div>
+                )}
+
+                {scanJob && (
+                  <div style={{ marginTop: '14px', padding: '12px', background: '#FFF', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>
+                        Tác vụ 3D: <code>{scanJob.scanJobId}</code>
+                      </span>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontWeight: '700',
+                        background: scanJob.status === 'COMPLETED' ? '#DCFCE7' : scanJob.status === 'REVIEW_REQUIRED' ? '#FEF3C7' : scanJob.status === 'FAILED' ? '#FEE2E2' : '#EFF6FF',
+                        color: scanJob.status === 'COMPLETED' ? '#166534' : scanJob.status === 'REVIEW_REQUIRED' ? '#92400E' : scanJob.status === 'FAILED' ? '#991B1B' : '#1E40AF'
+                      }}>
+                        {scanJob.status}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-600)', margin: '0 0 10px' }}>
+                      {scanJob.status === 'QUEUED' && 'Đang xếp hàng chờ tài nguyên máy tính...'}
+                      {scanJob.status === 'PROCESSING' && 'Đang tính toán đặc trưng điểm & phục dựng lưới 3D bằng COLMAP...'}
+                      {scanJob.status === 'REVIEW_REQUIRED' && 'Tái tạo 3D hoàn tất! Vui lòng kiểm tra mô hình phía trên và bấm phê duyệt.'}
+                      {scanJob.status === 'COMPLETED' && 'Mô hình 3D đã được Giám tuyển phê duyệt xuất bản.'}
+                    </p>
+
+                    {scanJob.status === 'REVIEW_REQUIRED' && !readOnly && (
+                      <button
+                        type="button"
+                        onClick={handleApprove3DModel}
+                        className="btn btn-primary btn-sm"
+                      >
+                        <Check size={14} /> Phê duyệt & Xuất bản mô hình 3D
+                      </button>
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
@@ -509,56 +922,145 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 </div>
               </div>
             </div>
-            <section className="card" style={{ marginTop: '24px', padding: '20px', background: '#FAF7F2' }}>
+            <section className="card" style={{ marginTop: '24px', padding: '20px', background: '#FAF7F2', border: '1px solid #EADCC8' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                 <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--color-burgundy-900)', marginBottom: '6px' }}>Ảnh tham chiếu nhận diện</h4>
-                  <p style={{ fontSize: '0.8125rem', lineHeight: '1.5', color: 'var(--color-charcoal-600)', maxWidth: '650px' }}>
-                    Ảnh được gắn với hiện vật <strong>{artifact.name}</strong>. Chọn nhiều góc chụp rõ nét; ảnh khách gửi để nhận diện không tự động thêm vào bộ ảnh này.
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: 0 }}>Ảnh tham chiếu nhận diện AI Vision</h4>
+                    <span style={{
+                      fontSize: '0.675rem',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      background: visionHealth?.ok ? '#DCFCE7' : '#FEF3C7',
+                      color: visionHealth?.ok ? '#166534' : '#92400E',
+                      fontWeight: '600'
+                    }}>
+                      {visionHealth?.ok ? `AI Vision (Port 8001): ${visionHealth.referenceCount} vectors đã index` : 'AI Vision: Ngoại tuyến'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', lineHeight: '1.5', color: 'var(--color-charcoal-600)', maxWidth: '650px', margin: 0 }}>
+                    Ảnh được trích xuất vector đặc trưng 512 chiều bằng mô hình CLIP ViT-B/32 ONNX và lưu vào schema <code>ai_vision</code> của database. Phục vụ nhận diện camera cho khách tham quan.
                   </p>
                 </div>
-                {!readOnly && <label className="btn btn-primary btn-sm" style={{ cursor: referenceImages.length >= 20 ? 'not-allowed' : 'pointer', opacity: referenceImages.length >= 20 ? 0.55 : 1 }}>
-                  + Tải ảnh tham chiếu
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    disabled={referenceImages.length >= 20}
-                    style={{ display: 'none' }}
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
-                      const remaining = Math.max(0, 20 - referenceImages.length);
-                      setReferenceImages(current => [...current, ...files.slice(0, remaining).map((file, index) => ({
-                        id: `${Date.now()}-${index}-${file.name}`,
-                        url: URL.createObjectURL(file),
-                        name: file.name,
-                        status: 'Chờ kết nối BE'
-                      }))]);
-                      event.target.value = '';
-                    }}
-                  />
-                </label>}
+
+                {!readOnly && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <label className="btn btn-primary btn-sm" style={{ cursor: referenceImages.length >= 20 ? 'not-allowed' : 'pointer', opacity: referenceImages.length >= 20 ? 0.55 : 1 }}>
+                      + Tải ảnh tham chiếu
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        disabled={referenceImages.length >= 20}
+                        style={{ display: 'none' }}
+                        onChange={(event) => {
+                          const files = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
+                          const remaining = Math.max(0, 20 - referenceImages.length);
+                          setReferenceImages(current => [...current, ...files.slice(0, remaining).map((file, index) => ({
+                            id: `${Date.now()}-${index}-${file.name}`,
+                            url: URL.createObjectURL(file),
+                            file: file,
+                            name: file.name,
+                            status: 'Chưa đồng bộ vector'
+                          }))]);
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      disabled={isSyncingVision || !referenceImages.some(img => img.file && !img.status?.includes('Đã index'))}
+                      onClick={handleSyncAllReferences}
+                      className="btn btn-gold btn-sm"
+                      title="Đẩy ảnh vào AI Vision để tính toán vector 512 chiều"
+                    >
+                      {isSyncingVision ? (
+                        <>
+                          <RefreshCw size={13} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
+                          <span>Đang trích xuất vector...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={13} />
+                          <span>Đồng bộ vào AI Vision</span>
+                        </>
+                      )}
+                    </button>
+
+                    {referenceImages.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllReferences}
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: '#991B1B' }}
+                        title="Xóa toàn bộ vector tham chiếu của hiện vật này trên AI Vision"
+                      >
+                        Xóa vector
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
+
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '12px', fontSize: '0.75rem', color: 'var(--color-charcoal-600)' }}>
                 <span>{referenceImages.length}/20 ảnh</span>
                 <span>•</span>
+                <span>Model: CLIP ViT-B/32 ONNX (512d)</span>
+                <span>•</span>
                 <span>Chỉ quản trị viên / nhân viên bảo tàng có quyền chỉnh sửa</span>
               </div>
-              {referenceImages.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: '12px', marginTop: '16px' }}>
-                {referenceImages.map(image => <div key={image.id} style={{ overflow: 'hidden', border: '1px solid var(--color-paper-border)', borderRadius: '8px', background: 'white' }}>
-                  <img src={image.url} alt={image.name} style={{ width: '100%', height: '112px', objectFit: 'cover', display: 'block' }} />
-                  <div style={{ padding: '8px' }}>
-                    <div title={image.name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', fontWeight: 600 }}>{image.name}</div>
-                    <div style={{ marginTop: '4px', fontSize: '0.6875rem', color: 'var(--color-charcoal-500)' }}>{image.status || 'Đã index'}</div>
-                    {!readOnly && <button type="button" onClick={() => setReferenceImages(current => current.filter(item => item.id !== image.id))} style={{ marginTop: '6px', fontSize: '0.7rem', color: 'var(--color-burgundy-700)' }}>Gỡ khỏi danh sách</button>}
-                  </div>
-                </div>)}
-              </div> : <div style={{ marginTop: '16px', padding: '24px', textAlign: 'center', border: '1px dashed var(--color-paper-border)', borderRadius: '8px', color: 'var(--color-charcoal-500)', fontSize: '0.8125rem' }}>
-                Chưa có ảnh tham chiếu. Tải ảnh hiện vật đã được nhân viên kiểm duyệt để chuẩn bị lập chỉ mục nhận diện.
-              </div>}
-              <p style={{ marginTop: '12px', fontSize: '0.7rem', color: 'var(--color-charcoal-500)' }}>
-                Bản giao diện hiện chỉ tạo xem trước trong phiên này; chưa tải file lên backend hay gọi AI Vision.
-              </p>
+
+              {visionSyncError && (
+                <div style={{ marginTop: '10px', padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '6px', fontSize: '0.75rem', color: '#991B1B' }}>
+                  {visionSyncError}
+                </div>
+              )}
+
+              {referenceImages.length ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px', marginTop: '16px' }}>
+                  {referenceImages.map(image => (
+                    <div key={image.id} style={{ overflow: 'hidden', border: '1px solid var(--color-paper-border)', borderRadius: '8px', background: 'white' }}>
+                      <img src={image.url} alt={image.name} style={{ width: '100%', height: '112px', objectFit: 'cover', display: 'block' }} />
+                      <div style={{ padding: '8px' }}>
+                        <div title={image.name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', fontWeight: 600 }}>{image.name}</div>
+                        <div style={{
+                          marginTop: '4px',
+                          fontSize: '0.6875rem',
+                          color: image.status?.includes('Đã index') ? 'var(--color-success)' : 'var(--color-charcoal-500)',
+                          fontWeight: image.status?.includes('Đã index') ? '600' : 'normal'
+                        }}>
+                          {image.status || 'Đã index'}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                          {!readOnly && image.file && !image.status?.includes('Đã index') && (
+                            <button
+                              type="button"
+                              onClick={() => handleSyncReferenceToVision(image)}
+                              style={{ fontSize: '0.675rem', color: 'var(--color-burgundy-700)', fontWeight: '600', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                            >
+                              Sync vector
+                            </button>
+                          )}
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              onClick={() => setReferenceImages(current => current.filter(item => item.id !== image.id))}
+                              style={{ fontSize: '0.675rem', color: '#991B1B', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                            >
+                              Gỡ ảnh
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ marginTop: '16px', padding: '24px', textAlign: 'center', border: '1px dashed var(--color-paper-border)', borderRadius: '8px', color: 'var(--color-charcoal-500)', fontSize: '0.8125rem' }}>
+                  Chưa có ảnh tham chiếu. Tải ảnh hiện vật đã được nhân viên kiểm duyệt để chuẩn bị lập chỉ mục nhận diện.
+                </div>
+              )}
             </section>
             </div>
           )}
