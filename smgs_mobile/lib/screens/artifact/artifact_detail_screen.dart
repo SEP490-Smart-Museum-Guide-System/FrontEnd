@@ -154,7 +154,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           icon: Icons.menu_book_outlined,
           onPressed: () => openPage(context, NarrationScreen(artifact: a)),
         ),
-        if (a.id == 'artifact_1' || a.id == '1') ...[
+        if (a.id == 'artifact_1' || a.id == '1' || (a.modelUrl != null && a.modelUrl!.isNotEmpty)) ...[
           const SizedBox(height: 12),
           SecondaryButton(
             label: 'Xem mô hình 3D',
