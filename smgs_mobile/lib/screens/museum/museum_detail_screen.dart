@@ -13,6 +13,7 @@ import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
 import '../profile/services_screen.dart';
 import '../profile/profile_screen.dart';
+import 'visitor_indoor_map_screen.dart';
 
 class MuseumDetailScreen extends StatefulWidget {
   const MuseumDetailScreen({super.key, required this.museum, this.heroTag});
@@ -53,6 +54,17 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   Future<void> _openDirections(BuildContext context) async {
     if (!context.mounted) return;
     RoutePreviewSheet.show(context, museum: widget.museum);
+  }
+
+  void _openIndoorMap(BuildContext context) {
+    final mId = int.tryParse(widget.museum.id) ?? (widget.museum.id == 'museum_national' ? 1 : 1);
+    openPage(
+      context,
+      VisitorIndoorMapScreen(
+        mapId: mId,
+        museumName: widget.museum.name,
+      ),
+    );
   }
 
   @override
@@ -177,6 +189,12 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
             icon: Icons.directions_outlined,
             onTap: () => _openDirections(context),
           ),
+        ActionTile(
+          title: 'Sơ đồ bảo tàng & Tìm đường hiện vật',
+          subtitle: 'Bản đồ trong nhà, quét QR xác định vị trí và dẫn đường.',
+          icon: Icons.map_outlined,
+          onTap: () => _openIndoorMap(context),
+        ),
         ActionTile(
           title: 'Hành trình dành cho bạn',
           subtitle: 'Chọn thời gian và sở thích để bắt đầu.',

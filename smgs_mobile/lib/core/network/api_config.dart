@@ -42,6 +42,11 @@ class ApiConfig {
   static String publishedContentUrl(dynamic artifactId, {String lang = 'vi'}) =>
       '$baseUrl/artifacts/$artifactId/contents/published?languageCode=$lang';
 
+  // Indoor Maps (Visitor)
+  static String publishedIndoorMapUrl(dynamic id) => '$baseUrl/indoor-maps/$id/published';
+  static String publishedIndoorMapImageUrl(dynamic id, String imageKey) =>
+      '$baseUrl/indoor-maps/$id/published/image?key=${Uri.encodeComponent(imageKey)}';
+
   // --- AI-System Services (Port 8000: TTS, Port 8001: Vision, Port 8002: 3D Scan) ---
 
   static String get defaultTtsHost {

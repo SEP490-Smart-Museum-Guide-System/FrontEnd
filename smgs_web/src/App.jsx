@@ -8,6 +8,7 @@ import AIContentStudio from './components/ai_studio/AIContentStudio';
 import CurationCenter from './components/curation/CurationCenter';
 import SubmissionStatus from './components/curation/SubmissionStatus';
 import MuseumManager from './components/museums/MuseumManager';
+import IndoorMapEditor from './components/indoor_maps/IndoorMapEditor';
 import TourManager from './components/tours/TourManager';
 import ReviewManager from './components/reviews/ReviewManager';
 import UserManager from './components/users/UserManager';
@@ -30,6 +31,8 @@ export default function App() {
     switch (activeTab) {
       case 'overview':
         return <RoleDashboard onNavigate={setActiveTab} />;
+      case 'indoor_maps':
+        return <IndoorMapEditor />;
       case 'museums':
       case 'spaces':
         return <MuseumManager />;

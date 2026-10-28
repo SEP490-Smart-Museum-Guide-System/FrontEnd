@@ -15,7 +15,8 @@ import {
   FileText,
   LifeBuoy,
   Activity,
-  RotateCcw
+  RotateCcw,
+  Map
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -34,6 +35,7 @@ export default function Sidebar() {
           items: [
             { id: 'overview', label: 'Tổng quan hệ thống', icon: LayoutDashboard },
             { id: 'museums', label: 'Bảo tàng & Google Maps', icon: Landmark },
+            { id: 'indoor_maps', label: 'Bản đồ trong bảo tàng', icon: Map, highlight: true },
             { id: 'artifacts', label: 'Kho hiện vật', icon: Layers },
           ]
         },
@@ -95,7 +97,8 @@ export default function Sidebar() {
           title: 'Bàn làm việc Nghiệp vụ',
           items: [
             { id: 'overview', label: 'Bàn làm việc', icon: LayoutDashboard },
-            { id: 'spaces', label: 'Thông tin & bản đồ bảo tàng', icon: Building2 },
+            { id: 'indoor_maps', label: 'Bản đồ trong bảo tàng', icon: Map, highlight: true },
+            { id: 'spaces', label: 'Thông tin bảo tàng', icon: Building2 },
             { id: 'artifacts', label: 'Quản lý Hiện vật & QR', icon: Layers },
             { id: 'ai_studio', label: 'Xưởng nội dung AI', icon: Sparkles, highlight: true },
             { id: 'submission_status', label: 'Đệ trình & phản hồi Giám tuyển', icon: CheckSquare, badge: pendingCuration },
