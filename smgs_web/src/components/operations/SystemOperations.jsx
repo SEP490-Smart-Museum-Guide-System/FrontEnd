@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import AiClusterHealthPanel from './AiClusterHealthPanel';
 import {
   Activity,
   AlertTriangle,
@@ -370,6 +371,9 @@ export default function SystemOperations({ mode = 'support' }) {
           </div>
         </div>
       )}
+
+      {/* Live AI Cluster Health Monitor & Diagnostics */}
+      {mode === 'operations' && <AiClusterHealthPanel />}
 
       {/* Metrics */}
       <div className="operations-metrics" style={{ marginBottom: '20px' }}>
