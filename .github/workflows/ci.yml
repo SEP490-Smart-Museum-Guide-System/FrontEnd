@@ -1,0 +1,70 @@
+name: FrontEnd CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: React web checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: smgs_web
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: smgs_web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run web tests
+        run: npm test
+
+      - name: Lint web source
+        run: npm run lint
+
+      - name: Build web app
+        run: npm run build
+
+  mobile:
+    name: Flutter mobile checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: smgs_mobile
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Flutter source
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
