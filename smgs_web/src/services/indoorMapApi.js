@@ -293,3 +293,23 @@ export async function fetchArtifactQrBlob(mapId, markerId) {
   const blob = await response.blob();
   return URL.createObjectURL(blob);
 }
+
+
+const base = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
+
+export async function indoorApi(path, { method = 'GET', body, blob = false, signal } = {}) {
+  const form = body instanceof FormData;
+  const response = await fetch(`${base}/${path}`, {
+    method, signal,
+    headers: { Authorization: `Bearer ${getAuthToken()}`, ...(!form && body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? (form ? body : JSON.stringify(body)) : undefined,
+  });
+  if (response.ok && blob) return response.blob();
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(result?.message || (response.status === 401 ? 'Phiên đăng nhập đã hết hạn.' : 'Không thể xử lý yêu cầu bản đồ. Vui lòng thử lại.'));
+    error.status = response.status;
+    throw error;
+  }
+  return result.data;
+}

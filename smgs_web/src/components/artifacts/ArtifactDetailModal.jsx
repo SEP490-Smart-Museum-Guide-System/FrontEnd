@@ -1,3 +1,4 @@
+import ArtifactMediaPanel from './ArtifactMediaPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import '@google/model-viewer';
@@ -442,6 +443,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
         {/* Modal Body */}
         <div className="modal-body">
+          <ArtifactMediaPanel key={artifact.id} artifactId={artifact.backendId || artifact.id} readOnly={readOnly || !['administrator', 'museumStaff'].includes(currentRole)} />
           {activeTab === 'overview' && (
             <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '28px' }}>
               {/* Left Column: Image & Audio */}

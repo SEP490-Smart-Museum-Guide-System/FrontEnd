@@ -8,7 +8,7 @@ import AIContentStudio from './components/ai_studio/AIContentStudio';
 import CurationCenter from './components/curation/CurationCenter';
 import SubmissionStatus from './components/curation/SubmissionStatus';
 import MuseumManager from './components/museums/MuseumManager';
-import IndoorMapEditor from './components/indoor_maps/IndoorMapEditor';
+
 import TourManager from './components/tours/TourManager';
 import ReviewManager from './components/reviews/ReviewManager';
 import UserManager from './components/users/UserManager';
@@ -17,6 +17,7 @@ import AuditLogs from './components/logs/AuditLogs';
 import SystemOperations from './components/operations/SystemOperations';
 import ToastContainer from './components/common/ToastContainer';
 import LoginScreen from './components/auth/LoginScreen';
+import IndoorMapManager from './components/indoor_maps/IndoorMapManager';
 
 export default function App() {
   const { activeTab, setActiveTab, isAuthenticated } = useApp();
@@ -32,7 +33,7 @@ export default function App() {
       case 'overview':
         return <RoleDashboard onNavigate={setActiveTab} />;
       case 'indoor_maps':
-        return <IndoorMapEditor />;
+        return <IndoorMapManager />;
       case 'museums':
       case 'spaces':
         return <MuseumManager />;

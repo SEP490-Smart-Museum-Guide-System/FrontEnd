@@ -1,0 +1,24 @@
+.indoor-page { color: var(--color-charcoal-900, #272522); }
+.indoor-page h1 { margin-bottom: 8px; }
+.indoor-page h2 { font-size: 1.15rem; }
+.indoor-page p { margin: 12px 0; line-height: 1.5; }
+.indoor-page fieldset { border: 0; padding: 0; min-width: 0; }
+.indoor-page label { display: flex; flex-direction: column; gap: 6px; font-size: .9rem; margin: 8px 0; }
+.indoor-page input, .indoor-page select { padding: 9px; border: 1px solid #bbb; border-radius: 6px; min-width: 0; max-width: 100%; background: white; color: #272522; }
+.indoor-page button { padding: 9px 13px; border: 1px solid #8b7566; border-radius: 6px; background: #fffdf8; color: #49362d; cursor: pointer; }
+.indoor-page button[aria-pressed="true"] { background: #6b2e2e; color: white; }
+.indoor-page button:disabled { opacity: .5; cursor: not-allowed; }
+.indoor-page :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.indoor-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+.indoor-row label { flex: 1 1 180px; }
+.indoor-box { background: #f9f5ef; border: 1px solid #ded5c9; padding: 16px; border-radius: 10px; margin: 16px 0; }
+.indoor-editor { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; margin-top: 12px; }
+.indoor-canvas { display: block; width: 100%; height: 60vh; min-height: 320px; background: #e8e5e0; border: 1px solid #b5aca0; border-radius: 8px; touch-action: none; user-select: none; }
+.indoor-properties { padding: 16px; background: #f9f5ef; border: 1px solid #ded5c9; border-radius: 8px; }
+.indoor-page .indoor-check { flex-direction: row; align-items: center; gap: 8px; }
+.indoor-hint { color: #665d54; font-size: .85rem; }
+.indoor-error, .indoor-message { padding: 12px; border-radius: 8px; margin: 12px 0; }
+.indoor-error { background: #fff0f0; color: #9b1c1c; border: 1px solid #e5a3a3; }
+.indoor-message { background: #edf8ee; color: #245c2e; border: 1px solid #a6caaa; }
+.indoor-page summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 1000px) { .indoor-editor { grid-template-columns: 1fr; } }

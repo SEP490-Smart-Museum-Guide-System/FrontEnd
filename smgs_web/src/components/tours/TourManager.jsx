@@ -200,7 +200,7 @@ export default function TourManager() {
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
                     Bảo tàng: {tour.museumName}
                   </span>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>Chỉnh sửa tour</button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>Chỉnh sửa tuyến tham quan</button>
                 </div>
               </div>
             </div>
@@ -252,7 +252,7 @@ export default function TourManager() {
         <div className="modal-overlay" onClick={() => setIsCreatingTour(false)}>
           <div className="modal-dialog" style={{ maxWidth: '700px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title font-serif">{editingTour ? 'Chỉnh sửa tour' : 'Tạo hành trình mới'}</h3>
+              <h3 className="modal-title font-serif">{editingTour ? 'Chỉnh sửa tuyến tham quan' : 'Tạo hành trình mới'}</h3>
               <button type="button" onClick={() => setIsCreatingTour(false)} className="btn btn-secondary btn-sm">✕</button>
             </div>
             <form onSubmit={handleCreateTour} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -316,7 +316,7 @@ export default function TourManager() {
 
                 {/* Select Artifact Stops */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Chọn các hiện vật thuộc lộ trình tour:</label>
+                  <label className="form-label">Chọn các hiện vật thuộc tuyến tham quan:</label>
                   <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--color-paper-border)', borderRadius: '8px', padding: '8px' }}>
                     {museumArtifacts.map(art => (
                       <label key={art.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', fontSize: '0.8125rem' }}>

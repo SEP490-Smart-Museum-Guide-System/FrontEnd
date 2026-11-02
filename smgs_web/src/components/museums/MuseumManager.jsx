@@ -1,3 +1,5 @@
+import MediaUpload from '../common/MediaUpload';
+import { mediaApi } from '../../services/mediaApi';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
@@ -312,6 +314,16 @@ export default function MuseumManager() {
               {activeMuseum.description}
             </p>
 
+            {['administrator', 'museumStaff'].includes(currentRole) && Number(activeMuseum.backendId || activeMuseum.id) > 0 && <>
+              <MediaUpload key={activeMuseum.id} path={`museums/${activeMuseum.backendId || activeMuseum.id}/image`} label="Ảnh bảo tàng"
+                onSaved={data => setMuseums(prev => prev.map(m => m.id === activeMuseum.id ? { ...m, image: data.coverImageUrl, coverImageUrl: data.coverImageUrl } : m))} />
+              <button type="button" disabled={isSubmitting} onClick={async () => {
+                setIsSubmitting(true);
+                try { await mediaApi(`museums/${activeMuseum.backendId || activeMuseum.id}/image`, { method: 'DELETE' });
+                  setMuseums(prev => prev.map(m => m.id === activeMuseum.id ? { ...m, image: '', coverImageUrl: '' } : m)); showToast('Đã gỡ ảnh bảo tàng.');
+                } catch (e) { showToast(e.message, 'error'); } finally { setIsSubmitting(false); }
+              }}>Gỡ ảnh bảo tàng</button>
+            </>}
             <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
               {(currentRole === 'museumStaff' || currentRole === 'administrator') && (
                 <button

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   initialMuseums,
   initialArtifacts,
@@ -50,7 +50,15 @@ export function AppProvider({ children }) {
   const isAuthenticated = session !== null;
   const [selectedMuseumId, setSelectedMuseumId] = useState('mus-01');
   // Navigation tab
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTabState] = useState('overview');
+  const navigationGuard = useRef(null);
+  const registerNavigationGuard = useCallback(guard => {
+    navigationGuard.current = guard;
+    return () => { if (navigationGuard.current === guard) navigationGuard.current = null; };
+  }, []);
+  const setActiveTab = useCallback(tab => {
+    if (!navigationGuard.current || navigationGuard.current()) setActiveTabState(tab);
+  }, []);
 
   // Core data states
   const [museums, setMuseums] = useState(initialMuseums);
@@ -89,6 +97,8 @@ export function AppProvider({ children }) {
   };
 
   const logout = () => {
+    if (navigationGuard.current && !navigationGuard.current()) return;
+    navigationGuard.current = null;
     clearWebSession();
     setSession(null);
     setActiveTab('overview');
@@ -694,6 +704,7 @@ export function AppProvider({ children }) {
       setSelectedMuseumId,
       currentMuseum,
       activeTab,
+      registerNavigationGuard,
       setActiveTab,
       museums,
       setMuseums,

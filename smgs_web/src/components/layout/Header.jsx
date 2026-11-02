@@ -28,7 +28,7 @@ const roleMeta = {
     color: 'var(--color-burgundy-700)',
     badgeBg: '#F8EEEA',
     badgeText: '#6B2E2E',
-    accountDesc: 'Quản lý không gian, hiện vật, tour & AI Studio'
+    accountDesc: 'Quản lý không gian, hiện vật, tuyến tham quan và xưởng nội dung AI'
   },
   curator: {
     label: 'Giám tuyển Thẩm định',
