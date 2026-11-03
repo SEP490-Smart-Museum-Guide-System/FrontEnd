@@ -207,7 +207,7 @@ export default function UserManager() {
         <div className="modal-overlay" onClick={() => setIsAddingUser(false)}>
           <div className="modal-dialog" style={{ maxWidth: '580px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title font-serif">Tạo tài khoản mẫu</h3>
+              <h3 className="modal-title font-serif">Tạo tài khoản</h3>
               <button type="button" onClick={() => setIsAddingUser(false)} className="btn btn-secondary btn-sm">✕</button>
             </div>
             <form onSubmit={handleAddUserSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>

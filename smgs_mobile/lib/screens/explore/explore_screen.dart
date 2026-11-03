@@ -62,6 +62,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   bool _isLoadingMuseums = false;
   String? _museumsError;
   Timer? _debounceTimer;
+  int _museumRequest = 0;
 
   @override
   void initState() {
@@ -77,6 +78,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<void> _fetchBackendMuseums() async {
+    final request = ++_museumRequest;
     setState(() {
       _isLoadingMuseums = true;
       _museumsError = null;
@@ -87,14 +89,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
         keyword: _query.trim().isNotEmpty ? _query.trim() : null,
         sortBy: _sortName ? 'newest' : null,
       );
-      if (mounted) {
+      if (mounted && request == _museumRequest) {
         setState(() {
           _backendMuseums = list;
           _isLoadingMuseums = false;
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && request == _museumRequest) {
         setState(() {
           _museumsError = e.toString().replaceFirst('Exception: ', '');
           _isLoadingMuseums = false;
@@ -106,6 +108,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void _onSearchChanged(String val) {
     setState(() => _query = val);
     if (!_artifacts) {
+      _museumRequest++;
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(milliseconds: 400), () {
         _fetchBackendMuseums();
@@ -188,7 +191,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       value: '',
                       child: Text('Tất cả bảo tàng'),
                     ),
-                    ..._backendMuseums.map(
+                    ...AppServices.catalog.museums.map(
                       (m) => DropdownMenuItem(
                         value: m.id,
                         child: Text(m.name, overflow: TextOverflow.ellipsis),

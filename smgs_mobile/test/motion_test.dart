@@ -1,3 +1,4 @@
+import 'support/api_widgets.dart';
 import 'support/fake_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,11 @@ import 'package:smgs_mobile/widgets/heritage_motion.dart';
 import 'widget_test.dart' show tapText, screenSize;
 
 void main() {
+  setUp(() {
+    AppServices.catalog = MockCatalogService();
+    AppServices.tours = MockTourService(AppServices.catalog);
+    AppServices.recognition = MockRecognitionService(AppServices.catalog);
+  });
   setUp(
     () => AppServices.auth = MockAuthService(
       initialUser: const VisitorUser(
@@ -17,7 +23,7 @@ void main() {
       ),
     ),
   );
-  testWidgets(
+  apiTestWidgets(
     'Reveal follows a replaced scroll position after physics change',
     (tester) async {
       await screenSize(tester, const Size(390, 600));
@@ -70,14 +76,15 @@ void main() {
       );
     },
   );
-  testWidgets('Web semantics alone must not disable scroll animations', (
+  apiTestWidgets('Web semantics alone must not disable scroll animations', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(accessibleNavigation: true, disableAnimations: false),
+          data: MediaQuery.of(
+            context,
+          ).copyWith(accessibleNavigation: true, disableAnimations: false),
           child: child!,
         ),
         home: Scaffold(
@@ -109,7 +116,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
+  apiTestWidgets(
     'Photo transition, pinned title and back navigation work from both tabs',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -117,6 +124,17 @@ void main() {
       await tester.pumpAndSettle();
       for (final tab in ['Trang chủ', 'Khám phá']) {
         await tapText(tester, tab);
+        for (
+          var i = 0;
+          i < 20 && find.text('Bước vào bảo tàng').evaluate().isEmpty;
+          i++
+        ) {
+          await tester.drag(
+            find.byType(Scrollable).first,
+            const Offset(0, -220),
+          );
+          await tester.pumpAndSettle();
+        }
         await tester.dragUntilVisible(
           find.text('Bước vào bảo tàng').first,
           find.byType(Scrollable).first,
@@ -151,86 +169,87 @@ void main() {
     },
   );
 
-  testWidgets('A section reveals on entry and stays visible when revisited', (
-    tester,
-  ) async {
-    await screenSize(tester, const Size(390, 600));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: Column(
-              children: const [
-                SizedBox(height: 650),
-                ScrollReveal(
-                  child: SizedBox(
-                    height: 100,
-                    child: Text('Câu chuyện di sản'),
+  apiTestWidgets(
+    'A section reveals on entry and stays visible when revisited',
+    (tester) async {
+      await screenSize(tester, const Size(390, 600));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: const [
+                  SizedBox(height: 650),
+                  ScrollReveal(
+                    child: SizedBox(
+                      height: 100,
+                      child: Text('Câu chuyện di sản'),
+                    ),
                   ),
-                ),
-                SizedBox(height: 1600),
-              ],
+                  SizedBox(height: 1600),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<FadeTransition>(
-            find.descendant(
-              of: find.byType(ScrollReveal),
-              matching: find.byType(FadeTransition),
-            ),
-          )
-          .opacity
-          .value,
-      0,
-    );
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, -350),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<FadeTransition>(
-            find.descendant(
-              of: find.byType(ScrollReveal),
-              matching: find.byType(FadeTransition),
-            ),
-          )
-          .opacity
-          .value,
-      1,
-    );
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, -1100),
-    );
-    await tester.pumpAndSettle();
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, 1100),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<FadeTransition>(
-            find.descendant(
-              of: find.byType(ScrollReveal),
-              matching: find.byType(FadeTransition),
-            ),
-          )
-          .opacity
-          .value,
-      1,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FadeTransition>(
+              find.descendant(
+                of: find.byType(ScrollReveal),
+                matching: find.byType(FadeTransition),
+              ),
+            )
+            .opacity
+            .value,
+        0,
+      );
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -350),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FadeTransition>(
+              find.descendant(
+                of: find.byType(ScrollReveal),
+                matching: find.byType(FadeTransition),
+              ),
+            )
+            .opacity
+            .value,
+        1,
+      );
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -1100),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, 1100),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FadeTransition>(
+              find.descendant(
+                of: find.byType(ScrollReveal),
+                matching: find.byType(FadeTransition),
+              ),
+            )
+            .opacity
+            .value,
+        1,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets(
+  apiTestWidgets(
     'Reduced motion shows content immediately and disables parallax',
     (tester) async {
       await tester.pumpWidget(

@@ -1,0 +1,28 @@
+param([string]$Flutter = 'flutter')
+
+$ErrorActionPreference = 'Stop'
+$repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$mobileRoot = Join-Path $repoRoot 'smgs_mobile'
+$buildRoot = Join-Path $mobileRoot 'build\web'
+$visitorRoot = Join-Path $repoRoot 'smgs_web\public\visitor'
+
+# The web portal currently deploys this checked-in Flutter build.
+# Rebuild before copying, so a failed build can never replace the working preview.
+Push-Location -LiteralPath $mobileRoot
+try {
+    & $Flutter build web --release --base-href /visitor/
+    if ($LASTEXITCODE -ne 0) { throw 'Flutter build thất bại. Chưa cập nhật Visitor web.' }
+} finally {
+    Pop-Location
+}
+if (!(Test-Path -LiteralPath (Join-Path $buildRoot 'main.dart.js'))) {
+    throw 'Không tìm thấy kết quả Flutter web.'
+}
+New-Item -ItemType Directory -Path $visitorRoot -Force | Out-Null
+Get-ChildItem -LiteralPath $buildRoot -Force | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination $visitorRoot -Recurse -Force
+}
+$sourceHash = (Get-FileHash -LiteralPath (Join-Path $buildRoot 'main.dart.js')).Hash
+$targetHash = (Get-FileHash -LiteralPath (Join-Path $visitorRoot 'main.dart.js')).Hash
+if ($sourceHash -ne $targetHash) { throw 'Bundle Visitor sao chép không khớp.' }
+Write-Host 'Đã cập nhật Flutter Visitor tại smgs_web/public/visitor. Chạy npm run build trong smgs_web để đóng gói portal.'

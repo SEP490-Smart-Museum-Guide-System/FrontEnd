@@ -66,8 +66,8 @@ export async function createMuseumApi(museumData) {
       description: museumData.description || null,
       address: museumData.address || null,
       cityCode: museumData.cityCode || null,
-      latitude: museumData.latitude ? Number(museumData.latitude) : null,
-      longitude: museumData.longitude ? Number(museumData.longitude) : null,
+      latitude: museumData.latitude === '' || museumData.latitude == null ? null : Number(museumData.latitude),
+      longitude: museumData.longitude === '' || museumData.longitude == null ? null : Number(museumData.longitude),
       openingHours: museumData.openingHours || null,
       coverImageUrl: museumData.coverImageUrl || museumData.image || null
     })
@@ -89,8 +89,8 @@ export async function updateMuseumApi(id, museumData) {
       description: museumData.description || null,
       address: museumData.address || null,
       cityCode: museumData.cityCode || null,
-      latitude: museumData.latitude ? Number(museumData.latitude) : null,
-      longitude: museumData.longitude ? Number(museumData.longitude) : null,
+      latitude: museumData.latitude === '' || museumData.latitude == null ? null : Number(museumData.latitude),
+      longitude: museumData.longitude === '' || museumData.longitude == null ? null : Number(museumData.longitude),
       openingHours: museumData.openingHours || null,
       coverImageUrl: museumData.coverImageUrl || museumData.image || null
     })

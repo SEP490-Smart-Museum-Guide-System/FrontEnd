@@ -15,9 +15,10 @@ class _CatalogGateState extends State<CatalogGate> {
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: _load,
     builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done)
+      if (snapshot.connectionState != ConnectionState.done) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
-      if (snapshot.hasError)
+      }
+      if (snapshot.hasError) {
         return MuseumPage(
           title: 'Chưa tải được dữ liệu',
           children: [
@@ -33,6 +34,7 @@ class _CatalogGateState extends State<CatalogGate> {
             ),
           ],
         );
+      }
       return const MainNavigation();
     },
   );

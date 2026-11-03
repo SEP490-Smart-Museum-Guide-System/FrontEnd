@@ -10,12 +10,9 @@ class VisitStore extends ChangeNotifier {
   final List<Artifact> viewed = [];
   final Set<String> saved = {};
   final Set<String> deferredQuizArtifactIds = {};
-  final List<SupportTicket> supportTickets = [];
   final Map<String, int> quizScores = {};
   final List<QuizResult> quizResults = [];
-  final List<FeedbackEntry> feedback = [];
   final List<VisitRecord> history = [];
-  final List<ServicePurchase> purchases = [];
   int completedTours = 0;
 
   List<String> get todayScannedArtifactIds {
@@ -40,28 +37,6 @@ class VisitStore extends ChangeNotifier {
 
   bool isQuizDeferred(String artifactId) =>
       deferredQuizArtifactIds.contains(artifactId);
-
-  void submitSupportTicket({
-    required String orderId,
-    required String category,
-    required String reason,
-    required String description,
-    int refundPercent = 100,
-  }) {
-    final now = DateTime.now();
-    final ticket = SupportTicket(
-      id: 'TCK-${now.millisecondsSinceEpoch.toString().substring(7)}',
-      orderId: orderId,
-      category: category,
-      reason: reason,
-      description: description,
-      status: 'Đang tiếp nhận',
-      date: now,
-      refundPercent: refundPercent,
-    );
-    supportTickets.insert(0, ticket);
-    notifyListeners();
-  }
 
   Artifact? getNextArtifact(Artifact current) {
     final sameMuseum = AppServices.catalog.artifacts
@@ -134,7 +109,7 @@ class VisitStore extends ChangeNotifier {
   }
 
   void finishTour({
-    String museumId = 'museum_national',
+    required String museumId,
     List<String> visited = const [],
     List<String> skipped = const [],
     bool completed = true,
@@ -153,49 +128,13 @@ class VisitStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void recordFeedback(
-    String rating,
-    String comment, {
-    String targetType = 'app',
-    String targetId = 'smgs',
-    String targetName = 'Cẩm nang SMGS',
-  }) {
-    feedback.add(
-      FeedbackEntry(
-        targetType: targetType,
-        targetId: targetId,
-        targetName: targetName,
-        rating: rating,
-        comment: comment,
-        date: DateTime.now(),
-      ),
-    );
-    notifyListeners();
-  }
-
-  bool hasPurchase(String offerId, String museumId, DateTime date) =>
-      purchases.any(
-        (p) =>
-            p.offer.id == offerId && p.museumId == museumId && p.isForDay(date),
-      );
-  void activate(ServicePurchase purchase) {
-    if (hasPurchase(purchase.offer.id, purchase.museumId, purchase.date)) {
-      return;
-    }
-    purchases.insert(0, purchase);
-    notifyListeners();
-  }
-
   void reset() {
     viewed.clear();
     saved.clear();
     quizScores.clear();
     quizResults.clear();
-    feedback.clear();
     history.clear();
-    purchases.clear();
     deferredQuizArtifactIds.clear();
-    supportTickets.clear();
     completedTours = 0;
     notifyListeners();
   }

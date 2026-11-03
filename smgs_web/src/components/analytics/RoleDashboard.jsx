@@ -22,7 +22,6 @@ export default function RoleDashboard({ onNavigate }) {
   const revenue = transactions.filter(item => item.status === 'completed').reduce((sum, item) => sum + item.amount, 0);
   const museumRevenue = transactions.filter(item => item.status === 'completed' && item.museumCode === currentMuseum?.code).reduce((sum, item) => sum + item.amount, 0);
   const openCases = systemCases.filter(item => item.status !== 'resolved');
-  const scans = museumArtifacts.reduce((sum, item) => sum + (item.scansCount || 0), 0);
 
   const config = currentRole === 'administrator' ? {
     eyebrow: 'Quản trị toàn hệ thống',

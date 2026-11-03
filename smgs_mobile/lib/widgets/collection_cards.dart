@@ -1,3 +1,4 @@
+import 'artifact_photo.dart';
 import 'package:flutter/material.dart';
 
 import '../models/museum.dart';
@@ -246,14 +247,7 @@ class ArtifactCard extends StatelessWidget {
                   width: 86,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: artifact.id == 'artifact_1'
-                        ? Image.asset(
-                            'assets/images/ngoc-lu-web.jpg',
-                            height: 108,
-                            fit: BoxFit.cover,
-                            semanticLabel: 'Trống đồng Ngọc Lũ',
-                          )
-                        : HeritageArt(kind: artifact.id, height: 108),
+                    child: ArtifactPhoto(artifact: artifact, height: 108),
                   ),
                 ),
                 const SizedBox(width: 16),

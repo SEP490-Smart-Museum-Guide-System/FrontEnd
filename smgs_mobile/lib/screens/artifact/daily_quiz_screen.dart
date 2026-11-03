@@ -26,7 +26,7 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
         method: 'POST',
         body: {'dailyEntryId': id, 'mode': 'later'},
       );
-      if (mounted)
+      if (mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => BackendQuizAttemptScreen(
@@ -34,6 +34,7 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
             ),
           ),
         );
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -60,8 +61,9 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
       FutureBuilder<dynamic>(
         future: _entries,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const CircularProgressIndicator();
+          }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
           final entries = (snapshot.data as List)
               .cast<Map<String, dynamic>>()
@@ -71,12 +73,13 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                     e['artifactId'].toString() == widget.artifactId,
               )
               .toList();
-          if (entries.isEmpty)
+          if (entries.isEmpty) {
             return const EmptyState(
               title: 'Chưa có câu hỏi',
               message:
                   'Chưa có câu hỏi được mở cho hiện vật bạn đã quét hôm nay.',
             );
+          }
           return Column(
             children: entries
                 .map(

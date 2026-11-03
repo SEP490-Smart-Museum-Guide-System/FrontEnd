@@ -247,10 +247,10 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
             }}>
               <div style={{ width: '50px', height: '50px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#1A1F26' }}>
                 <img
-                  src={selectedArtifact.image || '/assets/images/ngoc-lu-web.jpg'}
+                  src={selectedArtifact.image || '/assets/images/placeholder.svg'}
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.src = '/assets/images/national-museum-web.jpg'; }}
+                  onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                 />
               </div>
               <div style={{ overflow: 'hidden' }}>

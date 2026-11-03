@@ -381,7 +381,7 @@ export default function SystemOperations({ mode = 'support' }) {
         {shown.map(item => {
           const transaction = transactions.find(t => t.id === item.transactionId);
           const policy = isRefundMode ? calculateRefundPolicy(item) : null;
-          const origAmount = transaction ? transaction.amount : 39000;
+          const origAmount = transaction?.amount ?? null;
           const calcAmount = policy ? Math.round((origAmount * policy.rate) / 100) : 0;
 
           return (

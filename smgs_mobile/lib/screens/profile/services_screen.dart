@@ -53,9 +53,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
         FutureBuilder<dynamic>(
           future: _products,
           builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done)
+            if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError)
+            }
+            if (snapshot.hasError) {
               return Column(
                 children: [
                   Notice(snapshot.error.toString()),
@@ -69,13 +70,15 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   ),
                 ],
               );
+            }
             final products = (snapshot.data as List)
                 .cast<Map<String, dynamic>>();
-            if (products.isEmpty)
+            if (products.isEmpty) {
               return const EmptyState(
                 title: 'Chưa có gói dịch vụ',
                 message: 'Bảo tàng chưa công khai sản phẩm trên hệ thống.',
               );
+            }
             return Column(
               children: products
                   .map(
@@ -243,8 +246,9 @@ class _PurchasedServicesScreenState extends State<PurchasedServicesScreen> {
       FutureBuilder<List<List<Map<String, dynamic>>>>(
         future: _data,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
+          }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
           final orders = snapshot.data![0], passes = snapshot.data![1];
           return Column(

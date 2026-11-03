@@ -29,6 +29,9 @@ export default function App() {
   };
 
   const renderContent = () => {
+    const sources = { overview: Object.keys(loading), artifacts: ['artifacts'], curation_artifacts: ['artifacts'], museums: ['museums'], spaces: ['museums'], users: ['users'], transactions: ['transactions', 'passPackages'], tours: ['tours'], reviews: ['reviews'], review_moderation: ['reviews'], support: ['systemCases'], curation_queue: ['curationQueue'], submission_status: ['curationQueue'] }[activeTab] || [];
+    if (sources.some(key => loading[key])) return <p role="status">Đang tải dữ liệu…</p>;
+    if (sources.some(key => dataErrors[key])) return <p role="alert">Chưa tải được dữ liệu cho màn hình này. Hãy thử lại bằng nút phía trên.</p>;
     if (activeTab === 'audit') return <p role="status">Máy chủ chưa cung cấp API nhật ký hệ thống.</p>;
     if (activeTab === 'refunds') return <p role="status">Máy chủ chưa cung cấp API yêu cầu hoàn tiền. Chưa có dữ liệu để hiển thị.</p>;
     if (activeTab === 'transactions' && currentRole === 'systemStaff') return <p role="status">API giao dịch hiện chưa hỗ trợ quyền Nhân viên hệ thống.</p>;

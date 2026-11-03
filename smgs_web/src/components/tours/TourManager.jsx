@@ -27,7 +27,7 @@ export default function TourManager() {
   const [tourForm, setTourForm] = useState({
     title: '',
     duration: '60 phút',
-    theme: 'Bảo vật & Lịch sử',
+    theme: '',
     isPaidGuide: false,
     price: 0,
     description: '',
@@ -59,7 +59,7 @@ export default function TourManager() {
     setTourForm({
       title: '',
       duration: '60 phút',
-      theme: 'Bảo vật & Lịch sử',
+      theme: '',
       isPaidGuide: false,
       price: 0,
       description: '',
@@ -100,7 +100,7 @@ export default function TourManager() {
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"
-            onClick={() => { setEditingTour(null); setTourForm({ title: '', duration: '60 phút', theme: 'Bảo vật & Lịch sử', isPaidGuide: false, price: 0, description: '', selectedArtifacts: [] }); setIsCreatingTour(true); }}
+            onClick={() => { setEditingTour(null); setTourForm({ title: '', duration: '60 phút', theme: '', isPaidGuide: false, price: 0, description: '', selectedArtifacts: [] }); setIsCreatingTour(true); }}
             className="btn btn-primary"
           >
             <Plus size={16} /> Tạo Hành Trình Mới
@@ -147,7 +147,7 @@ export default function TourManager() {
             transition: 'all var(--transition-fast)'
           }}
         >
-          <Calendar size={16} /> Triển Lãm Chuyên Đề ({museumExhibitions.length})
+          <Calendar size={16} /> Triển lãm chuyên đề
         </button>
       </div>
 
@@ -207,6 +207,7 @@ export default function TourManager() {
       {/* Exhibition List View */}
       {activeSection === 'exhibitions' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <p>Máy chủ chưa cung cấp danh sách triển lãm chuyên đề.</p>
           {museumExhibitions.map(exh => (
             <div key={exh.id} className="card" style={{ padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
@@ -281,9 +282,9 @@ export default function TourManager() {
                     <input
                       type="text"
                       className="form-input"
-                      value={tourForm.theme}
+                      disabled title="Máy chủ chưa hỗ trợ trường chủ đề riêng; hãy ghi trong mô tả." value={tourForm.theme}
                       onChange={(e) => setTourForm(prev => ({ ...prev, theme: e.target.value }))}
-                      placeholder="Đông Sơn"
+                      placeholder="Ghi chủ đề trong mô tả hành trình"
                     />
                   </div>
                 </div>

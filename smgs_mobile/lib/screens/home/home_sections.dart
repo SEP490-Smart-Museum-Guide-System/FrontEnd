@@ -140,10 +140,11 @@ class HomeMuseumStory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final museums = AppServices.catalog.museums;
-    if (museums.length < 2)
+    if (museums.length < 2) {
       return const Notice(
         'Các bảo tàng khác sẽ xuất hiện khi được công khai trên hệ thống.',
       );
+    }
     return MuseumCard(museum: museums[1]);
   }
 }

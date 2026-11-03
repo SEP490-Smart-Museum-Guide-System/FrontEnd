@@ -1,3 +1,6 @@
+import 'support/fake_services.dart';
+import 'package:smgs_mobile/services/app_services.dart';
+import 'support/api_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/screens/home/home_screen.dart';
@@ -22,7 +25,11 @@ Future<void> reach(WidgetTester tester, String title) async {
 }
 
 void main() {
-  testWidgets('Every home chapter fits a narrow screen with enlarged text', (
+  setUp(() {
+    AppServices.catalog = MockCatalogService();
+    AppServices.tours = MockTourService(AppServices.catalog);
+  });
+  apiTestWidgets('Every home chapter fits a narrow screen with enlarged text', (
     tester,
   ) async {
     await screenSize(tester, const Size(320, 640));
@@ -60,49 +67,50 @@ void main() {
     expect(find.text('Chạm vào\nmiền ký ức.').hitTestable(), findsOneWidget);
   });
 
-  testWidgets('Home themes, itinerary, quiz and visitor guide are connected', (
-    tester,
-  ) async {
-    await screenSize(tester, const Size(390, 844));
-    await tester.pumpWidget(host(HomeScreen(onExplore: () {}, onScan: () {})));
-    await tester.pumpAndSettle();
-    await reach(tester, 'Chuyện chốn cung đình');
-    await tester.tap(find.text('Chuyện chốn cung đình'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ExploreScreen), findsOneWidget);
-    final selected = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'Cung đình'),
-    );
-    expect(selected.selected, isTrue);
-    expect(find.text('1 hiện vật được tìm thấy'), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+  apiTestWidgets(
+    'Home themes, itinerary, quiz and visitor guide are connected',
+    (tester) async {
+      await screenSize(tester, const Size(390, 844));
+      await tester.pumpWidget(
+        host(HomeScreen(onExplore: () {}, onScan: () {})),
+      );
+      await tester.pumpAndSettle();
+      await reach(tester, 'Chuyện chốn cung đình');
+      await tester.tap(find.text('Chuyện chốn cung đình'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExploreScreen), findsOneWidget);
+      final selected = tester.widget<ChoiceChip>(
+        find.widgetWithText(ChoiceChip, 'Cung đình'),
+      );
+      expect(selected.selected, isTrue);
+      expect(find.text('1 hiện vật được tìm thấy'), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
 
-    await reach(tester, 'Xem hành trình 60 phút');
-    await tester.tap(find.text('Xem hành trình 60 phút'));
-    await tester.pumpAndSettle();
-    final route = tester.widget<TourRouteScreen>(find.byType(TourRouteScreen));
-    expect(route.duration, 60);
-    expect(route.stops, hasLength(2));
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+      await reach(tester, 'Tìm hành trình');
+      await tester.tap(find.text('Tìm hành trình'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ToursScreen), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
 
-    await reach(tester, 'Thử tài cùng trống đồng');
-    await tester.tap(find.text('Thử tài cùng trống đồng'));
-    await tester.pumpAndSettle();
-    expect(find.byType(QuizScreen), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+      await reach(tester, 'Thử tài cùng trống đồng');
+      await tester.tap(find.text('Thử tài cùng trống đồng'));
+      await tester.pumpAndSettle();
+      expect(find.byType(QuizScreen), findsOneWidget);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
 
-    await reach(tester, 'Chuẩn bị một chuyến đi');
-    await tester.tap(find.text('Chuẩn bị một chuyến đi'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.textContaining('Kiểm tra giờ mở cửa'));
-    await tester.pumpAndSettle();
-    expect(
-      find.textContaining('Kiểm tra giờ mở cửa').hitTestable(),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      await reach(tester, 'Chuẩn bị một chuyến đi');
+      await tester.tap(find.text('Chuẩn bị một chuyến đi'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.textContaining('Kiểm tra giờ mở cửa'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Kiểm tra giờ mở cửa').hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

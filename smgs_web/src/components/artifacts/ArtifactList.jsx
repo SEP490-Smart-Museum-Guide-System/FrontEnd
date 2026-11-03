@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import ArtifactDetailModal from './ArtifactDetailModal';
 import ArtifactEditModal from './ArtifactEditModal';
-import QrTestArtifact from './QrTestArtifact';
+
 
 export default function ArtifactList({ onOpenAIStudio }) {
   const {
@@ -72,11 +72,11 @@ export default function ArtifactList({ onOpenAIStudio }) {
 
   const totalTreasureCount = scopedArtifacts.filter(a => a.isNationalTreasure).length;
   const total3DCount = scopedArtifacts.filter(a => a.has3DModel).length;
-  const totalScans = scopedArtifacts.reduce((acc, curr) => acc + (curr.scansCount || 0), 0);
+  const totalScans = null;
 
   return (
     <div>
-      {currentRole === 'museumStaff' && <QrTestArtifact />}
+
       {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -136,7 +136,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
             <QrCode size={24} />
           </div>
           <div>
-            <div className="stat-value">{totalScans.toLocaleString()}</div>
+            <div className="stat-value">{totalScans?.toLocaleString() ?? '—'}</div>
             <div className="stat-label">Lượt quét QR ghi nhận</div>
           </div>
         </div>
@@ -259,10 +259,10 @@ export default function ArtifactList({ onOpenAIStudio }) {
                         onClick={() => setSelectedArtifact(art)}
                         >
                           <img
-                            src={art.image || '/assets/images/ngoc-lu-web.jpg'}
+                            src={art.image || '/assets/images/placeholder.svg'}
                             alt={art.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.target.src = '/assets/images/national-museum-web.jpg'; }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                           />
                         </div>
                       </td>
@@ -403,10 +403,10 @@ export default function ArtifactList({ onOpenAIStudio }) {
                 overflow: 'hidden'
               }}>
                 <img
-                  src={art.image || '/assets/images/ngoc-lu-web.jpg'}
+                  src={art.image || '/assets/images/placeholder.svg'}
                   alt={art.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.src = '/assets/images/national-museum-web.jpg'; }}
+                  onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                 />
                 <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px' }}>
                   {art.isNationalTreasure && (

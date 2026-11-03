@@ -96,11 +96,13 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
       FutureBuilder<List<Map<String, dynamic>>>(
         future: _tickets,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const CircularProgressIndicator();
+          }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
-          if (snapshot.data!.isEmpty)
+          if (snapshot.data!.isEmpty) {
             return const Notice('Bạn chưa gửi yêu cầu nào.');
+          }
           return Column(
             children: snapshot.data!
                 .map(

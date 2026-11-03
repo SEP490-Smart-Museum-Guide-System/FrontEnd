@@ -71,7 +71,9 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                 icon: Icons.auto_awesome,
                 onPressed: () {
                   final contentsList = data['contents'] as List? ?? [];
-                  final firstContent = contentsList.isNotEmpty ? contentsList[0] as Map<String, dynamic> : null;
+                  final firstContent = contentsList.isNotEmpty
+                      ? contentsList[0] as Map<String, dynamic>
+                      : null;
                   final a = Artifact(
                     id: data['id']?.toString() ?? '',
                     name: data['name'] as String,
@@ -79,8 +81,11 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                     museumId: data['museumId']?.toString() ?? '',
                     imageUrl: Artifact.fromBackendJson(data).imageUrl,
                     period: '',
-                    location: data['galleryName'] as String? ?? 'Phòng trưng bày',
-                    summary: firstContent?['title'] as String? ?? data['name'] as String,
+                    location:
+                        data['galleryName'] as String? ?? 'Phòng trưng bày',
+                    summary:
+                        firstContent?['title'] as String? ??
+                        data['name'] as String,
                     story: firstContent?['description'] as String? ?? '',
                     aiGuide: 'Hỏi Trợ lý AI về ${data['name']}',
                     quizPrompt: 'Tìm hiểu về ${data['name']}',
@@ -127,19 +132,155 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
       // In mobile app, we can use a sample artifact test photo or prompt input
       // Send sample bytes to AI Vision endpoint (Port 8001)
       final sampleBytes = Uint8List.fromList([
-        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-        0x01, 0x01, 0x00, 0x60, 0x00, 0x60, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
-        0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
-        0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D, 0x0C, 0x0B, 0x0B, 0x0C, 0x19, 0x12,
-        0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E, 0x1D, 0x1A, 0x1C, 0x1C, 0x20,
-        0x24, 0x2E, 0x27, 0x20, 0x22, 0x2C, 0x23, 0x1C, 0x1C, 0x28, 0x37, 0x29,
-        0x2C, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1F, 0x27, 0x39, 0x3D, 0x38, 0x32,
-        0x3C, 0x2E, 0x33, 0x34, 0x32, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01,
-        0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x1F, 0x00, 0x00,
-        0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-        0x09, 0x0A, 0x0B, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F,
-        0x00, 0x7F, 0x00, 0xFF, 0xD9
+        0xFF,
+        0xD8,
+        0xFF,
+        0xE0,
+        0x00,
+        0x10,
+        0x4A,
+        0x46,
+        0x49,
+        0x46,
+        0x00,
+        0x01,
+        0x01,
+        0x01,
+        0x00,
+        0x60,
+        0x00,
+        0x60,
+        0x00,
+        0x00,
+        0xFF,
+        0xDB,
+        0x00,
+        0x43,
+        0x00,
+        0x08,
+        0x06,
+        0x06,
+        0x07,
+        0x06,
+        0x05,
+        0x08,
+        0x07,
+        0x07,
+        0x07,
+        0x09,
+        0x09,
+        0x08,
+        0x0A,
+        0x0C,
+        0x14,
+        0x0D,
+        0x0C,
+        0x0B,
+        0x0B,
+        0x0C,
+        0x19,
+        0x12,
+        0x13,
+        0x0F,
+        0x14,
+        0x1D,
+        0x1A,
+        0x1F,
+        0x1E,
+        0x1D,
+        0x1A,
+        0x1C,
+        0x1C,
+        0x20,
+        0x24,
+        0x2E,
+        0x27,
+        0x20,
+        0x22,
+        0x2C,
+        0x23,
+        0x1C,
+        0x1C,
+        0x28,
+        0x37,
+        0x29,
+        0x2C,
+        0x30,
+        0x31,
+        0x34,
+        0x34,
+        0x34,
+        0x1F,
+        0x27,
+        0x39,
+        0x3D,
+        0x38,
+        0x32,
+        0x3C,
+        0x2E,
+        0x33,
+        0x34,
+        0x32,
+        0xFF,
+        0xC0,
+        0x00,
+        0x0B,
+        0x08,
+        0x00,
+        0x01,
+        0x00,
+        0x01,
+        0x01,
+        0x01,
+        0x11,
+        0x00,
+        0xFF,
+        0xC4,
+        0x00,
+        0x1F,
+        0x00,
+        0x00,
+        0x01,
+        0x05,
+        0x01,
+        0x01,
+        0x01,
+        0x01,
+        0x01,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x02,
+        0x03,
+        0x04,
+        0x05,
+        0x06,
+        0x07,
+        0x08,
+        0x09,
+        0x0A,
+        0x0B,
+        0xFF,
+        0xDA,
+        0x00,
+        0x08,
+        0x01,
+        0x01,
+        0x00,
+        0x00,
+        0x3F,
+        0x00,
+        0x7F,
+        0x00,
+        0xFF,
+        0xD9,
       ]);
 
       final result = await VisionApiService.recognizeArtifact(sampleBytes);
@@ -148,12 +289,15 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
       if (result.matched && result.artifactId != null) {
         // Fetch detailed artifact data from backend
         try {
-          final detail = await DiscoveryApiService.fetchArtifactDetail(result.artifactId!);
+          final detail = await DiscoveryApiService.fetchArtifactDetail(
+            result.artifactId!,
+          );
           _matchedArtifact = Artifact.fromBackendJson(detail);
         } catch (_) {}
       }
     } catch (e) {
-      _error = 'Dịch vụ AI Vision (Port 8001): ${e.toString().replaceFirst('Exception: ', '')}';
+      _error =
+          'Dịch vụ AI Vision (Port 8001): ${e.toString().replaceFirst('Exception: ', '')}';
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -172,12 +316,15 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
         children: [
           Expanded(
             child: ChoiceChip(
+              showCheckmark: false,
               label: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.qr_code, size: 16),
                   SizedBox(width: 6),
-                  Text('Quét mã QR'),
+                  Flexible(
+                    child: Text('Quét mã QR', overflow: TextOverflow.ellipsis),
+                  ),
                 ],
               ),
               selected: _activeMode == 'qr',
@@ -187,19 +334,27 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
               }),
               checkmarkColor: AppColors.antiqueIvory,
               labelStyle: AppTextStyles.bodyMedium.copyWith(
-                color: _activeMode == 'qr' ? AppColors.antiqueIvory : AppColors.darkBrown,
+                color: _activeMode == 'qr'
+                    ? AppColors.antiqueIvory
+                    : AppColors.darkBrown,
               ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: ChoiceChip(
+              showCheckmark: false,
               label: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.camera_enhance, size: 16),
                   SizedBox(width: 6),
-                  Text('Nhận diện AI Vision'),
+                  Flexible(
+                    child: Text(
+                      'Nhận diện AI',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               selected: _activeMode == 'vision',
@@ -209,7 +364,9 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
               }),
               checkmarkColor: AppColors.antiqueIvory,
               labelStyle: AppTextStyles.bodyMedium.copyWith(
-                color: _activeMode == 'vision' ? AppColors.antiqueIvory : AppColors.darkBrown,
+                color: _activeMode == 'vision'
+                    ? AppColors.antiqueIvory
+                    : AppColors.darkBrown,
               ),
             ),
           ),
@@ -299,17 +456,26 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                   children: [
                     const Eyebrow('Kết quả phân tích thị giác'),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: _visionResult!.matched ? Colors.green.shade100 : Colors.amber.shade100,
+                        color: _visionResult!.matched
+                            ? Colors.green.shade100
+                            : Colors.amber.shade100,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _visionResult!.matched ? 'Khớp chính xác' : 'Cần xác nhận',
+                        _visionResult!.matched
+                            ? 'Khớp chính xác'
+                            : 'Cần xác nhận',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: _visionResult!.matched ? Colors.green.shade800 : Colors.amber.shade900,
+                          color: _visionResult!.matched
+                              ? Colors.green.shade800
+                              : Colors.amber.shade900,
                         ),
                       ),
                     ),
@@ -323,10 +489,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                 const SizedBox(height: 14),
 
                 if (_matchedArtifact != null) ...[
-                  Text(
-                    _matchedArtifact!.name,
-                    style: AppTextStyles.cardTitle,
-                  ),
+                  Text(_matchedArtifact!.name, style: AppTextStyles.cardTitle),
                   const SizedBox(height: 4),
                   Text(
                     '${_matchedArtifact!.period} · ${_matchedArtifact!.location}',

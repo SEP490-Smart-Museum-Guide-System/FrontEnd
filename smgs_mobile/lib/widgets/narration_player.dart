@@ -270,8 +270,9 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             const Eyebrow('Thuyết minh AI (TTS)'),
             if (_speechResult != null)
@@ -280,7 +281,9 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
                 decoration: BoxDecoration(
                   color: AppColors.mutedGold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppColors.mutedGold.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Text(
                   _speechResult!.cacheHit ? 'Cache HIT' : 'AI Ready',
@@ -302,7 +305,9 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
         const SizedBox(height: 18),
 
         // Speed adjustment chips
-        Row(
+        Wrap(
+          spacing: 4,
+          runSpacing: 8,
           children: [
             const Text('Tốc độ đọc:', style: AppTextStyles.caption),
             const SizedBox(width: 8),
@@ -312,12 +317,19 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
                 child: InkWell(
                   onTap: () => _changeSpeed(sp),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: _speed == sp ? AppColors.deepBurgundy : Colors.transparent,
+                      color: _speed == sp
+                          ? AppColors.deepBurgundy
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: _speed == sp ? AppColors.deepBurgundy : AppColors.mutedGold,
+                        color: _speed == sp
+                            ? AppColors.deepBurgundy
+                            : AppColors.mutedGold,
                       ),
                     ),
                     child: Text(
@@ -325,7 +337,9 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: _speed == sp ? AppColors.antiqueIvory : AppColors.darkBrown,
+                        color: _speed == sp
+                            ? AppColors.antiqueIvory
+                            : AppColors.darkBrown,
                       ),
                     ),
                   ),
@@ -336,10 +350,14 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
         const SizedBox(height: 14),
 
         LinearProgressIndicator(
-          value: _totalDurationSeconds > 0 ? (_seconds / _totalDurationSeconds).clamp(0.0, 1.0) : 0,
+          value: _totalDurationSeconds > 0
+              ? (_seconds / _totalDurationSeconds).clamp(0.0, 1.0)
+              : 0,
           minHeight: 4,
           backgroundColor: AppColors.darkBrown.withValues(alpha: 0.1),
-          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.deepBurgundy),
+          valueColor: const AlwaysStoppedAnimation<Color>(
+            AppColors.deepBurgundy,
+          ),
         ),
         const SizedBox(height: 10),
         Row(
@@ -352,7 +370,9 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
             if (_speechResult != null)
               Text(
                 '${(_speechResult!.byteLength / 1024).toStringAsFixed(0)} KB · ${_speechResult!.voice}',
-                style: AppTextStyles.caption.copyWith(color: AppColors.mutedGold),
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.mutedGold,
+                ),
               ),
           ],
         ),
@@ -394,7 +414,9 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.deepBurgundy),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.deepBurgundy,
+                      ),
                     ),
                   ),
                   SizedBox(width: 10),

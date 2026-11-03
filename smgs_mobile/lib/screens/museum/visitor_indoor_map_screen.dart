@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../core/network/api_config.dart';
 import '../../models/indoor_map.dart';
 import '../../services/indoor_map_api_service.dart';
 import '../../widgets/museum_ui.dart';
@@ -21,7 +20,8 @@ class VisitorIndoorMapScreen extends StatefulWidget {
 }
 
 class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
-  final TransformationController _transformController = TransformationController();
+  final TransformationController _transformController =
+      TransformationController();
   final TextEditingController _searchController = TextEditingController();
 
   late dynamic _currentMapId;
@@ -66,11 +66,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     });
 
     try {
-      final mapData = await IndoorMapApiService.fetchPublishedMap(_currentMapId);
+      final mapData = await IndoorMapApiService.fetchPublishedMap(
+        _currentMapId,
+      );
       Uint8List? imgBytes;
       if (mapData.imageKey != null && mapData.imageKey!.isNotEmpty) {
         try {
-          imgBytes = await IndoorMapApiService.fetchMapImageBytes(_currentMapId, mapData.imageKey!);
+          imgBytes = await IndoorMapApiService.fetchMapImageBytes(
+            _currentMapId,
+            mapData.imageKey!,
+          );
         } catch (_) {}
       }
 
@@ -100,12 +105,21 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Chọn sơ đồ tầng (Map ID)', style: TextStyle(color: AppColors.deepBurgundy, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Chọn sơ đồ tầng (Map ID)',
+          style: TextStyle(
+            color: AppColors.deepBurgundy,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Nhập ID sơ đồ đã xuất bản cần tải:', style: AppTextStyles.bodySmall),
+            const Text(
+              'Nhập ID sơ đồ đã xuất bản cần tải:',
+              style: AppTextStyles.bodySmall,
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: controller,
@@ -114,7 +128,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: 'Ví dụ: 1',
-                prefixIcon: Icon(Icons.layers_outlined, color: AppColors.deepBurgundy),
+                prefixIcon: Icon(
+                  Icons.layers_outlined,
+                  color: AppColors.deepBurgundy,
+                ),
               ),
             ),
           ],
@@ -122,7 +139,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy', style: TextStyle(color: AppColors.darkBrown)),
+            child: const Text(
+              'Hủy',
+              style: TextStyle(color: AppColors.darkBrown),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -135,8 +155,13 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                 _loadPublishedMap();
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
-            child: const Text('Tải sơ đồ', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.deepBurgundy,
+            ),
+            child: const Text(
+              'Tải sơ đồ',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -144,7 +169,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   }
 
   void _recalculateRoute() {
-    if (_map == null || _fromNodeId == null || _selectedDestination == null || _selectedDestination!.nodeId == null) {
+    if (_map == null ||
+        _fromNodeId == null ||
+        _selectedDestination == null ||
+        _selectedDestination!.nodeId == null) {
       setState(() {
         _routeNodeIds = [];
       });
@@ -192,8 +220,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     final targetY = -(py * targetScale - size.height / 3);
 
     _transformController.value = Matrix4.identity()
-      ..translate(targetX, targetY)
-      ..scale(targetScale);
+      ..translateByDouble(targetX, targetY, 0, 1)
+      ..scaleByDouble(targetScale, targetScale, 1, 1);
   }
 
   Future<void> _handleQrDetected(String rawCode) async {
@@ -234,7 +262,12 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('FormatException: ', '').replaceFirst('Exception: ', '')),
+          content: Text(
+            e
+                .toString()
+                .replaceFirst('FormatException: ', '')
+                .replaceFirst('Exception: ', ''),
+          ),
           backgroundColor: Colors.red.shade800,
           duration: const Duration(seconds: 4),
         ),
@@ -244,11 +277,19 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final destinations = _map?.markers.where((m) =>
-      m.isActive &&
-      m.isDestination &&
-      (_searchQuery.isEmpty || m.label.toLowerCase().contains(_searchQuery.toLowerCase()))
-    ).toList() ?? [];
+    final destinations =
+        _map?.markers
+            .where(
+              (m) =>
+                  m.isActive &&
+                  m.isDestination &&
+                  (_searchQuery.isEmpty ||
+                      m.label.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      )),
+            )
+            .toList() ??
+        [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5F0),
@@ -261,7 +302,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           children: [
             Text(
               _map?.name ?? 'Sơ đồ bảo tàng',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.deepBurgundy),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.deepBurgundy,
+              ),
             ),
             Text(
               widget.museumName,
@@ -271,12 +316,18 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.layers_outlined, color: AppColors.deepBurgundy),
+            icon: const Icon(
+              Icons.layers_outlined,
+              color: AppColors.deepBurgundy,
+            ),
             tooltip: 'Đổi sơ đồ tầng',
             onPressed: _showChangeMapDialog,
           ),
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner, color: AppColors.deepBurgundy),
+            icon: const Icon(
+              Icons.qr_code_scanner,
+              color: AppColors.deepBurgundy,
+            ),
             tooltip: 'Quét QR xác định vị trí',
             onPressed: () => setState(() {
               _showQrScanner = true;
@@ -286,7 +337,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.deepBurgundy))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.deepBurgundy),
+            )
           : _errorMessage != null
           ? Center(
               child: Padding(
@@ -294,14 +347,27 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: AppColors.deepBurgundy),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.deepBurgundy,
+                    ),
                     const SizedBox(height: 12),
-                    Text(_errorMessage!, textAlign: TextAlign.center, style: AppTextStyles.bodyMedium),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyMedium,
+                    ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _loadPublishedMap,
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
-                      child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.deepBurgundy,
+                      ),
+                      child: const Text(
+                        'Thử lại',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -349,51 +415,60 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                   ),
 
                                   // Clickable Markers Overlay
-                                  ..._map!.markers.where((m) => m.isActive).map((marker) {
-                                    final px = marker.x * _map!.imageWidth;
-                                    final py = marker.y * _map!.imageHeight;
-                                    final isSelected = _selectedDestination?.id == marker.id;
-                                    final isStart = _startMarker?.id == marker.id;
+                                  ..._map!.markers.where((m) => m.isActive).map(
+                                    (marker) {
+                                      final px = marker.x * _map!.imageWidth;
+                                      final py = marker.y * _map!.imageHeight;
+                                      final isSelected =
+                                          _selectedDestination?.id == marker.id;
+                                      final isStart =
+                                          _startMarker?.id == marker.id;
 
-                                    return Positioned(
-                                      left: px - 18,
-                                      top: py - 18,
-                                      child: GestureDetector(
-                                        onTap: () => _selectDestination(marker),
-                                        child: AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: isStart
-                                                ? const Color(0xFF2563EB)
-                                                : isSelected
-                                                ? const Color(0xFF227C64)
-                                                : const Color(0xFF873C32),
-                                            border: Border.all(
-                                              color: Colors.white,
-                                              width: isSelected || isStart ? 3 : 2,
+                                      return Positioned(
+                                        left: px - 18,
+                                        top: py - 18,
+                                        child: GestureDetector(
+                                          onTap: () =>
+                                              _selectDestination(marker),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 200,
                                             ),
-                                            boxShadow: const [
-                                              BoxShadow(
-                                                color: Colors.black26,
-                                                blurRadius: 4,
-                                                offset: Offset(0, 2),
+                                            width: 36,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: isStart
+                                                  ? const Color(0xFF2563EB)
+                                                  : isSelected
+                                                  ? const Color(0xFF227C64)
+                                                  : const Color(0xFF873C32),
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: isSelected || isStart
+                                                    ? 3
+                                                    : 2,
                                               ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            marker.type == 'artifact'
-                                                ? Icons.museum_outlined
-                                                : Icons.place,
-                                            size: 18,
-                                            color: Colors.white,
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 4,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              marker.type == 'artifact'
+                                                  ? Icons.museum_outlined
+                                                  : Icons.place,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }),
+                                      );
+                                    },
+                                  ),
                                 ],
                               ),
                             )
@@ -416,7 +491,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                           _showQrScanner = true;
                           _scannerController = MobileScannerController();
                         }),
-                        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                        child: const Icon(
+                          Icons.qr_code_scanner,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       if (_fromNodeId != null && _startMarker != null)
@@ -424,8 +502,14 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                           heroTag: 'my_loc_btn',
                           backgroundColor: const Color(0xFF2563EB),
                           tooltip: 'Vị trí của bạn',
-                          onPressed: () => _centerOnCoordinates(_startMarker!.x, _startMarker!.y),
-                          child: const Icon(Icons.my_location, color: Colors.white),
+                          onPressed: () => _centerOnCoordinates(
+                            _startMarker!.x,
+                            _startMarker!.y,
+                          ),
+                          child: const Icon(
+                            Icons.my_location,
+                            color: Colors.white,
+                          ),
                         ),
                       const SizedBox(height: 8),
                       FloatingActionButton.small(
@@ -435,7 +519,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                         onPressed: () {
                           _transformController.value = Matrix4.identity();
                         },
-                        child: const Icon(Icons.crop_free, color: AppColors.darkBrown),
+                        child: const Icon(
+                          Icons.crop_free,
+                          color: AppColors.darkBrown,
+                        ),
                       ),
                     ],
                   ),
@@ -447,19 +534,32 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                   right: 80,
                   top: 16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2))],
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          _fromNodeId != null ? Icons.check_circle : Icons.info_outline,
+                          _fromNodeId != null
+                              ? Icons.check_circle
+                              : Icons.info_outline,
                           size: 18,
-                          color: _fromNodeId != null ? const Color(0xFF227C64) : const Color(0xFF873C32),
+                          color: _fromNodeId != null
+                              ? const Color(0xFF227C64)
+                              : const Color(0xFF873C32),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -467,7 +567,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             _startArtifactName != null
                                 ? 'Đang ở: $_startArtifactName'
                                 : 'Chưa có vị trí. Hãy quét QR cạnh hiện vật.',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E232B)),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E232B),
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -486,9 +590,15 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                     return Container(
                       decoration: const BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
                         boxShadow: [
-                          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -3)),
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 10,
+                            offset: Offset(0, -3),
+                          ),
                         ],
                       ),
                       child: ListView(
@@ -515,13 +625,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFAF7F2),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFEADCC8)),
+                                border: Border.all(
+                                  color: const Color(0xFFEADCC8),
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         _selectedDestination!.label,
@@ -534,7 +647,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                       IconButton(
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
-                                        icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                                        icon: const Icon(
+                                          Icons.close,
+                                          size: 18,
+                                          color: Colors.grey,
+                                        ),
                                         onPressed: () => setState(() {
                                           _selectedDestination = null;
                                           _routeNodeIds = [];
@@ -548,22 +665,37 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                   if (_fromNodeId == null)
                                     const Text(
                                       '👉 Nhấn nút Quét QR góc trên để chọn điểm xuất phát gần bạn.',
-                                      style: TextStyle(fontSize: 12, color: Color(0xFF873C32)),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF873C32),
+                                      ),
                                     )
-                                  else if (_fromNodeId == _selectedDestination!.nodeId)
+                                  else if (_fromNodeId ==
+                                      _selectedDestination!.nodeId)
                                     const Text(
                                       '📍 Bạn đang ở điểm tiếp cận địa điểm này.',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF227C64)),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF227C64),
+                                      ),
                                     )
                                   else if (_routeNodeIds.isEmpty)
                                     const Text(
                                       'Không tìm thấy đường đi (có thể do đường một chiều hoặc lối đi xe lăn bị ngắt).',
-                                      style: TextStyle(fontSize: 12, color: Colors.red),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.red,
+                                      ),
                                     )
                                   else
                                     Text(
                                       'Đã tìm thấy lộ trình qua ${_routeNodeIds.length} điểm rẽ hành lang.',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF227C64)),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF227C64),
+                                      ),
                                     ),
 
                                   const SizedBox(height: 10),
@@ -571,8 +703,14 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                     children: [
                                       // Wheelchair filter toggle
                                       FilterChip(
-                                        label: const Text('Xe lăn', style: TextStyle(fontSize: 11)),
-                                        avatar: const Icon(Icons.accessible, size: 14),
+                                        label: const Text(
+                                          'Xe lăn',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                        avatar: const Icon(
+                                          Icons.accessible,
+                                          size: 14,
+                                        ),
                                         selected: _accessibleOnly,
                                         onSelected: (val) {
                                           setState(() => _accessibleOnly = val);
@@ -581,15 +719,32 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                       ),
                                       const Spacer(),
                                       ElevatedButton.icon(
-                                        onPressed: _fromNodeId != null ? _recalculateRoute : null,
+                                        onPressed: _fromNodeId != null
+                                            ? _recalculateRoute
+                                            : null,
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF7B3B31),
+                                          backgroundColor: const Color(
+                                            0xFF7B3B31,
+                                          ),
                                           foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 8,
+                                          ),
                                         ),
-                                        icon: const Icon(Icons.navigation, size: 16),
-                                        label: const Text('Chỉ đường', style: TextStyle(fontSize: 13)),
+                                        icon: const Icon(
+                                          Icons.navigation,
+                                          size: 16,
+                                        ),
+                                        label: const Text(
+                                          'Chỉ đường',
+                                          style: TextStyle(fontSize: 13),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -604,30 +759,51 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             controller: _searchController,
                             decoration: InputDecoration(
                               hintText: 'Tìm hiện vật, phòng trưng bày...',
-                              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                              prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF94A3B8)),
+                              hintStyle: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF94A3B8),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                size: 20,
+                                color: Color(0xFF94A3B8),
+                              ),
                               filled: true,
                               fillColor: const Color(0xFFF8F5EE),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide.none,
                               ),
                             ),
-                            onChanged: (val) => setState(() => _searchQuery = val),
+                            onChanged: (val) =>
+                                setState(() => _searchQuery = val),
                           ),
                           const SizedBox(height: 12),
 
                           // Destinations List
                           const Text(
                             'Điểm đến trên sơ đồ:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E232B)),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E232B),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           if (destinations.isEmpty)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Text('Không có địa điểm phù hợp.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              child: Text(
+                                'Không có địa điểm phù hợp.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
                           for (final marker in destinations)
                             ListTile(
@@ -636,20 +812,43 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               leading: CircleAvatar(
                                 radius: 14,
                                 backgroundColor: marker.type == 'artifact'
-                                    ? const Color(0xFF873C32).withValues(alpha: 0.15)
-                                    : const Color(0xFF2563EB).withValues(alpha: 0.15),
+                                    ? const Color(
+                                        0xFF873C32,
+                                      ).withValues(alpha: 0.15)
+                                    : const Color(
+                                        0xFF2563EB,
+                                      ).withValues(alpha: 0.15),
                                 child: Icon(
-                                  marker.type == 'artifact' ? Icons.museum : Icons.place,
+                                  marker.type == 'artifact'
+                                      ? Icons.museum
+                                      : Icons.place,
                                   size: 14,
-                                  color: marker.type == 'artifact' ? const Color(0xFF873C32) : const Color(0xFF2563EB),
+                                  color: marker.type == 'artifact'
+                                      ? const Color(0xFF873C32)
+                                      : const Color(0xFF2563EB),
                                 ),
                               ),
-                              title: Text(marker.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              subtitle: Text(
-                                marker.type == 'artifact' ? 'Hiện vật' : 'Tiện ích / Phòng',
-                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              title: Text(
+                                marker.label,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                              subtitle: Text(
+                                marker.type == 'artifact'
+                                    ? 'Hiện vật'
+                                    : 'Tiện ích / Phòng',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
                               onTap: () {
                                 _selectDestination(marker);
                                 _centerOnCoordinates(marker.x, marker.y);
@@ -672,7 +871,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             controller: _scannerController,
                             onDetect: (capture) {
                               for (final barcode in capture.barcodes) {
-                                if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+                                if (barcode.rawValue != null &&
+                                    barcode.rawValue!.isNotEmpty) {
                                   _handleQrDetected(barcode.rawValue!);
                                   break;
                                 }
@@ -685,7 +885,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               width: 250,
                               height: 250,
                               decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFFC5A059), width: 3),
+                                border: Border.all(
+                                  color: const Color(0xFFC5A059),
+                                  width: 3,
+                                ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
@@ -695,7 +898,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             left: 16,
                             top: 40,
                             child: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                               onPressed: () => setState(() {
                                 _showQrScanner = false;
                                 _scannerController?.dispose();
@@ -707,8 +914,13 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             right: 16,
                             top: 40,
                             child: IconButton(
-                              icon: const Icon(Icons.flash_on, color: Colors.white, size: 28),
-                              onPressed: () => _scannerController?.toggleTorch(),
+                              icon: const Icon(
+                                Icons.flash_on,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                              onPressed: () =>
+                                  _scannerController?.toggleTorch(),
                             ),
                           ),
                           // Instruction text
@@ -717,7 +929,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             left: 20,
                             right: 20,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black87,
                                 borderRadius: BorderRadius.circular(8),
@@ -725,13 +940,18 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               child: const Text(
                                 'Quét tem mã QR gắn cạnh hiện vật tại tủ trưng bày để xác định điểm xuất phát.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white, fontSize: 13),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ),
                           if (_isProcessingScan)
                             const Center(
-                              child: CircularProgressIndicator(color: Color(0xFFC5A059)),
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFC5A059),
+                              ),
                             ),
                         ],
                       ),
@@ -806,7 +1026,7 @@ class _IndoorMapPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _IndoorMapPainter oldDelegate) {
     return oldDelegate.routeNodeIds != routeNodeIds ||
-           oldDelegate.startNodeId != startNodeId ||
-           oldDelegate.destinationMarker != destinationMarker;
+        oldDelegate.startNodeId != startNodeId ||
+        oldDelegate.destinationMarker != destinationMarker;
   }
 }

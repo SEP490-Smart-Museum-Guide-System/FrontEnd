@@ -76,6 +76,8 @@ function DataProvider({ children, session, login, endSession }) {
   useEffect(() => {
     if (!session) return;
     const controller = new AbortController(), options = { signal: controller.signal };
+    setTours([]); setCurationQueue([]); setReviews([]); setTransactions([]); setPassPackages([]);
+    setLoading(p => ({ ...p, tours: false, curationQueue: false, reviews: false, transactions: false, passPackages: false }));
     const museumIds = currentRole === 'administrator' ? museums.filter(m => m.isActive).map(m => m.id) : currentMuseum ? [currentMuseum.id] : [];
     async function load(key, request, setter) {
       setter([]); setLoading(p => ({ ...p, [key]: true })); setDataErrors(p => ({ ...p, [key]: null }));

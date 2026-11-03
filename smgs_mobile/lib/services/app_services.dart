@@ -4,6 +4,8 @@ import '../models/experience.dart';
 import '../models/artifact.dart';
 import '../models/museum.dart';
 import 'backend_api.dart';
+import 'backend_auth_service.dart';
+import '../data/mock/mock_artifacts.dart';
 
 abstract class AuthService extends ChangeNotifier {
   VisitorUser? get user;
@@ -33,7 +35,9 @@ class MockRecognitionService implements RecognitionService {
   @override
   Future<Artifact?> recognize(String museumId, {bool match = true}) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    final artifacts = catalog.inMuseum(museumId);
+    final artifacts = museumId.isEmpty
+        ? catalog.artifacts
+        : catalog.inMuseum(museumId);
     return match && artifacts.isNotEmpty ? artifacts.first : null;
   }
 }
@@ -151,8 +155,9 @@ class BackendTourService implements TourService {
     int duration,
     Set<String> interests,
   ) async {
-    if (int.tryParse(museumId) == null)
+    if (int.tryParse(museumId) == null) {
       throw const FormatException('Hãy chọn bảo tàng.');
+    }
     final tours = await BackendApi.list('tours?museumId=$museumId');
     final suitable =
         tours.where((t) => (t['estimatedMinutes'] as num) <= duration).toList()
@@ -173,11 +178,25 @@ class BackendTourService implements TourService {
   }
 }
 
+// Only the explicitly labelled AI recognition sandbox can use these artifacts.
+// It cannot return an arbitrary live DB artifact as a simulated recognition.
+class AiDemoCatalog extends CatalogService {
+  @override
+  List<Museum> get museums => const [];
+  @override
+  List<Artifact> get artifacts => mockArtifacts;
+  @override
+  List<Artifact> inMuseum(String id) =>
+      artifacts.where((a) => a.museumId == id).toList();
+}
+
 class AppServices {
   AppServices._();
-  static late AuthService auth;
+  static AuthService auth = BackendAuthService();
   static CatalogService catalog = BackendCatalogService();
-  static RecognitionService recognition = MockRecognitionService(catalog);
+  static RecognitionService recognition = MockRecognitionService(
+    AiDemoCatalog(),
+  );
   static AiGuideService guide = MockAiGuideService();
   static QuizService quiz = MockQuizService();
   static TourService tours = BackendTourService();

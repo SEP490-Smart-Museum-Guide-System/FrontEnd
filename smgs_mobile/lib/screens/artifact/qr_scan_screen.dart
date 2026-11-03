@@ -203,7 +203,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Câu đố hiện vật đã được thêm vào "Danh sách Quiz trong ngày" để bạn làm khi rảnh.',
+                          'Đây là kết quả nhận diện mẫu AI. Trải nghiệm mẫu không tạo lượt tham quan hoặc câu đố trong tài khoản.',
                           style: AppTextStyles.caption,
                         ),
                       ),

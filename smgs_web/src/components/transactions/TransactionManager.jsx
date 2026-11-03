@@ -106,7 +106,7 @@ export default function TransactionManager() {
 
             <div style={{ borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', display: 'flex', justifyContent: 'space-between' }}>
               <span>Chưa có thống kê lượt kích hoạt từ máy chủ</span>
-              <span style={{ color: 'var(--color-burgundy-700)', fontWeight: '600' }}>Cập nhật giá</span>
+              <span style={{ color: 'var(--color-burgundy-700)', fontWeight: '600' }}>Giá từ hệ thống</span>
             </div>
           </div>
         ))}
@@ -117,7 +117,7 @@ export default function TransactionManager() {
         <div className="card-header" style={{ background: '#FAF7F2' }}>
           <div className="card-title">
             <CreditCard size={18} color="var(--color-burgundy-700)" />
-            <span>Lịch Sử Giao Dịch Thời Gian Thực</span>
+            <span>Đơn hàng từ hệ thống</span>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>

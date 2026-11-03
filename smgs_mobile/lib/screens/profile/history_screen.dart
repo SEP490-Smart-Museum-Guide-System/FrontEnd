@@ -27,15 +27,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       FutureBuilder<List<Map<String, dynamic>>>(
         future: _visits,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const CircularProgressIndicator();
+          }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
-          if (snapshot.data!.isEmpty)
+          if (snapshot.data!.isEmpty) {
             return const EmptyState(
               title: 'Chưa có lượt tham quan',
               message:
                   'Bắt đầu lượt tham quan từ trang bảo tàng để lưu lịch sử.',
             );
+          }
           return Column(
             children: snapshot.data!
                 .map(
@@ -87,8 +89,9 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         method: 'POST',
         body: {},
       );
-      if (mounted)
+      if (mounted) {
         setState(() => _data = BackendApi.request('visits/${widget.visit.id}'));
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -106,8 +109,9 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       FutureBuilder<dynamic>(
         future: _data,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const CircularProgressIndicator();
+          }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
           final v = snapshot.data as Map<String, dynamic>;
           return Column(

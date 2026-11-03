@@ -118,10 +118,11 @@ class _ToursScreenState extends State<ToursScreen> {
                     ),
                   );
                 } catch (e) {
-                  if (context.mounted)
+                  if (context.mounted) {
                     ScaffoldMessenger.of(
                       context,
                     ).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
                 }
               },
       ),
@@ -328,7 +329,7 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
             Text(a.summary, style: AppTextStyles.bodyLarge),
             const SizedBox(height: 22),
             const Notice(
-              'Sơ đồ minh họa, không định vị trực tiếp. Tìm phòng theo biển chỉ dẫn tại bảo tàng.',
+              'Danh sách thể hiện thứ tự tham quan, không phải sơ đồ đường đi. Tiến độ được giữ trong phiên hiện tại.',
             ),
             const SizedBox(height: 14),
             Text(

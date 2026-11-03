@@ -5,7 +5,7 @@ const base = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
 export async function backend(path, { method = 'GET', body, signal } = {}) {
   const token = getAuthToken();
   const response = await fetch(`${base}/${path}`, {
-    method, signal: signal ?? AbortSignal.timeout(15000),
+    method, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
     headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -27,7 +27,7 @@ export async function allPages(path, options = {}) {
     const items = Array.isArray(data) ? data : data?.items;
     if (!Array.isArray(items)) throw new Error('Danh sách trả về không hợp lệ.');
     rows.push(...items);
-    if (Array.isArray(data) ? items.length < 50 : (page >= data.totalPages || rows.length >= data.totalCount || items.length === 0)) return rows;
+    if (Array.isArray(data) ? true : (page >= data.totalPages || rows.length >= data.totalCount || items.length === 0)) return rows;
     if (page >= 1000) throw new Error('Danh sách quá lớn. Vui lòng lọc dữ liệu.');
   }
 }

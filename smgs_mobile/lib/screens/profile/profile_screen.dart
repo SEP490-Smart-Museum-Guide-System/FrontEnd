@@ -68,9 +68,15 @@ class ProfileScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Stat(value: '${store.visitedCount}', label: 'Đã tham quan'),
-              _Stat(value: '${store.saved.length}', label: 'Đã lưu'),
-              _Stat(value: '${store.completedTours}', label: 'Hành trình'),
+              _Stat(
+                value: '${store.viewed.length}',
+                label: 'Đã mở trong phiên',
+              ),
+              _Stat(value: '${store.saved.length}', label: 'Lưu trong phiên'),
+              _Stat(
+                value: '${store.completedTours}',
+                label: 'Tour trong phiên',
+              ),
             ],
           ),
           const SectionHeading('Sổ tay tham quan'),
@@ -91,14 +97,13 @@ class ProfileScreen extends StatelessWidget {
           ),
           ActionTile(
             title: 'Quiz tích lũy trong ngày',
-            subtitle:
-                '${store.todayScannedArtifactIds.length} hiện vật đã mở · Làm bài để nhận điểm.',
+            subtitle: 'Xem câu đố được hệ thống cấp trong ngày.',
             icon: Icons.quiz_outlined,
             onTap: () => openPage(context, const DailyQuizScreen()),
           ),
           ActionTile(
-            title: 'Kết quả thử tài',
-            subtitle: 'Nhìn lại những điều đã ghi nhớ.',
+            title: 'Kết quả thử tài mẫu AI',
+            subtitle: 'Kết quả mẫu trong phiên, không cộng vào điểm tài khoản.',
             icon: Icons.workspace_premium_outlined,
             onTap: () =>
                 openPage(context, const PersonalCollectionScreen(kind: 'quiz')),
@@ -111,7 +116,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           ActionTile(
             title: 'Huy hiệu của bạn',
-            subtitle: '${store.points} điểm · ${store.badges.length} huy hiệu',
+            subtitle: 'Điểm và huy hiệu được hệ thống ghi nhận.',
             icon: Icons.military_tech_outlined,
             onTap: () => openPage(context, const BadgesScreen()),
           ),
@@ -170,7 +175,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Notice(
-            'Bạn đang dùng bản trải nghiệm. Lịch sử, mục đã lưu và kết quả được giữ trong phiên hiện tại; tải lại trang sẽ đặt lại dữ liệu.',
+            'Mục đã lưu, hiện vật vừa mở và kết quả thử tài mẫu chỉ giữ trong phiên. Lượt tham quan, đơn hàng, điểm và huy hiệu được tải từ hệ thống.',
           ),
           const Divider(),
           const Center(
@@ -336,7 +341,7 @@ class FeedbackScreen extends StatefulWidget {
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
   String? _rating;
-  bool _submitted = false;
+  bool _submitted = false, _sending = false;
   final _comment = TextEditingController();
   @override
   void dispose() {
@@ -399,9 +404,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             const SizedBox(height: 20),
             PrimaryButton(
               label: 'Ghi nhận góp ý',
-              onPressed: _rating == null
+              onPressed: _rating == null || _sending
                   ? null
                   : () async {
+                      setState(() => _sending = true);
                       try {
                         if (widget.targetType == 'visit' &&
                             int.tryParse(widget.targetId) != null) {
@@ -434,10 +440,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         }
                         if (mounted) setState(() => _submitted = true);
                       } catch (e) {
-                        if (context.mounted)
+                        if (context.mounted) {
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text(e.toString())));
+                        }
+                      } finally {
+                        if (mounted) setState(() => _sending = false);
                       }
                     },
             ),
@@ -469,8 +478,9 @@ class _BadgesScreenState extends State<BadgesScreen> {
       FutureBuilder<List<dynamic>>(
         future: _data,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const CircularProgressIndicator();
+          }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
           final badges = snapshot.data![1] as List;
           return Column(

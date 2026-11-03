@@ -32,11 +32,12 @@ class BackendApi {
       final items = (data is List ? data : data['items']) as List;
       rows.addAll(items.cast<Map<String, dynamic>>());
       if (data is List
-          ? items.length < 50
+          ? true
           : (items.isEmpty ||
                 page >= (data['totalPages'] as int) ||
-                rows.length >= (data['totalCount'] as int)))
+                rows.length >= (data['totalCount'] as int))) {
         return rows;
+      }
     }
     throw const FormatException('Danh sách quá lớn. Hãy lọc dữ liệu.');
   }
