@@ -18,7 +18,8 @@ export async function submitArtifactContentApi(artifactId, contentData) {
     body: JSON.stringify({
       languageCode: contentData.languageCode || 'vi',
       title: contentData.title,
-      description: contentData.description
+      description: contentData.description,
+      isAiGenerated: contentData.isAiGenerated ?? false
     })
   });
 

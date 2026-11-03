@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/artifact.dart';
 import '../models/experience.dart';
-import 'mock/mock_artifacts.dart';
+import '../services/app_services.dart';
 
 class VisitStore extends ChangeNotifier {
   VisitStore._();
@@ -21,15 +21,14 @@ class VisitStore extends ChangeNotifier {
   List<String> get todayScannedArtifactIds {
     final now = DateTime.now();
     final todayRecords = history.where(
-      (h) => h.date.year == now.year && h.date.month == now.month && h.date.day == now.day,
+      (h) =>
+          h.date.year == now.year &&
+          h.date.month == now.month &&
+          h.date.day == now.day,
     );
     final scanned = todayRecords.expand((r) => r.artifactIds).toSet();
     for (final a in viewed) {
       scanned.add(a.id);
-    }
-    // If empty in fresh session, prefill with artifact_1 & artifact_2 for great demo experience
-    if (scanned.isEmpty) {
-      return ['artifact_1', 'artifact_2'];
     }
     return scanned.toList();
   }
@@ -39,7 +38,8 @@ class VisitStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isQuizDeferred(String artifactId) => deferredQuizArtifactIds.contains(artifactId);
+  bool isQuizDeferred(String artifactId) =>
+      deferredQuizArtifactIds.contains(artifactId);
 
   void submitSupportTicket({
     required String orderId,
@@ -64,13 +64,18 @@ class VisitStore extends ChangeNotifier {
   }
 
   Artifact? getNextArtifact(Artifact current) {
-    final sameMuseum = mockArtifacts.where((a) => a.museumId == current.museumId).toList();
+    final sameMuseum = AppServices.catalog.artifacts
+        .where((a) => a.museumId == current.museumId)
+        .toList();
     if (sameMuseum.isEmpty) return null;
     final currentIndex = sameMuseum.indexWhere((a) => a.id == current.id);
     if (currentIndex >= 0 && currentIndex < sameMuseum.length - 1) {
       return sameMuseum[currentIndex + 1];
     }
-    return sameMuseum.firstWhere((a) => a.id != current.id, orElse: () => sameMuseum.first);
+    return sameMuseum.firstWhere(
+      (a) => a.id != current.id,
+      orElse: () => sameMuseum.first,
+    );
   }
 
   int get visitedCount =>
@@ -120,8 +125,11 @@ class VisitStore extends ChangeNotifier {
     final previous = quizScores[id] ?? 0;
     quizScores[id] = score > previous ? score : previous;
     quizResults.add(result);
-    final artifact = mockArtifacts.firstWhere((a) => a.id == id);
-    _day(artifact.museumId, date).quizzes.add(result);
+    final artifact = [
+      ...AppServices.catalog.artifacts,
+      ...viewed,
+    ].where((a) => a.id == id).firstOrNull;
+    if (artifact != null) _day(artifact.museumId, date).quizzes.add(result);
     notifyListeners();
   }
 

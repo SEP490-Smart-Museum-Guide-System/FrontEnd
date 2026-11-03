@@ -1,8 +1,9 @@
+import '../../services/backend_api.dart';
+import '../profile/history_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
-import '../../data/mock/mock_artifacts.dart';
 import '../../models/museum.dart';
 import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
@@ -13,7 +14,6 @@ import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
 import '../profile/services_screen.dart';
 import '../profile/profile_screen.dart';
-import 'visitor_indoor_map_screen.dart';
 
 class MuseumDetailScreen extends StatefulWidget {
   const MuseumDetailScreen({super.key, required this.museum, this.heroTag});
@@ -27,6 +27,7 @@ class MuseumDetailScreen extends StatefulWidget {
 class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   List<Artifact>? _backendArtifacts;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -35,7 +36,11 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   }
 
   Future<void> _loadArtifacts() async {
-    final mId = int.tryParse(widget.museum.id) ?? (widget.museum.id == 'museum_national' ? 1 : null);
+    final mId = int.tryParse(widget.museum.id);
+    if (mId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     try {
       final items = await DiscoveryApiService.fetchArtifacts(museumId: mId);
       if (mounted) {
@@ -44,9 +49,12 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
       }
     }
   }
@@ -57,25 +65,35 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   }
 
   void _openIndoorMap(BuildContext context) {
-    final mId = int.tryParse(widget.museum.id) ?? (widget.museum.id == 'museum_national' ? 1 : 1);
-    openPage(
-      context,
-      VisitorIndoorMapScreen(
-        mapId: mId,
-        museumName: widget.museum.name,
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Hãy quét mã sơ đồ tại bảo tàng. API hiện chưa cung cấp danh sách sơ đồ cho khách theo bảo tàng.',
+        ),
       ),
     );
+  }
+
+  Future<void> _startVisit() async {
+    try {
+      await BackendApi.request(
+        'visits',
+        method: 'POST',
+        body: {'museumId': int.parse(widget.museum.id)},
+      );
+      if (mounted) openPage(context, const HistoryScreen());
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final museum = widget.museum;
-    final defaultArtifacts = mockArtifacts
-        .where((a) => a.museumId == museum.id || (museum.id == '1' && a.museumId == 'museum_national'))
-        .toList();
-    final artifacts = (_backendArtifacts != null && _backendArtifacts!.isNotEmpty)
-        ? _backendArtifacts!
-        : defaultArtifacts;
+    final artifacts = _backendArtifacts ?? <Artifact>[];
 
     return StoryScaffold(
       title: museum.name,
@@ -86,12 +104,9 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
         height: 300,
       ),
       children: [
-        Text(
-          museum.id == 'museum_national'
-              ? 'Ảnh: Alistair Morrenger · Wikimedia Commons'
-              : 'Ảnh: Ecow · Wikimedia Commons',
-          style: AppTextStyles.caption,
-        ),
+        if (_error != null) Notice(_error!),
+        PrimaryButton(label: 'Bắt đầu lượt tham quan', onPressed: _startVisit),
+        const SizedBox(height: 16),
         const SizedBox(height: 22),
         Eyebrow(museum.category),
         const SizedBox(height: 10),

@@ -12,29 +12,29 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     id: artifact?.id || '',
     name: artifact?.name || '',
     altName: artifact?.altName || '',
-    museumId: artifact?.museumId || currentMuseum.id,
-    museumName: artifact?.museumName || currentMuseum.name,
-    buildingName: artifact?.buildingName || 'Tòa nhà A',
-    floorName: artifact?.floorName || 'Tầng 1',
-    galleryName: artifact?.galleryName || 'Phòng Văn hóa Đông Sơn',
+    museumId: artifact?.museumId || currentMuseum?.id,
+    museumName: artifact?.museumName || currentMuseum?.name,
+    buildingName: artifact?.buildingName || '',
+    floorName: artifact?.floorName || '',
+    galleryName: artifact?.galleryName || '',
     qrCode: artifact?.qrCode || '',
     mapPosition: artifact?.mapPosition || '',
     mapIcon: artifact?.mapIcon || 'Hiện vật',
     mapX: artifact?.mapX ?? 50,
     mapY: artifact?.mapY ?? 50,
-    theme: artifact?.theme || 'Đông Sơn & Thời đại Kim khí',
-    period: artifact?.period || 'Văn hóa Đông Sơn (Thế kỷ II - III TCN)',
-    dating: artifact?.dating || 'Khoảng 2.500 năm trước',
-    material: artifact?.material || 'Hợp kim đồng',
+    theme: artifact?.theme || '',
+    period: artifact?.period || '',
+    dating: artifact?.dating || '',
+    material: artifact?.material || '',
     dimensions: artifact?.dimensions || '',
     isNationalTreasure: artifact?.isNationalTreasure || false,
     has3DModel: artifact?.has3DModel || false,
-    modelUrl: artifact?.modelUrl || '/assets/models/trong_dong_dong_son.glb',
-    image: artifact?.image || '/assets/images/ngoc-lu-web.jpg',
+    modelUrl: artifact?.modelUrl || '',
+    image: artifact?.image || '',
     referenceImages: artifact?.referenceImages || [],
     audioUrl: artifact?.audioUrl || '',
     accessLevel: artifact?.accessLevel || 'free',
-    audioDuration: artifact?.audioDuration || '03:30',
+    audioDuration: artifact?.audioDuration || '',
     status: artifact?.status || 'draft',
     shortDesc: artifact?.shortDesc || '',
     fullDesc: artifact?.fullDesc || ''
@@ -44,14 +44,14 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       alert('Vui lòng nhập tên hiện vật');
       return;
     }
-    onSave(formData);
-    onClose();
+    const result = await onSave(formData);
+    if (result?.success) onClose();
   };
 
   const modalContent = (

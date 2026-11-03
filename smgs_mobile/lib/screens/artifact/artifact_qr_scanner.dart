@@ -73,18 +73,18 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                   final contentsList = data['contents'] as List? ?? [];
                   final firstContent = contentsList.isNotEmpty ? contentsList[0] as Map<String, dynamic> : null;
                   final a = Artifact(
-                    id: data['id']?.toString() ?? '1',
+                    id: data['id']?.toString() ?? '',
                     name: data['name'] as String,
                     category: 'Hiện vật di sản',
-                    museumId: data['museumId']?.toString() ?? '1',
-                    imageUrl: 'assets/images/ngoc-lu-web.jpg',
-                    period: 'Thời kỳ lịch sử',
+                    museumId: data['museumId']?.toString() ?? '',
+                    imageUrl: Artifact.fromBackendJson(data).imageUrl,
+                    period: '',
                     location: data['galleryName'] as String? ?? 'Phòng trưng bày',
                     summary: firstContent?['title'] as String? ?? data['name'] as String,
                     story: firstContent?['description'] as String? ?? '',
                     aiGuide: 'Hỏi Trợ lý AI về ${data['name']}',
                     quizPrompt: 'Tìm hiểu về ${data['name']}',
-                    modelUrl: null,
+                    modelUrl: Artifact.fromBackendJson(data).modelUrl,
                   );
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -149,9 +149,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
         // Fetch detailed artifact data from backend
         try {
           final detail = await DiscoveryApiService.fetchArtifactDetail(result.artifactId!);
-          if (detail != null) {
-            _matchedArtifact = Artifact.fromBackendJson(detail);
-          }
+          _matchedArtifact = Artifact.fromBackendJson(detail);
         } catch (_) {}
       }
     } catch (e) {

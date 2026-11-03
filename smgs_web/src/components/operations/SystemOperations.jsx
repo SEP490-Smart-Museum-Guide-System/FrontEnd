@@ -26,7 +26,7 @@ const groups = {
   },
   refunds: {
     title: 'Xử lý Yêu cầu Hoàn tiền Vé & Dịch vụ',
-    description: 'Áp dụng chính sách hoàn hủy tự động theo mốc thời gian và xác nhận lệnh hoàn tiền mô phỏng.',
+    description: 'Chức năng hoàn tiền chưa được máy chủ hỗ trợ.',
     types: ['refund'],
     icon: RotateCcw
   },
@@ -260,7 +260,7 @@ export default function SystemOperations({ mode = 'support' }) {
                       className="btn btn-primary btn-sm"
                       onClick={() => {
                         updateSystemCase(item.id, 'resolved', notes[item.id] || 'Đã khắc phục sự cố.');
-                        showToast('Đã đánh dấu xử lý sự cố thành công.');
+
                       }}
                     >
                       Đánh dấu Đã xử lý
@@ -288,48 +288,8 @@ export default function SystemOperations({ mode = 'support' }) {
     ? cases
     : cases.filter(item => filter === 'open' ? item.status !== 'resolved' : item.status === filter);
 
-  // Helper to calculate refund rate automatically based on policy [WEB-O03]
-  const calculateRefundPolicy = (item) => {
-    // In our museum policy:
-    // Before 24h: 100%
-    // 12h - 24h: 50%
-    // < 12h or active: 0%
-    if (item.id === 'YC-103') {
-      return {
-        rate: 100,
-        text: 'Hủy trước giờ tham quan > 24 giờ',
-        badgeClass: 'badge-approved',
-        eligible: true
-      };
-    }
-    return {
-      rate: 100,
-      text: 'Đủ điều kiện hoàn theo chính sách dịch vụ',
-      badgeClass: 'badge-approved',
-      eligible: true
-    };
-  };
-
-  const handleExecuteRefund = (c, approve = true) => {
-    const t = transactions.find(val => val.id === c.transactionId);
-    const amount = t ? t.amount : 39000;
-    const policy = calculateRefundPolicy(c);
-    const refundAmount = approve ? Math.round((amount * policy.rate) / 100) : 0;
-
-    if (approve) {
-      const confirmMsg = `Xác nhận phê duyệt hoàn ${refundAmount.toLocaleString('vi-VN')} đ (${policy.rate}%) cho khách ${c.visitor}?\nSố tiền sẽ được hoàn trả mô phỏng qua cổng thanh toán ban đầu.`;
-      if (!window.confirm(confirmMsg)) return;
-
-      updateSystemCase(c.id, 'resolved', `Đã duyệt hoàn tiền ${refundAmount.toLocaleString('vi-VN')} đ (${policy.rate}%). Giao dịch đối soát thành công.`);
-      logAction('REFUND_APPROVED', `Hoàn tiền ${refundAmount} đ cho yêu cầu ${c.id}`);
-      showToast(`Đã duyệt lệnh hoàn tiền ${refundAmount.toLocaleString('vi-VN')} đ thành công!`);
-    } else {
-      const reason = prompt('Nhập lý do từ chối hoàn tiền theo điều khoản bảo tàng:') || 'Yêu cầu không thỏa mãn thời gian hoàn hủy theo quy chế.';
-      updateSystemCase(c.id, 'resolved', `Từ chối hoàn tiền: ${reason}`);
-      logAction('REFUND_REJECTED', `Từ chối hoàn tiền yêu cầu ${c.id}: ${reason}`);
-      showToast('Đã từ chối hoàn tiền theo quy chế.');
-    }
-  };
+  const calculateRefundPolicy = () => ({ rate: 0, text: 'Chưa có dữ liệu chính sách từ máy chủ', eligible: false });
+  const handleExecuteRefund = () => showToast('Máy chủ chưa hỗ trợ hoàn tiền.', 'warning');
 
   return (
     <div className="operations-page">

@@ -25,9 +25,10 @@ export default function UserManager() {
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
+    password: '',
     phone: '',
     role: 'museumStaff',
-    museumId: 'mus-01',
+    museumId: '',
     assignedGalleries: ''
   });
 
@@ -40,32 +41,12 @@ export default function UserManager() {
     return true;
   });
 
-  const handleAddUserSubmit = (e) => {
+  const handleAddUserSubmit = async (e) => {
     e.preventDefault();
-    if (!newUserForm.name || !newUserForm.email) {
-      alert('Vui lòng nhập họ tên và email');
-      return;
-    }
-    const m = museums.find(x => x.id === newUserForm.museumId);
-    addUser({
-      name: newUserForm.name,
-      email: newUserForm.email,
-      phone: newUserForm.phone || '0900 000 000',
-      role: newUserForm.role,
-      museumId: ['museumStaff', 'curator'].includes(newUserForm.role) ? newUserForm.museumId : newUserForm.role === 'visitor' ? null : 'all',
-      museumName: ['museumStaff', 'curator'].includes(newUserForm.role) ? (m?.name || 'Bảo tàng Lịch sử Quốc gia') : newUserForm.role === 'visitor' ? 'Ứng dụng di động' : 'Toàn hệ thống',
-      assignedGalleries: newUserForm.assignedGalleries ? newUserForm.assignedGalleries.split(',').map(s => s.trim()) : [],
-      permissions: newUserForm.role === 'systemStaff' ? ['visitor_support', 'refund_requests', 'transaction_reconciliation', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality'] : newUserForm.role === 'museumStaff' ? ['manage_museum', 'manage_artifacts', 'create_ai_content', 'edit_tours', 'view_museum_reports'] : newUserForm.role === 'curator' ? ['review_artifact', 'review_translation', 'review_narration', 'review_quiz', 'approve_publish'] : newUserForm.role === 'visitor' ? ['browse_museums', 'scan_artifacts', 'purchase_pass'] : ['all_access']
-    });
+    const result = await addUser({ ...newUserForm, museumId: null });
+    if (!result?.success) return;
     setIsAddingUser(false);
-    setNewUserForm({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'museumStaff',
-      museumId: 'mus-01',
-      assignedGalleries: ''
-    });
+    setNewUserForm({ name: '', email: '', password: '', phone: '', role: 'museumStaff', museumId: '', assignedGalleries: '' });
   };
 
   const getRoleBadge = (role) => {
@@ -282,29 +263,13 @@ export default function UserManager() {
                       <option value="visitor">Khách tham quan · di động</option>
                     </select>
                   </div>
-                  {['museumStaff', 'curator'].includes(newUserForm.role) && <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Bảo tàng phụ trách</label>
-                    <select
-                      className="form-select"
-                      value={newUserForm.museumId}
-                      onChange={(e) => setNewUserForm(prev => ({ ...prev, museumId: e.target.value }))}
-                    >
-                      {museums.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>}
+
                 </div>
 
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Phòng / Khu phân công quản lý (cách nhau bởi dấu phẩy)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={newUserForm.assignedGalleries}
-                    onChange={(e) => setNewUserForm(prev => ({ ...prev, assignedGalleries: e.target.value }))}
-                    placeholder="Ví dụ: Phòng Đông Sơn, Phòng Sa Huỳnh"
-                  />
+                <div className="form-group">
+                  <label className="form-label">Mật khẩu ban đầu *</label>
+                  <input type="password" className="form-input" required minLength={6} value={newUserForm.password} onChange={e => setNewUserForm(p => ({ ...p, password: e.target.value }))} />
+                  <p>Tài khoản mới chưa có phân công bảo tàng. Phân công được quản lý riêng trên máy chủ.</p>
                 </div>
               </div>
 

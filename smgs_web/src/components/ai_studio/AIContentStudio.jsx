@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { aiDemoArtifacts } from '../../data/aiDemoArtifacts';
 import { useApp } from '../../context/AppContext';
 import {
   Sparkles,
@@ -18,11 +19,13 @@ import {
 
 export default function AIContentStudio({ initialArtifact }) {
   const { artifacts, currentMuseum, submitToCuration, showToast } = useApp();
-  const museumArtifacts = artifacts.filter(item => 
+  const liveArtifacts = artifacts.filter(item => 
     String(item.museumId) === String(currentMuseum?.id) || 
     item.museumId === currentMuseum?.id ||
     String(item.museumId) === String(currentMuseum?.backendId)
   );
+
+  const museumArtifacts = liveArtifacts.length ? liveArtifacts : aiDemoArtifacts.map(a => ({ ...a, name: `[Mẫu AI/3D] ${a.name}` }));
 
   const [selectedArtifactId, setSelectedArtifactId] = useState(
     initialArtifact?.id || museumArtifacts[0]?.id || ''

@@ -36,7 +36,7 @@ export default function MuseumManager() {
     deleteMuseum
   } = useApp();
 
-  const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || 'mus-01');
+  const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || null);
   const [isAddingGallery, setIsAddingGallery] = useState(false);
   const [isEditingMuseum, setIsEditingMuseum] = useState(false);
   const [isAddingMuseum, setIsAddingMuseum] = useState(false);
@@ -157,43 +157,7 @@ export default function MuseumManager() {
 
   const handleAddGallery = (e) => {
     e.preventDefault();
-    if (!newGalleryData.name || !newGalleryData.buildingId || !newGalleryData.floorId) {
-      alert('Vui lòng chọn tòa nhà, tầng và nhập tên phòng trưng bày');
-      return;
-    }
-
-    const newGal = {
-      id: `gal-${Date.now()}`,
-      name: newGalleryData.name,
-      code: newGalleryData.code || `G-${Date.now().toString().slice(-3)}`,
-      artifactCount: 0,
-      theme: newGalleryData.theme || 'Chuyên đề chung'
-    };
-
-    setMuseums(prev => prev.map(m => {
-      if (m.id === activeMuseum.id) {
-        const buildings = m.buildings || [];
-        const updatedBuildings = buildings.map(b => {
-          if (b.id === newGalleryData.buildingId) {
-            const updatedFloors = (b.floors || []).map(f => {
-              if (f.id === newGalleryData.floorId) {
-                return { ...f, galleries: [...(f.galleries || []), newGal] };
-              }
-              return f;
-            });
-            return { ...b, floors: updatedFloors };
-          }
-          return b;
-        });
-        return { ...m, buildings: updatedBuildings };
-      }
-      return m;
-    }));
-
-    logAction('GALLERY_CREATE', `Thêm phòng trưng bày "${newGal.name}" vào bảo tàng ${activeMuseum.name}`);
-    showToast(`Đã thêm phòng "${newGal.name}" thành công!`);
-    setIsAddingGallery(false);
-    setNewGalleryData({ buildingId: '', floorId: '', name: '', code: '', theme: '' });
+    showToast('Chưa có API tạo phòng trong màn này. Hãy quản lý không gian tại mục Bản đồ trong nhà.', 'warning');
   };
 
   return (

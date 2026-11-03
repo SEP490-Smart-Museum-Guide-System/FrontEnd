@@ -2,16 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { indoorApi } from '../../services/indoorMapApi';
 import { markerTypes } from './indoorGraph';
 import { visitorRoute } from './visitorRoute';
-import { visitorDemo } from './visitorDemo';
 import './visitorMap.css';
 
 export default function VisitorMap() {
   const id = new URLSearchParams(window.location.search).get('map');
   const preview = new URLSearchParams(window.location.search).get('preview') === 'draft';
-  const [map, setMap] = useState(id ? null : visitorDemo);
+  const [map, setMap] = useState(null);
   const [image, setImage] = useState('');
-  const [error, setError] = useState('');
-  const [from, setFrom] = useState(id ? '' : 'entry');
+  const [error, setError] = useState(id ? '' : 'Hãy chọn bản đồ đã xuất bản từ bảo tàng.');
+  const [from, setFrom] = useState('');
   const [selected, setSelected] = useState('');
   const [search, setSearch] = useState('');
   const [accessible, setAccessible] = useState(false);
@@ -39,8 +38,8 @@ export default function VisitorMap() {
   return <div className="visitor-page">
     <header className="visitor-header"><a href="/">SMGS <span>· Bảo tàng số</span></a><span>Trải nghiệm khách tham quan</span></header>
     <main>
-      <div className="visitor-intro"><div><span className="visitor-eyebrow">KHÁM PHÁ THEO CÁCH CỦA BẠN</span><h1>{map?.name || 'Bản đồ bảo tàng'}</h1><p>Chạm vào một hiện vật để tìm đường đến nơi trưng bày.</p></div><span className="visitor-badge">{id ? (preview ? 'Xem thử bản nháp đã lưu · Chỉ nhân viên' : 'Bản đã xuất bản') : 'Bản đồ mẫu · Dữ liệu minh họa'}</span></div>
-      {error && <p role="alert" className="visitor-alert">{error} {preview ? 'Hãy đăng nhập tài khoản quản lý bảo tàng để xem bản nháp đã lưu.' : 'Hãy đăng nhập và mở bản đồ đã xuất bản từ trang quản lý.'} <a href="/visitor-map">Xem bản đồ mẫu</a></p>}
+      <div className="visitor-intro"><div><span className="visitor-eyebrow">KHÁM PHÁ THEO CÁCH CỦA BẠN</span><h1>{map?.name || 'Bản đồ bảo tàng'}</h1><p>Chạm vào một hiện vật để tìm đường đến nơi trưng bày.</p></div><span className="visitor-badge">{id ? (preview ? 'Xem thử bản nháp đã lưu · Chỉ nhân viên' : 'Bản đã xuất bản') : 'Chưa chọn bản đồ'}</span></div>
+      {error && <p role="alert" className="visitor-alert">{error} {preview ? 'Hãy đăng nhập tài khoản quản lý bảo tàng để xem bản nháp đã lưu.' : 'Hãy đăng nhập và mở bản đồ đã xuất bản từ trang quản lý.'}</p>}
       {!map && !error && <p role="status">Đang tải bản đồ…</p>}
       {map && <div className="visitor-layout">
         <aside className="visitor-panel"><h2>Bạn muốn khám phá gì?</h2>

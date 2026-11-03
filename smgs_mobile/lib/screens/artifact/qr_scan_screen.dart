@@ -9,11 +9,7 @@ import 'artifact_detail_screen.dart';
 import 'artifact_qr_scanner.dart';
 
 class QRScanScreen extends StatefulWidget {
-  const QRScanScreen({
-    super.key,
-    this.recognition = false,
-    this.museumId = 'museum_national',
-  });
+  const QRScanScreen({super.key, this.recognition = false, this.museumId = ''});
   final bool recognition;
   final String museumId;
   @override
@@ -61,202 +57,212 @@ class _QRScanScreenState extends State<QRScanScreen> {
     context,
     ArtifactDetailScreen(
       artifact: a,
-      museumName: AppServices.catalog.museums
-          .firstWhere((m) => m.id == a.museumId)
-          .name,
+      museumName: AppServices.catalog.museumName(a.museumId),
     ),
   );
   @override
   Widget build(BuildContext context) {
     if (!widget.recognition) return const ArtifactQrScanner();
     return MuseumPage(
-    back: true,
-    title: widget.recognition ? 'Nhận diện hiện vật' : 'Quét mã hiện vật',
-    eyebrow: 'Khám phá tại bảo tàng',
-    subtitle: AppServices.catalog.museums
-        .firstWhere((m) => m.id == widget.museumId)
-        .name,
-    children: [
-      AnimatedContainer(
-        duration: reduceHeritageMotion(context)
-            ? Duration.zero
-            : HeritageMotion.standard,
-        curve: HeritageMotion.curve,
-        height: 260,
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: AppColors.darkBrown,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: AnimatedContainer(
+      back: true,
+      title: widget.recognition ? 'Nhận diện hiện vật' : 'Quét mã hiện vật',
+      eyebrow: 'Khám phá tại bảo tàng',
+      subtitle: 'Thử nghiệm nhận diện AI',
+      children: [
+        AnimatedContainer(
           duration: reduceHeritageMotion(context)
               ? Duration.zero
-              : HeritageMotion.fast,
+              : HeritageMotion.standard,
+          curve: HeritageMotion.curve,
+          height: 260,
+          padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
-            border: Border.all(
-              color: _flash ? AppColors.antiqueIvory : AppColors.mutedGold,
-              width: 2,
+            color: AppColors.darkBrown,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: AnimatedContainer(
+            duration: reduceHeritageMotion(context)
+                ? Duration.zero
+                : HeritageMotion.fast,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _flash ? AppColors.antiqueIvory : AppColors.mutedGold,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
             ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                widget.recognition
-                    ? Icons.camera_alt_outlined
-                    : Icons.qr_code_scanner,
-                size: 64,
-                color: AppColors.antiqueIvory,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _busy ? 'Đang phân tích hiện vật…' : 'Khung mô phỏng',
-                style: AppTextStyles.bodyMedium.copyWith(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.recognition
+                      ? Icons.camera_alt_outlined
+                      : Icons.qr_code_scanner,
+                  size: 64,
                   color: AppColors.antiqueIvory,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              if (_busy)
-                const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: LinearProgressIndicator(),
+                const SizedBox(height: 20),
+                Text(
+                  _busy ? 'Đang phân tích hiện vật…' : 'Khung mô phỏng',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.antiqueIvory,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-            ],
+                if (_busy)
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: LinearProgressIndicator(),
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 20),
-      const Notice('Trải nghiệm mô phỏng trên web, không sử dụng máy ảnh.'),
-      const SizedBox(height: 16),
-      if (!widget.recognition)
-        SecondaryButton(
-          label: _flash ? 'Tắt đèn mô phỏng' : 'Bật đèn mô phỏng',
-          icon: _flash ? Icons.flash_on : Icons.flash_off,
-          onPressed: _busy ? null : () => setState(() => _flash = !_flash),
-        ),
-      if (widget.recognition && !_done)
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'Thử tình huống không tìm thấy',
-            style: AppTextStyles.bodyMedium,
+        const SizedBox(height: 20),
+        const Notice('Trải nghiệm mô phỏng trên web, không sử dụng máy ảnh.'),
+        const SizedBox(height: 16),
+        if (!widget.recognition)
+          SecondaryButton(
+            label: _flash ? 'Tắt đèn mô phỏng' : 'Bật đèn mô phỏng',
+            icon: _flash ? Icons.flash_on : Icons.flash_off,
+            onPressed: _busy ? null : () => setState(() => _flash = !_flash),
           ),
-          value: _noMatch,
-          onChanged: _busy ? null : (v) => setState(() => _noMatch = v),
-        ),
-      const SizedBox(height: 16),
-      if (_error != null) ...[Notice(_error!), const SizedBox(height: 16)],
-      if (_done && _match != null) ...[
-        Panel(
-          gold: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Color(0xFF2E6B3E), size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'NHẬN DIỆN THÀNH CÔNG',
-                      style: AppTextStyles.caption.copyWith(
-                        color: const Color(0xFF2E6B3E),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(_match!.name, style: AppTextStyles.cardTitle),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.place_outlined, size: 16, color: AppColors.deepBurgundy),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Vị trí của bạn: ${_match!.location}',
-                      style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.antiqueIvory,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Row(
+        if (widget.recognition && !_done)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'Thử tình huống không tìm thấy',
+              style: AppTextStyles.bodyMedium,
+            ),
+            value: _noMatch,
+            onChanged: _busy ? null : (v) => setState(() => _noMatch = v),
+          ),
+        const SizedBox(height: 16),
+        if (_error != null) ...[Notice(_error!), const SizedBox(height: 16)],
+        if (_done && _match != null) ...[
+          Panel(
+            gold: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(Icons.quiz_outlined, size: 16, color: AppColors.deepBurgundy),
-                    SizedBox(width: 8),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF2E6B3E),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Câu đố hiện vật đã được thêm vào "Danh sách Quiz trong ngày" để bạn làm khi rảnh.',
-                        style: AppTextStyles.caption,
+                        'NHẬN DIỆN THÀNH CÔNG',
+                        style: AppTextStyles.caption.copyWith(
+                          color: const Color(0xFF2E6B3E),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(_match!.name, style: AppTextStyles.cardTitle),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.place_outlined,
+                      size: 16,
+                      color: AppColors.deepBurgundy,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Vị trí của bạn: ${_match!.location}',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.antiqueIvory,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.quiz_outlined,
+                        size: 16,
+                        color: AppColors.deepBurgundy,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Câu đố hiện vật đã được thêm vào "Danh sách Quiz trong ngày" để bạn làm khi rảnh.',
+                          style: AppTextStyles.caption,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          PrimaryButton(
+            label: 'Xem hiện vật',
+            icon: Icons.arrow_forward,
+            onPressed: () => _open(_match!),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_done && _match == null) ...[
+          const EmptyState(
+            title: 'Chưa tìm thấy hiện vật',
+            message: 'Hãy thử lại hoặc tra cứu trong bộ sưu tập của bảo tàng.',
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (!_done)
+          PrimaryButton(
+            label: _busy
+                ? 'Đang xử lý…'
+                : widget.recognition
+                ? 'Nhận diện mô phỏng'
+                : 'Quét mã mô phỏng',
+            icon: widget.recognition
+                ? Icons.camera_alt_outlined
+                : Icons.qr_code_scanner,
+            onPressed: _busy ? null : _scan,
+          )
+        else
+          SecondaryButton(
+            label: 'Thử lại',
+            onPressed: () => setState(() {
+              _done = false;
+              _match = null;
+              _noMatch = false;
+            }),
+          ),
+        const SizedBox(height: 12),
+        SecondaryButton(
+          label: 'Tra cứu danh sách',
+          icon: Icons.search_outlined,
+          onPressed: () => openPage(
+            context,
+            ExploreScreen(standalone: true, museumId: widget.museumId),
           ),
         ),
-        const SizedBox(height: 18),
-        PrimaryButton(
-          label: 'Xem hiện vật',
-          icon: Icons.arrow_forward,
-          onPressed: () => _open(_match!),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy và quay lại'),
         ),
-        const SizedBox(height: 12),
       ],
-      if (_done && _match == null) ...[
-        const EmptyState(
-          title: 'Chưa tìm thấy hiện vật',
-          message: 'Hãy thử lại hoặc tra cứu trong bộ sưu tập của bảo tàng.',
-        ),
-        const SizedBox(height: 16),
-      ],
-      if (!_done)
-        PrimaryButton(
-          label: _busy
-              ? 'Đang xử lý…'
-              : widget.recognition
-              ? 'Nhận diện mô phỏng'
-              : 'Quét mã mô phỏng',
-          icon: widget.recognition
-              ? Icons.camera_alt_outlined
-              : Icons.qr_code_scanner,
-          onPressed: _busy ? null : _scan,
-        )
-      else
-        SecondaryButton(
-          label: 'Thử lại',
-          onPressed: () => setState(() {
-            _done = false;
-            _match = null;
-            _noMatch = false;
-          }),
-        ),
-      const SizedBox(height: 12),
-      SecondaryButton(
-        label: 'Tra cứu danh sách',
-        icon: Icons.search_outlined,
-        onPressed: () => openPage(
-          context,
-          ExploreScreen(standalone: true, museumId: widget.museumId),
-        ),
-      ),
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Hủy và quay lại'),
-      ),
-    ],
-  );
-
-  }}
+    );
+  }
+}

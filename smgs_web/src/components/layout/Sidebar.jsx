@@ -22,9 +22,9 @@ import {
 export default function Sidebar() {
   const { currentRole, currentMuseum, activeTab, setActiveTab, curationQueue, reviews, artifacts } = useApp();
 
-  const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id));
+  const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum?.id).map(item => item.id));
   const pendingCuration = curationQueue.filter(c => c.status === 'pending_review' && museumArtifactIds.has(c.targetArtifactId)).length;
-  const pendingReviews = reviews.filter(r => r.status === 'pending_reply' && r.museumName === currentMuseum.name).length;
+  const pendingReviews = reviews.filter(r => r.status === 'pending_reply' && r.museumName === currentMuseum?.name).length;
 
   // Navigation schema per role
   const getNavSections = () => {

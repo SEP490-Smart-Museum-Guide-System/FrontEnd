@@ -6,7 +6,7 @@ import '../../services/discovery_api_service.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../widgets/heritage_shimmer.dart';
-import '../../data/mock/mock_artifacts.dart';
+import '../../services/app_services.dart';
 import 'museum_discovery_map_screen.dart';
 
 String _searchKey(String text) {
@@ -128,24 +128,28 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final filterMuseum = widget.museumId ?? _museum;
-    final scoped = mockArtifacts
+    final scoped = AppServices.catalog.artifacts
         .where((a) => filterMuseum == null || a.museumId == filterMuseum)
         .toList();
     final galleries = scoped.map((a) => a.location).toSet().toList();
     final exhibitions = scoped.map((a) => a.exhibition).toSet().toList();
-    final artifacts = mockArtifacts
+    final artifacts = AppServices.catalog.artifacts
         .where(
           (a) =>
               (filterMuseum == null || a.museumId == filterMuseum) &&
               (_gallery == null || a.location == _gallery) &&
               (_exhibition == null || a.exhibition == _exhibition) &&
-              _searchKey('${a.name} ${a.period} ${a.category} ${a.location}')
-                  .contains(_searchKey(_query)) &&
+              _searchKey(
+                '${a.name} ${a.period} ${a.category} ${a.location}',
+              ).contains(_searchKey(_query)) &&
               (_category == 'Tất cả' || a.category == _category),
         )
         .toList();
     final categories = _artifacts
-        ? ['Tất cả', 'Khảo cổ', 'Cung đình', 'Tư liệu']
+        ? [
+            'Tất cả',
+            ...scoped.map((a) => a.category).where((c) => c.isNotEmpty).toSet(),
+          ]
         : ['Tất cả', 'Lịch sử', 'Văn hóa'];
 
     return MuseumPage(
@@ -327,7 +331,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     color: AppColors.imperialGold.withAlpha(50),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.map_outlined, color: AppColors.imperialGold, size: 26),
+                  child: const Icon(
+                    Icons.map_outlined,
+                    color: AppColors.imperialGold,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -345,7 +353,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'Xem vị trí trên bản đồ, lọc bảo tàng gần tôi nhất và chỉ đường ngoài trời.',
-                        style: TextStyle(color: Colors.white.withAlpha(215), fontSize: 11),
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(215),
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -355,12 +366,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.imperialGold,
                     foregroundColor: AppColors.charcoalBrown,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 0,
                   ),
-                  onPressed: () => openPage(context, const MuseumDiscoveryMapScreen()),
-                  child: const Text('Mở bản đồ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  onPressed: () =>
+                      openPage(context, const MuseumDiscoveryMapScreen()),
+                  child: const Text(
+                    'Mở bản đồ',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
                 ),
               ],
             ),
@@ -401,7 +421,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.cloud_off_outlined, color: AppColors.deepBurgundy, size: 36),
+                const Icon(
+                  Icons.cloud_off_outlined,
+                  color: AppColors.deepBurgundy,
+                  size: 36,
+                ),
                 const SizedBox(height: 10),
                 Text(
                   _museumsError!,
@@ -431,7 +455,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               (!_artifacts && _backendMuseums.isEmpty))
             const EmptyState(
               title: 'Chưa tìm thấy kết quả',
-              message: 'Thử một từ khóa khác hoặc chọn “Tất cả” để xem lại bộ sưu tập.',
+              message:
+                  'Thử một từ khóa khác hoặc chọn “Tất cả” để xem lại bộ sưu tập.',
             ),
           if (_artifacts)
             ...artifacts.map((a) => ArtifactCard(artifact: a))
@@ -445,7 +470,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ],
 
         const SizedBox(height: 10),
-        const Notice('Dữ liệu kết nối trực tiếp từ máy chủ Smart Museum Guide System.'),
+        const Notice(
+          'Dữ liệu kết nối trực tiếp từ máy chủ Smart Museum Guide System.',
+        ),
       ],
     );
   }

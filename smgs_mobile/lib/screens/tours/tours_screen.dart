@@ -2,18 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../models/artifact.dart';
-import '../../data/mock/mock_museums.dart';
 import '../../data/visit_store.dart';
 import '../artifact/artifact_detail_screen.dart';
 import '../../services/app_services.dart';
 import '../../widgets/museum_route_map.dart';
 
 class ToursScreen extends StatefulWidget {
-  const ToursScreen({
-    super.key,
-    this.standalone = false,
-    this.museumId = 'museum_national',
-  });
+  const ToursScreen({super.key, this.standalone = false, this.museumId = ''});
   final bool standalone;
   final String museumId;
   @override
@@ -24,7 +19,9 @@ class _ToursScreenState extends State<ToursScreen> {
   int _duration = 60;
   final Set<String> _interests = {'Lịch sử'};
   String get _interest => _interests.join(', ');
-  late String _museumId = widget.museumId;
+  late String _museumId = widget.museumId.isNotEmpty
+      ? widget.museumId
+      : (AppServices.catalog.museums.firstOrNull?.id ?? '');
   @override
   Widget build(BuildContext context) => MuseumPage(
     back: widget.standalone,
@@ -38,10 +35,10 @@ class _ToursScreenState extends State<ToursScreen> {
       ),
       const SectionHeading('Bạn muốn ghé thăm đâu?'),
       DropdownButtonFormField<String>(
-        initialValue: _museumId,
+        initialValue: _museumId.isEmpty ? null : _museumId,
         isExpanded: true,
         decoration: const InputDecoration(labelText: 'Bảo tàng'),
-        items: mockMuseums
+        items: AppServices.catalog.museums
             .map(
               (m) => DropdownMenuItem(
                 value: m.id,
@@ -102,27 +99,35 @@ class _ToursScreenState extends State<ToursScreen> {
       PrimaryButton(
         label: 'Gợi ý hành trình',
         icon: Icons.route_outlined,
-        onPressed: _interests.isEmpty
+        onPressed: _interests.isEmpty || _museumId.isEmpty
             ? null
-            : () {
-                final stops = AppServices.tours.plan(
-                  _museumId,
-                  _duration,
-                  _interests,
-                );
-                openPage(
-                  context,
-                  TourRouteScreen(
-                    stops: stops,
-                    duration: _duration,
-                    interest: _interest,
-                  ),
-                );
+            : () async {
+                try {
+                  final stops = await AppServices.tours.plan(
+                    _museumId,
+                    _duration,
+                    _interests,
+                  );
+                  if (!context.mounted) return;
+                  openPage(
+                    context,
+                    TourRouteScreen(
+                      stops: stops,
+                      duration: _duration,
+                      interest: _interest,
+                    ),
+                  );
+                } catch (e) {
+                  if (context.mounted)
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(e.toString())));
+                }
               },
       ),
       const SizedBox(height: 18),
       const Notice(
-        'Lộ trình được gợi ý từ bộ sưu tập mẫu. Bạn có thể điều chỉnh nhịp tham quan tùy ý.',
+        'Các hành trình được tải từ máy chủ và lọc theo thời gian. Sở thích chưa được máy chủ hỗ trợ lọc.',
       ),
     ],
   );
@@ -183,7 +188,9 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
       );
     }
     final a = widget.stops[_stop];
-    final museum = mockMuseums.firstWhere((m) => m.id == a.museumId);
+    final museum = AppServices.catalog.museums
+        .where((m) => m.id == a.museumId)
+        .firstOrNull;
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
         if (didPop && !_done) _record(false);
@@ -201,7 +208,7 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
             : _started
             ? 'Điểm dừng ${_stop + 1} / ${widget.stops.length}'
             : 'Hành trình gợi ý',
-        subtitle: museum.name,
+        subtitle: (museum?.name ?? 'Bảo tàng'),
         children: [
           if (_done) ...[
             Panel(
@@ -233,7 +240,7 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
               onPressed: () => Navigator.pop(context),
             ),
           ] else if (!_started) ...[
-            MuseumPhoto(museumId: museum.id, height: 185),
+            MuseumPhoto(museumId: a.museumId, height: 185),
             const SizedBox(height: 20),
             Panel(
               child: Column(
@@ -336,7 +343,10 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
               icon: Icons.menu_book_outlined,
               onPressed: () => openPage(
                 context,
-                ArtifactDetailScreen(artifact: a, museumName: museum.name),
+                ArtifactDetailScreen(
+                  artifact: a,
+                  museumName: (museum?.name ?? 'Bảo tàng'),
+                ),
               ),
             ),
             const SizedBox(height: 12),

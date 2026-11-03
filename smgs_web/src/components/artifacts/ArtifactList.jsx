@@ -505,11 +505,11 @@ export default function ArtifactList({ onOpenAIStudio }) {
             setEditingArtifact(null);
             setIsCreatingNew(false);
           }}
-          onSave={(artData) => {
+          onSave={async (artData) => {
             if (isCreatingNew) {
-              addArtifact(artData);
+              return await addArtifact(artData);
             } else {
-              updateArtifact(artData);
+              return await updateArtifact(artData);
             }
           }}
         />

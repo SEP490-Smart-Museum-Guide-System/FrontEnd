@@ -180,7 +180,8 @@ class MuseumPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && imageUrl!.startsWith('http')) {
+    if (imageUrl == null || imageUrl!.isEmpty) return _buildPlaceholder();
+    if (imageUrl!.startsWith('http')) {
       return Image.network(
         imageUrl!,
         height: height,
@@ -190,18 +191,12 @@ class MuseumPhoto extends StatelessWidget {
       );
     }
     return Image.asset(
-      imageUrl != null && !imageUrl!.startsWith('http') && imageUrl!.isNotEmpty
-          ? imageUrl!
-          : (museumId == 'museum_national'
-              ? 'assets/images/national-museum-web.jpg'
-              : 'assets/images/ho-chi-minh-museum-web.jpg'),
+      imageUrl!,
       height: height,
       width: double.infinity,
       fit: BoxFit.cover,
       alignment: const Alignment(0, 0.35),
-      semanticLabel: museumId == 'museum_national'
-          ? 'Kiến trúc Bảo tàng Lịch sử Quốc gia tại Hà Nội'
-          : 'Bảo tàng Hồ Chí Minh tại Hà Nội',
+      semanticLabel: 'Ảnh bảo tàng',
       errorBuilder: (context, error, stack) => _buildPlaceholder(),
     );
   }

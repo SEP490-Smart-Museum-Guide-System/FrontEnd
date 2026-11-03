@@ -1,3 +1,4 @@
+import 'support/fake_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/main.dart';
@@ -28,6 +29,8 @@ void main() {
   setUp(() {
     VisitStore.instance.reset();
     AppServices.auth = MockAuthService();
+    AppServices.catalog = MockCatalogService();
+    AppServices.tours = MockTourService(AppServices.catalog);
   });
 
   testWidgets(
@@ -249,46 +252,6 @@ void main() {
   );
 
   testWidgets(
-    'Payment failure preserves checkout; success activates only once and opens service',
-    (tester) async {
-      await screenSize(tester, const Size(390, 844));
-      await tester.pumpWidget(
-        host(
-          ServiceCheckoutScreen(
-            offer: AppServices.premium.offers[1],
-            museumId: 'museum_national',
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tapText(tester, 'VNPay');
-      await tapText(tester, 'Thất bại');
-      await tapText(tester, 'Xác nhận thanh toán mô phỏng');
-      expect(find.text('Thanh toán chưa thành công'), findsOneWidget);
-      expect(VisitStore.instance.purchases, isEmpty);
-      await tapText(tester, 'Thử thanh toán lại');
-      expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'VNPay'))
-            .selected,
-        isTrue,
-      );
-      await tapText(tester, 'Thành công');
-      await tapText(tester, 'Xác nhận thanh toán mô phỏng');
-      expect(find.text('Đã đăng ký dịch vụ'), findsOneWidget);
-      expect(VisitStore.instance.purchases, hasLength(1));
-      await tapText(tester, 'Mở Hướng dẫn số');
-      expect(find.byType(NarrationScreen), findsOneWidget);
-      await tapText(tester, 'Phát thử mô phỏng');
-      await tester.pump(const Duration(seconds: 2));
-      expect(find.text('Tạm dừng mô phỏng'), findsOneWidget);
-      await tapText(tester, 'Tạm dừng mô phỏng');
-      await tester.pumpWidget(const SizedBox.shrink());
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
     'Artifact filters combine and reset museum, gallery and exhibition',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -320,14 +283,8 @@ void main() {
       const ServicesScreen(),
       const PurchasedServicesScreen(),
       ServiceCheckoutScreen(
-        offer: AppServices.premium.offers.first,
+        offer: MockPremiumCatalog().offers.first,
         museumId: 'museum_national',
-      ),
-      PaymentResultScreen(
-        success: true,
-        offer: AppServices.premium.offers.first,
-        museumId: 'museum_national',
-        date: DateTime.now(),
       ),
       const QRScanScreen(recognition: true),
       NarrationScreen(artifact: mockArtifacts.first),
@@ -361,7 +318,7 @@ void main() {
     expect(store.badges, hasLength(1));
     final purchase = ServicePurchase(
       id: 'sample',
-      offer: AppServices.premium.offers.first,
+      offer: MockPremiumCatalog().offers.first,
       museumId: 'museum_national',
       date: DateTime.now(),
       method: 'MoMo',

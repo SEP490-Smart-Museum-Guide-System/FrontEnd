@@ -1,9 +1,9 @@
+import '../../services/backend_api.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../data/visit_store.dart';
-import '../../data/mock/mock_artifacts.dart';
 import 'services_screen.dart';
 import 'history_screen.dart';
 import 'support_refund_screen.dart';
@@ -91,7 +91,8 @@ class ProfileScreen extends StatelessWidget {
           ),
           ActionTile(
             title: 'Quiz tích lũy trong ngày',
-            subtitle: '${store.todayScannedArtifactIds.length} hiện vật đã mở · Làm bài để nhận điểm.',
+            subtitle:
+                '${store.todayScannedArtifactIds.length} hiện vật đã mở · Làm bài để nhận điểm.',
             icon: Icons.quiz_outlined,
             onTap: () => openPage(context, const DailyQuizScreen()),
           ),
@@ -212,7 +213,7 @@ class PersonalCollectionScreen extends StatelessWidget {
       final store = VisitStore.instance;
       final artifacts = kind == 'history'
           ? store.viewed
-          : mockArtifacts
+          : AppServices.catalog.artifacts
                 .where(
                   (a) => kind == 'saved'
                       ? store.saved.contains(a.id)
@@ -349,13 +350,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     title: _submitted ? 'Cảm ơn bạn!' : 'Bạn thấy thế nào?',
     eyebrow: 'Góp ý trải nghiệm',
     subtitle: _submitted
-        ? 'Góp ý đã được ghi nhận trong phiên trải nghiệm này.'
+        ? 'Góp ý đã được máy chủ ghi nhận.'
         : widget.targetName,
     children: _submitted
         ? [
             const Panel(
               child: Notice(
-                'Bản trải nghiệm chưa gửi góp ý đến bảo tàng. Nội dung sẽ không được lưu sau khi tải lại trang.',
+                'Bạn có thể theo dõi kết quả xử lý trong hệ thống.',
                 icon: Icons.check_circle_outline,
               ),
             ),
@@ -392,77 +393,108 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Notice('Góp ý hiện chỉ được ghi nhận trong bản trải nghiệm.'),
+            const Notice(
+              'Đánh giá bảo tàng cần gắn với lượt tham quan đã hoàn thành. Góp ý chung sẽ được gửi đến bộ phận hỗ trợ.',
+            ),
             const SizedBox(height: 20),
             PrimaryButton(
               label: 'Ghi nhận góp ý',
               onPressed: _rating == null
                   ? null
-                  : () {
-                      VisitStore.instance.recordFeedback(
-                        _rating!,
-                        _comment.text.trim(),
-                        targetType: widget.targetType,
-                        targetId: widget.targetId,
-                        targetName: widget.targetName,
-                      );
-                      setState(() => _submitted = true);
+                  : () async {
+                      try {
+                        if (widget.targetType == 'visit' &&
+                            int.tryParse(widget.targetId) != null) {
+                          await BackendApi.request(
+                            'feedbacks',
+                            method: 'POST',
+                            body: {
+                              'visitId': int.parse(widget.targetId),
+                              'overallRating':
+                                  5 -
+                                  [
+                                    'Rất hài lòng',
+                                    'Hài lòng',
+                                    'Bình thường',
+                                    'Chưa hài lòng',
+                                    'Rất không hài lòng',
+                                  ].indexOf(_rating!),
+                              'comment': _comment.text.trim(),
+                            },
+                          );
+                        } else {
+                          await BackendApi.request(
+                            'complaints',
+                            method: 'POST',
+                            body: {
+                              'subject': 'Góp ý: ${widget.targetName}',
+                              'body': '$_rating. ${_comment.text.trim()}',
+                            },
+                          );
+                        }
+                        if (mounted) setState(() => _submitted = true);
+                      } catch (e) {
+                        if (context.mounted)
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      }
                     },
             ),
           ],
   );
 }
 
-class BadgesScreen extends StatelessWidget {
+class BadgesScreen extends StatefulWidget {
   const BadgesScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    final store = VisitStore.instance;
-    return MuseumPage(
-      back: true,
-      title: 'Dấu ấn của bạn',
-      eyebrow: 'Huy hiệu & điểm khám phá',
-      children: [
-        Panel(
-          gold: true,
-          child: Column(
+  State<BadgesScreen> createState() => _BadgesScreenState();
+}
+
+class _BadgesScreenState extends State<BadgesScreen> {
+  late Future<List<dynamic>> _data = _load();
+  Future<List<dynamic>> _load() => Future.wait([
+    BackendApi.request('gamification/me/points'),
+    BackendApi.request('gamification/me/badges'),
+  ]);
+  @override
+  Widget build(BuildContext context) => MuseumPage(
+    back: true,
+    title: 'Dấu ấn của bạn',
+    children: [
+      TextButton(
+        onPressed: () => setState(() => _data = _load()),
+        child: const Text('Tải lại'),
+      ),
+      FutureBuilder<List<dynamic>>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done)
+            return const CircularProgressIndicator();
+          if (snapshot.hasError) return Notice(snapshot.error.toString());
+          final badges = snapshot.data![1] as List;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const HeritageSeal(size: 80),
-              const SizedBox(height: 16),
-              Text('${store.points} điểm', style: AppTextStyles.display),
-              const SizedBox(height: 12),
-              const Text(
-                'Tổng điểm từ kết quả tốt nhất của mỗi hiện vật. Làm lại không cộng trùng điểm.',
-                style: AppTextStyles.bodyMedium,
-                textAlign: TextAlign.center,
+              Text(
+                '${snapshot.data![0]['points']} điểm',
+                style: AppTextStyles.pageTitle,
               ),
-            ],
-          ),
-        ),
-        const SectionHeading('Bộ sưu tập huy hiệu'),
-        if (store.badges.isEmpty)
-          const EmptyState(
-            title: 'Huy hiệu đầu tiên đang chờ',
-            message: 'Trả lời đúng toàn bộ câu hỏi của một hiện vật để nhận huy hiệu.',
-          ),
-        for (final badge in store.badges)
-          Panel(
-            gold: true,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.workspace_premium_outlined,
-                  color: AppColors.mutedGold,
-                  size: 40,
+              const SectionHeading('Huy hiệu được cấp'),
+              if (badges.isEmpty) const Notice('Bạn chưa có huy hiệu.'),
+              for (final badge in badges)
+                Panel(
+                  child: Text(
+                    badge['name']?.toString() ??
+                        'Huy hiệu #${badge['badgeId']}',
+                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(child: Text(badge, style: AppTextStyles.sectionTitle)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+            ],
+          );
+        },
+      ),
+    ],
+  );
 }
 
 class SettingsScreen extends StatelessWidget {

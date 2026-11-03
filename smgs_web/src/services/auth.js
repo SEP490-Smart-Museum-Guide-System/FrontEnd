@@ -15,8 +15,8 @@ export function parseStaffSession(data) {
     throw new Error('Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.');
   }
   return { accessToken: data.accessToken, expiresAt,
-    // shortcut: auth has no museum membership field; replace with membership API when available.
-    user: { id: data.email, name: data.fullName, email: data.email, role, status: 'active', museumId: 'mus-01' } };
+    // Auth response does not provide a museum assignment. Never invent one.
+    user: { id: data.email, name: data.fullName, email: data.email, role, status: 'active', museumId: null } };
 }
 
 export function getAuthToken(storage = globalThis.localStorage) {

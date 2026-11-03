@@ -59,6 +59,7 @@ export default function Header() {
     curationQueue,
     artifacts,
     currentMuseum,
+    museums, selectedMuseumId, setSelectedMuseumId,
 
     logout
   } = useApp();
@@ -66,7 +67,7 @@ export default function Header() {
   const [isSwitchOpen, setIsSwitchOpen] = useState(false);
 
   const museumArtifactIds = new Set(
-    artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id)
+    artifacts.filter(item => item.museumId === currentMuseum?.id).map(item => item.id)
   );
   const pendingCurationCount = curationQueue.filter(
     c => c.status === 'pending_review' && museumArtifactIds.has(c.targetArtifactId)
@@ -104,7 +105,10 @@ export default function Header() {
             ) : (
               <div>
                 <span className="museum-select-badge" style={{ fontWeight: '600', color: 'var(--color-burgundy-900)' }}>
-                  {currentMuseum.name}
+                  <select aria-label="Bảo tàng đang xem" value={selectedMuseumId ?? ''} onChange={e => setSelectedMuseumId(Number(e.target.value))}>
+                    <option value="" disabled>Chọn bảo tàng</option>
+                    {museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
                 </span>
               </div>
             )}

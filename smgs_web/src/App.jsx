@@ -20,7 +20,7 @@ import LoginScreen from './components/auth/LoginScreen';
 import IndoorMapManager from './components/indoor_maps/IndoorMapManager';
 
 export default function App() {
-  const { activeTab, setActiveTab, isAuthenticated } = useApp();
+  const { activeTab, setActiveTab, isAuthenticated, currentMuseum, currentRole, dataErrors, loading, reload } = useApp();
   const [selectedStudioArtifact, setSelectedStudioArtifact] = useState(null);
 
   const handleOpenAIStudio = (artifact) => {
@@ -29,6 +29,12 @@ export default function App() {
   };
 
   const renderContent = () => {
+    if (activeTab === 'audit') return <p role="status">Máy chủ chưa cung cấp API nhật ký hệ thống.</p>;
+    if (activeTab === 'refunds') return <p role="status">Máy chủ chưa cung cấp API yêu cầu hoàn tiền. Chưa có dữ liệu để hiển thị.</p>;
+    if (activeTab === 'transactions' && currentRole === 'systemStaff') return <p role="status">API giao dịch hiện chưa hỗ trợ quyền Nhân viên hệ thống.</p>;
+    if (!currentMuseum && ['artifacts', 'curation_artifacts', 'ai_studio', 'curation_queue', 'submission_status', 'tours', 'reviews', 'spaces'].includes(activeTab)) {
+      return <p role="status">{loading.museums ? 'Đang tải bảo tàng…' : 'Chưa có bảo tàng để hiển thị. Hãy tải lại hoặc kiểm tra phân công tài khoản.'}</p>;
+    }
     switch (activeTab) {
       case 'overview':
         return <RoleDashboard onNavigate={setActiveTab} />;
@@ -77,6 +83,8 @@ export default function App() {
       <div className="main-content">
         <Header />
         <main className="page-body">
+          {Object.values(loading).some(Boolean) && <p role="status">Đang tải dữ liệu từ máy chủ…</p>}
+          {Object.entries(dataErrors).filter(([, error]) => error).map(([key, error]) => <p role="alert" key={key}>{error} <button className="btn btn-secondary btn-sm" onClick={reload}>Thử lại</button></p>)}
           {renderContent()}
         </main>
       </div>

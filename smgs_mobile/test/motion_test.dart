@@ -1,3 +1,4 @@
+import 'support/fake_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/main.dart';

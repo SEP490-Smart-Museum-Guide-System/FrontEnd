@@ -16,10 +16,10 @@ import {
 } from 'lucide-react';
 
 export default function TourManager() {
-  const { tours, addTour, updateTour, exhibitions, artifacts, currentMuseum } = useApp();
-  const museumTours = tours.filter(item => item.museumId === currentMuseum.id);
-  const museumExhibitions = exhibitions.filter(item => item.museumId === currentMuseum.id);
-  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
+  const { tours, addTour, updateTour, publishTour, exhibitions, artifacts, currentMuseum } = useApp();
+  const museumTours = tours.filter(item => item.museumId === currentMuseum?.id);
+  const museumExhibitions = exhibitions.filter(item => item.museumId === currentMuseum?.id);
+  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum?.id);
   const [activeSection, setActiveSection] = useState('tours'); // 'tours' | 'exhibitions'
   const [isCreatingTour, setIsCreatingTour] = useState(false);
   const [editingTour, setEditingTour] = useState(null);
@@ -34,7 +34,7 @@ export default function TourManager() {
     selectedArtifacts: []
   });
 
-  const handleCreateTour = (e) => {
+  const handleCreateTour = async (e) => {
     e.preventDefault();
     if (!tourForm.title) {
       alert('Vui lòng nhập tên hành trình tham quan');
@@ -46,14 +46,14 @@ export default function TourManager() {
       theme: tourForm.theme,
       isPaidGuide: tourForm.isPaidGuide,
       price: tourForm.isPaidGuide ? Number(tourForm.price) : 0,
-      museumId: currentMuseum.id,
-      museumName: currentMuseum.name,
+      museumId: currentMuseum?.id,
+      museumName: currentMuseum?.name,
       description: tourForm.description,
-      stopsCount: tourForm.selectedArtifacts.length || 4,
+      stopsCount: tourForm.selectedArtifacts.length,
       artifacts: tourForm.selectedArtifacts
     };
-    if (editingTour) updateTour({ ...data, id: editingTour.id });
-    else addTour(data);
+    const result = editingTour ? await updateTour({ ...data, id: editingTour.id, revision: editingTour.revision }) : await addTour(data);
+    if (!result?.success) return;
     setIsCreatingTour(false);
     setEditingTour(null);
     setTourForm({
@@ -154,22 +154,18 @@ export default function TourManager() {
       {/* Tour List View */}
       {activeSection === 'tours' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+          {!museumTours.length && <p>Chưa có hành trình trong bảo tàng này.</p>}
           {museumTours.map(tour => (
             <div key={tour.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+              {tour.status !== "published" && <button className="btn btn-secondary" onClick={() => publishTour(tour)}>Xuất bản hành trình</button>}
               <div className="card-header" style={{ background: '#FAF7F2' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Compass size={18} color="var(--color-burgundy-700)" />
                   <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-charcoal-500)', fontFamily: 'monospace' }}>
-                    {tour.code}
+                    {tour.code} · {tour.status === "published" ? "Đã xuất bản" : "Bản nháp"}
                   </span>
                 </div>
-                {tour.isPaidGuide ? (
-                  <span className="badge-status badge-treasure">
-                    Nội dung nâng cao: {(tour.price || 0).toLocaleString('vi-VN')} đ
-                  </span>
-                ) : (
-                  <span className="badge-status badge-published">Miễn phí</span>
-                )}
+                <span className="badge-status">{tour.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</span>
               </div>
 
               <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -192,7 +188,7 @@ export default function TourManager() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Star size={14} color="#EAB308" fill="#EAB308" />
-                    <span>{tour.rating} ({tour.reviewsCount} đánh giá)</span>
+                    <span>Chưa có thống kê đánh giá</span>
                   </div>
                 </div>
 
@@ -297,7 +293,7 @@ export default function TourManager() {
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', cursor: 'pointer', fontWeight: '600' }}>
                     <input
                       type="checkbox"
-                      checked={tourForm.isPaidGuide}
+                      disabled title="Cấu hình giá tại sản phẩm dịch vụ trên máy chủ" checked={false}
                       onChange={(e) => setTourForm(prev => ({ ...prev, isPaidGuide: e.target.checked }))}
                     />
                     <span>Nội dung nâng cao cần gói trả phí</span>
