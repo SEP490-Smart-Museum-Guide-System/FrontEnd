@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
 import '../models/museum.dart';
+import '../models/map_place.dart';
 import '../models/outdoor_route.dart';
 import '../services/discovery_api_service.dart';
 import '../services/location_service.dart';
@@ -11,22 +12,28 @@ import 'interactive_heritage_map.dart';
 class RoutePreviewSheet extends StatefulWidget {
   const RoutePreviewSheet({
     super.key,
-    required this.museum,
+    this.museum,
+    this.place,
     this.onRouteLoaded,
   });
-  final Museum museum;
+  final Museum? museum;
+  final MapPlace? place;
   final ValueChanged<OutdoorRoutePreview>? onRouteLoaded;
 
   static Future<void> show(
     BuildContext context, {
-    required Museum museum,
+    Museum? museum,
+    MapPlace? place,
     ValueChanged<OutdoorRoutePreview>? onRouteLoaded,
   }) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) =>
-        RoutePreviewSheet(museum: museum, onRouteLoaded: onRouteLoaded),
+    builder: (_) => RoutePreviewSheet(
+      museum: museum,
+      place: place,
+      onRouteLoaded: onRouteLoaded,
+    ),
   );
 
   @override
@@ -53,14 +60,20 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
       _origin = null;
     });
     try {
-      if (!widget.museum.hasCoordinates) {
+      if ((widget.place == null && widget.museum?.hasCoordinates != true)) {
         throw Exception('Bảo tàng chưa có tọa độ hợp lệ.');
       }
       final origin = await LocationService.getCurrentUserLocation();
       if (!mounted) return;
       setState(() => _origin = origin);
       final route = await DiscoveryApiService.fetchOutdoorRoute(
-        museumId: widget.museum.id,
+        museumId: widget.museum?.id,
+        destination: widget.place == null
+            ? null
+            : {
+                'latitude': widget.place!.latitude,
+                'longitude': widget.place!.longitude,
+              },
         originLat: origin.latitude,
         originLng: origin.longitude,
       );
@@ -84,7 +97,8 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
     setState(() => _opening = true);
     final url = Uri.https('www.google.com', '/maps/dir/', {
       'api': '1',
-      'destination': '${widget.museum.latitude},${widget.museum.longitude}',
+      'destination':
+          '${widget.place?.latitude ?? widget.museum?.latitude},${widget.place?.longitude ?? widget.museum?.longitude}',
       'travelmode': 'driving',
       'dir_action': 'navigate',
     });
@@ -124,8 +138,8 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ListTile(
-          title: Text(widget.museum.name),
-          subtitle: Text(widget.museum.location),
+          title: Text(widget.place?.name ?? widget.museum!.name),
+          subtitle: Text(widget.place?.address ?? widget.museum!.location),
           trailing: IconButton(
             tooltip: 'Đóng',
             onPressed: () => Navigator.pop(context),
@@ -134,8 +148,12 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
         ),
         Expanded(
           child: InteractiveHeritageMap(
-            museums: [widget.museum],
-            selectedMuseumId: widget.museum.id,
+            museums: [if (widget.museum != null) widget.museum!],
+            placeLocation: widget.place == null
+                ? null
+                : LatLng(widget.place!.latitude, widget.place!.longitude),
+            placeName: widget.place?.name,
+            selectedMuseumId: widget.museum?.id,
             onMuseumSelected: (_) {},
             userLocation: _origin == null
                 ? null
@@ -184,7 +202,10 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
                 ],
                 const SizedBox(height: 8),
                 FilledButton.icon(
-                  onPressed: !widget.museum.hasCoordinates || _opening
+                  onPressed:
+                      (widget.place == null &&
+                              widget.museum?.hasCoordinates != true) ||
+                          _opening
                       ? null
                       : _openGoogleMaps,
                   icon: const Icon(Icons.near_me),

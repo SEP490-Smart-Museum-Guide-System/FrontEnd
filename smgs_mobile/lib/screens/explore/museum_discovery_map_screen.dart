@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../models/map_place.dart';
 import '../../widgets/place_search_field.dart';
 import '../../core/theme/app_colors.dart';
@@ -160,28 +159,6 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
     );
   }
 
-  Future<void> _navigateToPlace() async {
-    final place = _place;
-    if (place == null) return;
-    final uri = Uri.https('www.google.com', '/maps/dir/', {
-      'api': '1',
-      'destination': '${place.latitude},${place.longitude}',
-      'travelmode': 'driving',
-    });
-    try {
-      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
-    } catch (_) {
-      /* Show a retryable error below. */
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không mở được ứng dụng bản đồ. Vui lòng thử lại.'),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.antiqueIvory,
@@ -189,17 +166,14 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
     body: SafeArea(
       child: Column(
         children: [
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: true, label: Text('Mọi địa điểm')),
-              ButtonSegment(value: false, label: Text('Bảo tàng SMGS')),
-            ],
-            selected: {_world},
-            onSelectionChanged: (value) {
+          FilterChip(
+            label: const Text('Chỉ bảo tàng trong hệ thống'),
+            selected: !_world,
+            onSelected: (onlySystem) {
               _debounce?.cancel();
               FocusScope.of(context).unfocus();
               setState(() {
-                _world = value.first;
+                _world = !onlySystem;
                 _place = null;
                 _route = [];
               });
@@ -209,7 +183,10 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: PlaceSearchField(
-                onSelected: (place) => setState(() => _place = place),
+                onSelected: (place) => setState(() {
+                  _place = place;
+                  _route = [];
+                }),
               ),
             ),
           if (!_world) ...[
@@ -288,7 +265,7 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
                   : null,
               placeName: _place?.name,
               onMuseumSelected: _select,
-              polylinePoints: _world ? const [] : _route,
+              polylinePoints: _route,
               userLocation: _location == null
                   ? null
                   : LatLng(_location!.latitude, _location!.longitude),
@@ -307,9 +284,15 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               trailing: IconButton(
-                tooltip: 'Chỉ đường bằng Google Maps',
+                tooltip: 'Xem quãng đường và thời gian',
                 icon: const Icon(Icons.directions),
-                onPressed: _navigateToPlace,
+                onPressed: () => RoutePreviewSheet.show(
+                  context,
+                  place: _place!,
+                  onRouteLoaded: (route) {
+                    if (mounted) setState(() => _route = route.routePoints);
+                  },
+                ),
               ),
             ),
           if (!_world) ...[

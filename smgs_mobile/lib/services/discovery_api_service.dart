@@ -123,12 +123,13 @@ class DiscoveryApiService {
   }
 
   static Future<OutdoorRoutePreview> fetchOutdoorRoute({
-    required String museumId,
+    String? museumId,
+    Map<String, double>? destination,
     required double originLat,
     required double originLng,
   }) async {
-    final id = int.tryParse(museumId);
-    if (id == null || id <= 0) {
+    final id = int.tryParse(museumId ?? '');
+    if (destination == null && (id == null || id <= 0)) {
       throw const FormatException('Mã bảo tàng không hợp lệ.');
     }
     final response = await http
@@ -139,7 +140,8 @@ class DiscoveryApiService {
             'Content-Type': 'application/json',
           },
           body: jsonEncode({
-            'museumId': id,
+            'museumId': ?id,
+            'destination': ?destination,
             'origin': {'latitude': originLat, 'longitude': originLng},
             'travelMode': 'DRIVE',
           }),
@@ -160,9 +162,12 @@ class DiscoveryApiService {
       'page': '$page',
       'pageSize': '$pageSize',
       if (museumId != null) 'museumId': '$museumId',
-      if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+      if (keyword != null && keyword.trim().isNotEmpty)
+        'keyword': keyword.trim(),
     };
-    final uri = Uri.parse(ApiConfig.artifactsUrl).replace(queryParameters: query);
+    final uri = Uri.parse(
+      ApiConfig.artifactsUrl,
+    ).replace(queryParameters: query);
     final response = await http
         .get(uri, headers: TokenManager.authHeaders)
         .timeout(const Duration(seconds: 10));
@@ -189,7 +194,9 @@ class DiscoveryApiService {
   }) async {
     final response = await http
         .get(
-          Uri.parse(ApiConfig.publishedContentUrl(artifactId, lang: languageCode)),
+          Uri.parse(
+            ApiConfig.publishedContentUrl(artifactId, lang: languageCode),
+          ),
           headers: TokenManager.authHeaders,
         )
         .timeout(const Duration(seconds: 10));
