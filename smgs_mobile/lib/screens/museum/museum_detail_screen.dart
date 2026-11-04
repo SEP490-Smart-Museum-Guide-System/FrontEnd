@@ -1,8 +1,9 @@
+import '../../services/visitor_experience_api.dart';
+import 'visit_progress_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
-import '../../data/mock/mock_artifacts.dart';
 import '../../models/museum.dart';
 import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
@@ -13,7 +14,6 @@ import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
 import '../profile/services_screen.dart';
 import '../profile/profile_screen.dart';
-import 'visitor_indoor_map_screen.dart';
 
 class MuseumDetailScreen extends StatefulWidget {
   const MuseumDetailScreen({super.key, required this.museum, this.heroTag});
@@ -25,17 +25,43 @@ class MuseumDetailScreen extends StatefulWidget {
 }
 
 class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
+  late Museum _museum = widget.museum;
+  String? _museumError;
+  bool _startingVisit = false;
   List<Artifact>? _backendArtifacts;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _loadArtifacts();
+    _loadMuseum();
+  }
+
+  Future<void> _loadMuseum() async {
+    if (int.tryParse(widget.museum.id) == null) return;
+    try {
+      final museum = await DiscoveryApiService.fetchMuseumDetail(
+        widget.museum.id,
+      );
+      if (mounted) {
+        setState(() {
+          _museum = museum;
+          _museumError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _museumError = e.toString());
+    }
   }
 
   Future<void> _loadArtifacts() async {
-    final mId = int.tryParse(widget.museum.id) ?? (widget.museum.id == 'museum_national' ? 1 : null);
+    final mId = int.tryParse(widget.museum.id);
+    if (mId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     try {
       final items = await DiscoveryApiService.fetchArtifacts(museumId: mId);
       if (mounted) {
@@ -44,38 +70,56 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
       }
     }
   }
 
   Future<void> _openDirections(BuildContext context) async {
     if (!context.mounted) return;
-    RoutePreviewSheet.show(context, museum: widget.museum);
+    RoutePreviewSheet.show(context, museum: _museum);
   }
 
   void _openIndoorMap(BuildContext context) {
-    final mId = int.tryParse(widget.museum.id) ?? (widget.museum.id == 'museum_national' ? 1 : 1);
-    openPage(
-      context,
-      VisitorIndoorMapScreen(
-        mapId: mId,
-        museumName: widget.museum.name,
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Hãy quét mã sơ đồ tại bảo tàng. API hiện chưa cung cấp danh sách sơ đồ cho khách theo bảo tàng.',
+        ),
       ),
     );
   }
 
+  Future<void> _startVisit() async {
+    if (_startingVisit) return;
+    setState(() => _startingVisit = true);
+    try {
+      final visit = await VisitorExperienceApi.startVisit(
+        int.parse(widget.museum.id),
+      );
+      if (mounted) {
+        openPage(context, VisitProgressScreen(visitId: visit['id'] as int));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _startingVisit = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final museum = widget.museum;
-    final defaultArtifacts = mockArtifacts
-        .where((a) => a.museumId == museum.id || (museum.id == '1' && a.museumId == 'museum_national'))
-        .toList();
-    final artifacts = (_backendArtifacts != null && _backendArtifacts!.isNotEmpty)
-        ? _backendArtifacts!
-        : defaultArtifacts;
+    final museum = _museum;
+    final artifacts = _backendArtifacts ?? <Artifact>[];
 
     return StoryScaffold(
       title: museum.name,
@@ -86,12 +130,19 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
         height: 300,
       ),
       children: [
-        Text(
-          museum.id == 'museum_national'
-              ? 'Ảnh: Alistair Morrenger · Wikimedia Commons'
-              : 'Ảnh: Ecow · Wikimedia Commons',
-          style: AppTextStyles.caption,
+        if (_museumError != null) ...[
+          Notice(_museumError!),
+          TextButton(
+            onPressed: _loadMuseum,
+            child: const Text('Thử tải lại thông tin bảo tàng'),
+          ),
+        ],
+        if (_error != null) Notice(_error!),
+        PrimaryButton(
+          label: _startingVisit ? 'Đang bắt đầu…' : 'Bắt đầu lượt tham quan',
+          onPressed: _startingVisit ? null : _startVisit,
         ),
+        const SizedBox(height: 16),
         const SizedBox(height: 22),
         Eyebrow(museum.category),
         const SizedBox(height: 10),

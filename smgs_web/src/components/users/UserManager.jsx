@@ -1,322 +1,72 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
-import {
-  Users,
-  ShieldCheck,
-  UserCheck,
-  Sparkles,
-  Plus,
-  Search,
-  Phone,
-  Mail,
-  Building,
-  CheckCircle,
-  XCircle,
-  Edit2
-} from 'lucide-react';
+import { backend, allPages } from '../../services/backend';
+import { Field, Modal, PageTitle, LoadState, ErrorNotice, Empty, useData, useAction, roleLabels } from '../common/BusinessUI';
 
 export default function UserManager() {
-  const { users, addUser, toggleUserStatus, museums } = useApp();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [isAddingUser, setIsAddingUser] = useState(false);
-
-  const [newUserForm, setNewUserForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'museumStaff',
-    museumId: 'mus-01',
-    assignedGalleries: ''
-  });
-
-  const filteredUsers = users.filter(u => {
-    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
-    if (searchTerm.trim()) {
-      const q = searchTerm.toLowerCase();
-      return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.phone.includes(q);
-    }
-    return true;
-  });
-
-  const handleAddUserSubmit = (e) => {
+  const { reload: reloadApp } = useApp();
+  const list = useData('accounts', signal => allPages('admin/accounts', { signal }), []);
+  const roles = useData('roles', signal => backend('admin/roles', { signal }), []);
+  const [query, setQuery] = useState(''), [role, setRole] = useState(''), [editing, setEditing] = useState(null), [allScopes, setAllScopes] = useState(false);
+  const action = useAction();
+  const refresh = () => { list.reload(); reloadApp(); };
+  const rows = list.data.filter(u => (!role || u.roles.includes(role)) && `${u.fullName} ${u.email} ${u.phoneNumber || ''}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi')));
+  return <div><PageTitle description="Tài khoản, vai trò và phạm vi phụ trách được quản lý tại một nơi.">Người dùng & phân quyền</PageTitle>
+    <div className="business-toolbar"><input className="form-input" aria-label="Tìm tài khoản" placeholder="Tìm tên, email, số điện thoại" value={query} onChange={e => setQuery(e.target.value)} />
+      <select className="form-select" aria-label="Lọc vai trò" value={role} onChange={e => setRole(e.target.value)}><option value="">Tất cả vai trò</option>{roles.data.map(r => <option key={r} value={r}>{roleLabels[r] || r}</option>)}</select>
+      <button className="btn btn-primary" disabled={roles.busy || !!roles.error} onClick={() => setEditing('new')}>Thêm tài khoản</button><button className="btn btn-secondary" onClick={list.reload}>Tải lại</button><button className="btn btn-secondary" onClick={() => setAllScopes(true)}>Danh sách phân công</button></div>
+    <ErrorNotice>{action.error || roles.error}</ErrorNotice><LoadState resource={list}><div className="table-container card"><table className="data-table"><thead><tr><th>Thành viên</th><th>Vai trò</th><th>Phạm vi phụ trách</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{rows.map(u => <tr key={u.id}><td><strong>{u.fullName}</strong><div>{u.email}</div><small>{u.phoneNumber}</small></td><td>{u.roles.map(r => roleLabels[r] || r).join(', ')}</td><td>{u.assignments.length ? u.assignments.map(a => <p key={a.id}>{a.museumName}{a.galleryName ? ` · ${a.galleryName}` : ''}{a.artifactName ? ` · ${a.artifactName}` : ''}</p>) : 'Chưa phân công'}</td><td>{u.isActive ? 'Đang hoạt động' : 'Đã khóa'}</td><td><div className="business-actions"><button className="btn btn-secondary btn-sm" onClick={() => setEditing(u.id)}>Chi tiết & chỉnh sửa</button><button className="btn btn-secondary btn-sm" disabled={action.busy} onClick={() => action.run(() => backend(`admin/accounts/${u.id}/status`, { method: 'PATCH', body: { isActive: !u.isActive } }), refresh)}>{u.isActive ? 'Khóa' : 'Mở khóa'}</button></div></td></tr>)}</tbody></table>{!rows.length && <Empty>Không có tài khoản phù hợp.</Empty>}</div></LoadState>
+    {allScopes && <GlobalAssignments users={list.data} onClose={() => setAllScopes(false)} onSaved={refresh} />}
+    {editing && <AccountEditor key={editing} id={editing} roles={roles.data} onClose={() => setEditing(null)} onSaved={refresh} />}
+  </div>;
+}
+function AccountEditor({ id, roles, onClose, onSaved }) {
+  const detail = useData(id, signal => id === 'new' ? Promise.resolve({ fullName: '', email: '', phoneNumber: '', roles: [] }) : backend(`admin/accounts/${id}`, { signal }));
+  return <Modal title={id === 'new' ? 'Tạo tài khoản' : 'Chi tiết tài khoản'} onClose={onClose}><LoadState resource={detail}>{detail.data && <AccountForms key={detail.data.id || id} account={detail.data} roles={roles} onClose={onClose} onSaved={() => { detail.reload(); onSaved(); }} />}</LoadState></Modal>;
+}
+function AccountForms({ account, roles, onClose, onSaved }) {
+  const isNew = !account.id;
+  const [form, setForm] = useState({ fullName: account.fullName, email: account.email, phoneNumber: account.phoneNumber || '', password: '' });
+  const [role, setRole] = useState(account.roles[0] || roles.find(r => r === 'Museum Staff') || roles[0] || '');
+  const action = useAction();
+  const change = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  async function save(e) {
     e.preventDefault();
-    if (!newUserForm.name || !newUserForm.email) {
-      alert('Vui lòng nhập họ tên và email');
-      return;
-    }
-    const m = museums.find(x => x.id === newUserForm.museumId);
-    addUser({
-      name: newUserForm.name,
-      email: newUserForm.email,
-      phone: newUserForm.phone || '0900 000 000',
-      role: newUserForm.role,
-      museumId: ['museumStaff', 'curator'].includes(newUserForm.role) ? newUserForm.museumId : newUserForm.role === 'visitor' ? null : 'all',
-      museumName: ['museumStaff', 'curator'].includes(newUserForm.role) ? (m?.name || 'Bảo tàng Lịch sử Quốc gia') : newUserForm.role === 'visitor' ? 'Ứng dụng di động' : 'Toàn hệ thống',
-      assignedGalleries: newUserForm.assignedGalleries ? newUserForm.assignedGalleries.split(',').map(s => s.trim()) : [],
-      permissions: newUserForm.role === 'systemStaff' ? ['visitor_support', 'refund_requests', 'transaction_reconciliation', 'moderate_reviews', 'monitor_operations', 'monitor_ai_quality'] : newUserForm.role === 'museumStaff' ? ['manage_museum', 'manage_artifacts', 'create_ai_content', 'edit_tours', 'view_museum_reports'] : newUserForm.role === 'curator' ? ['review_artifact', 'review_translation', 'review_narration', 'review_quiz', 'approve_publish'] : newUserForm.role === 'visitor' ? ['browse_museums', 'scan_artifacts', 'purchase_pass'] : ['all_access']
-    });
-    setIsAddingUser(false);
-    setNewUserForm({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'museumStaff',
-      museumId: 'mus-01',
-      assignedGalleries: ''
-    });
-  };
+    await action.run(() => backend(isNew ? 'admin/accounts' : `admin/accounts/${account.id}`, { method: isNew ? 'POST' : 'PUT', body: { fullName: form.fullName.trim(), email: form.email.trim(), phoneNumber: form.phoneNumber.trim() || null, ...(isNew ? { password: form.password, roles: [role] } : { newPassword: form.password || null }) } }), () => { onSaved(); if (isNew) onClose(); });
+  }
+  return <><ErrorNotice>{action.error}</ErrorNotice><form onSubmit={save}>
+    <Field label="Họ và tên"><input className="form-input" name="fullName" required maxLength={200} value={form.fullName} onChange={change} /></Field>
+    <Field label="Email"><input className="form-input" type="email" name="email" required maxLength={256} value={form.email} onChange={change} /></Field>
+    <Field label="Số điện thoại"><input className="form-input" name="phoneNumber" maxLength={30} value={form.phoneNumber} onChange={change} /></Field>
+    <Field label={isNew ? 'Mật khẩu ban đầu' : 'Mật khẩu mới (để trống để giữ nguyên)'}><input className="form-input" name="password" type="password" autoComplete="new-password" required={isNew} minLength={6} maxLength={100} value={form.password} onChange={change} /></Field>
+    {isNew && <Field label="Vai trò"><select className="form-select" required value={role} onChange={e => setRole(e.target.value)}>{roles.map(r => <option key={r} value={r}>{roleLabels[r] || r}</option>)}</select></Field>}
+    <button className="btn btn-primary" disabled={action.busy}>{action.busy ? 'Đang lưu…' : isNew ? 'Tạo tài khoản' : 'Lưu thông tin'}</button>
+  </form>
+  {!isNew && <><hr /><h4>Vai trò tài khoản</h4><p className="business-muted">Sau khi đổi vai trò, tài khoản cần đăng nhập lại để nhận phiên làm việc mới.</p><form onSubmit={e => { e.preventDefault(); action.run(() => backend(`admin/accounts/${account.id}/roles`, { method: 'PUT', body: { roles: [role] } }), onSaved); }}><Field label="Vai trò"><select className="form-select" value={role} onChange={e => setRole(e.target.value)}>{roles.map(r => <option key={r} value={r}>{roleLabels[r] || r}</option>)}</select></Field><button className="btn btn-secondary" disabled={action.busy || role === account.roles[0]}>Lưu vai trò</button></form><hr /><Assignments id={account.id} eligible={account.roles.some(r => ['Museum Staff', 'Curator', 'Staff', 'Admin'].includes(r))} onSaved={onSaved} /></>}
+  </>;
+}
+function Assignments({ id, eligible, onSaved }) {
+  const { museums, artifacts } = useApp();
+  const list = useData(`assignments:${id}`, signal => backend(`admin/accounts/${id}/assignments`, { signal }), []);
+  const [museumId, setMuseumId] = useState(''), [galleryId, setGalleryId] = useState(''), [artifactId, setArtifactId] = useState('');
+  const galleries = useData(`galleries:${museumId}`, signal => museumId ? backend(`museums/${museumId}/galleries`, { signal }) : Promise.resolve([]), []);
+  const action = useAction();
+  const refresh = () => { list.reload(); onSaved(); };
+  return <><h4>Phạm vi phụ trách</h4><ErrorNotice>{action.error}</ErrorNotice><LoadState resource={list}>{!list.data.length && <Empty>Chưa có phân công.</Empty>}{list.data.map(a => <div className="business-actions" key={a.id}><span>{a.museumName}{a.galleryName ? ` · ${a.galleryName}` : ''}{a.artifactName ? ` · ${a.artifactName}` : ''}</span><button className="btn btn-secondary btn-sm" disabled={action.busy} onClick={() => { if (window.confirm('Thu hồi phân công này?')) action.run(() => backend(`admin/accounts/${id}/assignments/${a.id}`, { method: 'DELETE' }), refresh); }}>Thu hồi</button></div>)}</LoadState>
+    {eligible ? <form onSubmit={e => { e.preventDefault(); action.run(() => backend(`admin/accounts/${id}/assignments`, { method: 'POST', body: { museumId: Number(museumId), galleryId: galleryId ? Number(galleryId) : null, artifactId: artifactId ? Number(artifactId) : null } }), refresh); }}>
+      <Field label="Bảo tàng"><select className="form-select" required value={museumId} onChange={e => { setMuseumId(e.target.value); setGalleryId(''); setArtifactId(''); }}><option value="">Chọn bảo tàng</option>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+      <Field label="Phòng trưng bày"><select className="form-select" value={galleryId} disabled={galleries.busy || !!galleries.error} onChange={e => { setGalleryId(e.target.value); setArtifactId(''); }}><option value="">Toàn bảo tàng</option>{galleries.data.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></Field>
+      <ErrorNotice>{galleries.error}</ErrorNotice><Field label="Hiện vật"><select className="form-select" value={artifactId} onChange={e => setArtifactId(e.target.value)}><option value="">Toàn phạm vi đã chọn</option>{artifacts.filter(a => String(a.museumId) === museumId && (!galleryId || String(a.galleryId) === galleryId)).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+      <button className="btn btn-primary" disabled={action.busy || !museumId || galleries.busy || !!galleries.error}>Thêm phân công</button>
+    </form> : <p className="business-muted">Phân công bảo tàng áp dụng cho các tài khoản nghiệp vụ.</p>}
+  </>;
+}
 
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'administrator':
-        return <span className="badge-status role-badge-admin" style={{ fontSize: '0.75rem' }}><ShieldCheck size={13} /> Quản trị viên</span>;
-      case 'systemStaff':
-        return <span className="badge-status role-badge-system" style={{ fontSize: '0.75rem' }}><Sparkles size={13} /> Nhân viên hệ thống</span>;
-      case 'visitor':
-        return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}>Khách tham quan · di động</span>;
-      case 'curator':
-        return <span className="badge-status" style={{ fontSize: '0.75rem', background: 'var(--color-gold-50)', color: 'var(--color-gold-700)', border: '1px solid var(--color-gold-300)' }}><ShieldCheck size={13} /> Giám tuyển</span>;
-      default:
-        return <span className="badge-status role-badge-staff" style={{ fontSize: '0.75rem' }}><UserCheck size={13} /> Nhân viên bảo tàng</span>;
-    }
-  };
-
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-            Quản Lý Nhân Sự & Phân Quyền Hệ Thống
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Năm vai trò: Quản trị viên, Nhân viên bảo tàng, Giám tuyển, Nhân viên hệ thống và Khách tham quan. Bốn role nghiệp vụ dùng chung portal web.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsAddingUser(true)}
-          className="btn btn-primary"
-        >
-          <Plus size={16} /> Thêm Tài Khoản Mới
-        </button>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
-            <Search size={16} color="var(--color-charcoal-400)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              className="form-input"
-              style={{ paddingLeft: '36px' }}
-              placeholder="Tìm theo họ tên, email, số điện thoại..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <select
-            className="form-select"
-            style={{ width: 'auto', minWidth: '180px' }}
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-          >
-            <option value="all">Tất cả vai trò</option>
-            <option value="administrator">Quản trị viên</option>
-            <option value="systemStaff">Nhân viên hệ thống</option>
-            <option value="museumStaff">Nhân viên bảo tàng</option>
-            <option value="curator">Giám tuyển</option>
-            <option value="visitor">Khách tham quan</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <div className="card">
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Thành viên</th>
-                <th>Vai trò</th>
-                <th>Bảo tàng & Khu vực phụ trách</th>
-                <th>Liên hệ</th>
-                <th>Đăng nhập gần nhất</th>
-                <th>Trạng thái</th>
-                <th style={{ textAlign: 'right' }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map(u => (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
-                        color: '#FFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '700',
-                        fontSize: '0.875rem'
-                      }}>
-                        {u.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: '600', color: 'var(--color-charcoal-900)' }}>{u.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>{u.email}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>{getRoleBadge(u.role)}</td>
-
-                  <td>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: '500' }}>{u.museumName}</div>
-                    {u.assignedGalleries && u.assignedGalleries.length > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-burgundy-700)' }}>
-                        Phòng: {u.assignedGalleries.join(', ')}
-                      </div>
-                    )}
-                  </td>
-
-                  <td>
-                    <div style={{ fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Phone size={13} color="var(--color-charcoal-400)" />
-                      <span>{u.phone}</span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <span style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-600)' }}>{u.lastLogin}</span>
-                  </td>
-
-                  <td>
-                    <span className={`badge-status badge-${u.status === 'active' ? 'active' : 'inactive'}`}>
-                      {u.status === 'active' ? 'Đang kích hoạt' : 'Đã khóa'}
-                    </span>
-                  </td>
-
-                  <td style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      onClick={() => toggleUserStatus(u.id)}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      {u.status === 'active' ? 'Khóa TK' : 'Mở khóa'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Add User Modal */}
-      {isAddingUser && typeof document !== 'undefined' && createPortal(
-        <div className="modal-overlay" onClick={() => setIsAddingUser(false)}>
-          <div className="modal-dialog" style={{ maxWidth: '580px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title font-serif">Tạo tài khoản mẫu</h3>
-              <button type="button" onClick={() => setIsAddingUser(false)} className="btn btn-secondary btn-sm">✕</button>
-            </div>
-            <form onSubmit={handleAddUserSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Họ và tên *</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={newUserForm.name}
-                    onChange={(e) => setNewUserForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Ví dụ: Nguyễn Văn An"
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Email nội bộ *</label>
-                    <input
-                      type="email"
-                      className="form-input"
-                      value={newUserForm.email}
-                      onChange={(e) => setNewUserForm(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="an.nv@smgs.vn"
-                      required
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Số điện thoại</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={newUserForm.phone}
-                      onChange={(e) => setNewUserForm(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="0912 345 678"
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Vai trò hệ thống</label>
-                    <select
-                      className="form-select"
-                      value={newUserForm.role}
-                      onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
-                    >
-                      <option value="museumStaff">Nhân viên bảo tàng</option>
-                      <option value="curator">Giám tuyển</option>
-                      <option value="systemStaff">Nhân viên hệ thống</option>
-                      <option value="administrator">Quản trị viên</option>
-                      <option value="visitor">Khách tham quan · di động</option>
-                    </select>
-                  </div>
-                  {['museumStaff', 'curator'].includes(newUserForm.role) && <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Bảo tàng phụ trách</label>
-                    <select
-                      className="form-select"
-                      value={newUserForm.museumId}
-                      onChange={(e) => setNewUserForm(prev => ({ ...prev, museumId: e.target.value }))}
-                    >
-                      {museums.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>}
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Phòng / Khu phân công quản lý (cách nhau bởi dấu phẩy)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={newUserForm.assignedGalleries}
-                    onChange={(e) => setNewUserForm(prev => ({ ...prev, assignedGalleries: e.target.value }))}
-                    placeholder="Ví dụ: Phòng Đông Sơn, Phòng Sa Huỳnh"
-                  />
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ flexShrink: 0 }}>
-                <button type="button" onClick={() => setIsAddingUser(false)} className="btn btn-secondary">Hủy</button>
-                <button type="submit" className="btn btn-primary">Tạo tài khoản</button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
+function GlobalAssignments({ users, onClose, onSaved }) {
+  const { museums } = useApp();
+  const [museumId, setMuseum] = useState(''), [userId, setUser] = useState('');
+  const query = new URLSearchParams({ ...(museumId ? { museumId } : {}), ...(userId ? { userId } : {}) }).toString();
+  const data = useData(`all-assignments:${query}`, signal => backend(`admin/assignments${query ? `?${query}` : ''}`, { signal }), []);
+  const action = useAction();
+  return <Modal title="Danh sách phân công toàn hệ thống" onClose={onClose} busy={action.busy}><div className="business-toolbar"><Field label="Lọc bảo tàng"><select className="form-select" value={museumId} onChange={e => setMuseum(e.target.value)}><option value="">Tất cả bảo tàng</option>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field><Field label="Lọc tài khoản"><select className="form-select" value={userId} onChange={e => setUser(e.target.value)}><option value="">Tất cả tài khoản</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName} · {u.email}</option>)}</select></Field></div><ErrorNotice>{action.error}</ErrorNotice><LoadState resource={data}>{!data.data.length && <Empty>Chưa có phân công phù hợp.</Empty>}{data.data.map(a => <article className="card business-card" key={a.id}><strong>{a.userFullName}</strong><p>{a.userEmail}</p><p>{a.museumName}{a.galleryName ? ` · ${a.galleryName}` : ''}{a.artifactName ? ` · ${a.artifactName}` : ''}</p><button className="btn btn-secondary" disabled={action.busy} onClick={() => { if (window.confirm('Thu hồi phân công này?')) action.run(() => backend(`admin/assignments/${a.id}`, { method: 'DELETE' }), () => { data.reload(); onSaved(); }); }}>Thu hồi phân công</button></article>)}</LoadState></Modal>;
 }

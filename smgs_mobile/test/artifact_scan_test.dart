@@ -1,3 +1,6 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smgs_mobile/models/auth_session.dart';
+import 'package:smgs_mobile/services/token_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_qr_scanner.dart';
 import 'dart:convert';
@@ -42,6 +45,20 @@ void main() {
         ),
       ),
     );
+  });
+  test('premium QR lookups send the visitor token only to the configured BE', () async {
+    SharedPreferences.setMockInitialValues({});
+    await TokenManager.saveSession(AuthSession.fromJson({
+      'accessToken': 'visitor-test-token', 'email': 'visitor@example.invalid', 'fullName': 'Khách kiểm thử', 'roles': ['Visitor'],
+      'accessTokenExpiration': DateTime.now().toUtc().add(const Duration(hours: 1)).toIso8601String(),
+    }));
+    try {
+      await http.runWithClient(() => ArtifactScanService.scan('https://untrusted.test/api/artifacts/scan/premium-qr'), () => MockClient((request) async {
+        expect(request.url.toString(), '${ApiConfig.baseUrl}/artifacts/scan/premium-qr');
+        expect(request.headers['Authorization'], 'Bearer visitor-test-token');
+        return http.Response(jsonEncode({'data': {'id': 11, 'name': 'Purchased content', 'contents': []}}), 200);
+      }));
+    } finally { await TokenManager.clearSession(); }
   });
   test('accept raw codes and backend QR URLs; reject unrelated URLs', () {
     expect(ArtifactScanService.extractCode(' abc '), 'abc');

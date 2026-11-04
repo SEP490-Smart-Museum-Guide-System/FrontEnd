@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
-import '../../data/mock/mock_museums.dart';
+import '../../services/app_services.dart';
 import '../../data/mock/mock_artifacts.dart';
 import '../../data/visit_store.dart';
 import '../explore/explore_screen.dart';
@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Gợi ý hôm nay · Hành trình 60 phút',
+                            'Khám phá bảo tàng · Dữ liệu trực tiếp',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.caption.copyWith(
@@ -374,16 +374,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: widget.onExplore,
                 ),
                 ScrollReveal(
-                  child: MuseumCard(museum: mockMuseums.first, featured: true),
+                  child: AppServices.catalog.museums.isEmpty
+                      ? const EmptyState(
+                          title: 'Chưa có bảo tàng',
+                          message: 'Chưa có bảo tàng công khai từ máy chủ.',
+                        )
+                      : MuseumCard(
+                          museum: AppServices.catalog.museums.first,
+                          featured: true,
+                        ),
                 ),
-                const ChapterHeading(number: '02', title: 'Hiện vật kể chuyện'),
+                const ChapterHeading(
+                  number: '02',
+                  title: 'Trải nghiệm AI / 3D mẫu',
+                ),
                 ScrollReveal(
                   child: _ArtifactEditorial(
                     onTap: () => openPage(
                       context,
                       ArtifactDetailScreen(
                         artifact: mockArtifacts.first,
-                        museumName: mockMuseums.first.name,
+                        museumName: 'Mẫu trải nghiệm AI / 3D',
                       ),
                     ),
                   ),

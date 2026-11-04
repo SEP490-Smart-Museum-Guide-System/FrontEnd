@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
+import '../../widgets/artifact_photo.dart';
 import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
 import '../../data/visit_store.dart';
@@ -26,6 +27,7 @@ class ArtifactDetailScreen extends StatefulWidget {
 
 class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   Map<String, dynamic>? _publishedContent;
+  String? _contentError;
 
   @override
   void initState() {
@@ -39,14 +41,21 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   }
 
   Future<void> _loadPublishedContent() async {
-    final aId = int.tryParse(widget.artifact.id) ?? (widget.artifact.id == 'artifact_1' ? 1 : null);
+    final aId = int.tryParse(widget.artifact.id);
     if (aId != null) {
       try {
         final content = await DiscoveryApiService.fetchPublishedContent(aId);
         if (mounted) {
           setState(() => _publishedContent = content);
         }
-      } catch (_) {}
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => _contentError =
+                'Chưa tải được nội dung thuyết minh. Vui lòng thử lại.',
+          );
+        }
+      }
     }
   }
 
@@ -57,15 +66,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
     final story = _publishedContent?['description'] as String? ?? a.story;
     return StoryScaffold(
       title: a.name,
-      photo: a.id == 'artifact_1'
-          ? Image.asset(
-              'assets/images/ngoc-lu-web.jpg',
-              height: 300,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              semanticLabel: 'Trống đồng Ngọc Lũ',
-            )
-          : HeritageArt(kind: a.id, height: 300),
+      photo: ArtifactPhoto(artifact: a, height: 300),
       actions: [
         ListenableBuilder(
           listenable: VisitStore.instance,
@@ -92,7 +93,9 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         Text(
           a.id == 'artifact_1'
               ? 'Trống đồng Ngọc Lũ · Ảnh: VuThiAnh, Wikimedia Commons'
-              : 'Hình minh họa · Không phải ảnh hiện vật gốc',
+              : (a.imageUrl.isEmpty
+                    ? 'Chưa có ảnh hiện vật'
+                    : 'Ảnh hiện vật từ bảo tàng'),
           style: AppTextStyles.caption,
         ),
         const SizedBox(height: 24),
@@ -125,8 +128,9 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: AppColors.mutedGold),
             ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
+            child: const Wrap(
+              spacing: 6,
+              runSpacing: 4,
               children: [
                 Icon(Icons.verified, size: 14, color: AppColors.deepBurgundy),
                 SizedBox(width: 6),
@@ -141,6 +145,16 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
               ],
             ),
           ),
+        if (_contentError != null) ...[
+          Notice(_contentError!),
+          TextButton(
+            onPressed: () {
+              setState(() => _contentError = null);
+              _loadPublishedContent();
+            },
+            child: const Text('Thử lại'),
+          ),
+        ],
         Text(summary, style: AppTextStyles.bodyLarge),
         const SizedBox(height: 24),
         PrimaryButton(
@@ -154,7 +168,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           icon: Icons.menu_book_outlined,
           onPressed: () => openPage(context, NarrationScreen(artifact: a)),
         ),
-        if (a.id == 'artifact_1' || a.id == '1' || (a.modelUrl != null && a.modelUrl!.isNotEmpty)) ...[
+        if (a.modelUrl != null && a.modelUrl!.isNotEmpty) ...[
           const SizedBox(height: 12),
           SecondaryButton(
             label: 'Xem mô hình 3D',
@@ -181,7 +195,11 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.school_outlined, color: AppColors.deepBurgundy, size: 22),
+                      const Icon(
+                        Icons.school_outlined,
+                        color: AppColors.deepBurgundy,
+                        size: 22,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -200,8 +218,8 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                     isCompleted
                         ? 'Bạn đã hoàn thành bài thử tài cho hiện vật này (Đạt ${store.quizScores[a.id]}/2 câu).'
                         : isDeferred
-                        ? 'Câu đố đã được lưu vào "Danh sách Quiz tích lũy trong ngày". Bạn có thể làm ngay hoặc để đến cuối ngày.'
-                        : 'Bạn có thể thử sức ngay với 2 câu trắc nghiệm nhanh để tích điểm, hoặc lưu lại để cuối ngày làm.',
+                        ? 'Bạn đã đánh dấu để xem lại trong phiên này. Danh sách câu đố chính thức được tải từ hệ thống.'
+                        : 'Mở danh sách câu đố để xem bài được hệ thống cấp cho hiện vật này.',
                     style: AppTextStyles.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -209,13 +227,15 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                     SecondaryButton(
                       label: 'Làm lại câu đố khác',
                       icon: Icons.refresh,
-                      onPressed: () => openPage(context, QuizScreen(artifact: a)),
+                      onPressed: () =>
+                          openPage(context, QuizScreen(artifact: a)),
                     )
                   else ...[
                     PrimaryButton(
                       label: 'Làm Quiz ngay (+20 điểm)',
                       icon: Icons.play_arrow,
-                      onPressed: () => openPage(context, QuizScreen(artifact: a)),
+                      onPressed: () =>
+                          openPage(context, QuizScreen(artifact: a)),
                     ),
                     const SizedBox(height: 8),
                     if (!isDeferred)
@@ -226,7 +246,9 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                           store.deferQuiz(a.id);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Đã lưu câu đố vào mục Quiz tích lũy cuối ngày.'),
+                              content: Text(
+                                'Đã lưu câu đố vào mục Quiz tích lũy cuối ngày.',
+                              ),
                               backgroundColor: AppColors.deepBurgundy,
                             ),
                           );
@@ -234,11 +256,19 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                       )
                     else
                       TextButton.icon(
-                        onPressed: () => openPage(context, const DailyQuizScreen()),
-                        icon: const Icon(Icons.check_circle_outline, color: Color(0xFF2E6B3E), size: 18),
+                        onPressed: () =>
+                            openPage(context, const DailyQuizScreen()),
+                        icon: const Icon(
+                          Icons.check_circle_outline,
+                          color: Color(0xFF2E6B3E),
+                          size: 18,
+                        ),
                         label: const Text(
                           'Đã lưu · Xem danh sách Quiz trong ngày',
-                          style: TextStyle(color: Color(0xFF2E6B3E), fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: Color(0xFF2E6B3E),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                   ],

@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { backend } from '../../services/backend';
+import { useData } from '../common/BusinessUI';
 import { useApp } from '../../context/AppContext';
 import {
   ArrowRight, Building2, CheckSquare, ClipboardCheck, CreditCard,
@@ -14,15 +16,18 @@ export default function RoleDashboard({ onNavigate }) {
     curationQueue, transactions, users, reviews, systemCases
   } = useApp();
 
-  const museumQueue = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum.id);
+  const museumQueue = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum?.id);
   const pending = curationQueue.filter(item => item.status === 'pending_review');
-  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum.id);
-  const museumTours = tours.filter(item => item.museumId === currentMuseum.id);
-  const museumReviews = reviews.filter(item => item.museumName === currentMuseum.name);
-  const revenue = transactions.filter(item => item.status === 'completed').reduce((sum, item) => sum + item.amount, 0);
-  const museumRevenue = transactions.filter(item => item.status === 'completed' && item.museumCode === currentMuseum.code).reduce((sum, item) => sum + item.amount, 0);
+  const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum?.id);
+  const museumTours = tours.filter(item => item.museumId === currentMuseum?.id);
+  const museumReviews = reviews.filter(item => item.museumName === currentMuseum?.name);
+  const [period] = useState(() => { const end = new Date(); return { from: new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1)).toISOString(), to: end.toISOString() }; });
+  const revenueIds = currentRole === 'administrator' ? museums.filter(m => m.isActive).map(m => m.id) : currentRole === 'museumStaff' && currentMuseum ? [currentMuseum.id] : [];
+  const revenueData = useData(`dashboard-revenue:${currentRole}:${revenueIds.join(',')}`, async signal => (await Promise.all(revenueIds.map(id => backend(`commerce/museums/${id}/revenue?from=${encodeURIComponent(period.from)}&to=${encodeURIComponent(period.to)}`, { signal })))).flat(), []);
+  const currencyTotals = new Map();
+  for (const row of revenueData.data) currencyTotals.set(row.currency, (currencyTotals.get(row.currency) || 0) + row.revenue);
+  const revenueText = revenueData.busy ? '…' : revenueData.error ? 'Chưa tải được' : !currencyTotals.size ? 'Chưa phát sinh' : [...currencyTotals].map(([currency, value]) => `${formatNumber(value)} ${currency}`).join(' · ');
   const openCases = systemCases.filter(item => item.status !== 'resolved');
-  const scans = museumArtifacts.reduce((sum, item) => sum + (item.scansCount || 0), 0);
 
   const config = currentRole === 'administrator' ? {
     eyebrow: 'Quản trị toàn hệ thống',
@@ -33,7 +38,7 @@ export default function RoleDashboard({ onNavigate }) {
     metrics: [
       [Users, formatNumber(users.length), 'Tài khoản', 'Toàn hệ thống', 'burgundy'],
       [Building2, formatNumber(museums.length), 'Bảo tàng', 'Đang kết nối', 'gold'],
-      [CreditCard, formatMoney(revenue), 'Doanh thu mô phỏng', 'Giao dịch thành công', 'green'],
+      [CreditCard, revenueText, 'Doanh thu tháng này', 'Theo báo cáo máy chủ · UTC', 'green'],
       [ClipboardCheck, formatNumber(pending.length), 'Chờ kiểm duyệt', 'Nội dung chưa xuất bản', 'blue']
     ],
     listTitle: 'Giao dịch gần đây',
@@ -41,7 +46,7 @@ export default function RoleDashboard({ onNavigate }) {
     rows: transactions.slice(0, 5).map(item => ({
       title: item.packageName,
       subtitle: `${item.userName} · ${item.timestamp}`,
-      badge: formatMoney(item.amount),
+      badge: `${formatNumber(item.amount)} ${item.currency || ''}`,
       status: item.status === 'completed' ? 'approved' : item.status === 'refunded' ? 'refunded' : 'pending'
     })),
     asideTitle: 'Việc cần theo dõi',
@@ -55,8 +60,8 @@ export default function RoleDashboard({ onNavigate }) {
     secondary: ['Đối soát giao dịch', 'transactions'],
     metrics: [
       [ClipboardCheck, formatNumber(openCases.length), 'Yêu cầu mở', 'Cần theo dõi', 'burgundy'],
-      [CreditCard, formatNumber(systemCases.filter(item => item.type === 'refund' && item.status !== 'resolved').length), 'Hoàn tiền', 'Chờ đối soát', 'gold'],
-      [Layers, formatNumber(systemCases.filter(item => ['operations', 'ai_quality'].includes(item.type) && item.status !== 'resolved').length), 'Lỗi & chất lượng AI', 'Toàn hệ thống', 'blue'],
+      [CreditCard, '—', 'Hoàn tiền', 'Chưa có API', 'gold'],
+      [Layers, '—', 'Lỗi & chất lượng AI', 'Chưa có API sự cố', 'blue'],
       [MessageSquare, formatNumber(reviews.filter(item => !item.hidden).length), 'Feedback hiển thị', 'Cần giám sát', 'green']
     ],
     listTitle: 'Việc cần xử lý',
@@ -70,7 +75,7 @@ export default function RoleDashboard({ onNavigate }) {
     asideText: 'Theo dõi lỗi ứng dụng, chất lượng câu trả lời AI và phản hồi không phù hợp.',
     asideAction: ['Xem lỗi & AI', 'operations']
   } : currentRole === 'curator' ? {
-    eyebrow: `Giám tuyển · ${currentMuseum.name}`,
+    eyebrow: `Giám tuyển · ${currentMuseum?.name}`,
     title: 'Kiểm định nội dung di sản',
     description: 'Thẩm định thông tin hiện vật, bản dịch, thuyết minh và quiz AI trước khi công bố cho Khách tham quan.',
     primary: ['Mở hàng đợi thẩm định', 'curation_queue'],
@@ -93,16 +98,16 @@ export default function RoleDashboard({ onNavigate }) {
     asideText: 'Chỉ phê duyệt nội dung có nguồn đáng tin cậy, thuật ngữ đúng và phù hợp với nhóm khách tham quan.',
     asideAction: ['Xem nhật ký thẩm định', 'audit']
   } : {
-    eyebrow: currentMuseum.name,
+    eyebrow: currentMuseum?.name,
     title: 'Bàn làm việc bảo tàng',
     description: 'Quản lý nội dung, bản đồ, tour, kiểm duyệt AI và doanh thu của bảo tàng mình.',
     primary: ['Quản lý hiện vật', 'artifacts'],
     secondary: ['Xưởng nội dung AI', 'ai_studio'],
     metrics: [
       [Layers, formatNumber(museumArtifacts.length), 'Hiện vật', 'Trong bảo tàng đã chọn', 'burgundy'],
-      [QrCode, formatNumber(scans), 'Lượt quét mã', 'Từ các hiện vật', 'green'],
+      [QrCode, '—', 'Lượt quét mã', 'Từ các hiện vật', 'green'],
       [Sparkles, formatNumber(museumQueue.filter(item => item.status === 'pending_review').length), 'AI chờ kiểm tra', 'Trước khi xuất bản', 'gold'],
-      [CreditCard, formatMoney(museumRevenue), 'Doanh thu mô phỏng', 'Chỉ bảo tàng này', 'blue']
+      [CreditCard, revenueText, 'Doanh thu tháng này', 'Bảo tàng đã chọn · UTC', 'blue']
     ],
     listTitle: 'Hiện vật đang quản lý',
     listAction: ['Xem kho hiện vật', 'artifacts'],

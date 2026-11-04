@@ -139,21 +139,22 @@ export default function CurationCenter() {
     setDecision('');
   };
 
-  const submitDecision = () => {
+  const submitDecision = async () => {
     if (!decision || !selected) return;
     if (decision !== 'approve' && !note.trim()) {
       alert('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi yêu cầu hiệu đính hoặc từ chối.');
       return;
     }
 
+    let result;
     if (decision === 'approve') {
-      approveCurationItem(selected.id, note || 'Đã thẩm định phê duyệt theo quy chuẩn lưu trữ và truyền thông di sản bảo tàng.');
+      result = await approveCurationItem(selected.id, note || 'Đã thẩm định phê duyệt theo quy chuẩn lưu trữ và truyền thông di sản bảo tàng.');
     } else if (decision === 'revision') {
-      requestRevisionCurationItem(selected.id, note);
+      result = await requestRevisionCurationItem(selected.id, note);
     } else if (decision === 'reject') {
-      rejectCurationItem(selected.id, note);
+      result = await rejectCurationItem(selected.id, note);
     }
-    closeItem();
+    if (result?.success) closeItem();
   };
 
   // Helper to parse Quiz JSON safely if applicable
@@ -174,7 +175,7 @@ export default function CurationCenter() {
       {/* Hero Header */}
       <section className="role-dashboard-hero" style={{ marginBottom: '24px' }}>
         <div className="role-dashboard-eyebrow">
-          BÀN LÀM VIỆC GIÁM TUYỂN · {currentMuseum.shortName || currentMuseum.name}
+          BÀN LÀM VIỆC GIÁM TUYỂN · {currentMuseum?.shortName || currentMuseum?.name}
         </div>
         <h1>Thẩm định & Kiểm chuẩn Nội dung Di sản</h1>
         <p>

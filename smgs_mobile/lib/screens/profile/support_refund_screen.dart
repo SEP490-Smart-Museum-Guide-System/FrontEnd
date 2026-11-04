@@ -1,351 +1,170 @@
+import '../../widgets/backend_panel.dart';
 import 'package:flutter/material.dart';
-
 import '../../widgets/museum_ui.dart';
-import '../../data/visit_store.dart';
+import '../../services/backend_api.dart';
 
 class SupportRefundScreen extends StatefulWidget {
   const SupportRefundScreen({super.key});
-
   @override
   State<SupportRefundScreen> createState() => _SupportRefundScreenState();
 }
 
 class _SupportRefundScreenState extends State<SupportRefundScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String _category = 'refund'; // 'refund', 'tech_issue', 'general'
-  String _reason = 'museum_closed';
-  int _refundPercent = 100;
-  final _descController = TextEditingController();
-
-  final Map<String, String> _categories = {
-    'refund': 'Yêu cầu hoàn tiền (Vé / Combo / Dịch vụ số)',
-    'tech_issue': 'Sự cố kỹ thuật (Không quét được QR / Lỗi AI)',
-    'general': 'Khiếu nại & Đóng góp ý kiến',
-  };
-
-  final Map<String, String> _reasons = {
-    'museum_closed': 'Bảo tàng tạm dừng hoạt động / Đóng cửa đột xuất',
-    'network_error': 'Sự cố kết nối tại bảo tàng, không tải được thuyết minh',
-    'wrong_date': 'Đặt nhầm ngày tham quan / Kế hoạch thay đổi',
-    'other': 'Lý do cá nhân khác',
-  };
-
+  final _subject = TextEditingController(), _body = TextEditingController();
+  final _form = GlobalKey<FormState>();
+  bool _busy = false;
+  String? _error;
+  late Future<List<Map<String, dynamic>>> _tickets = BackendApi.list(
+    'complaints/me',
+  );
   @override
   void dispose() {
-    _descController.dispose();
+    _subject.dispose();
+    _body.dispose();
     super.dispose();
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-
-    VisitStore.instance.submitSupportTicket(
-      orderId: 'SMGS-20261017-01',
-      category: _categories[_category]!,
-      reason: _reasons[_reason]!,
-      description: _descController.text.trim(),
-      refundPercent: _refundPercent,
-    );
-
-    _descController.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Yêu cầu đã được gửi thành công tới Nhân viên hệ thống.'),
-        backgroundColor: AppColors.deepBurgundy,
-      ),
-    );
+  Future<void> _submit() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await BackendApi.request(
+        'complaints',
+        method: 'POST',
+        body: {'subject': _subject.text.trim(), 'body': _body.text.trim()},
+      );
+      if (!mounted) return;
+      _subject.clear();
+      _body.clear();
+      setState(() => _tickets = BackendApi.list('complaints/me'));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi yêu cầu tới hệ thống.')),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: VisitStore.instance,
-      builder: (context, _) {
-        final store = VisitStore.instance;
-        final tickets = store.supportTickets;
-
-        return MuseumPage(
-          back: true,
-          title: 'Hỗ trợ & Hoàn tiền',
-          eyebrow: 'Quyền lợi khách tham quan',
-          subtitle: 'Tiếp nhận khiếu nại & đối soát dịch vụ',
+  Widget build(BuildContext context) => MuseumPage(
+    back: true,
+    title: 'Hỗ trợ & khiếu nại',
+    children: [
+      const Notice(
+        'Bạn có thể gửi vấn đề về dịch vụ hoặc đơn hàng. Việc gửi yêu cầu không tự động hoàn tiền; hệ thống chưa hỗ trợ hoàn tiền trực tiếp.',
+      ),
+      const SizedBox(height: 16),
+      Form(
+        key: _form,
+        child: Column(
           children: [
-            // Panel chính sách hoàn tiền
-            Panel(
-              gold: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.shield_outlined, color: AppColors.deepBurgundy, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        'CHÍNH SÁCH BẢO VỆ KHÁCH HÀNG',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.deepBurgundy,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Theo quy chế hệ thống SMGS, mọi yêu cầu khiếu nại hoặc hoàn tiền do lỗi kỹ thuật / sự kiện bất khả kháng được Nhân viên hệ thống (System Staff) thẩm tra và hoàn trả tự động theo tỷ lệ quy định.',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    children: [
-                      Icon(Icons.check_circle_outline, color: Color(0xFF2E6B3E), size: 16),
-                      SizedBox(width: 6),
-                      Text('Hoàn 100% nếu bảo tàng đóng cửa hoặc lỗi app', style: AppTextStyles.caption),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Row(
-                    children: [
-                      Icon(Icons.check_circle_outline, color: Color(0xFF2E6B3E), size: 16),
-                      SizedBox(width: 6),
-                      Text('Hoàn 80% nếu yêu cầu hủy trước giờ mở cửa 24h', style: AppTextStyles.caption),
-                    ],
-                  ),
-                ],
-              ),
+            TextFormField(
+              controller: _subject,
+              maxLength: 300,
+              decoration: const InputDecoration(labelText: 'Tiêu đề'),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Nhập tiêu đề' : null,
             ),
-            const SizedBox(height: 24),
-
-            // Form gửi yêu cầu mới
-            const SectionHeading('Gửi yêu cầu hỗ trợ mới'),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Chọn danh mục
-                  const Text('Loại yêu cầu', style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _category,
-                        isExpanded: true,
-                        dropdownColor: AppColors.card,
-                        items: _categories.entries
-                            .map((e) => DropdownMenuItem(
-                                  value: e.key,
-                                  child: Text(e.value, style: AppTextStyles.bodySmall),
-                                ))
-                            .toList(),
-                        onChanged: (v) => setState(() => _category = v!),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Đơn hàng liên quan
-                  const Text('Đơn hàng áp dụng', style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.receipt_outlined, size: 20, color: AppColors.deepBurgundy),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Đơn gần nhất: SMGS-20261017-01', style: TextStyle(fontWeight: FontWeight.w600)),
-                              Text('Combo Vé cổng + Hướng dẫn số · 75.000 đ', style: AppTextStyles.caption),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Lý do hoàn tiền
-                  const Text('Lý do yêu cầu', style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _reason,
-                        isExpanded: true,
-                        dropdownColor: AppColors.card,
-                        items: _reasons.entries
-                            .map((e) => DropdownMenuItem(
-                                  value: e.key,
-                                  child: Text(e.value, style: AppTextStyles.bodySmall),
-                                ))
-                            .toList(),
-                        onChanged: (v) => setState(() => _reason = v!),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Tỷ lệ đề xuất
-                  const Text('Tỷ lệ hoàn tiền đề xuất', style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [100, 80, 50].map((percent) {
-                      final selected = _refundPercent == percent;
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: selected ? AppColors.deepBurgundy : AppColors.card,
-                              foregroundColor: selected ? AppColors.antiqueIvory : AppColors.darkBrown,
-                              side: BorderSide(
-                                color: selected ? AppColors.deepBurgundy : AppColors.border,
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                            ),
-                            onPressed: () => setState(() => _refundPercent = percent),
-                            child: Text('$percent%', style: const TextStyle(fontWeight: FontWeight.w700)),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Mô tả chi tiết
-                  const Text('Mô tả sự việc chi tiết', style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    controller: _descController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: 'Vui lòng mô tả thời gian, địa điểm và chi tiết khó khăn bạn gặp phải...',
-                      hintStyle: AppTextStyles.caption,
-                      filled: true,
-                      fillColor: AppColors.card,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.deepBurgundy, width: 1.5),
-                      ),
-                    ),
-                    validator: (v) => (v == null || v.trim().length < 10)
-                        ? 'Vui lòng nhập tối thiểu 10 ký tự mô tả lý do.'
-                        : null,
-                  ),
-                  const SizedBox(height: 20),
-
-                  PrimaryButton(
-                    label: 'Gửi yêu cầu tới System Staff',
-                    icon: Icons.send_outlined,
-                    onPressed: _submit,
-                  ),
-                ],
+            TextFormField(
+              controller: _body,
+              maxLength: 5000,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Nội dung và mã đơn hàng (nếu có)',
               ),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Nhập nội dung' : null,
             ),
-            const SizedBox(height: 32),
-
-            // Lịch sử các yêu cầu đã gửi
-            const SectionHeading('Lịch sử yêu cầu đã gửi'),
-            if (tickets.isEmpty)
-              const Panel(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text(
-                      'Bạn chưa có yêu cầu khiếu nại hoặc hoàn tiền nào.',
-                      style: AppTextStyles.caption,
-                    ),
-                  ),
-                ),
-              )
-            else
-              for (final ticket in tickets)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Panel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              ticket.id,
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.deepBurgundy,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.mutedGold.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                ticket.status,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.deepBurgundy,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(ticket.category, style: AppTextStyles.cardTitle),
-                        const SizedBox(height: 4),
-                        Text('Lý do: ${ticket.reason}', style: AppTextStyles.bodySmall),
-                        Text('Đề xuất hoàn: ${ticket.refundPercent}%', style: AppTextStyles.caption),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.antiqueIvory,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            ticket.description,
-                            style: AppTextStyles.caption,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            if (_error != null) Notice(_error!),
+            PrimaryButton(
+              label: _busy ? 'Đang gửi…' : 'Gửi yêu cầu',
+              onPressed: _busy ? null : _submit,
+            ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      ),
+      const SectionHeading('Yêu cầu của tôi'),
+      TextButton(
+        onPressed: () =>
+            setState(() => _tickets = BackendApi.list('complaints/me')),
+        child: const Text('Tải lại'),
+      ),
+      FutureBuilder<List<Map<String, dynamic>>>(
+        future: _tickets,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const CircularProgressIndicator();
+          }
+          if (snapshot.hasError) return Notice(snapshot.error.toString());
+          if (snapshot.data!.isEmpty) {
+            return const Notice('Bạn chưa gửi yêu cầu nào.');
+          }
+          return Column(
+            children: snapshot.data!
+                .map(
+                  (t) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Panel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t['subject'], style: AppTextStyles.sectionTitle),
+                          Text(t['body']),
+                          Text('Trạng thái: ${backendStatus(t['status'])}'),
+                          TextButton(
+                            onPressed: () => openPage(
+                              context,
+                              ComplaintDetailScreen(id: t['id'] as int),
+                            ),
+                            child: const Text('Xem quá trình xử lý'),
+                          ),
+                          if (t['resolutionNote'] != null)
+                            Text(t['resolutionNote']),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
+    ],
+  );
+}
+
+class ComplaintDetailScreen extends StatelessWidget {
+  const ComplaintDetailScreen({super.key, required this.id});
+  final int id;
+  @override
+  Widget build(BuildContext context) => MuseumPage(
+    back: true,
+    title: 'Chi tiết yêu cầu',
+    children: [
+      BackendPanel(
+        resourceKey: 'complaint:$id',
+        load: () => BackendApi.request('complaints/me/$id'),
+        builder: (data, reload) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(data['subject'], style: AppTextStyles.pageTitle),
+            Text(data['body']),
+            Text(backendStatus(data['status'])),
+            Text('Ngày gửi: ${data['createdAt']}'),
+            if (data['resolutionNote'] != null)
+              Text('Phản hồi xử lý: ${data['resolutionNote']}'),
+            TextButton(
+              onPressed: reload,
+              child: const Text('Cập nhật tiến độ'),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }

@@ -1,3 +1,5 @@
+import { backend } from '../../services/backend';
+import { Modal, LoadState, useData } from '../common/BusinessUI';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import AiClusterHealthPanel from './AiClusterHealthPanel';
@@ -26,7 +28,7 @@ const groups = {
   },
   refunds: {
     title: 'Xử lý Yêu cầu Hoàn tiền Vé & Dịch vụ',
-    description: 'Áp dụng chính sách hoàn hủy tự động theo mốc thời gian và xác nhận lệnh hoàn tiền mô phỏng.',
+    description: 'Chức năng hoàn tiền chưa được máy chủ hỗ trợ.',
     types: ['refund'],
     icon: RotateCcw
   },
@@ -63,6 +65,7 @@ export default function SystemOperations({ mode = 'support' }) {
     logAction
   } = useApp();
 
+  const [selectedCase, setSelectedCase] = useState(null);
   const [filter, setFilter] = useState('open');
   const [notes, setNotes] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -260,7 +263,7 @@ export default function SystemOperations({ mode = 'support' }) {
                       className="btn btn-primary btn-sm"
                       onClick={() => {
                         updateSystemCase(item.id, 'resolved', notes[item.id] || 'Đã khắc phục sự cố.');
-                        showToast('Đã đánh dấu xử lý sự cố thành công.');
+
                       }}
                     >
                       Đánh dấu Đã xử lý
@@ -288,48 +291,8 @@ export default function SystemOperations({ mode = 'support' }) {
     ? cases
     : cases.filter(item => filter === 'open' ? item.status !== 'resolved' : item.status === filter);
 
-  // Helper to calculate refund rate automatically based on policy [WEB-O03]
-  const calculateRefundPolicy = (item) => {
-    // In our museum policy:
-    // Before 24h: 100%
-    // 12h - 24h: 50%
-    // < 12h or active: 0%
-    if (item.id === 'YC-103') {
-      return {
-        rate: 100,
-        text: 'Hủy trước giờ tham quan > 24 giờ',
-        badgeClass: 'badge-approved',
-        eligible: true
-      };
-    }
-    return {
-      rate: 100,
-      text: 'Đủ điều kiện hoàn theo chính sách dịch vụ',
-      badgeClass: 'badge-approved',
-      eligible: true
-    };
-  };
-
-  const handleExecuteRefund = (c, approve = true) => {
-    const t = transactions.find(val => val.id === c.transactionId);
-    const amount = t ? t.amount : 39000;
-    const policy = calculateRefundPolicy(c);
-    const refundAmount = approve ? Math.round((amount * policy.rate) / 100) : 0;
-
-    if (approve) {
-      const confirmMsg = `Xác nhận phê duyệt hoàn ${refundAmount.toLocaleString('vi-VN')} đ (${policy.rate}%) cho khách ${c.visitor}?\nSố tiền sẽ được hoàn trả mô phỏng qua cổng thanh toán ban đầu.`;
-      if (!window.confirm(confirmMsg)) return;
-
-      updateSystemCase(c.id, 'resolved', `Đã duyệt hoàn tiền ${refundAmount.toLocaleString('vi-VN')} đ (${policy.rate}%). Giao dịch đối soát thành công.`);
-      logAction('REFUND_APPROVED', `Hoàn tiền ${refundAmount} đ cho yêu cầu ${c.id}`);
-      showToast(`Đã duyệt lệnh hoàn tiền ${refundAmount.toLocaleString('vi-VN')} đ thành công!`);
-    } else {
-      const reason = prompt('Nhập lý do từ chối hoàn tiền theo điều khoản bảo tàng:') || 'Yêu cầu không thỏa mãn thời gian hoàn hủy theo quy chế.';
-      updateSystemCase(c.id, 'resolved', `Từ chối hoàn tiền: ${reason}`);
-      logAction('REFUND_REJECTED', `Từ chối hoàn tiền yêu cầu ${c.id}: ${reason}`);
-      showToast('Đã từ chối hoàn tiền theo quy chế.');
-    }
-  };
+  const calculateRefundPolicy = () => ({ rate: 0, text: 'Chưa có dữ liệu chính sách từ máy chủ', eligible: false });
+  const handleExecuteRefund = () => showToast('Máy chủ chưa hỗ trợ hoàn tiền.', 'warning');
 
   return (
     <div className="operations-page">
@@ -416,12 +379,13 @@ export default function SystemOperations({ mode = 'support' }) {
         </select>
       </div>
 
+      {selectedCase && <ComplaintDetail id={selectedCase} onClose={() => setSelectedCase(null)} />}
       {/* Case List */}
       <div className="operations-list">
         {shown.map(item => {
           const transaction = transactions.find(t => t.id === item.transactionId);
           const policy = isRefundMode ? calculateRefundPolicy(item) : null;
-          const origAmount = transaction ? transaction.amount : 39000;
+          const origAmount = transaction?.amount ?? null;
           const calcAmount = policy ? Math.round((origAmount * policy.rate) / 100) : 0;
 
           return (
@@ -436,6 +400,7 @@ export default function SystemOperations({ mode = 'support' }) {
               <h2 style={{ fontSize: '1.05rem', margin: '6px 0', color: 'var(--color-charcoal-900)' }}>
                 {item.title}
               </h2>
+              <button className="btn btn-secondary btn-sm" onClick={() => setSelectedCase(item.id)}>Xem hồ sơ chi tiết</button>
               <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-700)', margin: '4px 0 10px', lineHeight: 1.5 }}>
                 {item.detail}
               </p>
@@ -563,4 +528,9 @@ export default function SystemOperations({ mode = 'support' }) {
       </div>
     </div>
   );
+}
+
+function ComplaintDetail({ id, onClose }) {
+  const data = useData(`complaint:${id}`, signal => backend(`complaints/${id}`, { signal }));
+  return <Modal title="Hồ sơ khiếu nại" onClose={onClose}><LoadState resource={data}>{data.data && <><h3>{data.data.subject}</h3><p style={{ whiteSpace: 'pre-wrap' }}>{data.data.body}</p><p>Trạng thái: {({ Open: 'Mới tiếp nhận', InProgress: 'Đang xử lý', Resolved: 'Đã giải quyết' })[data.data.status] || data.data.status}</p><p>Ngày gửi: {new Date(data.data.createdAt).toLocaleString('vi-VN')}</p>{data.data.resolutionNote && <p>Phản hồi xử lý: {data.data.resolutionNote}</p>}</>}</LoadState></Modal>;
 }

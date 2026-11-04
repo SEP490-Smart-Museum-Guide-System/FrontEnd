@@ -1,3 +1,4 @@
+import ArtifactContentManager from './ArtifactContentManager';
 import ArtifactMediaPanel from './ArtifactMediaPanel';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -443,6 +444,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
         {/* Modal Body */}
         <div className="modal-body">
+          <ArtifactContentManager key={`contents-${artifact.id}`} artifactId={artifact.backendId || artifact.id} canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)} canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)} />
           <ArtifactMediaPanel key={artifact.id} artifactId={artifact.backendId || artifact.id} readOnly={readOnly || !['administrator', 'museumStaff'].includes(currentRole)} />
           {activeTab === 'overview' && (
             <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '28px' }}>
@@ -461,11 +463,11 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   justifyContent: 'center'
                 }}>
                   <img
-                    src={artifact.image || '/assets/images/ngoc-lu-web.jpg'}
+                    src={artifact.image || '/assets/images/placeholder.svg'}
                     alt={artifact.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
-                      e.target.src = '/assets/images/national-museum-web.jpg';
+                      e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg';
                     }}
                   />
                 </div>
@@ -532,7 +534,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
-                    <span>{ttsCurrentTime} / {ttsDuration !== '00:00' ? ttsDuration : (artifact.audioDuration || '01:00')}</span>
+                    <span>{ttsCurrentTime} / {ttsDuration !== '00:00' ? ttsDuration : (artifact.audioDuration || 'Chưa có thời lượng')}</span>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.7rem' }}>Tốc độ:</span>
                       {[0.75, 1.0, 1.25].map(sp => (
@@ -586,7 +588,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
                     <span style={{ color: 'var(--color-charcoal-500)' }}>Lượt quét QR:</span>
-                    <span style={{ fontWeight: '600', color: 'var(--color-burgundy-700)' }}>{artifact.scansCount.toLocaleString()} lượt</span>
+                    <span style={{ fontWeight: '600', color: 'var(--color-burgundy-700)' }}>{artifact.scansCount == null ? 'Chưa có dữ liệu' : `${artifact.scansCount.toLocaleString()} lượt`}</span>
                   </div>
                 </div>
               </div>
@@ -671,7 +673,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
           {/* 3D Model Tab */}
           {activeTab === '3d' && (
             <div>
-              {(artifact.has3DModel || reconstructedGlbUrl) ? (
+              {(artifact.modelUrl || reconstructedGlbUrl) ? (
                 <div>
                   <div style={{
                     height: '420px',
@@ -682,7 +684,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     position: 'relative'
                   }}>
                     <model-viewer
-                      src={reconstructedGlbUrl || artifact.modelUrl || '/assets/models/trong_dong_dong_son.glb'}
+                      src={reconstructedGlbUrl || artifact.modelUrl}
                       alt={artifact.name}
                       auto-rotate
                       camera-controls

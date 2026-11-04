@@ -1,3 +1,8 @@
+import './components/common/business.css';
+import QuestionBank from './components/curation/QuestionBank';
+import TopicManager from './components/artifacts/TopicManager';
+import BadgeManager from './components/analytics/BadgeManager';
+import CommerceManager from './components/transactions/CommerceManager';
 import React, { useState } from 'react';
 import { useApp } from './context/AppContext';
 import Header from './components/layout/Header';
@@ -20,8 +25,9 @@ import LoginScreen from './components/auth/LoginScreen';
 import IndoorMapManager from './components/indoor_maps/IndoorMapManager';
 
 export default function App() {
-  const { activeTab, setActiveTab, isAuthenticated } = useApp();
+  const { activeTab, setActiveTab, isAuthenticated, currentMuseum, currentRole, dataErrors, loading, reload } = useApp();
   const [selectedStudioArtifact, setSelectedStudioArtifact] = useState(null);
+  const [questionDrafts, setQuestionDrafts] = useState(null);
 
   const handleOpenAIStudio = (artifact) => {
     setSelectedStudioArtifact(artifact);
@@ -29,6 +35,15 @@ export default function App() {
   };
 
   const renderContent = () => {
+    const sources = { overview: Object.keys(loading), artifacts: ['artifacts'], curation_artifacts: ['artifacts'], museums: ['museums'], spaces: ['museums'], users: [], transactions: [], tours: ['tours'], reviews: ['reviews'], review_moderation: ['reviews'], support: ['systemCases'], curation_queue: ['curationQueue'], submission_status: ['curationQueue'] }[activeTab] || [];
+    if (sources.some(key => loading[key])) return <p role="status">Đang tải dữ liệu…</p>;
+    if (sources.some(key => dataErrors[key])) return <p role="alert">Chưa tải được dữ liệu cho màn hình này. Hãy thử lại bằng nút phía trên.</p>;
+    if (activeTab === 'audit') return <p role="status">Máy chủ chưa cung cấp API nhật ký hệ thống.</p>;
+    if (activeTab === 'refunds') return <p role="status">Máy chủ chưa cung cấp API yêu cầu hoàn tiền. Chưa có dữ liệu để hiển thị.</p>;
+    if (activeTab === 'transactions' && currentRole === 'systemStaff') return <p role="status">API giao dịch hiện chưa hỗ trợ quyền Nhân viên hệ thống.</p>;
+    if (!currentMuseum && ['artifacts', 'curation_artifacts', 'ai_studio', 'curation_queue', 'submission_status', 'tours', 'reviews', 'spaces', 'topics', 'question_bank'].includes(activeTab)) {
+      return <p role="status">{loading.museums ? 'Đang tải bảo tàng…' : 'Chưa có bảo tàng để hiển thị. Hãy tải lại hoặc kiểm tra phân công tài khoản.'}</p>;
+    }
     switch (activeTab) {
       case 'overview':
         return <RoleDashboard onNavigate={setActiveTab} />;
@@ -41,7 +56,7 @@ export default function App() {
       case 'curation_artifacts':
         return <ArtifactList onOpenAIStudio={handleOpenAIStudio} />;
       case 'ai_studio':
-        return <AIContentStudio initialArtifact={selectedStudioArtifact} />;
+        return <AIContentStudio initialArtifact={selectedStudioArtifact} onOpenQuestionBank={drafts => { setQuestionDrafts(drafts); setActiveTab('question_bank'); }} />;
       case 'curation_queue':
         return <CurationCenter />;
       case 'submission_status':
@@ -55,10 +70,16 @@ export default function App() {
       case 'review_moderation':
       case 'operations':
         return <SystemOperations mode={activeTab} />;
+      case 'topics':
+        return ['administrator', 'museumStaff'].includes(currentRole) ? <TopicManager key={currentMuseum?.id} /> : null;
+      case 'question_bank':
+        return ['administrator', 'museumStaff', 'curator'].includes(currentRole) ? <QuestionBank key={currentMuseum?.id} imported={questionDrafts} /> : null;
+      case 'badges':
+        return currentRole === 'administrator' ? <BadgeManager /> : null;
       case 'users':
         return <UserManager />;
       case 'transactions':
-        return <TransactionManager />;
+        return <CommerceManager />;
       case 'audit':
         return <AuditLogs />;
       default:
@@ -77,6 +98,8 @@ export default function App() {
       <div className="main-content">
         <Header />
         <main className="page-body">
+          {Object.values(loading).some(Boolean) && <p role="status">Đang tải dữ liệu từ máy chủ…</p>}
+          {Object.entries(dataErrors).filter(([, error]) => error).map(([key, error]) => <p role="alert" key={key}>{error} <button className="btn btn-secondary btn-sm" onClick={reload}>Thử lại</button></p>)}
           {renderContent()}
         </main>
       </div>

@@ -1,3 +1,4 @@
+import '../core/network/api_config.dart';
 class Museum {
   const Museum({
     required this.id,
@@ -48,11 +49,10 @@ class Museum {
       name: json['name'] as String? ?? '',
       location: json['address'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      imageUrl:
-          json['coverImageUrl'] as String? ??
-          'assets/images/national-museum-web.jpg',
-      openingHours: json['openingHours'] as String? ?? '08:00 - 17:00',
-      category: json['category'] as String? ?? 'Lịch sử & Di sản',
+      imageUrl: ApiConfig.mediaUrl(json['coverImageUrl'] as String?),
+      openingHours:
+          json['openingHours'] as String? ?? 'Chưa có thông tin giờ mở cửa',
+      category: json['category'] as String? ?? 'Bảo tàng',
       shortIntro:
           json['shortIntro'] as String? ??
           (json['description'] as String? ?? ''),

@@ -124,3 +124,7 @@ smgs_curator/
 
 # Kotlin build sessions
 smgs_mobile/android/.kotlin/
+
+# Browser test output
+**/test-results/
+**/playwright-report/

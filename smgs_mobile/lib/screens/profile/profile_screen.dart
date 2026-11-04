@@ -1,9 +1,10 @@
+import 'experience_history_screen.dart';
+import '../../services/backend_api.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../data/visit_store.dart';
-import '../../data/mock/mock_artifacts.dart';
 import 'services_screen.dart';
 import 'history_screen.dart';
 import 'support_refund_screen.dart';
@@ -68,9 +69,15 @@ class ProfileScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Stat(value: '${store.visitedCount}', label: 'Đã tham quan'),
-              _Stat(value: '${store.saved.length}', label: 'Đã lưu'),
-              _Stat(value: '${store.completedTours}', label: 'Hành trình'),
+              _Stat(
+                value: '${store.viewed.length}',
+                label: 'Đã mở trong phiên',
+              ),
+              _Stat(value: '${store.saved.length}', label: 'Lưu trong phiên'),
+              _Stat(
+                value: '${store.completedTours}',
+                label: 'Tour trong phiên',
+              ),
             ],
           ),
           const SectionHeading('Sổ tay tham quan'),
@@ -91,16 +98,16 @@ class ProfileScreen extends StatelessWidget {
           ),
           ActionTile(
             title: 'Quiz tích lũy trong ngày',
-            subtitle: '${store.todayScannedArtifactIds.length} hiện vật đã mở · Làm bài để nhận điểm.',
+            subtitle: 'Xem câu đố được hệ thống cấp trong ngày.',
             icon: Icons.quiz_outlined,
             onTap: () => openPage(context, const DailyQuizScreen()),
           ),
           ActionTile(
             title: 'Kết quả thử tài',
-            subtitle: 'Nhìn lại những điều đã ghi nhớ.',
+            subtitle: 'Các lượt làm và kết quả được hệ thống lưu.',
             icon: Icons.workspace_premium_outlined,
             onTap: () =>
-                openPage(context, const PersonalCollectionScreen(kind: 'quiz')),
+                openPage(context, const ExperienceHistoryScreen(kind: 'quiz')),
           ),
           ActionTile(
             title: 'Vé & Hướng dẫn số',
@@ -109,8 +116,26 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => openPage(context, const ServicesScreen()),
           ),
           ActionTile(
+            title: 'Sổ điểm',
+            subtitle: 'Theo dõi từng lần cộng điểm.',
+            icon: Icons.stars_outlined,
+            onTap: () => openPage(
+              context,
+              const ExperienceHistoryScreen(kind: 'points'),
+            ),
+          ),
+          ActionTile(
+            title: 'Lịch sử quét hiện vật',
+            subtitle: 'Các lượt quét đã được hệ thống ghi nhận.',
+            icon: Icons.qr_code,
+            onTap: () => openPage(
+              context,
+              const ExperienceHistoryScreen(kind: 'recognitions'),
+            ),
+          ),
+          ActionTile(
             title: 'Huy hiệu của bạn',
-            subtitle: '${store.points} điểm · ${store.badges.length} huy hiệu',
+            subtitle: 'Điểm và huy hiệu được hệ thống ghi nhận.',
             icon: Icons.military_tech_outlined,
             onTap: () => openPage(context, const BadgesScreen()),
           ),
@@ -169,7 +194,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Notice(
-            'Bạn đang dùng bản trải nghiệm. Lịch sử, mục đã lưu và kết quả được giữ trong phiên hiện tại; tải lại trang sẽ đặt lại dữ liệu.',
+            'Mục đã lưu, hiện vật vừa mở và kết quả thử tài mẫu chỉ giữ trong phiên. Lượt tham quan, đơn hàng, điểm và huy hiệu được tải từ hệ thống.',
           ),
           const Divider(),
           const Center(
@@ -212,7 +237,7 @@ class PersonalCollectionScreen extends StatelessWidget {
       final store = VisitStore.instance;
       final artifacts = kind == 'history'
           ? store.viewed
-          : mockArtifacts
+          : AppServices.catalog.artifacts
                 .where(
                   (a) => kind == 'saved'
                       ? store.saved.contains(a.id)
@@ -327,16 +352,28 @@ class FeedbackScreen extends StatefulWidget {
     this.targetType = 'app',
     this.targetId = 'smgs',
     this.targetName = 'Cẩm nang SMGS',
+    this.existingFeedback,
   });
   final String targetType, targetId, targetName;
+  final Map<String, dynamic>? existingFeedback;
   @override
   State<FeedbackScreen> createState() => _FeedbackScreenState();
 }
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
-  String? _rating;
-  bool _submitted = false;
-  final _comment = TextEditingController();
+  late String? _rating = widget.existingFeedback == null
+      ? null
+      : [
+          'Rất hài lòng',
+          'Hài lòng',
+          'Bình thường',
+          'Chưa hài lòng',
+          'Rất không hài lòng',
+        ][5 - (widget.existingFeedback!['overallRating'] as int)];
+  bool _submitted = false, _sending = false;
+  late final _comment = TextEditingController(
+    text: widget.existingFeedback?['comment'] as String? ?? '',
+  );
   @override
   void dispose() {
     _comment.dispose();
@@ -349,13 +386,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     title: _submitted ? 'Cảm ơn bạn!' : 'Bạn thấy thế nào?',
     eyebrow: 'Góp ý trải nghiệm',
     subtitle: _submitted
-        ? 'Góp ý đã được ghi nhận trong phiên trải nghiệm này.'
+        ? 'Góp ý đã được máy chủ ghi nhận.'
         : widget.targetName,
     children: _submitted
         ? [
             const Panel(
               child: Notice(
-                'Bản trải nghiệm chưa gửi góp ý đến bảo tàng. Nội dung sẽ không được lưu sau khi tải lại trang.',
+                'Bạn có thể theo dõi kết quả xử lý trong hệ thống.',
                 icon: Icons.check_circle_outline,
               ),
             ),
@@ -377,92 +414,158 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: SecondaryButton(
                   label: '${_rating == r ? '✓  ' : ''}$r',
-                  onPressed: () => setState(() => _rating = r),
+                  onPressed: widget.existingFeedback?['canEdit'] == false
+                      ? null
+                      : () => setState(() => _rating = r),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _comment,
+              readOnly: widget.existingFeedback?['canEdit'] == false,
               maxLines: 4,
-              maxLength: 1000,
+              maxLength: 2000,
               decoration: const InputDecoration(
                 labelText: 'Lời nhắn của bạn (không bắt buộc)',
                 hintText: 'Chia sẻ điều bạn muốn cải thiện…',
               ),
             ),
             const SizedBox(height: 20),
-            const Notice('Góp ý hiện chỉ được ghi nhận trong bản trải nghiệm.'),
+            const Notice(
+              'Đánh giá bảo tàng cần gắn với lượt tham quan đã hoàn thành. Góp ý chung sẽ được gửi đến bộ phận hỗ trợ.',
+            ),
             const SizedBox(height: 20),
+            if (widget.existingFeedback?['canEdit'] == false)
+              const Notice('Đánh giá này đã hết thời hạn chỉnh sửa.'),
+            if (widget.existingFeedback?['staffResponse'] != null)
+              Notice(
+                'Phản hồi bảo tàng: ${widget.existingFeedback!['staffResponse']['content']}',
+              ),
             PrimaryButton(
               label: 'Ghi nhận góp ý',
-              onPressed: _rating == null
+              onPressed:
+                  _rating == null ||
+                      _sending ||
+                      widget.existingFeedback?['canEdit'] == false
                   ? null
-                  : () {
-                      VisitStore.instance.recordFeedback(
-                        _rating!,
-                        _comment.text.trim(),
-                        targetType: widget.targetType,
-                        targetId: widget.targetId,
-                        targetName: widget.targetName,
-                      );
-                      setState(() => _submitted = true);
+                  : () async {
+                      setState(() => _sending = true);
+                      try {
+                        if (widget.targetType == 'visit' &&
+                            int.tryParse(widget.targetId) != null) {
+                          await BackendApi.request(
+                            widget.existingFeedback == null
+                                ? 'feedbacks'
+                                : "feedbacks/${widget.existingFeedback!['id']}",
+                            method: widget.existingFeedback == null
+                                ? 'POST'
+                                : 'PUT',
+                            body: {
+                              'visitId': int.parse(widget.targetId),
+                              if (widget.existingFeedback != null) ...{
+                                'contentRating':
+                                    widget.existingFeedback!['contentRating'],
+                                'tourRating':
+                                    widget.existingFeedback!['tourRating'],
+                                'chatbotRating':
+                                    widget.existingFeedback!['chatbotRating'],
+                              },
+                              'overallRating':
+                                  5 -
+                                  [
+                                    'Rất hài lòng',
+                                    'Hài lòng',
+                                    'Bình thường',
+                                    'Chưa hài lòng',
+                                    'Rất không hài lòng',
+                                  ].indexOf(_rating!),
+                              'comment': _comment.text.trim(),
+                            },
+                          );
+                        } else {
+                          await BackendApi.request(
+                            'complaints',
+                            method: 'POST',
+                            body: {
+                              'subject': 'Góp ý: ${widget.targetName}',
+                              'body': '$_rating. ${_comment.text.trim()}',
+                            },
+                          );
+                        }
+                        if (mounted) setState(() => _submitted = true);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.toString())));
+                        }
+                      } finally {
+                        if (mounted) setState(() => _sending = false);
+                      }
                     },
             ),
           ],
   );
 }
 
-class BadgesScreen extends StatelessWidget {
+class BadgesScreen extends StatefulWidget {
   const BadgesScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    final store = VisitStore.instance;
-    return MuseumPage(
-      back: true,
-      title: 'Dấu ấn của bạn',
-      eyebrow: 'Huy hiệu & điểm khám phá',
-      children: [
-        Panel(
-          gold: true,
-          child: Column(
+  State<BadgesScreen> createState() => _BadgesScreenState();
+}
+
+class _BadgesScreenState extends State<BadgesScreen> {
+  late Future<List<dynamic>> _data = _load();
+  Future<List<dynamic>> _load() => Future.wait([
+    BackendApi.request('gamification/me/points'),
+    BackendApi.request('gamification/me/badges'),
+    BackendApi.request('gamification/badges'),
+  ]);
+  @override
+  Widget build(BuildContext context) => MuseumPage(
+    back: true,
+    title: 'Dấu ấn của bạn',
+    children: [
+      TextButton(
+        onPressed: () => setState(() => _data = _load()),
+        child: const Text('Tải lại'),
+      ),
+      FutureBuilder<List<dynamic>>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const CircularProgressIndicator();
+          }
+          if (snapshot.hasError) return Notice(snapshot.error.toString());
+          final badges = snapshot.data![1] as List;
+          final definitions = snapshot.data![2] as List;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const HeritageSeal(size: 80),
-              const SizedBox(height: 16),
-              Text('${store.points} điểm', style: AppTextStyles.display),
-              const SizedBox(height: 12),
-              const Text(
-                'Tổng điểm từ kết quả tốt nhất của mỗi hiện vật. Làm lại không cộng trùng điểm.',
-                style: AppTextStyles.bodyMedium,
-                textAlign: TextAlign.center,
+              Text(
+                '${snapshot.data![0]['points']} điểm',
+                style: AppTextStyles.pageTitle,
               ),
-            ],
-          ),
-        ),
-        const SectionHeading('Bộ sưu tập huy hiệu'),
-        if (store.badges.isEmpty)
-          const EmptyState(
-            title: 'Huy hiệu đầu tiên đang chờ',
-            message: 'Trả lời đúng toàn bộ câu hỏi của một hiện vật để nhận huy hiệu.',
-          ),
-        for (final badge in store.badges)
-          Panel(
-            gold: true,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.workspace_premium_outlined,
-                  color: AppColors.mutedGold,
-                  size: 40,
+              const SectionHeading('Huy hiệu được cấp'),
+              if (badges.isEmpty) const Notice('Bạn chưa có huy hiệu.'),
+              for (final badge in badges)
+                Panel(
+                  child: Text(
+                    definitions
+                            .where((d) => d['id'] == badge['badgeId'])
+                            .firstOrNull?['name']
+                            ?.toString() ??
+                        badge['name']?.toString() ??
+                        'Huy hiệu #${badge['badgeId']}',
+                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(child: Text(badge, style: AppTextStyles.sectionTitle)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+            ],
+          );
+        },
+      ),
+    ],
+  );
 }
 
 class SettingsScreen extends StatelessWidget {
@@ -505,4 +608,37 @@ class SettingsScreen extends StatelessWidget {
       ],
     ),
   );
+}
+
+Future<void> openVisitFeedback(
+  BuildContext context,
+  Map<String, dynamic> visit,
+) async {
+  try {
+    final feedback = visit['hasFeedback'] == true
+        ? Map<String, dynamic>.from(
+            await BackendApi.request('feedbacks/visit/${visit['id']}'),
+          )
+        : null;
+    if (context.mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => FeedbackScreen(
+            targetType: 'visit',
+            targetId: visit['id'].toString(),
+            targetName: AppServices.catalog.museumName(
+              visit['museumId'].toString(),
+            ),
+            existingFeedback: feedback,
+          ),
+        ),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
 }

@@ -1,131 +1,159 @@
+import '../museum/visit_progress_screen.dart';
 import 'package:flutter/material.dart';
-
 import '../../widgets/museum_ui.dart';
-import '../../widgets/collection_cards.dart';
-import '../../data/visit_store.dart';
 import '../../models/experience.dart';
 import '../../services/app_services.dart';
-import '../explore/explore_screen.dart';
+import '../../services/backend_api.dart';
 import 'profile_screen.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: VisitStore.instance,
-    builder: (context, _) {
-      final visits = [...VisitStore.instance.history]
-        ..sort((a, b) => b.date.compareTo(a.date));
-      final dates = visits.map((v) => vietnameseDate(v.date)).toSet();
-      return MuseumPage(
-        back: true,
-        title: 'Lịch sử khám phá',
-        eyebrow: 'Những ngày cùng di sản',
-        children: [
-          if (visits.isEmpty) ...[
-            const EmptyState(
-              title: 'Chuyến đi đầu tiên đang chờ',
-              message: 'Khám phá một hiện vật để bắt đầu ghi lại hành trình của bạn.',
-            ),
-            const SizedBox(height: 20),
-            PrimaryButton(
-              label: 'Khám phá bảo tàng',
-              icon: Icons.explore_outlined,
-              onPressed: () =>
-                  openPage(context, const ExploreScreen(standalone: true)),
-            ),
-          ],
-          for (final day in dates) ...[
-            SectionHeading(day),
-            for (final visit in visits.where(
-              (v) => vietnameseDate(v.date) == day,
-            ))
-              ActionTile(
-                title: AppServices.catalog.museums
-                    .firstWhere((m) => m.id == visit.museumId)
-                    .name,
-                subtitle:
-                    '${visit.artifactIds.length} hiện vật · ${visit.tours.where((t) => t.completed).length} hành trình hoàn thành · ${visit.quizzes.length} lượt thử tài',
-                icon: Icons.auto_stories_outlined,
-                onTap: () => openPage(context, VisitDetailScreen(visit: visit)),
-              ),
-          ],
-        ],
-      );
-    },
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  late Future<List<Map<String, dynamic>>> _visits = BackendApi.list(
+    'visits/me',
+  );
+  @override
+  Widget build(BuildContext context) => MuseumPage(
+    back: true,
+    title: 'Lịch sử tham quan',
+    children: [
+      TextButton(
+        onPressed: () => setState(() => _visits = BackendApi.list('visits/me')),
+        child: const Text('Tải lại'),
+      ),
+      FutureBuilder<List<Map<String, dynamic>>>(
+        future: _visits,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const CircularProgressIndicator();
+          }
+          if (snapshot.hasError) return Notice(snapshot.error.toString());
+          if (snapshot.data!.isEmpty) {
+            return const EmptyState(
+              title: 'Chưa có lượt tham quan',
+              message:
+                  'Bắt đầu lượt tham quan từ trang bảo tàng để lưu lịch sử.',
+            );
+          }
+          return Column(
+            children: snapshot.data!
+                .map(
+                  (v) => ActionTile(
+                    title: AppServices.catalog.museumName(
+                      v['museumId'].toString(),
+                    ),
+                    subtitle: '${v['startedAt']} · ${v['status']}',
+                    icon: Icons.history,
+                    onTap: () => openPage(
+                      context,
+                      VisitDetailScreen(
+                        visit: VisitRecord(
+                          id: v['id'].toString(),
+                          museumId: v['museumId'].toString(),
+                          date: DateTime.parse(v['startedAt']),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
+    ],
   );
 }
 
-class VisitDetailScreen extends StatelessWidget {
+class VisitDetailScreen extends StatefulWidget {
   const VisitDetailScreen({super.key, required this.visit});
   final VisitRecord visit;
   @override
-  Widget build(BuildContext context) {
-    final museum = AppServices.catalog.museums.firstWhere(
-      (m) => m.id == visit.museumId,
-    );
-    return MuseumPage(
-      back: true,
-      title: 'Một ngày ở bảo tàng',
-      eyebrow: vietnameseDate(visit.date),
-      subtitle: museum.name,
-      children: [
-        MuseumPhoto(museumId: museum.id, height: 185),
-        const SectionHeading('Hiện vật đã xem'),
-        if (visit.artifactIds.isEmpty)
-          const Text(
-            'Bạn chưa mở chi tiết hiện vật trong ngày này.',
-            style: AppTextStyles.bodyMedium,
-          ),
-        ...AppServices.catalog.artifacts
-            .where((a) => visit.artifactIds.contains(a.id))
-            .map((a) => ArtifactCard(artifact: a)),
-        const SectionHeading('Hành trình'),
-        if (visit.tours.isEmpty)
-          const Text(
-            'Chưa có hành trình trong ngày này.',
-            style: AppTextStyles.bodyMedium,
-          ),
-        for (final tour in visit.tours)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Panel(
-              child: Text(
-                '${tour.completed ? 'Đã hoàn thành' : 'Kết thúc sớm'}\nĐã ghé ${tour.visitedIds.length} điểm · Bỏ qua ${tour.skippedIds.length} điểm',
-                style: AppTextStyles.bodyMedium,
-              ),
-            ),
-          ),
-        const SectionHeading('Kết quả thử tài'),
-        if (visit.quizzes.isEmpty)
-          const Text(
-            'Chưa có lượt thử tài trong ngày này.',
-            style: AppTextStyles.bodyMedium,
-          ),
-        for (final quiz in visit.quizzes)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Panel(
-              child: Text(
-                '${AppServices.catalog.artifacts.firstWhere((a) => a.id == quiz.artifactId).name}\n${quiz.correct}/${quiz.total} câu đúng · ${quiz.points} điểm',
-                style: AppTextStyles.bodyMedium,
-              ),
-            ),
-          ),
-        const SizedBox(height: 24),
-        PrimaryButton(
-          label: 'Góp ý chuyến tham quan',
-          icon: Icons.rate_review_outlined,
-          onPressed: () => openPage(
-            context,
-            FeedbackScreen(
-              targetType: 'visit',
-              targetId: visit.id,
-              targetName: '${museum.name} · ${vietnameseDate(visit.date)}',
-            ),
-          ),
-        ),
-      ],
-    );
+  State<VisitDetailScreen> createState() => _VisitDetailScreenState();
+}
+
+class _VisitDetailScreenState extends State<VisitDetailScreen> {
+  late Future<dynamic> _data = BackendApi.request('visits/${widget.visit.id}');
+  String? _error;
+  bool _busy = false;
+  Future<void> _complete() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await BackendApi.request(
+        'visits/${widget.visit.id}/complete',
+        method: 'POST',
+        body: {},
+      );
+      if (mounted) {
+        setState(() => _data = BackendApi.request('visits/${widget.visit.id}'));
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
+
+  @override
+  Widget build(BuildContext context) => MuseumPage(
+    back: true,
+    title: 'Lượt tham quan',
+    subtitle: AppServices.catalog.museumName(widget.visit.museumId),
+    children: [
+      if (_error != null) Notice(_error!),
+      FutureBuilder<dynamic>(
+        future: _data,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const CircularProgressIndicator();
+          }
+          if (snapshot.hasError) return Notice(snapshot.error.toString());
+          final v = snapshot.data as Map<String, dynamic>;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trạng thái: ${v['status']}'),
+              Text('Bắt đầu: ${v['startedAt']}'),
+              if (v['completedAt'] != null)
+                Text('Kết thúc: ${v['completedAt']}'),
+              TextButton(
+                onPressed: () => openPage(
+                  context,
+                  VisitProgressScreen(visitId: int.parse(widget.visit.id)),
+                ),
+                child: const Text('Tiến độ & dẫn đường'),
+              ),
+              if (v['status'] == 'InProgress')
+                PrimaryButton(
+                  label: _busy ? 'Đang gửi…' : 'Kết thúc lượt tham quan',
+                  onPressed: _busy ? null : _complete,
+                ),
+              if (v['status'] == 'Completed')
+                PrimaryButton(
+                  label: v['hasFeedback'] == true
+                      ? 'Xem / chỉnh sửa đánh giá'
+                      : 'Đánh giá lượt tham quan',
+                  onPressed: () async {
+                    await openVisitFeedback(context, v);
+                    if (mounted) {
+                      setState(
+                        () => _data = BackendApi.request(
+                          'visits/${widget.visit.id}',
+                        ),
+                      );
+                    }
+                  },
+                ),
+            ],
+          );
+        },
+      ),
+    ],
+  );
 }

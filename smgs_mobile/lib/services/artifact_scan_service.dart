@@ -1,3 +1,4 @@
+import 'token_manager.dart';
 import 'package:http/http.dart' as http;
 import '../core/network/api_config.dart';
 import 'discovery_api_service.dart';
@@ -34,6 +35,7 @@ class ArtifactScanService {
           Uri.parse(
             '${ApiConfig.baseUrl}/artifacts/scan/${Uri.encodeComponent(code)}',
           ),
+          headers: TokenManager.authHeaders,
         )
         .timeout(const Duration(seconds: 12));
     return DiscoveryApiService.decodeResponse(response)['data']

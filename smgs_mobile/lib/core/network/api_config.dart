@@ -23,6 +23,12 @@ class ApiConfig {
     return '$host/api';
   }
 
+  static String mediaUrl(String? value) {
+    if (value == null || value.isEmpty) return '';
+    if (value.startsWith('/')) return Uri.parse(baseUrl).resolve(value).toString();
+    return value;
+  }
+
   // Auth endpoints
   static String get loginUrl => '$baseUrl/auth/login';
   static String get registerUrl => '$baseUrl/auth/register';

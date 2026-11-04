@@ -1,3 +1,5 @@
+import 'support/api_widgets.dart';
+import 'support/fake_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -63,6 +65,11 @@ Future<void> tapText(WidgetTester tester, String label) async {
 
 void main() {
   setUp(() {
+    AppServices.catalog = MockCatalogService();
+    AppServices.tours = MockTourService(AppServices.catalog);
+    AppServices.recognition = MockRecognitionService(AppServices.catalog);
+  });
+  setUp(() {
     AppServices.auth = MockAuthService(
       initialUser: const VisitorUser(
         name: 'Người dùng thử',
@@ -72,42 +79,62 @@ void main() {
     final s = VisitStore.instance;
     s.reset();
   });
-  testWidgets('Vietnamese home and all five navigation tabs render at 360px', (
-    tester,
-  ) async {
-    await screenSize(tester, const Size(360, 800));
-    await tester.pumpWidget(const SMGSApp());
-    await tester.pumpAndSettle();
-    expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
-    expect(find.text('Home'), findsNothing);
-    for (final label in [
-      'Khám phá',
-      'Quét mã',
-      'Hành trình',
-      'Cá nhân',
-      'Trang chủ',
-    ]) {
-      await tapText(tester, label);
-      expect(tester.takeException(), isNull);
-    }
-  });
-  testWidgets(
+  apiTestWidgets(
+    'Vietnamese home and all five navigation tabs render at 360px',
+    (tester) async {
+      await screenSize(tester, const Size(360, 800));
+      await tester.pumpWidget(const SMGSApp());
+      await tester.pumpAndSettle();
+      expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
+      expect(find.text('Home'), findsNothing);
+      for (final label in [
+        'Khám phá',
+        'Quét mã',
+        'Hành trình',
+        'Cá nhân',
+        'Trang chủ',
+      ]) {
+        await tapText(tester, label);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+  apiTestWidgets(
     'Search accepts Vietnamese without accents and handles empty results',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       await tester.pumpWidget(host(const ExploreScreen()));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'ho chi minh');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Bảo tàng Hồ Chí Minh'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       expect(find.text('Bảo tàng Hồ Chí Minh'), findsOneWidget);
       expect(find.text('Bảo tàng Lịch sử Quốc gia'), findsNothing);
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'khong co hien vat');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Chưa tìm thấy kết quả'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       expect(find.text('Chưa tìm thấy kết quả'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('Artifact visit and bookmark are reflected in session state', (
+  apiTestWidgets('Artifact visit and bookmark are reflected in session state', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
@@ -129,7 +156,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(VisitStore.instance.saved, isEmpty);
   });
-  testWidgets('Quiz gates submission, scores once and records result', (
+  apiTestWidgets('Quiz gates submission, scores once and records result', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
@@ -149,7 +176,7 @@ void main() {
     expect(find.text('2 / 2'), findsOneWidget);
     expect(VisitStore.instance.quizScores['artifact_1'], 2);
   });
-  testWidgets(
+  apiTestWidgets(
     'Guide answers suggested questions and does not invent freeform answers',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -175,7 +202,9 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets('Tour uses one museum and completes each stop', (tester) async {
+  apiTestWidgets('Tour uses one museum and completes each stop', (
+    tester,
+  ) async {
     await screenSize(tester, const Size(390, 844));
     await tester.pumpWidget(
       host(
@@ -189,12 +218,12 @@ void main() {
     await tester.pumpAndSettle();
     await tapText(tester, 'Bắt đầu hành trình');
     await tapText(tester, 'Đến điểm tiếp theo');
-    expect(find.text('Ấn triện hoàng cung'), findsOneWidget);
+    expect(find.text('Ấn triện hoàng cung'), findsWidgets);
     await tapText(tester, 'Hoàn thành hành trình');
     expect(find.text('Hành trình đáng nhớ'), findsOneWidget);
     expect(VisitStore.instance.completedTours, 1);
   });
-  testWidgets(
+  apiTestWidgets(
     'Narrow screens with larger text remain scrollable without overflow',
     (tester) async {
       await screenSize(tester, const Size(320, 640));

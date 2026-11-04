@@ -1,4 +1,6 @@
+import 'visitor_experience_api.dart';
 import 'dart:async';
+import '../data/visit_store.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/network/api_config.dart';
@@ -89,6 +91,7 @@ class BackendAuthService extends AuthService {
       );
     }
     await TokenManager.saveSession(session);
+    VisitorSession.clear();
     _user = session.user;
     _scheduleExpiry(session);
     notifyListeners();
@@ -113,6 +116,9 @@ class BackendAuthService extends AuthService {
   Future<void> logout() async {
     _expiryTimer?.cancel();
     _user = null;
+    VisitStore.instance.reset();
+    VisitorSession.clear();
+    AppServices.catalog = BackendCatalogService();
     final clearing = TokenManager.clearSession();
     notifyListeners();
     await clearing;

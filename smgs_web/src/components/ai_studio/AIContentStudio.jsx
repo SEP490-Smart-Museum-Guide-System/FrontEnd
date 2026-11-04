@@ -1,4 +1,6 @@
+import { parseQuestionDrafts } from '../../services/questionDrafts';
 import React, { useState, useEffect } from 'react';
+import { aiDemoArtifacts } from '../../data/aiDemoArtifacts';
 import { useApp } from '../../context/AppContext';
 import {
   Sparkles,
@@ -16,13 +18,15 @@ import {
   Play
 } from 'lucide-react';
 
-export default function AIContentStudio({ initialArtifact }) {
+export default function AIContentStudio({ initialArtifact, onOpenQuestionBank }) {
   const { artifacts, currentMuseum, submitToCuration, showToast } = useApp();
-  const museumArtifacts = artifacts.filter(item => 
-    String(item.museumId) === String(currentMuseum?.id) || 
+  const liveArtifacts = artifacts.filter(item =>
+    String(item.museumId) === String(currentMuseum?.id) ||
     item.museumId === currentMuseum?.id ||
     String(item.museumId) === String(currentMuseum?.backendId)
   );
+
+  const museumArtifacts = liveArtifacts.length ? liveArtifacts : aiDemoArtifacts.map(a => ({ ...a, name: `[Mẫu AI/3D] ${a.name}` }));
 
   const [selectedArtifactId, setSelectedArtifactId] = useState(
     initialArtifact?.id || museumArtifacts[0]?.id || ''
@@ -149,7 +153,13 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
 
   // Submit to Curation Queue
   const handleSubmitForReview = async () => {
-    if (!generatedOutput || !selectedArtifact) return;
+    if (!generatedOutput || !selectedArtifact || isSubmitting) return;
+    if (activeMode === 'quiz') {
+      if (!Number.isInteger(Number(selectedArtifact.id)) || Number(selectedArtifact.id) <= 0) { showToast('Hãy chọn hiện vật đã lưu để tạo câu hỏi trong ngân hàng.', 'warning'); return; }
+      try { onOpenQuestionBank({ artifactId: selectedArtifact.id, drafts: parseQuestionDrafts(generatedOutput) }); }
+      catch (e) { showToast(e.message, 'warning'); }
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -244,10 +254,10 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
             }}>
               <div style={{ width: '50px', height: '50px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#1A1F26' }}>
                 <img
-                  src={selectedArtifact.image || '/assets/images/ngoc-lu-web.jpg'}
+                  src={selectedArtifact.image || '/assets/images/placeholder.svg'}
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.src = '/assets/images/national-museum-web.jpg'; }}
+                  onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                 />
               </div>
               <div style={{ overflow: 'hidden' }}>
@@ -477,7 +487,7 @@ A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã đ�
                     onClick={handleSubmitForReview}
                     className="btn btn-primary"
                   >
-                    <Send size={16} /> {isSubmitting ? 'Đang gửi...' : 'Gửi sang Hàng đợi Kiểm duyệt'}
+                    <Send size={16} /> {isSubmitting ? 'Đang gửi...' : activeMode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}
                   </button>
                 </div>
               </div>

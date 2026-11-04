@@ -16,7 +16,7 @@ export default function TransactionManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const transactions = currentRole === 'museumStaff' ? allTransactions.filter(t => t.museumCode === currentMuseum.code) : allTransactions;
+  const transactions = currentRole === 'museumStaff' ? allTransactions.filter(t => t.museumCode === currentMuseum?.code) : allTransactions;
   const filteredTxns = transactions.filter(t => {
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
     if (searchTerm.trim()) {
@@ -42,7 +42,7 @@ export default function TransactionManager() {
             {currentRole === 'museumStaff' ? 'Doanh Thu & Giao Dịch Bảo Tàng' : 'Đối Soát Giao Dịch Toàn Hệ Thống'}
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            {currentRole === 'museumStaff' ? `Số liệu mô phỏng chỉ của ${currentMuseum.name}.` : 'Theo dõi doanh thu, đối soát giao dịch và yêu cầu hoàn tiền.'}
+            {currentRole === 'museumStaff' ? `Dữ liệu đơn hàng của ${currentMuseum?.name}.` : 'Theo dõi doanh thu, đối soát giao dịch và yêu cầu hoàn tiền.'}
           </p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function TransactionManager() {
             <TrendingUp size={24} />
           </div>
           <div>
-            <div className="stat-value">{currentRole === 'museumStaff' ? refundedCount : passPackages.reduce((sum, item) => sum + item.activePassesCount, 0).toLocaleString('vi-VN')}</div>
+            <div className="stat-value">{currentRole === 'museumStaff' ? refundedCount : '—'}</div>
             <div className="stat-label">{currentRole === 'museumStaff' ? 'Giao dịch đã hoàn tiền' : 'Lượt kích hoạt đang sử dụng'}</div>
           </div>
         </div>
@@ -91,11 +91,11 @@ export default function TransactionManager() {
               <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--color-charcoal-950)' }}>
                 {pkg.name}
               </h4>
-              <span className="badge-status badge-active">Kích hoạt</span>
+              <span className="badge-status">{pkg.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}</span>
             </div>
 
             <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--color-burgundy-800)', marginBottom: '12px' }}>
-              {pkg.price.toLocaleString()} đ <span style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', fontWeight: 'normal' }}>/ {pkg.durationDays} ngày</span>
+              {pkg.price.toLocaleString()} đ <span style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', fontWeight: 'normal' }}>/ {pkg.durationDays ?? 'Chưa cấu hình'} ngày</span>
             </div>
 
             <ul style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', paddingLeft: '18px', lineHeight: '1.7', marginBottom: '16px' }}>
@@ -105,8 +105,8 @@ export default function TransactionManager() {
             </ul>
 
             <div style={{ borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Đang có {pkg.activePassesCount} lượt kích hoạt</span>
-              <span style={{ color: 'var(--color-burgundy-700)', fontWeight: '600' }}>Cập nhật giá</span>
+              <span>Chưa có thống kê lượt kích hoạt từ máy chủ</span>
+              <span style={{ color: 'var(--color-burgundy-700)', fontWeight: '600' }}>Giá từ hệ thống</span>
             </div>
           </div>
         ))}
@@ -117,7 +117,7 @@ export default function TransactionManager() {
         <div className="card-header" style={{ background: '#FAF7F2' }}>
           <div className="card-title">
             <CreditCard size={18} color="var(--color-burgundy-700)" />
-            <span>Lịch Sử Giao Dịch Thời Gian Thực</span>
+            <span>Đơn hàng từ hệ thống</span>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>

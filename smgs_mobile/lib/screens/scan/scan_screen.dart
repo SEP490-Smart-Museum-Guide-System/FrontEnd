@@ -33,10 +33,7 @@ class ScanScreen extends StatelessWidget {
         title: 'Tra cứu bộ sưu tập',
         subtitle: 'Tìm hiện vật theo tên và chủ đề.',
         icon: Icons.view_list_outlined,
-        onTap: () => openPage(
-          context,
-          const ExploreScreen(standalone: true, museumId: 'museum_national'),
-        ),
+        onTap: () => openPage(context, const ExploreScreen(standalone: true)),
       ),
       const SizedBox(height: 10),
       const Notice(

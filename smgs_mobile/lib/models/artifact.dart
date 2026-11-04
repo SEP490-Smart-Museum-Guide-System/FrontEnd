@@ -1,3 +1,4 @@
+import '../core/network/api_config.dart';
 class Artifact {
   const Artifact({
     required this.id,
@@ -30,22 +31,22 @@ class Artifact {
   final String? modelUrl;
 
   factory Artifact.fromBackendJson(Map<String, dynamic> json) {
-    final id = json['id']?.toString() ?? '1';
+    final id = json['id']?.toString() ?? '';
     final name = json['name'] as String? ?? 'Hiện vật di sản';
     final galleryName = json['galleryName'] as String? ?? 'Phòng trưng bày';
     return Artifact(
       id: id,
       name: name,
       category: 'Hiện vật bảo tàng',
-      museumId: json['museumId']?.toString() ?? '1',
-      imageUrl: 'assets/images/ngoc-lu-web.jpg',
-      period: 'Thời kỳ lịch sử',
+      museumId: json['museumId']?.toString() ?? '',
+      imageUrl: ApiConfig.mediaUrl((json['media'] as List?)?.where((m) => m['mediaType'] == 'image').firstOrNull?['fileUrl'] as String?),
+      period: json['period'] as String? ?? '',
       location: galleryName,
       summary: 'Hiện vật $name lưu giữ tại bảo tàng. Mã: ${json['code'] ?? id}',
-      story: 'Hiện vật đã được kiểm định và cấp mã định danh số SMGS.',
+      story: json['description'] as String? ?? '',
       aiGuide: 'Bạn có thể hỏi Trợ lý AI về chi tiết hiện vật $name.',
       quizPrompt: 'Tìm hiểu về $name',
-      modelUrl: null,
+      modelUrl: json['model3D'] == null ? null : ApiConfig.mediaUrl(json['model3D']?['modelUrl'] as String?),
     );
   }
 }

@@ -18,15 +18,16 @@ export default function ReviewManager() {
   const [replyingId, setReplyingId] = useState(null);
   const [replyText, setReplyText] = useState('');
 
-  const museumReviews = reviews.filter(r => r.museumName === currentMuseum.name);
+  const museumReviews = reviews.filter(r => r.museumName === currentMuseum?.name);
   const filteredReviews = museumReviews.filter(r => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     return true;
   });
 
-  const handleSendReply = (reviewId) => {
+  const handleSendReply = async (reviewId) => {
     if (!replyText.trim()) return;
-    replyToReview(reviewId, replyText);
+    const result = await replyToReview(reviewId, replyText);
+    if (!result?.success) return;
     setReplyingId(null);
     setReplyText('');
   };

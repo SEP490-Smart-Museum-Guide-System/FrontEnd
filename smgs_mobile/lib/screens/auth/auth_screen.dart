@@ -4,7 +4,7 @@ import '../../widgets/museum_ui.dart';
 import '../../services/app_services.dart';
 import '../../data/visit_store.dart';
 import '../../models/experience.dart';
-import '../../navigation/main_navigation.dart';
+import '../../widgets/catalog_gate.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -53,7 +53,7 @@ class _AuthGateState extends State<AuthGate> {
               final user = AppServices.auth.user;
               if (user == null) return const AuthScreen();
               if (user.role == UserRole.visitor) {
-                return MainNavigation(key: ValueKey(user.email));
+                return CatalogGate(key: ValueKey(user.email));
               }
               return Scaffold(
                 body: Center(

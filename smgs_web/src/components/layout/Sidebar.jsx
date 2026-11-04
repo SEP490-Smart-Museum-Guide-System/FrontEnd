@@ -22,9 +22,9 @@ import {
 export default function Sidebar() {
   const { currentRole, currentMuseum, activeTab, setActiveTab, curationQueue, reviews, artifacts } = useApp();
 
-  const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum.id).map(item => item.id));
+  const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum?.id).map(item => item.id));
   const pendingCuration = curationQueue.filter(c => c.status === 'pending_review' && museumArtifactIds.has(c.targetArtifactId)).length;
-  const pendingReviews = reviews.filter(r => r.status === 'pending_reply' && r.museumName === currentMuseum.name).length;
+  const pendingReviews = reviews.filter(r => r.status === 'pending_reply' && r.museumName === currentMuseum?.name).length;
 
   // Navigation schema per role
   const getNavSections = () => {
@@ -37,6 +37,9 @@ export default function Sidebar() {
             { id: 'museums', label: 'Bảo tàng & Google Maps', icon: Landmark },
             { id: 'indoor_maps', label: 'Bản đồ trong bảo tàng', icon: Compass },
             { id: 'artifacts', label: 'Kho hiện vật', icon: Layers },
+            { id: 'topics', label: 'Chủ đề hiện vật', icon: Layers },
+            { id: 'question_bank', label: 'Ngân hàng câu hỏi', icon: CheckSquare },
+            { id: 'badges', label: 'Huy hiệu khám phá', icon: Sparkles },
           ]
         },
         {
@@ -81,6 +84,7 @@ export default function Sidebar() {
             { id: 'overview', label: 'Tổng quan thẩm định', icon: LayoutDashboard },
             { id: 'curation_queue', label: 'Hàng đợi phê duyệt', icon: CheckSquare, badge: pendingCuration, highlight: true },
             { id: 'artifacts', label: 'Tra cứu hiện vật', icon: Layers },
+            { id: 'question_bank', label: 'Thẩm định câu hỏi & quiz', icon: CheckSquare },
           ]
         },
         {
@@ -100,6 +104,8 @@ export default function Sidebar() {
             { id: 'spaces', label: 'Thông tin & bản đồ bảo tàng', icon: Building2 },
             { id: 'indoor_maps', label: 'Bản đồ trong bảo tàng', icon: Compass },
             { id: 'artifacts', label: 'Quản lý Hiện vật & QR', icon: Layers },
+            { id: 'topics', label: 'Chủ đề hiện vật', icon: Layers },
+            { id: 'question_bank', label: 'Ngân hàng câu hỏi', icon: CheckSquare },
             { id: 'ai_studio', label: 'Xưởng nội dung AI', icon: Sparkles, highlight: true },
             { id: 'submission_status', label: 'Đệ trình & phản hồi Giám tuyển', icon: CheckSquare, badge: pendingCuration },
           ]

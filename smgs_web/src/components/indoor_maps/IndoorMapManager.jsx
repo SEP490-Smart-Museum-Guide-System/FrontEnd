@@ -1,3 +1,4 @@
+import StructureManager from './StructureManager';
 import { uploadMedia } from '../../services/mediaApi';
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -150,6 +151,7 @@ export default function IndoorMapManager() {
     <h1>Bản đồ trong bảo tàng</h1>
     <a href={map ? `/visitor-map?map=${map.id}&preview=draft` : '/visitor-map'} target="_blank" rel="noreferrer">Xem thử phía khách {map ? '(bản nháp đã lưu)' : '(bản đồ mẫu)'} ↗</a>
     <p>Quản lý sơ đồ, điểm thông tin và đường đi trong phạm vi bảo tàng được phân công.</p>
+    {museumId && <StructureManager key={museumId} museumId={museumId} onSaved={() => { refreshStructure().catch(e => setError(e.message)); }} />}
     {error && <div className="indoor-error" role="alert">{error}</div>}
     {message && <div className="indoor-message" role="status">{message}</div>}
     {busy && <p role="status">Đang xử lý…</p>}

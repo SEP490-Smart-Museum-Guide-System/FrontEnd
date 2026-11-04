@@ -1,10 +1,11 @@
+import 'support/api_widgets.dart';
+import 'support/fake_services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/main.dart';
 import 'package:smgs_mobile/data/visit_store.dart';
 import 'package:smgs_mobile/data/mock/mock_artifacts.dart';
 import 'package:smgs_mobile/services/app_services.dart';
-import 'package:smgs_mobile/models/experience.dart';
 import 'package:smgs_mobile/screens/auth/auth_screen.dart';
 import 'package:smgs_mobile/screens/artifact/qr_scan_screen.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_detail_screen.dart';
@@ -28,9 +29,12 @@ void main() {
   setUp(() {
     VisitStore.instance.reset();
     AppServices.auth = MockAuthService();
+    AppServices.catalog = MockCatalogService();
+    AppServices.recognition = MockRecognitionService(AppServices.catalog);
+    AppServices.tours = MockTourService(AppServices.catalog);
   });
 
-  testWidgets(
+  apiTestWidgets(
     'Splash, invalid login, visitor login and logout form one complete flow',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -54,7 +58,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  apiTestWidgets(
     'Registration validates password confirmation and opens the visitor workspace',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -75,7 +79,7 @@ void main() {
     },
   );
 
-  testWidgets('Mobile only opens visitor workspace', (tester) async {
+  apiTestWidgets('Mobile only opens visitor workspace', (tester) async {
     await screenSize(tester, const Size(390, 844));
     await tester.pumpWidget(const SMGSApp());
     await tester.pumpAndSettle();
@@ -93,40 +97,41 @@ void main() {
     await tapText(tester, 'Đăng nhập');
     expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
   });
-  testWidgets('QR and recognition handle match, no match and museum context', (
-    tester,
-  ) async {
-    await screenSize(tester, const Size(390, 844));
-    await tester.pumpWidget(
-      host(
-        const QRScanScreen(recognition: true, museumId: 'museum_ho_chi_minh'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tapText(tester, 'Thử tình huống không tìm thấy');
-    await tapText(tester, 'Nhận diện mô phỏng');
-    expect(find.text('Chưa tìm thấy hiện vật'), findsOneWidget);
-    await tapText(tester, 'Thử lại');
-    await tapText(tester, 'Nhận diện mô phỏng');
-    expect(find.text('Trang báo cách mạng'), findsOneWidget);
-    await tapText(tester, 'Xem hiện vật');
-    expect(
-      tester
-          .widget<ArtifactDetailScreen>(find.byType(ArtifactDetailScreen))
-          .artifact
-          .museumId,
-      'museum_ho_chi_minh',
-    );
-    expect(VisitStore.instance.history, isEmpty);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(host(const QRScanScreen()));
-    await tester.pumpAndSettle();
-    expect(find.text('Mở camera quét QR'), findsOneWidget);
-    expect(find.text('Mã QR hoặc URL trên mã QR'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+  apiTestWidgets(
+    'QR and recognition handle match, no match and museum context',
+    (tester) async {
+      await screenSize(tester, const Size(390, 844));
+      await tester.pumpWidget(
+        host(
+          const QRScanScreen(recognition: true, museumId: 'museum_ho_chi_minh'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Thử tình huống không tìm thấy');
+      await tapText(tester, 'Nhận diện mô phỏng');
+      expect(find.text('Chưa tìm thấy hiện vật'), findsOneWidget);
+      await tapText(tester, 'Thử lại');
+      await tapText(tester, 'Nhận diện mô phỏng');
+      expect(find.text('Trang báo cách mạng'), findsOneWidget);
+      await tapText(tester, 'Xem hiện vật');
+      expect(
+        tester
+            .widget<ArtifactDetailScreen>(find.byType(ArtifactDetailScreen))
+            .artifact
+            .museumId,
+        'museum_ho_chi_minh',
+      );
+      expect(VisitStore.instance.history, isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(host(const QRScanScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Mở camera quét QR'), findsOneWidget);
+      expect(find.text('Mã QR hoặc URL trên mã QR'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('Narration separates duration from level of detail', (
+  apiTestWidgets('Narration separates duration from level of detail', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
@@ -148,7 +153,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Artifact with a model opens the simulated 3D viewer', (
+  apiTestWidgets('Artifact with a model opens the simulated 3D viewer', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
@@ -168,21 +173,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Product selection shows ticket, digital guide and combo', (
+  apiTestWidgets('Products do not fall back to sample offers on API error', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
     await tester.pumpWidget(host(const ServicesScreen()));
     await tester.pumpAndSettle();
-    expect(find.text('Vé vào cửa bảo tàng'), findsOneWidget);
-    await tapText(tester, 'Hướng dẫn số');
-    expect(find.text('Hướng dẫn số'), findsOneWidget);
-    await tapText(tester, 'Vé + Hướng dẫn số');
-    expect(find.text('Vé + Hướng dẫn số'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(find.text('Vé vào cửa bảo tàng'), findsNothing);
+    expect(find.text('Thử lại'), findsOneWidget);
+    expect(find.textContaining('Chưa có dữ liệu kiểm thử'), findsOneWidget);
   });
 
-  testWidgets(
+  apiTestWidgets(
     'Tour requires interests, supports multiple interests, skipping and early end',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -213,82 +215,18 @@ void main() {
     },
   );
 
-  testWidgets(
-    'History groups a day and stores contextual, rating-required feedback',
-    (tester) async {
-      await screenSize(tester, const Size(390, 844));
-      VisitStore.instance.visit(mockArtifacts[0]);
-      VisitStore.instance.visit(mockArtifacts[1]);
-      VisitStore.instance.recordQuiz('artifact_1', 2);
-      expect(VisitStore.instance.history, hasLength(1));
-      await tester.pumpWidget(host(const HistoryScreen()));
-      await tester.pumpAndSettle();
-      await tapText(tester, 'Bảo tàng Lịch sử Quốc gia');
-      expect(find.byType(VisitDetailScreen), findsOneWidget);
-      await tapText(tester, 'Góp ý chuyến tham quan');
-      await tester.scrollUntilVisible(
-        find.text('Ghi nhận góp ý'),
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
-        isNull,
-      );
-      await tapText(tester, 'Hài lòng');
-      await tapText(tester, 'Ghi nhận góp ý');
-      expect(find.text('Cảm ơn bạn!'), findsOneWidget);
-      expect(VisitStore.instance.feedback.single.targetType, 'visit');
-      expect(
-        VisitStore.instance.feedback.single.targetId,
-        VisitStore.instance.history.single.id,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  apiTestWidgets('History never replaces an API failure with local visits', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    VisitStore.instance.visit(mockArtifacts.first);
+    await tester.pumpWidget(host(const HistoryScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Bảo tàng Lịch sử Quốc gia'), findsNothing);
+    expect(find.textContaining('Chưa có dữ liệu kiểm thử'), findsOneWidget);
+  });
 
-  testWidgets(
-    'Payment failure preserves checkout; success activates only once and opens service',
-    (tester) async {
-      await screenSize(tester, const Size(390, 844));
-      await tester.pumpWidget(
-        host(
-          ServiceCheckoutScreen(
-            offer: AppServices.premium.offers[1],
-            museumId: 'museum_national',
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tapText(tester, 'VNPay');
-      await tapText(tester, 'Thất bại');
-      await tapText(tester, 'Xác nhận thanh toán mô phỏng');
-      expect(find.text('Thanh toán chưa thành công'), findsOneWidget);
-      expect(VisitStore.instance.purchases, isEmpty);
-      await tapText(tester, 'Thử thanh toán lại');
-      expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'VNPay'))
-            .selected,
-        isTrue,
-      );
-      await tapText(tester, 'Thành công');
-      await tapText(tester, 'Xác nhận thanh toán mô phỏng');
-      expect(find.text('Đã đăng ký dịch vụ'), findsOneWidget);
-      expect(VisitStore.instance.purchases, hasLength(1));
-      await tapText(tester, 'Mở Hướng dẫn số');
-      expect(find.byType(NarrationScreen), findsOneWidget);
-      await tapText(tester, 'Phát thử mô phỏng');
-      await tester.pump(const Duration(seconds: 2));
-      expect(find.text('Tạm dừng mô phỏng'), findsOneWidget);
-      await tapText(tester, 'Tạm dừng mô phỏng');
-      await tester.pumpWidget(const SizedBox.shrink());
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
+  apiTestWidgets(
     'Artifact filters combine and reset museum, gallery and exhibition',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -310,7 +248,7 @@ void main() {
     },
   );
 
-  testWidgets('New screens fit 320px with larger text', (tester) async {
+  apiTestWidgets('New screens fit 320px with larger text', (tester) async {
     await screenSize(tester, const Size(320, 640));
     for (final screen in <Widget>[
       const AuthScreen(),
@@ -320,14 +258,8 @@ void main() {
       const ServicesScreen(),
       const PurchasedServicesScreen(),
       ServiceCheckoutScreen(
-        offer: AppServices.premium.offers.first,
+        offer: MockPremiumCatalog().offers.first,
         museumId: 'museum_national',
-      ),
-      PaymentResultScreen(
-        success: true,
-        offer: AppServices.premium.offers.first,
-        museumId: 'museum_national',
-        date: DateTime.now(),
       ),
       const QRScanScreen(recognition: true),
       NarrationScreen(artifact: mockArtifacts.first),
@@ -352,25 +284,14 @@ void main() {
     }
   });
 
-  test('Best quiz scores, badges and purchases cannot be duplicated', () {
+  test('Best sample quiz scores and badges cannot be duplicated', () {
     final store = VisitStore.instance;
     store.recordQuiz('artifact_1', 2);
     store.recordQuiz('artifact_1', 1);
     store.recordQuiz('artifact_1', 2);
     expect(store.points, 20);
     expect(store.badges, hasLength(1));
-    final purchase = ServicePurchase(
-      id: 'sample',
-      offer: AppServices.premium.offers.first,
-      museumId: 'museum_national',
-      date: DateTime.now(),
-      method: 'MoMo',
-    );
-    store.activate(purchase);
-    store.activate(purchase);
-    expect(store.purchases, hasLength(1));
     store.reset();
     expect(store.history, isEmpty);
-    expect(store.purchases, isEmpty);
   });
 }

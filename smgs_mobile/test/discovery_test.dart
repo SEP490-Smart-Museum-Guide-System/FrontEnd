@@ -318,7 +318,7 @@ void main() {
       await http.runWithClient(
         () async {
           await tester.pumpWidget(host(const MuseumDiscoveryMapScreen()));
-          await tester.tap(find.text('Bảo tàng SMGS'));
+          await tester.tap(find.text('Chỉ bảo tàng trong hệ thống'));
           await tester.pump();
           await tester.pump();
           await tester.tap(find.text('Gần tôi'));
@@ -370,7 +370,7 @@ void main() {
           await tester.pumpWidget(
             host(const MuseumDiscoveryMapScreen(), scale: 1.3),
           );
-          await tester.tap(find.text('Bảo tàng SMGS'));
+          await tester.tap(find.text('Chỉ bảo tàng trong hệ thống'));
           await tester.pump();
           await tester.pump();
           await tester.pump();

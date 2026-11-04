@@ -3,8 +3,9 @@ import 'package:flutter/foundation.dart';
 import '../models/experience.dart';
 import '../models/artifact.dart';
 import '../models/museum.dart';
+import 'backend_api.dart';
+import 'backend_auth_service.dart';
 import '../data/mock/mock_artifacts.dart';
-import '../data/mock/mock_museums.dart';
 
 abstract class AuthService extends ChangeNotifier {
   VisitorUser? get user;
@@ -14,75 +15,14 @@ abstract class AuthService extends ChangeNotifier {
   Future<void> logout();
 }
 
-class MockAuthService extends AuthService {
-  MockAuthService({VisitorUser? initialUser}) : _user = initialUser;
-
-  VisitorUser? _user;
-  final _accounts = <String, ({String name, String password, UserRole role})>{
-    'khach@smgs.vn': (
-      name: 'Minh An',
-      password: 'smgs123',
-      role: UserRole.visitor,
-    ),
-  };
-  @override
-  VisitorUser? get user => _user;
-  @override
-  Future<void> login(String email, String password) async {
-    await Future<void>.delayed(const Duration(milliseconds: 350));
-    final key = email.trim().toLowerCase();
-    final account = _accounts[key];
-    if (account == null || account.password != password) {
-      throw const FormatException(
-        'Email hoặc mật khẩu chưa đúng. Hãy dùng tài khoản mẫu hoặc đăng ký trong phiên này.',
-      );
-    }
-    _user = VisitorUser(name: account.name, email: key, role: account.role);
-    notifyListeners();
-  }
-
-  @override
-  Future<void> register(String name, String email, String password) async {
-    await Future<void>.delayed(const Duration(milliseconds: 350));
-    final key = email.trim().toLowerCase();
-    if (_accounts.containsKey(key)) {
-      throw const FormatException(
-        'Địa chỉ này đã có tài khoản trong bản trải nghiệm.',
-      );
-    }
-    _accounts[key] = (
-      name: name.trim(),
-      password: password,
-      role: UserRole.visitor,
-    );
-    _user = VisitorUser(name: name.trim(), email: key);
-    notifyListeners();
-  }
-
-  @override
-  Future<void> recover(String email) =>
-      Future<void>.delayed(const Duration(milliseconds: 350));
-  @override
-  Future<void> logout() async {
-    _user = null;
-    notifyListeners();
-  }
-}
-
 abstract class CatalogService {
+  Future<void> load() async {}
+  String museumName(String id) =>
+      museums.where((m) => m.id == id).firstOrNull?.name ??
+      'Chưa có thông tin bảo tàng';
   List<Museum> get museums;
   List<Artifact> get artifacts;
   List<Artifact> inMuseum(String id);
-}
-
-class MockCatalogService implements CatalogService {
-  @override
-  List<Museum> get museums => mockMuseums;
-  @override
-  List<Artifact> get artifacts => mockArtifacts;
-  @override
-  List<Artifact> inMuseum(String id) =>
-      artifacts.where((a) => a.museumId == id).toList();
 }
 
 abstract class RecognitionService {
@@ -95,7 +35,9 @@ class MockRecognitionService implements RecognitionService {
   @override
   Future<Artifact?> recognize(String museumId, {bool match = true}) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    final artifacts = catalog.inMuseum(museumId);
+    final artifacts = museumId.isEmpty
+        ? catalog.artifacts
+        : catalog.inMuseum(museumId);
     return match && artifacts.isNotEmpty ? artifacts.first : null;
   }
 }
@@ -164,78 +106,98 @@ class MockQuizService implements QuizService {
 }
 
 abstract class TourService {
-  List<Artifact> plan(String museumId, int duration, Set<String> interests);
-}
-
-class MockTourService implements TourService {
-  MockTourService(this.catalog);
-  final CatalogService catalog;
-  @override
-  List<Artifact> plan(String museumId, int duration, Set<String> interests) {
-    if (interests.isEmpty) return [];
-    final stops = [...catalog.inMuseum(museumId)];
-    int rank(Artifact a) =>
-        (interests.contains('Nghệ thuật') && a.category == 'Cung đình') ||
-            (interests.contains('Văn hóa') && a.category == 'Khảo cổ')
-        ? 0
-        : 1;
-    stops.sort((a, b) => rank(a).compareTo(rank(b)));
-    return stops.take(duration == 30 ? 1 : stops.length).toList();
-  }
+  Future<List<Artifact>> plan(
+    String museumId,
+    int duration,
+    Set<String> interests,
+  );
 }
 
 abstract class PaymentService {
   Future<bool> pay({required bool simulateSuccess});
 }
 
-class MockPaymentService implements PaymentService {
-  @override
-  Future<bool> pay({required bool simulateSuccess}) async {
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    return simulateSuccess;
-  }
-}
-
 abstract class PremiumCatalog {
   List<PremiumOffer> get offers;
 }
 
-class MockPremiumCatalog implements PremiumCatalog {
+class BackendCatalogService implements CatalogService {
+  List<Museum> _museums = [];
+  List<Artifact> _artifacts = [];
   @override
-  List<PremiumOffer> get offers => const [
-    PremiumOffer(
-      id: 'ticket',
-      name: 'Vé vào cửa bảo tàng',
-      description: 'Vé tham quan theo ngày tại bảo tàng đã chọn.',
-      price: 50000,
-      kind: DigitalServiceKind.exhibition,
-    ),
-    PremiumOffer(
-      id: 'digital-guide',
-      name: 'Hướng dẫn số',
-      description:
-          'Thuyết minh, trợ lý AI và nội dung số trong ngày tham quan.',
-      price: 20000,
-      kind: DigitalServiceKind.narration,
-    ),
-    PremiumOffer(
-      id: 'combo',
-      name: 'Vé + Hướng dẫn số',
-      description: 'Một gói gồm vé vào cửa và toàn bộ quyền Hướng dẫn số.',
-      price: 65000,
-      kind: DigitalServiceKind.guide,
-    ),
-  ];
+  List<Museum> get museums => _museums;
+  @override
+  List<Artifact> get artifacts => _artifacts;
+  @override
+  List<Artifact> inMuseum(String id) =>
+      artifacts.where((a) => a.museumId == id).toList();
+  @override
+  String museumName(String id) =>
+      museums.where((m) => m.id == id).firstOrNull?.name ??
+      'Chưa có thông tin bảo tàng';
+  @override
+  Future<void> load() async {
+    _museums = [];
+    _artifacts = [];
+    final results = await Future.wait([
+      BackendApi.list('museums'),
+      BackendApi.list('artifacts'),
+    ]);
+    _museums = results[0].map(Museum.fromBackendJson).toList();
+    _artifacts = results[1].map(Artifact.fromBackendJson).toList();
+  }
+}
+
+class BackendTourService implements TourService {
+  @override
+  Future<List<Artifact>> plan(
+    String museumId,
+    int duration,
+    Set<String> interests,
+  ) async {
+    if (int.tryParse(museumId) == null) {
+      throw const FormatException('Hãy chọn bảo tàng.');
+    }
+    final tours = await BackendApi.list('tours?museumId=$museumId');
+    final suitable =
+        tours.where((t) => (t['estimatedMinutes'] as num) <= duration).toList()
+          ..sort(
+            (a, b) => (b['estimatedMinutes'] as num).compareTo(
+              a['estimatedMinutes'] as num,
+            ),
+          );
+    if (suitable.isEmpty) return [];
+    final items = (suitable.first['items'] as List).cast<Map<String, dynamic>>()
+      ..sort((a, b) => (a['orderNo'] as int).compareTo(b['orderNo'] as int));
+    final stops = <Artifact>[];
+    for (final item in items) {
+      final row = await BackendApi.request('artifacts/${item['artifactId']}');
+      stops.add(Artifact.fromBackendJson(row as Map<String, dynamic>));
+    }
+    return stops;
+  }
+}
+
+// Only the explicitly labelled AI recognition sandbox can use these artifacts.
+// It cannot return an arbitrary live DB artifact as a simulated recognition.
+class AiDemoCatalog extends CatalogService {
+  @override
+  List<Museum> get museums => const [];
+  @override
+  List<Artifact> get artifacts => mockArtifacts;
+  @override
+  List<Artifact> inMuseum(String id) =>
+      artifacts.where((a) => a.museumId == id).toList();
 }
 
 class AppServices {
   AppServices._();
-  static AuthService auth = MockAuthService();
-  static CatalogService catalog = MockCatalogService();
-  static RecognitionService recognition = MockRecognitionService(catalog);
+  static AuthService auth = BackendAuthService();
+  static CatalogService catalog = BackendCatalogService();
+  static RecognitionService recognition = MockRecognitionService(
+    AiDemoCatalog(),
+  );
   static AiGuideService guide = MockAiGuideService();
   static QuizService quiz = MockQuizService();
-  static TourService tours = MockTourService(catalog);
-  static PaymentService payment = MockPaymentService();
-  static PremiumCatalog premium = MockPremiumCatalog();
+  static TourService tours = BackendTourService();
 }

@@ -1,8 +1,9 @@
+import 'artifact_photo.dart';
 import 'package:flutter/material.dart';
 
 import '../models/museum.dart';
 import '../models/artifact.dart';
-import '../data/mock/mock_museums.dart';
+import '../services/app_services.dart';
 import '../screens/museum/museum_detail_screen.dart';
 import '../screens/artifact/artifact_detail_screen.dart';
 import 'museum_ui.dart';
@@ -15,7 +16,8 @@ class MuseumCard extends StatelessWidget {
       'museum-photo:${featured ? 'home' : 'collection'}:${museum.id}';
 
   String get _displayCity {
-    if (museum.cityCode == '01' || museum.location.toLowerCase().contains('hà nội')) {
+    if (museum.cityCode == '01' ||
+        museum.location.toLowerCase().contains('hà nội')) {
       return 'HÀ NỘI';
     }
     if (museum.cityCode == '79' ||
@@ -23,13 +25,16 @@ class MuseumCard extends StatelessWidget {
         museum.location.toLowerCase().contains('hcm')) {
       return 'TP. HỒ CHÍ MINH';
     }
-    if (museum.cityCode == '48' || museum.location.toLowerCase().contains('đà nẵng')) {
+    if (museum.cityCode == '48' ||
+        museum.location.toLowerCase().contains('đà nẵng')) {
       return 'ĐÀ NẴNG';
     }
-    if (museum.cityCode == '46' || museum.location.toLowerCase().contains('huế')) {
+    if (museum.cityCode == '46' ||
+        museum.location.toLowerCase().contains('huế')) {
       return 'THỪA THIÊN HUẾ';
     }
-    if (museum.cityCode == '31' || museum.location.toLowerCase().contains('hải phòng')) {
+    if (museum.cityCode == '31' ||
+        museum.location.toLowerCase().contains('hải phòng')) {
       return 'HẢI PHÒNG';
     }
     if (museum.location.isNotEmpty) {
@@ -62,17 +67,13 @@ class MuseumCard extends StatelessWidget {
                   enabled: !reduceHeritageMotion(context),
                   child: Hero(
                     tag: _heroTag,
-                    flightShuttleBuilder: (
-                      context,
-                      animation,
-                      direction,
-                      from,
-                      to,
-                    ) => MuseumPhoto(
-                      museumId: museum.id,
-                      imageUrl: museum.imageUrl,
-                      height: 300,
-                    ),
+                    flightShuttleBuilder:
+                        (context, animation, direction, from, to) =>
+                            MuseumPhoto(
+                              museumId: museum.id,
+                              imageUrl: museum.imageUrl,
+                              height: 300,
+                            ),
                     child: ParallaxPhoto(
                       height: featured ? 238 : 200,
                       child: MuseumPhoto(
@@ -112,7 +113,10 @@ class MuseumCard extends StatelessWidget {
                         if (museum.distanceKm != null) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.softSand,
                               borderRadius: BorderRadius.circular(4),
@@ -232,12 +236,7 @@ class ArtifactCard extends StatelessWidget {
             context,
             ArtifactDetailScreen(
               artifact: artifact,
-              museumName: mockMuseums
-                  .firstWhere(
-                    (m) => m.id == artifact.museumId,
-                    orElse: () => mockMuseums.first,
-                  )
-                  .name,
+              museumName: AppServices.catalog.museumName(artifact.museumId),
             ),
           ),
           child: Padding(
@@ -248,14 +247,7 @@ class ArtifactCard extends StatelessWidget {
                   width: 86,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: artifact.id == 'artifact_1'
-                        ? Image.asset(
-                            'assets/images/ngoc-lu-web.jpg',
-                            height: 108,
-                            fit: BoxFit.cover,
-                            semanticLabel: 'Trống đồng Ngọc Lũ',
-                          )
-                        : HeritageArt(kind: artifact.id, height: 108),
+                    child: ArtifactPhoto(artifact: artifact, height: 108),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -281,9 +273,7 @@ class ArtifactCard extends StatelessWidget {
                       Text(artifact.period, style: AppTextStyles.bodySmall),
                       const SizedBox(height: 6),
                       Text(
-                        mockMuseums
-                            .firstWhere((m) => m.id == artifact.museumId)
-                            .name,
+                        AppServices.catalog.museumName(artifact.museumId),
                         style: AppTextStyles.caption,
                       ),
                       Text(artifact.location, style: AppTextStyles.caption),
