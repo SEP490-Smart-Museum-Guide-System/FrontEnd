@@ -1,4 +1,4 @@
-param([string]$Flutter = 'flutter', [string]$ApiBaseUrl = '')
+param([string]$Flutter = 'flutter', [string]$ApiBaseUrl = '', [string]$TtsBaseUrl = '')
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -19,6 +19,14 @@ try {
             throw 'ApiBaseUrl cần là địa chỉ HTTP(S) của Backend.'
         }
         $buildArguments += "--dart-define=API_BASE_URL=$backendAddress"
+    }
+    if (![string]::IsNullOrWhiteSpace($TtsBaseUrl)) {
+        $ttsAddress = $TtsBaseUrl.Trim().TrimEnd('/')
+        $parsedTtsAddress = [Uri]$ttsAddress
+        if (!$parsedTtsAddress.IsAbsoluteUri -or $parsedTtsAddress.Scheme -notin @('http', 'https')) {
+            throw 'TtsBaseUrl cần là địa chỉ HTTP(S) của dịch vụ hoặc proxy giọng đọc.'
+        }
+        $buildArguments += "--dart-define=TTS_BASE_URL=$ttsAddress"
     }
     & $Flutter @buildArguments
     if ($LASTEXITCODE -ne 0) { throw 'Flutter build thất bại. Chưa cập nhật Visitor web.' }

@@ -25,7 +25,9 @@ class ApiConfig {
 
   static String mediaUrl(String? value) {
     if (value == null || value.isEmpty) return '';
-    if (value.startsWith('/')) return Uri.parse(baseUrl).resolve(value).toString();
+    if (value.startsWith('/')) {
+      return Uri.parse(baseUrl).resolve(value).toString();
+    }
     return value;
   }
 
@@ -44,12 +46,14 @@ class ApiConfig {
   // Artifact endpoints
   static String get artifactsUrl => '$baseUrl/artifacts';
   static String artifactDetailUrl(dynamic id) => '$baseUrl/artifacts/$id';
-  static String artifactScanUrl(String code) => '$baseUrl/artifacts/scan/${Uri.encodeComponent(code)}';
+  static String artifactScanUrl(String code) =>
+      '$baseUrl/artifacts/scan/${Uri.encodeComponent(code)}';
   static String publishedContentUrl(dynamic artifactId, {String lang = 'vi'}) =>
       '$baseUrl/artifacts/$artifactId/contents/published?languageCode=$lang';
 
   // Indoor Maps (Visitor)
-  static String publishedIndoorMapUrl(dynamic id) => '$baseUrl/indoor-maps/$id/published';
+  static String publishedIndoorMapUrl(dynamic id) =>
+      '$baseUrl/indoor-maps/$id/published';
   static String publishedIndoorMapImageUrl(dynamic id, String imageKey) =>
       '$baseUrl/indoor-maps/$id/published/image?key=${Uri.encodeComponent(imageKey)}';
 
@@ -61,15 +65,15 @@ class ApiConfig {
       return configured.replaceFirst(RegExp(r'/+$'), '');
     }
     if (kIsWeb) {
-      final host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
-      return 'http://$host:8000';
+      return '${Uri.base.origin}/ai-tts';
     }
     if (Platform.isAndroid) return 'http://10.0.2.2:8000';
     return 'http://localhost:8000';
   }
 
   static String customTtsHost = '';
-  static String get ttsBaseUrl => customTtsHost.trim().isNotEmpty ? customTtsHost.trim() : defaultTtsHost;
+  static String get ttsBaseUrl =>
+      customTtsHost.trim().isNotEmpty ? customTtsHost.trim() : defaultTtsHost;
   static String get ttsSpeechUrl => '$ttsBaseUrl/api/v1/speech';
   static String get ttsHealthUrl => '$ttsBaseUrl/health';
 
@@ -87,10 +91,14 @@ class ApiConfig {
   }
 
   static String customVisionHost = '';
-  static String get visionBaseUrl => customVisionHost.trim().isNotEmpty ? customVisionHost.trim() : defaultVisionHost;
+  static String get visionBaseUrl => customVisionHost.trim().isNotEmpty
+      ? customVisionHost.trim()
+      : defaultVisionHost;
   static String get visionHealthUrl => '$visionBaseUrl/health';
-  static String get visionRecognitionsUrl => '$visionBaseUrl/api/v1/recognitions';
-  static String visionReferencesUrl(dynamic artifactId) => '$visionBaseUrl/api/v1/references?artifact_id=$artifactId';
+  static String get visionRecognitionsUrl =>
+      '$visionBaseUrl/api/v1/recognitions';
+  static String visionReferencesUrl(dynamic artifactId) =>
+      '$visionBaseUrl/api/v1/references?artifact_id=$artifactId';
 
   static String get defaultScanHost {
     const configured = String.fromEnvironment('SCAN_BASE_URL');
@@ -106,9 +114,13 @@ class ApiConfig {
   }
 
   static String customScanHost = '';
-  static String get scanBaseUrl => customScanHost.trim().isNotEmpty ? customScanHost.trim() : defaultScanHost;
+  static String get scanBaseUrl => customScanHost.trim().isNotEmpty
+      ? customScanHost.trim()
+      : defaultScanHost;
   static String get scanHealthUrl => '$scanBaseUrl/health';
   static String get scanJobsUrl => '$scanBaseUrl/api/v1/scans';
-  static String scanJobStatusUrl(String jobId) => '$scanBaseUrl/api/v1/scans/$jobId';
-  static String scanDownloadGlbUrl(String jobId) => '$scanBaseUrl/api/v1/scans/$jobId/model.glb';
+  static String scanJobStatusUrl(String jobId) =>
+      '$scanBaseUrl/api/v1/scans/$jobId';
+  static String scanDownloadGlbUrl(String jobId) =>
+      '$scanBaseUrl/api/v1/scans/$jobId/model.glb';
 }
