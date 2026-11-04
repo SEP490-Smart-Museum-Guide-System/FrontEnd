@@ -11,6 +11,7 @@ import '../../widgets/narration_player.dart';
 import '../profile/profile_screen.dart';
 import 'artifact_3d_screen.dart';
 import '../museum/indoor_guidance_screen.dart';
+import '../museum/visitor_directory_screen.dart';
 import 'daily_quiz_screen.dart';
 
 class ArtifactDetailScreen extends StatefulWidget {
@@ -168,6 +169,21 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           icon: Icons.menu_book_outlined,
           onPressed: () => openPage(context, NarrationScreen(artifact: a)),
         ),
+        if (int.tryParse(a.museumId) != null && int.tryParse(a.id) != null) ...[
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Vị trí & chỉ đường tới hiện vật',
+            icon: Icons.directions_walk,
+            onPressed: () => openPage(
+              context,
+              VisitorDirectoryScreen(
+                museumId: int.parse(a.museumId),
+                initialArtifactId: int.parse(a.id),
+                museumName: widget.museumName,
+              ),
+            ),
+          ),
+        ],
         if (a.modelUrl != null && a.modelUrl!.isNotEmpty) ...[
           const SizedBox(height: 12),
           SecondaryButton(

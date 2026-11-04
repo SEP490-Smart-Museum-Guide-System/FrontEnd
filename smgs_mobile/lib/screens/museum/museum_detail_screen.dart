@@ -1,5 +1,6 @@
 import '../../services/visitor_experience_api.dart';
 import 'visit_progress_screen.dart';
+import 'visitor_directory_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
@@ -86,12 +87,11 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   }
 
   void _openIndoorMap(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Hãy quét mã sơ đồ tại bảo tàng. API hiện chưa cung cấp danh sách sơ đồ cho khách theo bảo tàng.',
-        ),
-      ),
+    final id = int.tryParse(widget.museum.id);
+    if (id == null) return;
+    openPage(
+      context,
+      VisitorDirectoryScreen(museumId: id, museumName: _museum.name),
     );
   }
 

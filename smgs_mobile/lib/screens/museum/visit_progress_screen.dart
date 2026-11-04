@@ -5,7 +5,7 @@ import '../../services/backend_api.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/app_services.dart';
 import '../artifact/artifact_qr_scanner.dart';
-import 'visitor_indoor_map_screen.dart';
+import 'visitor_directory_screen.dart';
 import '../profile/profile_screen.dart';
 
 class VisitProgressScreen extends StatefulWidget {
@@ -18,48 +18,17 @@ class VisitProgressScreen extends StatefulWidget {
 class _VisitProgressScreenState extends State<VisitProgressScreen> {
   bool _busy = false;
   String? _error;
-  Future<void> _openMap(Map<String, dynamic> visit) async {
-    final controller = TextEditingController();
-    final id = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Mở sơ đồ bảo tàng'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Mã sơ đồ tại bảo tàng'),
+  void _openMap(Map<String, dynamic> visit) {
+    openPage(
+      context,
+      VisitorDirectoryScreen(
+        museumId: visit['museumId'] as int,
+        museumName: AppServices.catalog.museumName(
+          visit['museumId'].toString(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text.trim());
-              if (value != null && value > 0) Navigator.pop(ctx, value);
-            },
-            child: const Text('Mở sơ đồ'),
-          ),
-        ],
+        visitId: widget.visitId,
       ),
     );
-    // The text field finishes its closing animation before its controller is disposed.
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    controller.dispose();
-    if (id != null && mounted) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => VisitorIndoorMapScreen(
-            mapId: id,
-            visitId: widget.visitId,
-            museumName: AppServices.catalog.museumName(
-              visit['museumId'].toString(),
-            ),
-          ),
-        ),
-      );
-    }
   }
 
   @override

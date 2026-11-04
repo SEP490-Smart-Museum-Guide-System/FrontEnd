@@ -18,7 +18,11 @@ class BackendPanel extends StatefulWidget {
 class _BackendPanelState extends State<BackendPanel> {
   late Future<dynamic> _future = widget.load();
   void _reload() {
-    if (mounted) setState(() => _future = widget.load());
+    if (mounted) {
+      setState(() {
+        _future = widget.load();
+      });
+    }
   }
 
   @override

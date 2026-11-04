@@ -1,6 +1,7 @@
 import '../../services/visitor_experience_api.dart';
 import '../../services/artifact_scan_service.dart';
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../models/indoor_map.dart';
@@ -13,11 +14,13 @@ class VisitorIndoorMapScreen extends StatefulWidget {
     required this.mapId,
     this.museumName = 'Bảo tàng',
     this.visitId,
+    this.targetArtifactId,
   });
 
   final dynamic mapId;
   final String museumName;
   final int? visitId;
+  final int? targetArtifactId;
 
   @override
   State<VisitorIndoorMapScreen> createState() => _VisitorIndoorMapScreenState();
@@ -86,7 +89,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             _currentMapId,
             mapData.imageKey!,
           );
-        } catch (_) {}
+        } catch (_) {
+          throw const FormatException(
+            'Chưa tải được ảnh sơ đồ. Vui lòng thử lại.',
+          );
+        }
       }
 
       if (!mounted || loadRequest != _mapRequest) return;
@@ -97,9 +104,22 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _fromNodeId = null;
         _startMarker = null;
         _startArtifactName = null;
-        _selectedDestination = null;
+        final targets = widget.targetArtifactId == null
+            ? <IndoorMarker>[]
+            : mapData.markers
+                  .where(
+                    (m) =>
+                        m.isActive &&
+                        m.isDestination &&
+                        m.artifactId == widget.targetArtifactId,
+                  )
+                  .toList();
+        _selectedDestination = targets.length == 1 ? targets.single : null;
         _routeNodeIds = [];
         _routeError = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && loadRequest == _mapRequest) _fitMap();
       });
       if (widget.visitId != null) {
         try {
@@ -128,6 +148,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             setState(() => _routeError = e.toString());
           }
         }
+      }
+      if (_selectedDestination != null &&
+          (widget.visitId == null || _fromNodeId != null)) {
+        _recalculateRoute();
       }
     } catch (e) {
       if (!mounted || loadRequest != _mapRequest) return;
@@ -289,6 +313,27 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     _recalculateRoute();
   }
 
+  void _fitMap() {
+    if (_map == null || _map!.imageWidth <= 0 || _map!.imageHeight <= 0) return;
+    final screen = MediaQuery.of(context).size;
+    final height =
+        (screen.height -
+            kToolbarHeight -
+            MediaQuery.of(context).padding.vertical) *
+        0.65;
+    final scale = math
+        .min(screen.width / _map!.imageWidth, height / _map!.imageHeight)
+        .clamp(0.02, 4.0);
+    _transformController.value = Matrix4.identity()
+      ..translateByDouble(
+        (screen.width - _map!.imageWidth * scale) / 2,
+        (height - _map!.imageHeight * scale) / 2 + 16,
+        0,
+        1,
+      )
+      ..scaleByDouble(scale, scale, 1, 1);
+  }
+
   void _centerOnCoordinates(double normX, double normY) {
     if (_map == null) return;
     const targetScale = 1.5;
@@ -389,6 +434,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           children: [
             Text(
               _map?.name ?? 'Sơ đồ bảo tàng',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -397,11 +444,18 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             ),
             Text(
               widget.museumName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, color: AppColors.darkBrown),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Vừa khung sơ đồ',
+            onPressed: _fitMap,
+            icon: const Icon(Icons.fit_screen, color: AppColors.deepBurgundy),
+          ),
           IconButton(
             icon: const Icon(
               Icons.layers_outlined,
@@ -485,7 +539,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                 Positioned.fill(
                   child: InteractiveViewer(
                     transformationController: _transformController,
-                    minScale: 0.4,
+                    constrained: false,
+                    minScale: 0.02,
                     maxScale: 4.0,
                     boundaryMargin: const EdgeInsets.all(300),
                     child: Center(
@@ -689,24 +744,19 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
                 // 4. Draggable Bottom Sheet for Destinations & Navigation Info
                 DraggableScrollableSheet(
-                  initialChildSize: 0.28,
+                  initialChildSize: widget.targetArtifactId == null
+                      ? 0.34
+                      : 0.46,
                   minChildSize: 0.12,
                   maxChildSize: 0.65,
                   builder: (context, scrollController) {
-                    return Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 10,
-                            offset: Offset(0, -3),
-                          ),
-                        ],
+                    return Material(
+                      color: Colors.white,
+                      elevation: 8,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
                       ),
+                      clipBehavior: Clip.antiAlias,
                       child: ListView(
                         controller: scrollController,
                         padding: const EdgeInsets.all(16),
@@ -724,6 +774,49 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                           ),
                           const SizedBox(height: 12),
 
+                          if (widget.visitId == null && _map != null) ...[
+                            DropdownButtonFormField<String>(
+                              key: ValueKey(
+                                'start:$_currentMapId:${_startMarker?.id}',
+                              ),
+                              initialValue: _startMarker?.id,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Điểm bạn đang đứng',
+                              ),
+                              items: _map!.markers
+                                  .where((m) => m.isActive && m.nodeId != null)
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m.id,
+                                      child: Text(
+                                        m.label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                final marker = _map!.markers
+                                    .where((m) => m.id == value)
+                                    .firstOrNull;
+                                if (marker == null) return;
+                                setState(() {
+                                  _startMarker = marker;
+                                  _fromNodeId = marker.nodeId;
+                                  _startArtifactName = marker.label;
+                                });
+                                _recalculateRoute();
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Chọn đúng vị trí thực tế hoặc quét QR. Vị trí không được theo dõi tự động.',
+                              style: AppTextStyles.caption,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           // Selected Destination Card if active
                           if (_selectedDestination != null) ...[
                             Container(
@@ -742,12 +835,14 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        _selectedDestination!.label,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF800020),
+                                      Expanded(
+                                        child: Text(
+                                          _selectedDestination!.label,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF800020),
+                                          ),
                                         ),
                                       ),
                                       IconButton(

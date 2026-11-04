@@ -1,7 +1,10 @@
 import { backend } from '../../services/backend';
 import MediaUpload from '../common/MediaUpload';
 import { mediaApi } from '../../services/mediaApi';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import MuseumCoverPicker from './MuseumCoverPicker';
+import MuseumCityPicker from './MuseumCityPicker';
+import OpeningHoursPicker from './OpeningHoursPicker';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import {
@@ -32,7 +35,6 @@ export default function MuseumManager() {
     currentRole,
     currentMuseum,
     toggleMuseumGoogleMapsVisibility,
-    cities,
     createMuseum,
     updateMuseum,
     deleteMuseum
@@ -44,6 +46,9 @@ export default function MuseumManager() {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [newCoverFile, setNewCoverFile] = useState(null);
+  const [editCoverFile, setEditCoverFile] = useState(null);
+  const submitLock = useRef(false);
   const [museumForm, setMuseumForm] = useState({});
   const [newMuseumData, setNewMuseumData] = useState({
     name: '',
@@ -76,9 +81,9 @@ export default function MuseumManager() {
     return () => controller.abort();
   }, [activeMuseum?.id]);
   const buildings = structure.id === activeMuseum?.id ? structure.buildings : [];
-  const cityOptions = cities || [];
 
   const handleOpenEditMuseum = () => {
+    setEditCoverFile(null);
     setMuseumForm({
       name: activeMuseum?.name || '',
       cityCode: activeMuseum?.cityCode || '',
@@ -94,23 +99,30 @@ export default function MuseumManager() {
 
   const saveMuseumInfo = async (event) => {
     event.preventDefault();
+    if (submitLock.current) return;
+    if (!/^(?!00)\d{2}$/.test(museumForm.cityCode || '')) { showToast('Hãy chọn tỉnh / thành phố hợp lệ.', 'warning'); return; }
+    submitLock.current = true;
     setIsSubmitting(true);
     try {
-      const res = await updateMuseum(activeMuseum?.id, museumForm);
+      const res = await updateMuseum(activeMuseum?.id, museumForm, editCoverFile);
       if (res?.success) {
         setIsEditingMuseum(false);
       }
     } finally {
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleCreateMuseum = async (e) => {
     e.preventDefault();
+    if (submitLock.current) return;
+    if (!/^(?!00)\d{2}$/.test(newMuseumData.cityCode || '')) { showToast('Hãy chọn tỉnh / thành phố hợp lệ.', 'warning'); return; }
     if (!newMuseumData.name.trim()) {
       showToast('Vui lòng nhập tên bảo tàng.', 'warning');
       return;
     }
+    submitLock.current = true;
     setIsSubmitting(true);
     try {
       const res = await createMuseum({
@@ -122,13 +134,14 @@ export default function MuseumManager() {
         openingHours: newMuseumData.openingHours.trim(),
         coverImageUrl: newMuseumData.coverImageUrl.trim(),
         description: newMuseumData.description.trim()
-      });
+      }, newCoverFile);
 
       if (res?.success) {
         if (res.data?.id) {
           setSelectedMuseumId(res.data.id);
         }
         setIsAddingMuseum(false);
+        setNewCoverFile(null);
         setNewMuseumData({
           name: '',
           cityCode: '',
@@ -141,6 +154,7 @@ export default function MuseumManager() {
         });
       }
     } finally {
+      submitLock.current = false;
       setIsSubmitting(false);
     }
   };
@@ -176,7 +190,7 @@ export default function MuseumManager() {
           {currentRole === 'administrator' && (
             <button
               type="button"
-              onClick={() => setIsAddingMuseum(true)}
+              onClick={() => { setNewCoverFile(null); setIsAddingMuseum(true); }}
               className="btn btn-primary"
             >
               <Plus size={16} /> Thêm Bảo Tàng Mới
@@ -408,11 +422,11 @@ export default function MuseumManager() {
 
       {/* Edit Museum Modal */}
       {isEditingMuseum && typeof document !== 'undefined' && createPortal(
-        <div className="modal-overlay" onClick={() => setIsEditingMuseum(false)}>
+        <div className="modal-overlay" onClick={() => { if (!submitLock.current) setIsEditingMuseum(false); }}>
           <div className="modal-dialog" style={{ maxWidth: '640px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={event => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title font-serif">Chỉnh Sửa Thông Tin Bảo Tàng</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsEditingMuseum(false)}>✕</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { if (!submitLock.current) setIsEditingMuseum(false); }}>✕</button>
             </div>
             <form onSubmit={saveMuseumInfo} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="modal-body" style={{ display: 'grid', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -426,32 +440,12 @@ export default function MuseumManager() {
                   />
                 </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <label className="form-group" style={{ marginBottom: 0 }}>
-                    <span className="form-label">Tỉnh / Thành phố *</span>
-                    <select
-                      className="form-select"
-                      value={museumForm.cityCode || ''}
-                      onChange={e => setMuseumForm(prev => ({ ...prev, cityCode: e.target.value }))}
-                      required
-                    >
-                      {cityOptions.map(city => (
-                        <option key={city.key} value={city.key}>
-                          {city.value} ({city.key})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                  <MuseumCityPicker value={museumForm.cityCode || ''} disabled={isSubmitting}
+                    onChange={cityCode => setMuseumForm(prev => ({ ...prev, cityCode }))} />
 
-                  <label className="form-group" style={{ marginBottom: 0 }}>
-                    <span className="form-label">Giờ mở cửa</span>
-                    <input
-                      className="form-input"
-                      value={museumForm.openingHours || ''}
-                      onChange={e => setMuseumForm(prev => ({ ...prev, openingHours: e.target.value }))}
-                      placeholder="08:00 - 17:00 (Thứ 3 - Chủ nhật)"
-                    />
-                  </label>
+                  <OpeningHoursPicker value={museumForm.openingHours || ''} disabled={isSubmitting}
+                    onChange={openingHours => setMuseumForm(prev => ({ ...prev, openingHours }))} />
                 </div>
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
@@ -490,15 +484,8 @@ export default function MuseumManager() {
                   </label>
                 </div>
 
-                <label className="form-group" style={{ marginBottom: 0 }}>
-                  <span className="form-label">Đường dẫn ảnh đại diện (Cover Image URL)</span>
-                  <input
-                    className="form-input"
-                    value={museumForm.image || ''}
-                    onChange={e => setMuseumForm(prev => ({ ...prev, image: e.target.value }))}
-                    placeholder="/assets/images/..."
-                  />
-                </label>
+                <MuseumCoverPicker file={editCoverFile} currentUrl={museumForm.image || ''}
+                  onChange={setEditCoverFile} disabled={isSubmitting} />
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
                   <span className="form-label">Giới thiệu bảo tàng</span>
@@ -511,7 +498,7 @@ export default function MuseumManager() {
                 </label>
               </div>
               <div className="modal-footer" style={{ flexShrink: 0 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsEditingMuseum(false)} disabled={isSubmitting}>
+                <button type="button" className="btn btn-secondary" onClick={() => { if (!submitLock.current) setIsEditingMuseum(false); }} disabled={isSubmitting}>
                   Hủy
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
@@ -526,11 +513,11 @@ export default function MuseumManager() {
 
       {/* Add Museum Modal (Admin only) */}
       {isAddingMuseum && typeof document !== 'undefined' && createPortal(
-        <div className="modal-overlay" onClick={() => setIsAddingMuseum(false)}>
+        <div className="modal-overlay" onClick={() => { if (!submitLock.current) setIsAddingMuseum(false); }}>
           <div className="modal-dialog" style={{ maxWidth: '640px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title font-serif">Thêm Bảo Tàng Mới Vào Hệ Thống</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAddingMuseum(false)}>✕</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { if (!submitLock.current) setIsAddingMuseum(false); }}>✕</button>
             </div>
             <form onSubmit={handleCreateMuseum} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="modal-body" style={{ display: 'grid', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -545,32 +532,12 @@ export default function MuseumManager() {
                   />
                 </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <label className="form-group" style={{ marginBottom: 0 }}>
-                    <span className="form-label">Tỉnh / Thành phố *</span>
-                    <select
-                      className="form-select"
-                      value={newMuseumData.cityCode}
-                      onChange={e => setNewMuseumData(prev => ({ ...prev, cityCode: e.target.value }))}
-                      required
-                    >
-                      {cityOptions.map(city => (
-                        <option key={city.key} value={city.key}>
-                          {city.value} ({city.key})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                  <MuseumCityPicker value={newMuseumData.cityCode || ''} disabled={isSubmitting}
+                    onChange={cityCode => setNewMuseumData(prev => ({ ...prev, cityCode }))} />
 
-                  <label className="form-group" style={{ marginBottom: 0 }}>
-                    <span className="form-label">Giờ mở cửa</span>
-                    <input
-                      className="form-input"
-                      value={newMuseumData.openingHours}
-                      onChange={e => setNewMuseumData(prev => ({ ...prev, openingHours: e.target.value }))}
-                      placeholder="08:00 - 17:00"
-                    />
-                  </label>
+                  <OpeningHoursPicker value={newMuseumData.openingHours || ''} disabled={isSubmitting}
+                    onChange={openingHours => setNewMuseumData(prev => ({ ...prev, openingHours }))} />
                 </div>
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
@@ -610,15 +577,7 @@ export default function MuseumManager() {
                   </label>
                 </div>
 
-                <label className="form-group" style={{ marginBottom: 0 }}>
-                  <span className="form-label">Đường dẫn ảnh đại diện</span>
-                  <input
-                    className="form-input"
-                    value={newMuseumData.coverImageUrl}
-                    onChange={e => setNewMuseumData(prev => ({ ...prev, coverImageUrl: e.target.value }))}
-                    placeholder="/assets/images/national-museum-web.jpg"
-                  />
-                </label>
+                <MuseumCoverPicker file={newCoverFile} onChange={setNewCoverFile} disabled={isSubmitting} />
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
                   <span className="form-label">Giới thiệu bảo tàng</span>
@@ -633,7 +592,7 @@ export default function MuseumManager() {
               </div>
 
               <div className="modal-footer" style={{ flexShrink: 0 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsAddingMuseum(false)} disabled={isSubmitting}>
+                <button type="button" className="btn btn-secondary" onClick={() => { if (!submitLock.current) setIsAddingMuseum(false); }} disabled={isSubmitting}>
                   Hủy
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>

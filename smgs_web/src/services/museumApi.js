@@ -57,50 +57,35 @@ export async function getCitiesApi() {
   return data;
 }
 
-export async function createMuseumApi(museumData) {
-  const response = await fetch(`${API_BASE}/museums`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      name: museumData.name,
-      description: museumData.description || null,
-      address: museumData.address || null,
-      cityCode: museumData.cityCode || null,
-      latitude: museumData.latitude === '' || museumData.latitude == null ? null : Number(museumData.latitude),
-      longitude: museumData.longitude === '' || museumData.longitude == null ? null : Number(museumData.longitude),
-      openingHours: museumData.openingHours || null,
-      coverImageUrl: museumData.coverImageUrl || museumData.image || null
-    })
-  });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(data?.message || `Không thể tạo bảo tàng mới (${response.status})`);
+function museumFormData(data, file) {
+  const form = new FormData();
+  const values = {
+    name: data.name, description: data.description, address: data.address, cityCode: data.cityCode,
+    latitude: data.latitude, longitude: data.longitude, openingHours: data.openingHours,
+    coverImageUrl: data.coverImageUrl ?? data.image,
+  };
+  for (const [name, value] of Object.entries(values)) {
+    if (value !== '' && value != null) form.append(name, String(value));
   }
-  return data;
+  if (file) form.append('file', file);
+  return form;
 }
 
-export async function updateMuseumApi(id, museumData) {
-  const response = await fetch(`${API_BASE}/museums/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      name: museumData.name,
-      description: museumData.description || null,
-      address: museumData.address || null,
-      cityCode: museumData.cityCode || null,
-      latitude: museumData.latitude === '' || museumData.latitude == null ? null : Number(museumData.latitude),
-      longitude: museumData.longitude === '' || museumData.longitude == null ? null : Number(museumData.longitude),
-      openingHours: museumData.openingHours || null,
-      coverImageUrl: museumData.coverImageUrl || museumData.image || null
-    })
-  });
+async function saveMuseum(path, method, data, file) {
+  const headers = getAuthHeaders(); delete headers['Content-Type'];
+  const response = await fetch(`${API_BASE}/${path}`, { method, headers, body: museumFormData(data, file) });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(result?.message || `Không thể lưu bảo tàng (${response.status}).`);
+  if (!result?.data?.id) throw new Error('Máy chủ chưa trả về thông tin bảo tàng đã lưu.');
+  return result;
+}
 
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(data?.message || `Không thể cập nhật bảo tàng (${response.status})`);
-  }
-  return data;
+export function createMuseumApi(data, file) {
+  return saveMuseum('museums/with-image', 'POST', data, file);
+}
+
+export function updateMuseumApi(id, data, file) {
+  return saveMuseum(`museums/${id}/with-image`, 'PUT', data, file);
 }
 
 export async function deleteMuseumApi(id) {

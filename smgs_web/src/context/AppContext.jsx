@@ -119,8 +119,8 @@ function DataProvider({ children, session, login, endSession }) {
     if (!Number.isInteger(Number(id)) || Number(id) <= 0) throw new Error('Hãy chọn bản ghi đã lưu trên máy chủ. Dữ liệu AI/3D mẫu không thể dùng cho nghiệp vụ.');
     return Number(id);
   }
-  const createMuseum = form => mutate(async () => (await createMuseumApi(form)).data, 'Đã tạo bảo tàng.');
-  const updateMuseum = (id, form) => mutate(() => updateMuseumApi(requireId(id), form), 'Đã cập nhật bảo tàng.');
+  const createMuseum = (form, file) => mutate(async () => (await createMuseumApi(form, file)).data, 'Đã tạo bảo tàng.');
+  const updateMuseum = (id, form, file) => mutate(() => updateMuseumApi(requireId(id), form, file), 'Đã cập nhật bảo tàng.');
   const deleteMuseum = id => mutate(() => deleteMuseumApi(requireId(id)), 'Đã vô hiệu hóa bảo tàng.');
   const artifactPayload = a => ({ museumId: requireId(a.museumId || currentMuseum?.id), galleryId: a.galleryId ? requireId(a.galleryId) : null, name: a.name, code: a.code || null, qrCode: a.qrCode || null, accessLevel: a.accessLevel || 'free' });
   const addArtifact = a => mutate(async () => (await createArtifactApi(artifactPayload(a))).data, 'Đã thêm hiện vật.');

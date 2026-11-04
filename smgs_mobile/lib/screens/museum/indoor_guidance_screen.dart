@@ -4,6 +4,7 @@ import '../../models/artifact.dart';
 import '../../services/app_services.dart';
 import '../artifact/artifact_detail_screen.dart';
 import '../artifact/qr_scan_screen.dart';
+import 'visitor_directory_screen.dart';
 
 class IndoorGuidanceScreen extends StatelessWidget {
   const IndoorGuidanceScreen({
@@ -22,9 +23,21 @@ class IndoorGuidanceScreen extends StatelessWidget {
       Text(nextArtifact.name, style: AppTextStyles.cardTitle),
       Text(nextArtifact.location),
       const SizedBox(height: 16),
-      const Notice(
-        'Chưa có sơ đồ đường đi được liên kết với hành trình này. Hãy xem biển chỉ dẫn hoặc hỏi nhân viên bảo tàng.',
-      ),
+      if (int.tryParse(nextArtifact.museumId) != null)
+        PrimaryButton(
+          label: 'Xem phòng & chỉ đường trên sơ đồ',
+          icon: Icons.map_outlined,
+          onPressed: () => openPage(
+            context,
+            VisitorDirectoryScreen(
+              museumId: int.parse(nextArtifact.museumId),
+              initialArtifactId: int.tryParse(nextArtifact.id),
+              museumName: AppServices.catalog.museumName(nextArtifact.museumId),
+            ),
+          ),
+        )
+      else
+        const Notice('Hiện vật mẫu chưa có vị trí trong bảo tàng thực tế.'),
       const SizedBox(height: 16),
       PrimaryButton(
         label: 'Quét mã QR hiện vật',
