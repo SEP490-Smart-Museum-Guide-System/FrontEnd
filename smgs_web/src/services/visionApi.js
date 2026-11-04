@@ -25,7 +25,7 @@ export async function checkVisionHealthApi() {
     return {
       ok: data?.status === 'ok',
       status: data?.status || 'unknown',
-      referenceCount: data?.reference_count ?? 0,
+      referenceCount: data?.reference_images ?? data?.reference_count ?? 0,
       modelReady: data?.model_ready ?? false
     };
   } catch (error) {

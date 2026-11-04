@@ -9,10 +9,11 @@ class VisionCandidate {
 
   const VisionCandidate({required this.artifactId, required this.score});
 
-  factory VisionCandidate.fromJson(Map<String, dynamic> json) => VisionCandidate(
-    artifactId: (json['artifactId'] ?? json['artifact_id'] ?? 0) as int,
-    score: (json['similarity'] ?? json['score'] ?? 0.0).toDouble(),
-  );
+  factory VisionCandidate.fromJson(Map<String, dynamic> json) =>
+      VisionCandidate(
+        artifactId: (json['artifactId'] ?? json['artifact_id'] ?? 0) as int,
+        score: (json['similarity'] ?? json['score'] ?? 0.0).toDouble(),
+      );
 }
 
 class VisionMatchResult {
@@ -35,7 +36,8 @@ class VisionMatchResult {
   });
 
   factory VisionMatchResult.fromJson(Map<String, dynamic> json) {
-    final candidatesRaw = json['topCandidates'] ?? json['top_candidates'];
+    final candidatesRaw =
+        json['candidates'] ?? json['topCandidates'] ?? json['top_candidates'];
     final candidates = <VisionCandidate>[];
     if (candidatesRaw is List) {
       for (final c in candidatesRaw) {
@@ -86,14 +88,12 @@ class VisionApiService {
     }
 
     request.files.add(
-      http.MultipartFile.fromBytes(
-        'image',
-        imageBytes,
-        filename: filename,
-      ),
+      http.MultipartFile.fromBytes('image', imageBytes, filename: filename),
     );
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 20));
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 20),
+    );
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {

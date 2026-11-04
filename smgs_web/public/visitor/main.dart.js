@@ -34828,25 +34828,25 @@ return"audio/mpeg"},
 J8:function J8(a,b,c){this.a=a
 this.b=b
 this.e=c},
-bsh(a){var s,r,q,p,o,n,m="artifactId",l="similarity",k=a.h(0,"topCandidates")
+bsh(a){var s,r,q,p,o,n="artifactId",m="similarity",l=a.h(0,"candidates"),k=l==null?a.h(0,"topCandidates"):l
 if(k==null)k=a.h(0,"top_candidates")
 s=A.b([],t.H6)
-if(t.j.b(k))for(r=J.bI(k),q=t.P;r.v();){p=r.gT()
-if(q.b(p)){o=p.h(0,m)
-if(o==null)o=p.h(0,"artifact_id")
-A.cb(o==null?0:o)
-o=p.h(0,l)
-if(o==null)o=p.h(0,"score")
-J.agI(o==null?0:o)
-s.push(new A.a2J())}}r=J.c(a.h(0,"matched"),!0)
-q=A.dS(a.h(0,m))
-o=a.h(0,l)
+if(t.j.b(k))for(l=J.bI(k),r=t.P;l.v();){q=l.gT()
+if(r.b(q)){p=q.h(0,n)
+if(p==null)p=q.h(0,"artifact_id")
+A.cb(p==null?0:p)
+p=q.h(0,m)
+if(p==null)p=q.h(0,"score")
+J.agI(p==null?0:p)
+s.push(new A.a2J())}}l=J.c(a.h(0,"matched"),!0)
+r=A.dS(a.h(0,n))
+p=a.h(0,m)
+p=J.agI(p==null?0:p)
+o=a.h(0,"margin")
 o=J.agI(o==null?0:o)
-n=a.h(0,"margin")
-n=J.agI(n==null?0:n)
 J.c(a.h(0,"requiresConfirmation"),!0)
 A.aG(a.h(0,"message"))
-return new A.a2K(r,q,o,n)},
+return new A.a2K(l,r,p,o)},
 a2I(a){var s=0,r=A.r(t.Jv),q,p,o,n,m,l,k,j,i
 var $async$a2I=A.n(function(b,c){if(b===1)return A.o(c,r)
 for(;;)switch(s){case 0:k=B.c.c1("")

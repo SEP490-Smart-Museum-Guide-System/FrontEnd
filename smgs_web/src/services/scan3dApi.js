@@ -36,14 +36,14 @@ export async function checkScanHealthApi() {
  * Submit multi-photo dataset for 3D Photogrammetry reconstruction
  * @param {Object} params
  * @param {number|string} params.artifactId - ID of the target artifact
- * @param {FileList|File[]} params.files - 10 to 80 photos taken around the object
+ * @param {FileList|File[]} params.files - At least 5 photos of the same object (up to 80)
  * @param {Object} [params.metadata] - Device / capture metadata
  * @param {string} [params.serviceKey]
  * @returns {Promise<{ scanJobId: string, artifactId: number, status: string }>}
  */
 export async function submitScanJobApi({ artifactId, files, metadata = {}, serviceKey = DEFAULT_SERVICE_KEY }) {
-  if (!files || files.length < 3) {
-    throw new Error('Cần tối thiểu 3 ảnh nhiều góc để tiến hành tái tạo 3D (khuyến nghị 15-40 ảnh).');
+  if (!files || files.length < 5 || files.length > 80) {
+    throw new Error('Cần ít nhất 5 ảnh của cùng một hiện vật (tối đa 80 ảnh).');
   }
 
   const formData = new FormData();
@@ -98,7 +98,8 @@ export async function getScanJobStatusApi(scanJobId, serviceKey = DEFAULT_SERVIC
     throw new Error(detail);
   }
 
-  return response.json();
+  const data = await response.json();
+  return { ...data, errorMessage: data.error ?? data.errorMessage ?? null };
 }
 
 /**

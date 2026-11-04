@@ -226,8 +226,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   }, []);
 
   const handleStart3DScan = async () => {
-    if (scanFiles.length < 3) {
-      alert('Vui lòng chọn tối thiểu 3 ảnh nhiều góc (khuyến nghị 15-40 ảnh) để COLMAP tái tạo 3D.');
+    if (scanFiles.length < 5 || scanFiles.length > 80) {
+      alert('Vui lòng chọn ít nhất 5 ảnh JPG/PNG của cùng một hiện vật (tối đa 80 ảnh).');
       return;
     }
     setIsSubmittingScan(true);
@@ -257,6 +257,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
           }
         } catch (e) {
           clearInterval(pollTimerRef.current);
+          setScanError(e.message || 'Chưa tải được tiến trình dựng 3D. Vui lòng thử lại.');
         }
       }, 3000);
     } catch (err) {
@@ -270,7 +271,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     try {
       await approveScanJobApi(scanJob.scanJobId);
       setScanJob(prev => prev ? { ...prev, status: 'COMPLETED' } : null);
-      alert('Đã phê duyệt mô hình 3D! Mô hình sẵn sàng xuất bản vào cơ sở dữ liệu di sản.');
+      alert('Đã duyệt bản dựng. Hãy lưu mô hình vào hồ sơ hiện vật để xuất bản cho khách.');
     } catch (err) {
       alert('Lỗi phê duyệt: ' + err.message);
     }
@@ -749,7 +750,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                       </span>
                     </div>
                     <p style={{ fontSize: '0.785rem', color: 'var(--color-charcoal-600)', margin: 0 }}>
-                      Tải lên tập hợp 10 - 80 ảnh chụp 360° quanh hiện vật. Thuật toán COLMAP sẽ trích xuất đặc trưng điểm, tái tạo lưới mesh và xuất tệp GLB chuẩn bảo tàng.
+                      Bắt đầu với 5 ảnh JPG/PNG của cùng một hiện vật. Chụp các góc gần nhau, giữ phần chi tiết chung giữa các ảnh. Bộ ít ảnh có thể dựng thất bại hoặc thiếu chi tiết; Giám tuyển cần kiểm tra trước khi xuất bản.
                     </p>
                   </div>
 
@@ -759,18 +760,18 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                         + Chọn ảnh quét ({scanFiles.length} ảnh)
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp"
+                          accept="image/jpeg,image/png"
                           multiple
                           style={{ display: 'none' }}
                           onChange={(e) => {
-                            const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
+                            const files = Array.from(e.target.files || []).filter(f => ['image/jpeg', 'image/png'].includes(f.type));
                             setScanFiles(files);
                           }}
                         />
                       </label>
                       <button
                         type="button"
-                        disabled={isSubmittingScan || scanFiles.length < 3}
+                        disabled={isSubmittingScan || scanFiles.length < 5 || scanFiles.length > 80}
                         onClick={handleStart3DScan}
                         className="btn btn-gold btn-sm"
                       >
