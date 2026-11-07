@@ -8,6 +8,8 @@ import '../../widgets/collection_cards.dart';
 import '../../widgets/heritage_shimmer.dart';
 import '../../services/app_services.dart';
 import 'museum_discovery_map_screen.dart';
+import '../../models/experience.dart';
+import '../../widgets/game_tutorial_overlay.dart';
 
 String _searchKey(String text) {
   var value = text.toLowerCase();
@@ -68,6 +70,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void initState() {
     super.initState();
     _fetchBackendMuseums();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkTour());
+  }
+
+  Future<void> _checkTour() async {
+    final user = AppServices.auth.user;
+    if (user != null && user.role == UserRole.visitor) {
+      final shouldShow = await GameTutorialOverlay.shouldShow(user.email, 'explore');
+      if (shouldShow && mounted) {
+        await Future.delayed(const Duration(milliseconds: 350));
+        if (mounted) {
+          ExploreScreenTour.start(context);
+        }
+      }
+    }
   }
 
   @override
@@ -161,13 +177,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
       eyebrow: 'Bộ sưu tập',
       subtitle: 'Tìm một điểm đến. Mở một câu chuyện.',
       children: [
-        TextField(
-          controller: _input,
-          onChanged: _onSearchChanged,
-          decoration: const InputDecoration(
-            labelText: 'Tìm kiếm',
-            hintText: 'Tên bảo tàng hoặc hiện vật',
-            prefixIcon: Icon(Icons.search_outlined),
+        Container(
+          key: ExploreScreenTour.searchBarKey,
+          child: TextField(
+            controller: _input,
+            onChanged: _onSearchChanged,
+            decoration: const InputDecoration(
+              labelText: 'Tìm kiếm',
+              hintText: 'Tên bảo tàng hoặc hiện vật',
+              prefixIcon: Icon(Icons.search_outlined),
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -274,37 +293,40 @@ class _ExploreScreenState extends State<ExploreScreen> {
             label: const Text('Xóa bộ lọc và từ khóa'),
           ),
         if (widget.museumId == null) ...[
-          Row(
-            children: [
-              for (final mode in [false, true])
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(right: mode ? 0 : 8),
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: _artifacts == mode
-                            ? AppColors.deepBurgundy
-                            : AppColors.card,
-                        foregroundColor: _artifacts == mode
-                            ? AppColors.antiqueIvory
-                            : AppColors.darkBrown,
-                        minimumSize: const Size(48, 52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+          Container(
+            key: ExploreScreenTour.modeToggleKey,
+            child: Row(
+              children: [
+                for (final mode in [false, true])
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: mode ? 0 : 8),
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: _artifacts == mode
+                              ? AppColors.deepBurgundy
+                              : AppColors.card,
+                          foregroundColor: _artifacts == mode
+                              ? AppColors.antiqueIvory
+                              : AppColors.darkBrown,
+                          minimumSize: const Size(48, 52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: const BorderSide(color: AppColors.border),
                         ),
-                        side: const BorderSide(color: AppColors.border),
+                        onPressed: () => setState(() {
+                          _artifacts = mode;
+                          _category = 'Tất cả';
+                          _gallery = null;
+                          _exhibition = null;
+                        }),
+                        child: Text(mode ? 'Hiện vật' : 'Bảo tàng'),
                       ),
-                      onPressed: () => setState(() {
-                        _artifacts = mode;
-                        _category = 'Tất cả';
-                        _gallery = null;
-                        _exhibition = null;
-                      }),
-                      child: Text(mode ? 'Hiện vật' : 'Bảo tàng'),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -312,6 +334,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         // BẢN ĐỒ KHÁM PHÁ & DẪN ĐƯỜNG (MUSEUM DISCOVERY BANNER)
         if (!_artifacts) ...[
           Container(
+            key: ExploreScreenTour.resultsKey,
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

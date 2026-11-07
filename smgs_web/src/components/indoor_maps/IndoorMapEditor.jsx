@@ -602,6 +602,32 @@ export default function IndoorMapEditor() {
       alert('Vui lòng bấm "Lưu bản nháp" trước khi xuất bản.');
       return;
     }
+
+    // Pre-flight checks before publish
+    if (!draft.imageKey) {
+      setAlertMsg({ type: 'error', text: 'Chưa có ảnh sơ đồ mặt bằng. Vui lòng tải ảnh sơ đồ lên trước khi xuất bản.' });
+      return;
+    }
+    const legacyQr = draft.markers?.find(m => m.type === 'qr');
+    if (legacyQr) {
+      setAlertMsg({ type: 'error', text: `Điểm "${legacyQr.label || 'Không tên'}" là loại QR riêng cũ. Vui lòng đổi sang loại hiện vật hoặc loại phù hợp trước khi xuất bản.` });
+      return;
+    }
+    const unassignedArtifact = draft.markers?.find(m => m.type === 'artifact' && !m.artifactId);
+    if (unassignedArtifact) {
+      setAlertMsg({ type: 'error', text: `Điểm hiện vật "${unassignedArtifact.label || 'Chưa đặt tên'}" chưa được chọn Hiện vật tương ứng. Vui lòng chọn trong bảng bên phải trước khi xuất bản.` });
+      return;
+    }
+    const unassignedGallery = draft.markers?.find(m => m.type === 'gallery' && !m.galleryId);
+    if (unassignedGallery) {
+      setAlertMsg({ type: 'error', text: `Điểm "${unassignedGallery.label || 'Chưa đặt tên'}" chưa được chọn Phòng trưng bày. Vui lòng chọn phòng trước khi xuất bản.` });
+      return;
+    }
+    const unlinkedNode = draft.markers?.find(m => (m.isDestination || m.type === 'artifact') && !m.nodeId);
+    if (unlinkedNode) {
+      setAlertMsg({ type: 'error', text: `Điểm "${unlinkedNode.label || 'Hiện vật/Điểm đến'}" chưa liên kết điểm dẫn đường (Node). Vui lòng chọn "Điểm dẫn đường gần nhất" trước khi xuất bản.` });
+      return;
+    }
     if (!window.confirm(`Xuất bản sơ đồ "${draft.name}" (phiên bản ${draft.revision}) cho khách tham quan?`)) {
       return;
     }

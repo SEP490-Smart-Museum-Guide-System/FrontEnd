@@ -1,4 +1,4 @@
-import './components/common/business.css';
+﻿import './components/common/business.css';
 import QuestionBank from './components/curation/QuestionBank';
 import TopicManager from './components/artifacts/TopicManager';
 import BadgeManager from './components/analytics/BadgeManager';
@@ -106,6 +106,7 @@ export default function App() {
 
       {/* Global Toast Alert Layer */}
       <ToastContainer />
+      
     </div>
   );
 }

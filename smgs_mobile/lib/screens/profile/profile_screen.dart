@@ -1,3 +1,4 @@
+import '../../widgets/visitor_handbook_sheet.dart';
 import 'experience_history_screen.dart';
 import '../../services/backend_api.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,12 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
           const SectionHeading('Sổ tay tham quan'),
+          ActionTile(
+            title: 'Cẩm nang hướng dẫn & Quy định',
+            subtitle: 'Xem lại 3 bước công nghệ, nội quy & hotline khẩn cấp.',
+            icon: Icons.menu_book_rounded,
+            onTap: () => VisitorHandbookSheet.show(context),
+          ),
           ActionTile(
             title: 'Lịch sử khám phá',
             subtitle: 'Gặp lại những câu chuyện đã xem.',

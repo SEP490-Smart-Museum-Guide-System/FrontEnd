@@ -89,7 +89,7 @@ function DataProvider({ children, session, login, endSession }) {
       load('tours', async () => (await Promise.all(museumIds.map(id => allPages(`tours/manage?museumId=${id}`, options)))).flat().map(tourView), setTours);
       load('curationQueue', async () => {
         const contents = currentRole === 'curator'
-          ? (await Promise.all(['pending_review', 'published', 'rejected', 'draft'].map(status => allPages(`artifact-contents?museumId=${currentMuseum.id}&status=${status}`, options)))).flat()
+          ? (await Promise.all(['pending_review', 'published', 'rejected', 'archived'].map(status => allPages(`artifact-contents?museumId=${currentMuseum.id}&status=${status}`, options)))).flat()
           : (await Promise.all(artifacts.filter(a => museumIds.includes(a.museumId)).map(a => backend(`artifacts/${a.id}/contents/versions`, options)))).flat();
         return contents.map(c => ({ ...c, backendId: c.id, targetArtifactId: c.artifactId,
           museumId: artifacts.find(a => a.id === c.artifactId)?.museumId,

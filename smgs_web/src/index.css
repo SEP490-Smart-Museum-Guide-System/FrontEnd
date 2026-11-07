@@ -1,3 +1,15 @@
+﻿@font-face {
+  font-family: 'Noto Sans';
+  src: url('/fonts/NotoSans.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif';
+  src: url('/fonts/NotoSerif.ttf') format('truetype');
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'Noto Sans SMGS';
   src: url('/fonts/NotoSans.ttf') format('truetype');
@@ -13,7 +25,8 @@
 :root {
   --font-sans: 'Noto Sans SMGS', system-ui, sans-serif;
   --font-heading: 'Noto Serif SMGS', Georgia, serif;
-  --font-serif: 'Noto Serif SMGS', Georgia, serif;
+  --font-serif: 'Noto Serif SMGS', 'Noto Serif', Georgia, serif;
+  --font-display: 'Noto Serif SMGS', 'Noto Serif', Georgia, serif;
 
   /* Colors */
   --color-burgundy-900: #4A2020;

@@ -3,9 +3,37 @@ import 'package:flutter/material.dart';
 import '../../widgets/museum_ui.dart';
 import '../artifact/qr_scan_screen.dart';
 import '../explore/explore_screen.dart';
+import '../../widgets/game_tutorial_overlay.dart';
+import '../../services/app_services.dart';
+import '../../models/experience.dart';
 
-class ScanScreen extends StatelessWidget {
+class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
+
+  @override
+  State<ScanScreen> createState() => _ScanScreenState();
+}
+
+class _ScanScreenState extends State<ScanScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkTour());
+  }
+
+  Future<void> _checkTour() async {
+    final user = AppServices.auth.user;
+    if (user != null && user.role == UserRole.visitor) {
+      final shouldShow = await GameTutorialOverlay.shouldShow(user.email, 'scan');
+      if (shouldShow && mounted) {
+        await Future.delayed(const Duration(milliseconds: 350));
+        if (mounted) {
+          ScanScreenTour.start(context);
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => MuseumPage(
     title: 'Mở câu chuyện\ntrước mắt bạn.',
@@ -17,23 +45,32 @@ class ScanScreen extends StatelessWidget {
         child: const HeritageArt(kind: 'artifact_1', height: 215),
       ),
       const SizedBox(height: 24),
-      ActionTile(
-        title: 'Quét mã hiện vật',
-        subtitle: 'Dùng mã đặt cạnh hiện vật trưng bày.',
-        icon: Icons.qr_code_scanner,
-        onTap: () => openPage(context, const QRScanScreen()),
+      Container(
+        key: ScanScreenTour.qrTileKey,
+        child: ActionTile(
+          title: 'Quét mã hiện vật',
+          subtitle: 'Dùng mã đặt cạnh hiện vật trưng bày.',
+          icon: Icons.qr_code_scanner,
+          onTap: () => openPage(context, const QRScanScreen()),
+        ),
       ),
-      ActionTile(
-        title: 'Nhận diện qua hình ảnh',
-        subtitle: 'Tìm hiểu hiện vật qua góc nhìn của bạn.',
-        icon: Icons.camera_alt_outlined,
-        onTap: () => openPage(context, const QRScanScreen(recognition: true)),
+      Container(
+        key: ScanScreenTour.aiVisionTileKey,
+        child: ActionTile(
+          title: 'Nhận diện qua hình ảnh',
+          subtitle: 'Tìm hiểu hiện vật qua góc nhìn của bạn.',
+          icon: Icons.camera_alt_outlined,
+          onTap: () => openPage(context, const QRScanScreen(recognition: true)),
+        ),
       ),
-      ActionTile(
-        title: 'Tra cứu bộ sưu tập',
-        subtitle: 'Tìm hiện vật theo tên và chủ đề.',
-        icon: Icons.view_list_outlined,
-        onTap: () => openPage(context, const ExploreScreen(standalone: true)),
+      Container(
+        key: ScanScreenTour.collectionTileKey,
+        child: ActionTile(
+          title: 'Tra cứu bộ sưu tập',
+          subtitle: 'Tìm hiện vật theo tên và chủ đề.',
+          icon: Icons.view_list_outlined,
+          onTap: () => openPage(context, const ExploreScreen(standalone: true)),
+        ),
       ),
       const SizedBox(height: 10),
       const Notice(

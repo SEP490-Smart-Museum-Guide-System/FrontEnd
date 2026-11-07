@@ -1,8 +1,12 @@
+import '../../widgets/game_tutorial_overlay.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
+import '../../widgets/visitor_onboarding_dialog.dart';
+import '../../widgets/visitor_handbook_sheet.dart';
 import '../../services/app_services.dart';
+import '../../models/experience.dart';
 import '../../data/mock/mock_artifacts.dart';
 import '../../data/visit_store.dart';
 import '../explore/explore_screen.dart';
@@ -19,6 +23,26 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _scroll = ScrollController();
   final _search = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkFirstTimeOnboarding());
+  }
+
+  Future<void> _checkFirstTimeOnboarding() async {
+    final user = AppServices.auth.user;
+    if (user != null && user.role == UserRole.visitor) {
+      final shouldShow = await GameTutorialOverlay.shouldShow(user.email);
+      if (shouldShow && mounted) {
+        // Đợi các phần tử vẽ xong tọa độ màn hình
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          HomeScreenTour.start(context);
+        }
+      }
+    }
+  }
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -80,6 +104,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: AppTextStyles.caption,
                     ),
                   ),
+                  IconButton(
+                    key: HomeScreenTour.handbookBtnKey,
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.mutedGold.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.mutedGold.withOpacity(0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.menu_book_rounded,
+                        color: AppColors.deepBurgundy,
+                        size: 20,
+                      ),
+                    ),
+                    tooltip: 'Sổ tay hướng dẫn & Cẩm nang',
+                    onPressed: () => VisitorHandbookSheet.show(context),
+                  ),
+                  const SizedBox(width: 8),
                   Transform.rotate(
                     angle: reduceHeritageMotion(context) ? 0 : offset / 700,
                     child: const HeritageSeal(size: 38),
@@ -219,8 +265,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
-                TextField(
-                  controller: _search,
+                Container(
+                  key: HomeScreenTour.searchBarKey,
+                  child: TextField(
+                    controller: _search,
                   textInputAction: TextInputAction.search,
                   onSubmitted: (value) => openPage(
                     context,
@@ -251,9 +299,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                ),
                 const SizedBox(height: 16),
-                HoverLift(
-                  child: Material(
+                Container(
+                  key: HomeScreenTour.scanCardKey,
+                  child: HoverLift(
+                    child: Material(
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     clipBehavior: Clip.antiAlias,
@@ -348,6 +399,92 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+                ),
+                const SizedBox(height: 12),
+                HoverLift(
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    clipBehavior: Clip.antiAlias,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.mutedGold.withOpacity(0.55),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.mutedGold.withOpacity(0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: InkWell(
+                        onTap: () => VisitorHandbookSheet.show(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.mutedGold.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.mutedGold.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.menu_book_rounded,
+                                  color: AppColors.deepBurgundy,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'SỔ TAY HƯỚNG DẪN THAM QUAN',
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.sansFamily,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                        color: AppColors.mutedGold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'Cẩm nang công nghệ, quy định & tiện ích',
+                                      style: TextStyle(
+                                        fontFamily: AppTextStyles.sansFamily,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.darkBrown,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 14,
+                                color: AppColors.mutedGold,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
                 const Row(
                   children: [
@@ -373,28 +510,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   action: 'Tất cả',
                   onTap: widget.onExplore,
                 ),
-                ScrollReveal(
-                  child: AppServices.catalog.museums.isEmpty
-                      ? const EmptyState(
-                          title: 'Chưa có bảo tàng',
-                          message: 'Chưa có bảo tàng công khai từ máy chủ.',
-                        )
-                      : MuseumCard(
-                          museum: AppServices.catalog.museums.first,
-                          featured: true,
-                        ),
+                Container(
+                  key: HomeScreenTour.museumSectionKey,
+                  child: ScrollReveal(
+                    child: AppServices.catalog.museums.isEmpty
+                        ? const EmptyState(
+                            title: 'Chưa có bảo tàng',
+                            message: 'Chưa có bảo tàng công khai từ máy chủ.',
+                          )
+                        : MuseumCard(
+                            museum: AppServices.catalog.museums.first,
+                            featured: true,
+                          ),
+                  ),
                 ),
                 const ChapterHeading(
                   number: '02',
                   title: 'Trải nghiệm AI / 3D mẫu',
                 ),
-                ScrollReveal(
-                  child: _ArtifactEditorial(
-                    onTap: () => openPage(
-                      context,
-                      ArtifactDetailScreen(
-                        artifact: mockArtifacts.first,
-                        museumName: 'Mẫu trải nghiệm AI / 3D',
+                Container(
+                  key: HomeScreenTour.aiExperienceKey,
+                  child: ScrollReveal(
+                    child: _ArtifactEditorial(
+                      onTap: () => openPage(
+                        context,
+                        ArtifactDetailScreen(
+                          artifact: mockArtifacts.first,
+                          museumName: 'Mẫu trải nghiệm AI / 3D',
+                        ),
                       ),
                     ),
                   ),
