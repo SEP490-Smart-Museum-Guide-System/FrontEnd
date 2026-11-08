@@ -5,6 +5,8 @@ import '../models/artifact.dart';
 import '../models/museum.dart';
 import 'backend_api.dart';
 import 'backend_auth_service.dart';
+import 'ai_guide_service.dart';
+export 'ai_guide_service.dart';
 import '../data/mock/mock_artifacts.dart';
 
 abstract class AuthService extends ChangeNotifier {
@@ -39,30 +41,6 @@ class MockRecognitionService implements RecognitionService {
         ? catalog.artifacts
         : catalog.inMuseum(museumId);
     return match && artifacts.isNotEmpty ? artifacts.first : null;
-  }
-}
-
-abstract class AiGuideService {
-  List<String> get suggestions;
-  Future<String> answer(Artifact artifact, String question);
-}
-
-class MockAiGuideService implements AiGuideService {
-  @override
-  List<String> get suggestions => const [
-    'Hiện vật này có ý nghĩa gì?',
-    'Hiện vật thuộc thời kỳ nào?',
-    'Tôi nên chú ý chi tiết nào?',
-  ];
-  @override
-  Future<String> answer(Artifact a, String question) async {
-    await Future<void>.delayed(const Duration(milliseconds: 450));
-    if (question == suggestions[0]) return a.summary;
-    if (question == suggestions[1]) {
-      return 'Hiện vật được giới thiệu trong bối cảnh: ${a.period}.';
-    }
-    if (question == suggestions[2]) return a.aiGuide;
-    return 'Mình chưa có câu trả lời được kiểm chứng cho câu hỏi này trong bản trải nghiệm. Bạn có thể chọn câu hỏi gợi ý hoặc hỏi nhân viên bảo tàng để tìm hiểu thêm.';
   }
 }
 
@@ -197,7 +175,7 @@ class AppServices {
   static RecognitionService recognition = MockRecognitionService(
     AiDemoCatalog(),
   );
-  static AiGuideService guide = MockAiGuideService();
+  static AiGuideService guide = BackendAiGuideService();
   static QuizService quiz = MockQuizService();
   static TourService tours = BackendTourService();
 }

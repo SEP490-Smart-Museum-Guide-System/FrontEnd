@@ -31,7 +31,7 @@ class VisitorOnboardingDialog extends StatefulWidget {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (context) => const VisitorOnboardingDialog(),
     );
   }
@@ -104,12 +104,12 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
               color: AppColors.antiqueIvory,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.mutedGold.withOpacity(0.55),
+                color: AppColors.mutedGold.withValues(alpha: 0.55),
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
+                  color: Colors.black.withValues(alpha: 0.35),
                   blurRadius: 32,
                   offset: const Offset(0, 12),
                 ),
@@ -127,10 +127,10 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.mutedGold.withOpacity(0.18),
+                          color: AppColors.mutedGold.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: AppColors.mutedGold.withOpacity(0.4),
+                            color: AppColors.mutedGold.withValues(alpha: 0.4),
                           ),
                         ),
                         child: Text(
@@ -183,7 +183,7 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.mutedGold.withOpacity(0.2),
+                                    color: AppColors.mutedGold.withValues(alpha: 0.2),
                                     blurRadius: 16,
                                     offset: const Offset(0, 4),
                                   ),

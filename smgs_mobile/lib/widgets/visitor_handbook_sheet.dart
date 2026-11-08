@@ -30,12 +30,12 @@ class VisitorHandbookSheet extends StatelessWidget {
             color: AppColors.antiqueIvory,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(
-              color: AppColors.mutedGold.withOpacity(0.5),
+              color: AppColors.mutedGold.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 28,
                 offset: const Offset(0, -6),
               ),
@@ -49,7 +49,7 @@ class VisitorHandbookSheet extends StatelessWidget {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.mutedGold.withOpacity(0.5),
+                  color: AppColors.mutedGold.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -241,7 +241,7 @@ class VisitorHandbookSheet extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.deepBurgundy,
                         side: BorderSide(
-                          color: AppColors.deepBurgundy.withOpacity(0.5),
+                          color: AppColors.deepBurgundy.withValues(alpha: 0.5),
                           width: 1.2,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -292,7 +292,7 @@ class VisitorHandbookSheet extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.mutedGold.withOpacity(0.35),
+          color: AppColors.mutedGold.withValues(alpha: 0.35),
           width: 1,
         ),
       ),
@@ -302,7 +302,7 @@ class VisitorHandbookSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.mutedGold.withOpacity(0.15),
+              color: AppColors.mutedGold.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 22, color: AppColors.deepBurgundy),

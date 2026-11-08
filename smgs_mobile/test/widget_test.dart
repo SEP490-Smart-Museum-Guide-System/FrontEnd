@@ -177,7 +177,7 @@ void main() {
     expect(VisitStore.instance.quizScores['artifact_1'], 2);
   });
   apiTestWidgets(
-    'Guide answers suggested questions and does not invent freeform answers',
+    'Guide does not treat a demo artifact as live chatbot context',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       await tester.pumpWidget(
@@ -186,7 +186,7 @@ void main() {
       await tester.pumpAndSettle();
       await tapText(tester, 'Hiện vật thuộc thời kỳ nào?');
       expect(
-        find.text('Hiện vật được giới thiệu trong bối cảnh: Văn hóa Đông Sơn.'),
+        find.text('Hãy chọn hiện vật trong bộ sưu tập bảo tàng để hỏi trợ lý.'),
         findsOneWidget,
       );
       await tester.enterText(
@@ -196,7 +196,7 @@ void main() {
       await tester.tap(find.byTooltip('Gửi câu hỏi'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('Mình chưa có câu trả lời được kiểm chứng'),
+        find.text('Hãy chọn hiện vật trong bộ sưu tập bảo tàng để hỏi trợ lý.'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

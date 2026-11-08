@@ -1,6 +1,8 @@
 # SMGS · Smart Museum Guide System — Frontend
 
-Frontend của **Smart Museum Guide System (SMGS)**. Dự án hỗ trợ hành trình tham quan bảo tàng, quản trị nội dung di sản và vận hành hệ thống. Toàn bộ dữ liệu hiện là **mô phỏng ở phía giao diện**; backend, xác thực thật, thanh toán thật và đồng bộ liên portal sẽ được kết nối ở giai đoạn sau.
+Frontend của **Smart Museum Guide System (SMGS)**. Dự án hỗ trợ hành trình tham quan bảo tàng, quản trị nội dung di sản và vận hành hệ thống. Frontend đã có các luồng gọi BE cho đăng nhập và dữ liệu nghiệp vụ; một số phần AI/3D vẫn đang ở phạm vi thử nghiệm. Không coi toàn bộ giao diện là dữ liệu mô phỏng hoặc toàn bộ chức năng đã end-to-end.
+
+**Cập nhật chatbot 08/11/2026:** màn Trợ lý bảo tàng của Visitor đã gọi API hỏi đáp theo hiện vật, có câu hỏi tiếp nối, nguồn tham khảo, nghe đáp án và xử lý lỗi. BE chỉ dùng nội dung tiếng Việt đã xuất bản và kiểm tra quyền free/premium. Chatbot chạy local bằng Qwen ONNX INT4 qua AI-System, không dùng Gemini. Đã test model thật trên bộ smoke nhỏ; luồng DB/deploy còn cần kiểm thử. Xem [hợp đồng, lệnh chạy và phần còn thiếu](../BackEnd/Smart_Museum_Guide_System/ARTIFACT_CHATBOT_2026_11_08.md).
 
 ## Thành phần dự án
 

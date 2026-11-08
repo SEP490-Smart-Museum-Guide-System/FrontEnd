@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
-import '../../widgets/visitor_onboarding_dialog.dart';
 import '../../widgets/visitor_handbook_sheet.dart';
 import '../../services/app_services.dart';
 import '../../models/experience.dart';
@@ -109,10 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.mutedGold.withOpacity(0.18),
+                        color: AppColors.mutedGold.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: AppColors.mutedGold.withOpacity(0.5),
+                          color: AppColors.mutedGold.withValues(alpha: 0.5),
                           width: 1,
                         ),
                       ),
@@ -411,12 +410,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppColors.mutedGold.withOpacity(0.55),
+                          color: AppColors.mutedGold.withValues(alpha: 0.55),
                           width: 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.mutedGold.withOpacity(0.12),
+                            color: AppColors.mutedGold.withValues(alpha: 0.12),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -432,10 +431,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: AppColors.mutedGold.withOpacity(0.2),
+                                  color: AppColors.mutedGold.withValues(alpha: 0.2),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppColors.mutedGold.withOpacity(0.5),
+                                    color: AppColors.mutedGold.withValues(alpha: 0.5),
                                     width: 1,
                                   ),
                                 ),

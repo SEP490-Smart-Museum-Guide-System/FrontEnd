@@ -149,7 +149,7 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
         );
       } catch (_) {}
 
-      if (!mounted) return;
+      if (!mounted || !targetContext.mounted) return;
 
       final renderBox = targetContext.findRenderObject() as RenderBox?;
       if (renderBox != null && renderBox.hasSize) {
@@ -259,7 +259,7 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                     border: Border.all(color: AppColors.mutedGold, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.mutedGold.withOpacity(0.4),
+                        color: AppColors.mutedGold.withValues(alpha: 0.4),
                         blurRadius: 14,
                         offset: const Offset(0, 4),
                       ),
@@ -296,12 +296,12 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                     color: AppColors.antiqueIvory,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: AppColors.mutedGold.withOpacity(0.7),
+                      color: AppColors.mutedGold.withValues(alpha: 0.7),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.45),
+                        color: Colors.black.withValues(alpha: 0.45),
                         blurRadius: 30,
                         offset: const Offset(0, 10),
                       ),
@@ -487,7 +487,7 @@ class _SpotlightPainter extends CustomPainter {
     canvas.drawPath(overlayPath, overlayPaint);
 
     final glowPaint = Paint()
-      ..color = const Color(0xFFC5A059).withOpacity(0.5 + 0.45 * pulseValue)
+      ..color = const Color(0xFFC5A059).withValues(alpha: 0.5 + 0.45 * pulseValue)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5 + 1.5 * pulseValue;
 

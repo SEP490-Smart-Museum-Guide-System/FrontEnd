@@ -9,6 +9,7 @@ class BackendApi {
     String path, {
     String method = 'GET',
     Object? body,
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/$path');
     final headers = {
@@ -22,7 +23,7 @@ class BackendApi {
       'DELETE' => http.delete(uri, headers: headers),
       'GET' => http.get(uri, headers: headers),
       _ => throw ArgumentError('Phương thức HTTP không hợp lệ.'),
-    }).timeout(const Duration(seconds: 15));
+    }).timeout(timeout);
     return DiscoveryApiService.decodeResponse(response)['data'];
   }
 

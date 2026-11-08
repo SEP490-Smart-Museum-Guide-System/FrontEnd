@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
@@ -15,30 +16,98 @@ class AiGuideScreen extends StatefulWidget {
 class _AiGuideScreenState extends State<AiGuideScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
-  final List<({String text, bool visitor})> _messages = [];
+  final List<({String text, bool visitor, GuideReply? reply})> _messages = [];
+  final List<GuideTurn> _history = [];
+  String? _error;
+  String? _retryQuestion;
+  int _generation = 0;
+  late final AuthService _auth;
+  String? _owner;
   List<String> get _questions => AppServices.guide.suggestions;
   bool _busy = false;
-  Future<void> _ask(String value) async {
+
+  @override
+  void initState() {
+    super.initState();
+    _auth = AppServices.auth;
+    _owner = _auth.user?.email;
+    _auth.addListener(_onSessionChanged);
+  }
+
+  void _onSessionChanged() {
+    final owner = _auth.user?.email;
+    if (owner != _owner && mounted) {
+      setState(() {
+        _owner = owner;
+        _clear();
+      });
+    }
+  }
+
+  void _clear() {
+    _generation++;
+    _messages.clear();
+    _history.clear();
+    _input.clear();
+    _busy = false;
+    _error = null;
+    _retryQuestion = null;
+  }
+
+  @override
+  void didUpdateWidget(covariant AiGuideScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.artifact.id != widget.artifact.id) _clear();
+  }
+
+  Future<void> _ask(String value, {bool retry = false}) async {
     final question = value.trim();
     if (question.isEmpty || _busy) {
       return;
     }
+    if (question.length > 1000) {
+      setState(() => _error = 'Vui lòng nhập câu hỏi tối đa 1.000 ký tự.');
+      return;
+    }
+    final generation = _generation;
     setState(() {
       _busy = true;
-      _messages.add((text: question, visitor: true));
+      _error = null;
+      _retryQuestion = question;
+      if (!retry) _messages.add((text: question, visitor: true, reply: null));
       _input.clear();
     });
-    String answer;
     try {
-      answer = await AppServices.guide.answer(widget.artifact, question);
-    } catch (_) {
-      answer = 'Chưa thể trả lời lúc này. Bạn hãy thử lại câu hỏi.';
+      final reply = await AppServices.guide.answer(
+        widget.artifact,
+        question,
+        history: List.of(_history),
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _messages.add((text: reply.text, visitor: false, reply: reply));
+        if (reply.supported) {
+          _history.addAll([
+            GuideTurn('user', question),
+            GuideTurn('assistant', reply.text),
+          ]);
+          if (_history.length > 8) _history.removeRange(0, _history.length - 8);
+        }
+        _retryQuestion = null;
+      });
+    } catch (e) {
+      if (!mounted || generation != _generation) return;
+      setState(
+        () => _error = switch (e) {
+          FormatException() => e.message,
+          TimeoutException() => 'Trợ lý phản hồi chậm. Vui lòng thử lại.',
+          _ =>
+            'Chưa thể trả lời lúc này. ${e.toString().replaceFirst(RegExp(r'^Exception: '), '')}',
+        },
+      );
     }
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _messages.add((text: answer, visitor: false));
-    });
+    if (!mounted || generation != _generation) return;
+    setState(() => _busy = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scroll.hasClients) {
         if (reduceHeritageMotion(context)) {
@@ -56,6 +125,8 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
 
   @override
   void dispose() {
+    _generation++;
+    _auth.removeListener(_onSessionChanged);
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -63,7 +134,16 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Hướng dẫn viên')),
+    appBar: AppBar(
+      title: const Text('Trợ lý bảo tàng'),
+      actions: [
+        IconButton(
+          tooltip: 'Cuộc trò chuyện mới',
+          icon: const Icon(Icons.refresh_rounded),
+          onPressed: _busy || _messages.isEmpty ? null : () => setState(_clear),
+        ),
+      ],
+    ),
     body: SafeArea(
       child: Column(
         children: [
@@ -77,7 +157,7 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                 Text(widget.artifact.name, style: AppTextStyles.pageTitle),
                 const SizedBox(height: 18),
                 const Notice(
-                  'Hỏi đáp mẫu từ nội dung bộ sưu tập. Trợ lý thông minh sẽ được kết nối sau.',
+                  'Hỏi về hiện vật đang xem. Trợ lý tham khảo nội dung tiếng Việt đã được bảo tàng xuất bản.',
                 ),
                 const SizedBox(height: 22),
                 Panel(
@@ -91,7 +171,7 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        widget.artifact.aiGuide,
+                        'Bạn muốn tìm hiểu ý nghĩa, niên đại hay những chi tiết đáng chú ý của hiện vật?',
                         style: AppTextStyles.bodyLarge,
                       ),
                     ],
@@ -131,7 +211,7 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            m.visitor ? 'Bạn' : 'Hướng dẫn viên',
+                            m.visitor ? 'Bạn' : 'Trợ lý bảo tàng',
                             style: AppTextStyles.caption.copyWith(
                               fontWeight: FontWeight.w700,
                               color: m.visitor
@@ -140,14 +220,36 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            m.text,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: m.visitor
-                                  ? AppColors.antiqueIvory
-                                  : AppColors.darkBrown,
+                          Semantics(
+                            container: true,
+                            child: Text(
+                              m.text,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: m.visitor
+                                    ? AppColors.antiqueIvory
+                                    : AppColors.darkBrown,
+                              ),
                             ),
                           ),
+                          if (m.reply?.sources.isNotEmpty == true) ...[
+                            const Divider(height: 24),
+                            const Text(
+                              'Nội dung tham khảo',
+                              style: AppTextStyles.caption,
+                            ),
+                            ...m.reply!.sources.map(
+                              (source) => Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Semantics(
+                                  container: true,
+                                  child: Text(
+                                    '${source.title} · Phiên bản ${source.versionNo}',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -167,7 +269,21 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                       ],
                     ),
                   ),
-                if (_messages.isNotEmpty && !_busy)
+                if (_error != null) ...[
+                  Notice(_error!),
+                  if (_retryQuestion != null)
+                    TextButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () => _ask(_retryQuestion!, retry: true),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Thử lại câu hỏi'),
+                    ),
+                ],
+                if (_messages.isNotEmpty &&
+                    !_busy &&
+                    _error == null &&
+                    _messages.last.reply?.supported == true)
                   SecondaryButton(
                     label: 'Đọc và nghe câu trả lời',
                     icon: Icons.headphones_outlined,
@@ -184,15 +300,6 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                       ),
                     ),
                   ),
-                TextButton.icon(
-                  onPressed: () => showReading(
-                    context,
-                    title: 'Hỏi bằng giọng nói',
-                    text: 'Tính năng giọng nói đang được chuẩn bị. Trong bản trải nghiệm, bạn có thể nhập câu hỏi hoặc chọn gợi ý.',
-                  ),
-                  icon: const Icon(Icons.mic_none_outlined),
-                  label: const Text('Hỏi bằng giọng nói'),
-                ),
               ],
             ),
           ),
@@ -210,11 +317,14 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                     controller: _input,
                     minLines: 1,
                     maxLines: 4,
+                    maxLength: 1000,
+                    enabled: !_busy,
                     textInputAction: TextInputAction.send,
                     onSubmitted: _ask,
                     decoration: const InputDecoration(
-                      hintText: 'Điều bạn muốn tìm hiểu…',
+                      hintText: 'Hỏi về hiện vật này…',
                       labelText: 'Câu hỏi của bạn',
+                      counterText: '',
                     ),
                   ),
                 ),
