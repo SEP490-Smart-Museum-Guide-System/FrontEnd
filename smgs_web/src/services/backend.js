@@ -2,10 +2,10 @@ import { getAuthToken } from './auth.js';
 
 const base = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
 
-export async function backend(path, { method = 'GET', body, signal } = {}) {
+export async function backend(path, { method = 'GET', body, signal, timeoutMs = 15000 } = {}) {
   const token = getAuthToken();
   const response = await fetch(`${base}/${path}`, {
-    method, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
+    method, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),

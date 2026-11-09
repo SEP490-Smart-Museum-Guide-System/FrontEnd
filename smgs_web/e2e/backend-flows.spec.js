@@ -22,6 +22,15 @@ async function fixture(page, role = 'Admin') {
     if (path === 'me/museums') return ok([museum]);
     if (path === 'museums/cities') return ok([]);
     if (path === 'artifacts') return ok({ items: [artifact], totalPages: 1, totalCount: 1 });
+    if (path === 'artifacts/11/ai/drafts') {
+      if (state.aiFailure) return route.fulfill({ status: 503, json: { message: 'Model local chưa sẵn sàng.' } });
+      const draft = body.mode === 'quiz'
+        ? { question: 'Hiện vật dùng để làm gì?', options: ['Đựng nước', 'Lựa chọn B', 'Lựa chọn C', 'Lựa chọn D'], correctIndex: 0, explanation: 'Tư liệu ghi dùng để đựng nước.', evidenceQuote: 'Dùng để đựng nước.' }
+        : { title: 'Thuyết minh kiểm thử', narrationText: 'Hiện vật này được dùng để đựng nước theo tư liệu bảo tàng.', evidenceQuotes: ['Dùng để đựng nước.'] };
+      return ok({ artifactId: 11, mode: body.mode, languageCode: 'vi', isDraft: true, source: { artifactId: 11, text: 'Dùng để đựng nước.', contentVersionId: 91, versionNo: 1 }, draft });
+    }
+    if (path === 'artifacts/11/contents' && method === 'POST') { state.contentDraft = { ...body, status: 'pending_review' }; return ok({ id: 61, ...state.contentDraft }); }
+    if (path === 'artifacts/11/ai/speech-preview') return route.fulfill({ status: 503, json: { message: 'Bộ đọc tiếng Việt đang bận. Vui lòng thử lại.' } });
     if (path === 'museums/7/galleries') return ok([{ id: 4, name: 'Phòng kiểm thử', floorId: 3 }]);
     if (path === 'museums/7/indoor-structure') return ok(structure);
     if (path === 'museums/7/galleries/4' && method === 'PUT') { Object.assign(structure.galleries[0], body); return ok(structure.galleries[0]); }
@@ -55,7 +64,7 @@ async function fixture(page, role = 'Admin') {
     if (path === 'museums/7/topics' || path === 'topics') { if (method === 'GET') return ok({ items: state.topics, totalPages: 1, totalCount: state.topics.length }); const row = { ...body, id: 13, artifactCount: 0, isActive: true }; state.topics.push(row); return ok(row); }
     if (path === 'artifacts/11/topics') { if (method === 'PUT') state.artifactTopics = state.topics.filter(t => body.topicIds.includes(t.id)); return ok(state.artifactTopics); }
     if (path === 'gamification/badges') { if (method === 'POST') { const row = { id: 12, ...body, ruleJson: JSON.stringify({ Metric: body.metric, Threshold: body.threshold }) }; state.badges.push(row); return ok(row); } return ok(state.badges); }
-    if (['feedbacks', 'complaints', 'tours/manage', 'artifact-contents', 'artifacts/11/contents/versions', 'gamification/badges', 'museums/7/indoor-maps'].includes(path)) return ok([]);
+    if (['feedbacks', 'feedbacks/museum/7', 'complaints', 'tours/manage', 'artifact-contents', 'artifacts/11/contents/versions', 'gamification/badges', 'museums/7/indoor-maps'].includes(path)) return ok([]);
     return route.fulfill({ status: 404, json: { message: `Fixture chưa hỗ trợ ${method} ${path}` } });
   });
   await page.goto('/');
@@ -201,14 +210,14 @@ test('badge definitions use the server rule JSON casing and create only on confi
 
 test('AI quiz suggestions enter the editable question bank instead of artifact-content review', async ({ page }) => {
   const f = await fixture(page, 'Museum Staff');
-  await page.getByRole('button', { name: 'Xưởng nội dung AI', exact: true }).click();
+  await page.locator('.sidebar-item').filter({ hasText: 'Xưởng nội dung AI' }).click();
   await page.getByRole('button', { name: 'Bộ câu hỏi trắc nghiệm', exact: true }).click();
   await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
-  await expect(page.locator('textarea')).toBeVisible();
-  await page.locator('textarea').fill(JSON.stringify([{ question: 'Câu gợi ý đã hiệu đính', options: ['Dữ kiện đã kiểm chứng', 'Lựa chọn còn lại'], correctIndex: 0, explanation: 'Cần đối chiếu tài liệu bảo tàng' }]));
+  await expect(page.getByLabel('Nội dung bản nháp', { exact: true })).toBeVisible();
+  await page.getByLabel('Nội dung bản nháp', { exact: true }).fill(JSON.stringify([{ question: 'Câu gợi ý đã hiệu đính', options: ['Dữ kiện đã kiểm chứng', 'Lựa chọn còn lại'], correctIndex: 0, explanation: 'Cần đối chiếu tài liệu bảo tàng' }]));
   await page.getByRole('button', { name: 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Gợi ý từ Xưởng AI', exact: true })).toBeVisible();
-  expect(f.writes).toEqual([]);
+  expect(f.writes.every(r => r.path.endsWith('/ai/drafts'))).toBe(true);
   await page.getByRole('button', { name: 'Chỉnh sửa & lưu câu', exact: true }).click();
   await expect(page.getByLabel('Nội dung câu hỏi')).toHaveValue('Câu gợi ý đã hiệu đính');
   await page.getByRole('dialog').getByRole('button', { name: 'Lưu', exact: true }).click();
@@ -216,5 +225,49 @@ test('AI quiz suggestions enter the editable question bank instead of artifact-c
   expect(f.writes.filter(r => r.path.includes('/contents'))).toEqual([]);
   expect(f.state.questions[1].status).toBe('draft');
   await expect(page.getByRole('button', { name: 'Đã lưu câu hỏi', exact: true })).toBeDisabled();
+  expect(f.errors).toEqual([]);
+});
+
+test('Admin creates a Vietnamese narration draft and submits both text fields for review', async ({ page }) => {
+  const f = await fixture(page, 'Admin');
+  await page.getByRole('button', { name: 'Xưởng nội dung AI', exact: true }).click();
+  await page.getByLabel('Tư liệu nguồn bổ sung').fill('Hiện vật được dùng để đựng nước theo tư liệu đã kiểm chứng.');
+  await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
+  await expect(page.getByLabel('Nội dung bản nháp', { exact: true })).toHaveValue(/đựng nước/);
+  expect(f.state.contentDraft).toBeUndefined();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: 'test-results/staff-ai-narration-desktop.png' });
+  await page.getByRole('button', { name: 'Gửi sang Hàng đợi Kiểm duyệt', exact: true }).click();
+  await expect.poll(() => f.state.contentDraft?.status).toBe('pending_review');
+  expect(f.state.contentDraft).toMatchObject({ languageCode: 'vi', isAiGenerated: true });
+  expect(f.state.contentDraft.narrationText).toBe(f.state.contentDraft.description);
+  expect(f.errors).toEqual([]);
+});
+
+test('Question bank opens AI quiz mode and unavailable model does not fabricate output', async ({ page }) => {
+  const f = await fixture(page, 'Museum Staff');
+  await page.getByRole('button', { name: 'Ngân hàng câu hỏi', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Hiện vật', exact: true }).selectOption('11');
+  await page.getByRole('button', { name: 'AI gợi ý câu hỏi', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Bộ câu hỏi trắc nghiệm', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  f.state.aiFailure = true;
+  await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Model local chưa sẵn sàng');
+  await expect(page.getByLabel('Nội dung bản nháp', { exact: true })).toHaveCount(0);
+  expect(f.writes.filter(r => r.path.includes('/contents') || r.path === 'question-bank/questions')).toEqual([]);
+});
+
+test('Studio speech uses edited text and shows retry without pretending to play when TTS fails', async ({ page }) => {
+  const f = await fixture(page, 'Admin');
+  await page.locator('.sidebar-item').filter({ hasText: 'Xưởng nội dung AI' }).click();
+  await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
+  await page.getByLabel('Nội dung bản nháp', { exact: true }).fill('Bản thuyết minh vừa được hiệu đính.');
+  const panel = page.getByRole('region', { name: 'Nghe bản thuyết minh', exact: true });
+  await panel.getByRole('button', { name: 'Tạo giọng đọc', exact: true }).click();
+  await expect(panel.getByRole('alert')).toContainText('Bộ đọc tiếng Việt đang bận');
+  await expect(panel.locator('audio')).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Tạo giọng đọc', exact: true })).toBeEnabled();
+  expect(f.writes.find(r => r.path.endsWith('/speech-preview'))?.body.text).toBe('Bản thuyết minh vừa được hiệu đính.');
+  expect(f.state.contentDraft).toBeUndefined();
   expect(f.errors).toEqual([]);
 });

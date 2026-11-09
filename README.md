@@ -2,6 +2,12 @@
 
 Frontend của **Smart Museum Guide System (SMGS)**. Dự án hỗ trợ hành trình tham quan bảo tàng, quản trị nội dung di sản và vận hành hệ thống. Frontend đã có các luồng gọi BE cho đăng nhập và dữ liệu nghiệp vụ; một số phần AI/3D vẫn đang ở phạm vi thử nghiệm. Không coi toàn bộ giao diện là dữ liệu mô phỏng hoặc toàn bộ chức năng đã end-to-end.
 
+**Xưởng nội dung AI 09/11/2026:** Admin/Museum Staff gọi BE để sinh bản nháp thuyết minh hoặc quiz tiếng Việt bằng model ONNX local, thay đầu ra mô phỏng. Quiz mở đúng Ngân hàng câu hỏi để sửa/lưu; narration gửi cả mô tả và văn bản đọc sang kiểm duyệt. Không tự xuất bản, không tạo lịch sử từ ảnh. Xem [hợp đồng, cách chạy và kết quả kiểm thử](../AI-System/AI_STUDIO_LOCAL_2026_11_09.md).
+
+**Kiểm thử TTS thật 09/11/2026:** module `ttsApi.js` qua proxy Vite đã gọi Piper local, Edge decode/phát hết 3 mẫu không lỗi. Có [báo cáo và file nghe](../AI-System/evaluations/tts-2026-11-09/README.md), script `smgs_web/tools/check-real-tts.mjs`; chưa xác nhận Flutter/DB/deploy hoặc phát âm từng từ.
+
+**Nghe trong Xưởng AI:** bên dưới bản nháp thuyết minh đã có **Tạo giọng đọc → Phát bản đọc**, tua/tạm dừng/đổi tốc độ. Đọc văn bản đang sửa qua BE có JWT/phạm vi bảo tàng, không dùng file demo. Sửa văn bản sẽ bỏ audio cũ. Xem [cách chạy, API và tình trạng DB local](../AI-System/AI_STUDIO_PLAYBACK_2026_11_09.md).
+
 **Cập nhật chatbot 08/11/2026:** màn Trợ lý bảo tàng của Visitor đã gọi API hỏi đáp theo hiện vật, có câu hỏi tiếp nối, nguồn tham khảo, nghe đáp án và xử lý lỗi. BE chỉ dùng nội dung tiếng Việt đã xuất bản và kiểm tra quyền free/premium. Chatbot chạy local bằng Qwen ONNX INT4 qua AI-System, không dùng Gemini. Đã test model thật trên bộ smoke nhỏ; luồng DB/deploy còn cần kiểm thử. Xem [hợp đồng, lệnh chạy và phần còn thiếu](../BackEnd/Smart_Museum_Guide_System/ARTIFACT_CHATBOT_2026_11_08.md).
 
 ## Thành phần dự án

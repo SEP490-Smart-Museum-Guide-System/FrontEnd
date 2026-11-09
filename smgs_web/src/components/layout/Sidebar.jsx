@@ -39,6 +39,7 @@ export default function Sidebar() {
             { id: 'artifacts', label: 'Kho hiện vật', icon: Layers },
             { id: 'topics', label: 'Chủ đề hiện vật', icon: Layers },
             { id: 'question_bank', label: 'Ngân hàng câu hỏi', icon: CheckSquare },
+            { id: 'ai_studio', label: 'Xưởng nội dung AI', icon: Sparkles },
             { id: 'badges', label: 'Huy hiệu khám phá', icon: Sparkles },
           ]
         },

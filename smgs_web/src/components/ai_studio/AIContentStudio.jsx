@@ -1,510 +1,108 @@
-import { parseQuestionDrafts } from '../../services/questionDrafts';
-import React, { useState, useEffect } from 'react';
-import { aiDemoArtifacts } from '../../data/aiDemoArtifacts';
+import React, { useEffect, useRef, useState } from 'react';
+import { Sparkles, Volume2, HelpCircle, RefreshCw, Send, Copy } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import {
-  Sparkles,
-  Layers,
-  Volume2,
-  HelpCircle,
-  Globe,
-  Bot,
-  Send,
-  Check,
-  RefreshCw,
-  Copy,
-  ArrowRight,
-  FileCheck,
-  Play
-} from 'lucide-react';
+import { parseQuestionDrafts } from '../../services/questionDrafts';
+import { generateStaffDraft } from '../../services/staffAiApi';
+import NarrationPreview from './NarrationPreview';
 
-export default function AIContentStudio({ initialArtifact, onOpenQuestionBank }) {
-  const { artifacts, currentMuseum, submitToCuration, showToast } = useApp();
-  const liveArtifacts = artifacts.filter(item =>
-    String(item.museumId) === String(currentMuseum?.id) ||
-    item.museumId === currentMuseum?.id ||
-    String(item.museumId) === String(currentMuseum?.backendId)
-  );
+export default function AIContentStudio(props) {
+  const app = useApp();
+  return <Studio key={`${app.currentMuseum?.id}:${props.initialArtifact?.id || ''}:${props.initialMode || 'narration'}`} app={app} {...props} />;
+}
 
-  const museumArtifacts = liveArtifacts.length ? liveArtifacts : aiDemoArtifacts.map(a => ({ ...a, name: `[Mẫu AI/3D] ${a.name}` }));
+function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestionBank }) {
+  const { artifacts, currentMuseum, currentRole, museums, setSelectedMuseumId, submitToCuration, showToast } = app;
+  const available = artifacts.filter(a => String(a.museumId) === String(currentMuseum?.id) && Number.isSafeInteger(Number(a.id)) && Number(a.id) > 0);
+  const [artifactId, setArtifactId] = useState(String(available.find(a => String(a.id) === String(initialArtifact?.id))?.id || available[0]?.id || ''));
+  const artifact = available.find(a => String(a.id) === artifactId);
+  const [mode, setMode] = useState(initialMode);
+  const [sourceText, setSourceText] = useState('');
+  const [audience, setAudience] = useState('general'), [tone, setTone] = useState('vivid');
+  const [count, setCount] = useState(1), [difficulty, setDifficulty] = useState('medium');
+  const [output, setOutput] = useState(''), [title, setTitle] = useState('');
+  const [source, setSource] = useState(null), [evidence, setEvidence] = useState([]);
+  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [submitted, setSubmitted] = useState(false);
+  const [progress, setProgress] = useState('');
+  const activeRequest = useRef(null);
+  useEffect(() => () => activeRequest.current?.abort(), []);
+  const allowed = ['administrator', 'museumStaff'].includes(currentRole);
 
-  const [selectedArtifactId, setSelectedArtifactId] = useState(
-    initialArtifact?.id || museumArtifacts[0]?.id || ''
-  );
-  const [activeMode, setActiveMode] = useState('narration'); // narration | quiz | multilingual | knowledge
-  const [audience, setAudience] = useState('children'); // children | general | scholar
-  const [targetLang, setTargetLang] = useState('vi'); // vi | en | fr | ja
-  const [tone, setTone] = useState('vivid'); // vivid | inspiring | academic | story
-  const [quizCount, setQuizCount] = useState(3);
-  const [difficulty, setDifficulty] = useState('medium'); // easy | medium | hard
+  function invalidate() { setOutput(''); setSource(null); setEvidence([]); setError(''); setSubmitted(false); setProgress(''); }
 
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedOutput, setGeneratedOutput] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  const selectedArtifact = museumArtifacts.find(a => String(a.id) === String(selectedArtifactId)) || museumArtifacts[0];
-
-  useEffect(() => {
-    if (initialArtifact?.id) {
-      setSelectedArtifactId(initialArtifact.id);
-    }
-  }, [initialArtifact]);
-
-  // Generate content simulation
-  const handleGenerate = () => {
-    if (!selectedArtifact) {
-      showToast('Bảo tàng này chưa có hiện vật để tạo nội dung.');
-      return;
-    }
-    setIsGenerating(true);
-    setGeneratedOutput('');
-
-    setTimeout(() => {
-      let result = '';
-      if (activeMode === 'narration') {
-        if (audience === 'children') {
-          result = `Chào các bạn nhỏ thân mến! Chào mừng các bạn đến với bảo tàng di sản.
-
-Hôm nay, chúng mình hãy cùng làm quen với người bạn đặc biệt này nhé — đó chính là "${selectedArtifact.name}"!
-
-Hiện vật này đã có tuổi đời hơn ${selectedArtifact.dating || '2.000 năm'} rồi đấy. Các bạn thử nhìn xem, toàn bộ được đúc bằng ${selectedArtifact.material || 'đồng thau'} vô cùng lấp lánh và tinh xảo!
-
-Hãy chú ý vào các hoa văn sinh động trên bề mặt: có đàn chim đang sải cánh bay lượn, có những người đang giã gạo vui vẻ và cả những ngôi nhà sàn ấm cúng nữa. Người xưa tạo ra hiện vật này với ước mong cho mùa màng bội thu và mọi người luôn được bình an, mạnh khỏe.
-
-Đố các bạn biết, bí mật nào đang ẩn giấu trong những hoa văn này nữa? Hãy tiếp tục khám phá nhé!`;
-        } else if (audience === 'scholar') {
-          result = `BẢN LUẬN THUYẾT MINH CHUYÊN KHẢO: ${selectedArtifact.name.toUpperCase()}
-
-1. BỐI CẢNH LỊCH SỬ & KHẢO CỔ HỌC:
-Hiện vật thuộc ${selectedArtifact.period}, đại diện cho giai đoạn phát triển rực rỡ của kỹ nghệ luyện kim và đúc kim khí tại lưu vực sông Hồng và văn minh Đại Việt cổ.
-
-2. ĐẶC ĐIỂM HÌNH THÁI VÀ KỸ THUẬT CHẾ TÁC:
-Chất liệu: ${selectedArtifact.material}.
-Kỹ thuật đúc: Phương pháp đúc khuôn nhiều mang kết hợp chạm khắc hoa văn âm bản trực tiếp vào lòng khuôn trước khi rót hợp kim nóng chảy.
-
-3. HỆ THỐNG BIỂU TƯỢNG VÀ THẾ GIỚI QUAN:
-Mô thức hoa văn hình học đồng tâm kết hợp hình tượng nhân thần và linh vật phản ánh sâu sắc tư duy vũ trụ luận nhị nguyên (Âm - Dương, Đất - Trời) và tín ngưỡng sùng bái tự nhiên của cư dân nông nghiệp cổ đại.`;
-        } else {
-          // general
-          result = `THUYẾT MINH DI SẢN: ${selectedArtifact.name}
-
-Kính chào quý khách! Trước mắt quý vị là "${selectedArtifact.name}", một trong những báu vật tiêu biểu thuộc ${selectedArtifact.period}.
-
-Hiện vật được làm bằng ${selectedArtifact.material}, minh chứng sống động cho trình độ thẩm mỹ và kỹ thuật chế tác bậc thầy của cha ông chúng ta cách đây ${selectedArtifact.dating || 'nhiều thế kỷ'}.
-
-Điểm nhấn đặc biệt của hiện vật này nằm ở nghệ thuật trang trí hoa văn độc bản, tái hiện chân thực đời sống sinh hoạt, phong tục tập quán và khát vọng phồn vinh của dân tộc.
-
-Kính mời quý khách dành ít phút chiêm ngưỡng từng đường nét hoa văn và sử dụng tính năng 3D AR trên ứng dụng di động để quan sát đa chiều ở độ phân giải cao nhất.`;
-        }
-      } else if (activeMode === 'quiz') {
-        const sampleQuizzes = [
-          {
-            question: `Hiện vật "${selectedArtifact.name}" được chế tác chủ yếu bằng chất liệu gì?`,
-            options: [selectedArtifact.material, 'Đất nung không men', 'Đá cẩm thạch trắng', 'Gỗ lim phủ sơn'],
-            correctIndex: 0,
-            explanation: `Hiện vật được đúc và chế tác hoàn toàn từ ${selectedArtifact.material}.`
-          },
-          {
-            question: `Hiện vật "${selectedArtifact.name}" thuộc thời kỳ văn hóa / triều đại nào?`,
-            options: [selectedArtifact.period, 'Thời kỳ Đồ đá cũ', 'Thời cận đại thế kỷ XX', 'Thời kỳ đồ gốm sơ khai'],
-            correctIndex: 0,
-            explanation: `Đây là hiện vật tiêu biểu của ${selectedArtifact.period}.`
-          },
-          {
-            question: `Ý nghĩa biểu tượng nổi bật nhất trên hiện vật "${selectedArtifact.name}" là gì?`,
-            options: ['Tín ngưỡng phồn thực và khát vọng mùa màng bội thu', 'Biểu tượng chiến tranh hủy diệt', 'Ký hiệu buôn bán thương mại phương Tây', 'Bản đồ thiên văn hiện đại'],
-            correctIndex: 0,
-            explanation: `Hoa văn trên hiện vật phản ánh sâu sắc thế giới quan nông nghiệp và tín ngưỡng dân gian cổ truyền.`
-          }
-        ];
-        result = JSON.stringify(sampleQuizzes, null, 2);
-      } else if (activeMode === 'multilingual') {
-        result = `[ENGLISH TRANSLATION]
-Title: ${selectedArtifact.altName || selectedArtifact.name}
-Period: ${selectedArtifact.period}
-Material: ${selectedArtifact.material}
-Summary: ${selectedArtifact.shortDesc}
-
-Historical Significance:
-This masterpiece stands as an extraordinary testament to ancient Vietnamese craftsmanship, spiritual beliefs, and agricultural civilization. Displayed permanently at ${selectedArtifact.museumName}.`;
-      } else {
-        // knowledge
-        result = `BỘ TRI THỨC HỎI - ĐÁP CHO AI ASSISTANT (${selectedArtifact.name}):
-
-Q1: Hiện vật này có từ bao giờ?
-A1: Hiện vật có niên đại ${selectedArtifact.dating || 'nhiều thế kỷ trước'}, thuộc ${selectedArtifact.period}.
-
-Q2: Tôi có thể xem hiện vật này ở phòng trưng bày nào?
-A2: Quý khách có thể chiêm ngưỡng trực tiếp tại ${selectedArtifact.galleryName} (${selectedArtifact.buildingName}).
-
-Q3: Điểm đặc sắc nhất của hiện vật này là gì?
-A3: ${selectedArtifact.shortDesc}
-
-Q4: Hiện vật này có phải là Bảo vật Quốc gia không?
-A4: ${selectedArtifact.isNationalTreasure ? 'Đúng vậy, hiện vật đã được Thủ tướng Chính phủ công nhận là Bảo vật Quốc gia vô giá của Việt Nam.' : 'Hiện vật là di sản tiêu biểu quý hiếm được bảo tồn nghiêm ngặt tại bảo tàng.'}`;
-      }
-
-      setGeneratedOutput(result);
-      setIsGenerating(false);
-      showToast('AI đã hoàn tất quá trình sinh nội dung di sản!');
-    }, 1200);
-  };
-
-  // Submit to Curation Queue
-  const handleSubmitForReview = async () => {
-    if (!generatedOutput || !selectedArtifact || isSubmitting) return;
-    if (activeMode === 'quiz') {
-      if (!Number.isInteger(Number(selectedArtifact.id)) || Number(selectedArtifact.id) <= 0) { showToast('Hãy chọn hiện vật đã lưu để tạo câu hỏi trong ngân hàng.', 'warning'); return; }
-      try { onOpenQuestionBank({ artifactId: selectedArtifact.id, drafts: parseQuestionDrafts(generatedOutput) }); }
-      catch (e) { showToast(e.message, 'warning'); }
-      return;
-    }
-
-    setIsSubmitting(true);
+  async function generate() {
+    if (!artifact || busy || !allowed) return;
+    const controller = new AbortController(); activeRequest.current = controller;
+    invalidate(); setBusy(true);
+    const drafts = [];
     try {
-      await submitToCuration({
-        type: activeMode === 'narration' ? 'audio_narration' : activeMode === 'quiz' ? 'quiz' : 'artifact_update',
-        title: `Xưởng nội dung AI: ${activeMode === 'narration' ? 'Thuyết minh' : activeMode === 'quiz' ? 'Bộ câu hỏi' : 'Tư liệu di sản'} — ${selectedArtifact.name} (${audience === 'children' ? 'Thiếu nhi' : audience === 'scholar' ? 'Học thuật' : 'Phổ thông'})`,
-        targetArtifactId: selectedArtifact.id,
-        targetArtifactName: selectedArtifact.name,
-        languageCode: targetLang || 'vi',
-        submittedBy: 'Nhân viên bảo tàng',
-        priority: 'high',
-        currentVersion: selectedArtifact.shortDesc || 'Bản cơ bản',
-        proposedContent: generatedOutput,
-        changesSummary: `Nội dung được tạo tại xưởng nội dung AI dành cho hiện vật ${selectedArtifact.name}.`,
-        feedback: ''
-      });
+      const total = mode === 'quiz' ? count : 1;
+      for (let i = 0; i < total; i++) {
+        setProgress(mode === 'quiz' ? `Đang tạo câu ${i + 1}/${total}…` : 'Đang soạn bản thuyết minh…');
+        const response = await generateStaffDraft(artifact.id, {
+          mode, sourceText, audience, tone, difficulty, excludeQuestions: drafts.map(d => d.question),
+        }, controller.signal);
+        if (controller.signal.aborted) return;
+        drafts.push(response.draft); setSource(response.source);
+        setEvidence(drafts.flatMap(d => mode === 'quiz' ? [d.evidenceQuote] : d.evidenceQuotes || []));
+        setTitle(response.draft.title || `Câu hỏi về ${artifact.name}`);
+        setOutput(mode === 'quiz' ? JSON.stringify(drafts.map(d => ({ question: d.question, options: d.options, correctIndex: d.correctIndex, explanation: d.explanation })), null, 2) : response.draft.narrationText);
+      }
+      showToast('Đã tạo bản nháp AI. Hãy kiểm tra tư liệu, nội dung và đáp án.');
+    } catch (e) {
+      if (!controller.signal.aborted) setError(`${drafts.length && mode === 'quiz' ? `Đã tạo ${drafts.length}/${count} câu. ` : ''}${e.message}`);
     } finally {
-      setIsSubmitting(false);
+      if (!controller.signal.aborted) { setBusy(false); setProgress(''); }
     }
-  };
+  }
 
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(generatedOutput);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  async function submit() {
+    if (!output.trim() || !artifact || busy || saving || submitted) return;
+    if (mode === 'quiz') {
+      try { onOpenQuestionBank?.({ artifactId: artifact.id, drafts: parseQuestionDrafts(output) }); }
+      catch (e) { setError(e.message); }
+      return;
+    }
+    setSaving(true); setError('');
+    try {
+      const result = await submitToCuration({ targetArtifactId: artifact.id, title: title.trim(), proposedContent: output, narrationText: output, languageCode: 'vi', isAiGenerated: true });
+      if (result.success) setSubmitted(true); else setError(result.error);
+    } finally { setSaving(false); }
+  }
 
-  return (
-    <div>
-      {/* Page Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, var(--color-gold-500), var(--color-burgundy-700))',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: 'var(--shadow-gold)'
-          }}>
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-              Xưởng Nội Dung AI — Thuyết Minh Và Câu Hỏi Di Sản
-            </h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '2px' }}>
-              Trợ lý trí tuệ nhân tạo chuyên sâu giúp nhân viên tạo nhanh bài thuyết minh đa độ tuổi, trắc nghiệm tương tác và bản dịch đa ngữ
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Studio Grid */}
-      <div className="workbench-grid" style={{ display: 'grid', gridTemplateColumns: '380px minmax(0, 1fr)', gap: '28px' }}>
-        {/* Left Column: Configuration & Prompting */}
-        <div className="card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '16px', color: 'var(--color-charcoal-900)' }}>
-            Cấu hình Tạo Nội Dung
-          </h3>
-
-          {/* 1. Select Artifact */}
-          <div className="form-group">
-            <label className="form-label">Chọn hiện vật mục tiêu *</label>
-            <select
-              className="form-select"
-              value={selectedArtifact?.id || ''}
-              onChange={(e) => setSelectedArtifactId(e.target.value)}
-            >
-              {museumArtifacts.length === 0 && <option value="">Chưa có hiện vật trong bảo tàng này</option>}
-              {museumArtifacts.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.code}) {a.isNationalTreasure ? '⭐' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Artifact Preview mini card */}
-          {selectedArtifact && (
-            <div style={{
-              background: '#FAF7F2',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid var(--color-paper-border)',
-              display: 'flex',
-              gap: '12px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ width: '50px', height: '50px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#1A1F26' }}>
-                <img
-                  src={selectedArtifact.image || '/assets/images/placeholder.svg'}
-                  alt=""
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
-                />
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.8125rem', fontWeight: '700', color: 'var(--color-burgundy-900)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  {selectedArtifact.name}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
-                  {selectedArtifact.galleryName} • {selectedArtifact.material}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. Generation Mode Selector */}
-          <div className="form-group">
-            <label className="form-label">Chế độ tạo nội dung</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {[
-                { id: 'narration', label: 'Thuyết minh âm thanh', icon: Volume2 },
-                { id: 'quiz', label: 'Bộ câu hỏi trắc nghiệm', icon: HelpCircle },
-                { id: 'multilingual', label: 'Dịch thuật đa ngữ', icon: Globe },
-                { id: 'knowledge', label: 'Tri thức trợ lý AI', icon: Bot },
-              ].map(m => {
-                const Icon = m.icon;
-                const isSelected = activeMode === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setActiveMode(m.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.8125rem',
-                      fontWeight: isSelected ? '600' : '500',
-                      background: isSelected ? 'var(--color-burgundy-700)' : '#FFF',
-                      color: isSelected ? '#FFF' : 'var(--color-charcoal-700)',
-                      border: isSelected ? '1px solid var(--color-burgundy-800)' : '1px solid var(--color-paper-border)',
-                      transition: 'all var(--transition-fast)'
-                    }}
-                  >
-                    <Icon size={16} />
-                    <span>{m.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 3. Sub-parameters based on Mode */}
-          {activeMode === 'narration' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Đối tượng tiếp nhận</label>
-                <select
-                  className="form-select"
-                  value={audience}
-                  onChange={(e) => setAudience(e.target.value)}
-                >
-                  <option value="children">Thiếu nhi (6 - 12 tuổi, sinh động, dễ hiểu)</option>
-                  <option value="general">Khách đại chúng (Hấp dẫn, truyền cảm, cô đọng)</option>
-                  <option value="scholar">Học thuật / Nhà nghiên cứu (Chuyên sâu, khảo cổ)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Phong cách và ngữ điệu</label>
-                <select
-                  className="form-select"
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                >
-                  <option value="vivid">Sinh động, kể chuyện</option>
-                  <option value="inspiring">Hào hùng, tôn vinh lịch sử dân tộc</option>
-                  <option value="academic">Trang trọng, chuẩn mực bảo tàng</option>
-                </select>
-              </div>
-            </>
-          )}
-
-          {activeMode === 'quiz' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Số lượng câu hỏi trắc nghiệm</label>
-                <select
-                  className="form-select"
-                  value={quizCount}
-                  onChange={(e) => setQuizCount(Number(e.target.value))}
-                >
-                  <option value={3}>3 câu hỏi tương tác nhanh</option>
-                  <option value={5}>5 câu hỏi khám phá sâu</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Độ khó câu hỏi</label>
-                <select
-                  className="form-select"
-                  value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value)}
-                >
-                  <option value="easy">Dễ (Dành cho khách tham quan đại chúng)</option>
-                  <option value="medium">Trung bình (Tìm hiểu chi tiết hoa văn)</option>
-                  <option value="hard">Thử thách (Dành cho người yêu sử học)</option>
-                </select>
-              </div>
-            </>
-          )}
-
-          {activeMode === 'multilingual' && (
-            <div className="form-group">
-              <label className="form-label">Ngôn ngữ mục tiêu</label>
-              <select
-                className="form-select"
-                value={targetLang}
-                onChange={(e) => setTargetLang(e.target.value)}
-              >
-                <option value="en">Tiếng Anh (chuyên ngành di sản)</option>
-                <option value="fr">Tiếng Pháp</option>
-                <option value="ja">Tiếng Nhật</option>
-              </select>
-            </div>
-          )}
-
-          {/* Action Generate Button */}
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={isGenerating || !selectedArtifact}
-            className="btn btn-gold"
-            style={{ width: '100%', padding: '12px', marginTop: '12px' }}
-          >
-            {isGenerating ? (
-              <>
-                <RefreshCw size={16} className="spin-animation" /> Đang xử lý tri thức AI...
-              </>
-            ) : (
-              <>
-                <Sparkles size={16} /> Sinh nội dung bằng AI
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Right Column: Output & Action Studio */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card-header" style={{ background: '#FAF7F2' }}>
-            <div className="card-title">
-              <FileCheck size={18} color="var(--color-burgundy-700)" />
-              <span>Kết Quả & Trình Soạn Thảo Hiệu Đính</span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {generatedOutput && (
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="btn btn-secondary btn-sm"
-                >
-                  {copied ? <Check size={14} color="var(--color-success)" /> : <Copy size={14} />}
-                  <span>{copied ? 'Đã sao chép' : 'Sao chép'}</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {isGenerating ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px' }}>
-                <div style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '50%',
-                  background: 'var(--color-gold-100)',
-                  color: 'var(--color-gold-600)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                  animation: 'pulse 1.5s infinite'
-                }}>
-                  <Sparkles size={32} />
-                </div>
-                <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-charcoal-900)' }}>
-                  AI đang phân tích tư liệu hiện vật...
-                </h4>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-                  Áp dụng mô hình kiến thức bảo tàng để tạo nội dung chuẩn kiểm duyệt
-                </p>
-              </div>
-            ) : generatedOutput ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <textarea
-                  className="form-textarea"
-                  style={{
-                    flex: 1,
-                    minHeight: '340px',
-                    fontFamily: activeMode === 'quiz' ? 'monospace' : 'inherit',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.7',
-                    padding: '16px'
-                  }}
-                  value={generatedOutput}
-                  onChange={(e) => setGeneratedOutput(e.target.value)}
-                />
-
-                <div style={{
-                  marginTop: '16px',
-                  padding: '14px 18px',
-                  background: 'var(--color-paper-accent)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: '1px solid var(--color-paper-border)'
-                }}>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)' }}>
-                    💡 Chỉnh sửa bản AI trước khi gửi vào hàng đợi để bảo tàng kiểm tra và xuất bản.
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={handleSubmitForReview}
-                    className="btn btn-primary"
-                  >
-                    <Send size={16} /> {isSubmitting ? 'Đang gửi...' : activeMode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center' }}>
-                <Sparkles size={48} color="var(--color-charcoal-300)" style={{ marginBottom: '16px' }} />
-                <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-charcoal-800)' }}>
-                  Sẵn sàng tạo nội dung di sản
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', maxWidth: '420px', marginTop: '6px' }}>
-                  Chọn cấu hình ở cột bên trái và nhấn nút <strong>"Sinh nội dung bằng AI"</strong> để bắt đầu tạo kịch bản thuyết minh hoặc câu hỏi tự động.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  if (!allowed) return <p role="alert">Chức năng tạo bản nháp dành cho Quản trị viên và Nhân viên bảo tàng.</p>;
+  return <div>
+    <h1 style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-burgundy-900)', fontSize: '1.75rem' }}><Sparkles size={25} /> Xưởng nội dung AI</h1>
+    <p>Soạn thuyết minh và câu hỏi tiếng Việt bằng model ONNX local từ tư liệu bảo tàng. Kết quả luôn là bản nháp cần thẩm định.</p>
+    {currentRole === 'administrator' && <div className="form-group"><label className="form-label" htmlFor="studio-museum">Bảo tàng</label><select id="studio-museum" className="form-select" value={currentMuseum?.id || ''} disabled={busy || saving} onChange={e => setSelectedMuseumId(Number(e.target.value))}>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>}
+    {!available.length ? <div className="card business-card">Bảo tàng chưa có hiện vật đã lưu. Hãy tạo hiện vật và bổ sung tư liệu trước.</div> : <div className="business-grid" style={{ alignItems: 'start' }}>
+      <section className="card business-card">
+        <h2>Cấu hình bản nháp</h2>
+        <div className="form-group"><label className="form-label" htmlFor="studio-artifact">Hiện vật</label><select id="studio-artifact" className="form-select" value={artifactId} disabled={busy || saving} onChange={e => { setArtifactId(e.target.value); setSourceText(''); invalidate(); }}>{available.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+        {(artifact?.image || artifact?.imageUrl) && <img src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
+        <div className="form-group"><label className="form-label" htmlFor="studio-source">Tư liệu nguồn bổ sung</label><textarea id="studio-source" className="form-input" rows={6} maxLength={6000} disabled={busy || saving} value={sourceText} onChange={e => { setSourceText(e.target.value); invalidate(); }} placeholder="Chép nội dung bảng tên, tài liệu hoặc thông tin đã kiểm chứng về hiện vật…" /><small>Để trống để dùng nội dung tiếng Việt đã xuất bản nếu có. Nếu chưa có nội dung, cần nhập ít nhất 20 ký tự tư liệu. Ảnh dùng để đối chiếu; model hiện tại nhận chữ, chưa phân tích ảnh.</small></div>
+        <div className="business-actions" style={{ marginBottom: 16 }}>{[{ id: 'narration', label: 'Thuyết minh âm thanh', Icon: Volume2 }, { id: 'quiz', label: 'Bộ câu hỏi trắc nghiệm', Icon: HelpCircle }].map(({ id, label, Icon }) => <button key={id} className={`btn ${mode === id ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={mode === id} disabled={busy || saving} onClick={() => { setMode(id); invalidate(); }}><Icon size={16} />{label}</button>)}</div>
+        {mode === 'narration' ? <>
+          <div className="form-group"><label className="form-label" htmlFor="studio-audience">Đối tượng tiếp nhận</label><select id="studio-audience" className="form-select" value={audience} disabled={busy || saving} onChange={e => { setAudience(e.target.value); invalidate(); }}><option value="children">Thiếu nhi</option><option value="general">Khách đại chúng</option><option value="scholar">Người nghiên cứu</option></select></div>
+          <div className="form-group"><label className="form-label" htmlFor="studio-tone">Phong cách</label><select id="studio-tone" className="form-select" value={tone} disabled={busy || saving} onChange={e => { setTone(e.target.value); invalidate(); }}><option value="vivid">Sinh động, dễ hiểu</option><option value="inspiring">Truyền cảm</option><option value="academic">Trang trọng</option></select></div>
+        </> : <>
+          <div className="form-group"><label className="form-label" htmlFor="studio-count">Số lượng câu hỏi</label><select id="studio-count" className="form-select" value={count} disabled={busy || saving} onChange={e => { setCount(Number(e.target.value)); invalidate(); }}><option value={1}>1 câu hỏi</option><option value={3}>3 câu hỏi</option><option value={5}>5 câu hỏi</option></select><small>Model tạo từng câu; nếu tư liệu ít hoặc trùng câu hỏi, hệ thống giữ các câu đã tạo để bạn kiểm tra.</small></div>
+          <div className="form-group"><label className="form-label" htmlFor="studio-difficulty">Độ khó</label><select id="studio-difficulty" className="form-select" value={difficulty} disabled={busy || saving} onChange={e => { setDifficulty(e.target.value); invalidate(); }}><option value="easy">Dễ</option><option value="medium">Trung bình</option><option value="hard">Thử thách</option></select></div>
+        </>}
+        <button className="btn btn-gold" disabled={busy || saving || !artifact} onClick={generate}>{busy ? <RefreshCw size={16} className="spin-animation" /> : <Sparkles size={16} />}{busy ? 'Đang tạo bản nháp…' : 'Sinh nội dung bằng AI'}</button>
+        {busy && <p role="status">{progress}</p>}
+      </section>
+      <section className="card business-card"><h2>Bản nháp để kiểm tra</h2>
+        {error && <p role="alert" style={{ color: 'var(--color-burgundy-700)' }}>{error}</p>}
+        {!output && mode === 'quiz' ? <p>Chọn hiện vật, kiểm tra tư liệu rồi bấm “Sinh nội dung bằng AI”. Tạo bản nháp chưa lưu hoặc xuất bản dữ liệu.</p> : <>
+          {!output && <p>Nhập bản thuyết minh để nghe trực tiếp hoặc dùng AI soạn từ tư liệu. Nội dung chưa được lưu hay xuất bản.</p>}
+          {mode === 'narration' && <div className="form-group"><label className="form-label" htmlFor="studio-title">Tiêu đề bản nháp</label><input id="studio-title" className="form-input" maxLength={200} value={title} disabled={busy || saving} onChange={e => { setTitle(e.target.value); setSubmitted(false); }} /></div>}
+          <label className="form-label" htmlFor="studio-output">Nội dung bản nháp</label><textarea id="studio-output" className="form-input" rows={17} value={output} disabled={busy || saving} onChange={e => { setOutput(e.target.value); setSubmitted(false); }} style={{ fontFamily: mode === 'quiz' ? 'monospace' : 'inherit', lineHeight: 1.65 }} />
+          <p>AI có thể diễn giải sai. Hãy đối chiếu tên, niên đại, chất liệu và đáp án trước khi gửi.</p>
+          {mode === 'narration' && <NarrationPreview key={`${artifactId}:${output}`} artifactId={artifact.id} text={output} disabled={busy || saving} />}
+          <details><summary>Tư liệu và đoạn trích AI tham khảo</summary>{source?.contentVersionId && <p>Nội dung đã xuất bản · Phiên bản {source.versionNo}</p>}<p style={{ whiteSpace: 'pre-wrap' }}>{source?.text}</p>{[...new Set(evidence)].map((q, i) => <blockquote key={i}>{q}</blockquote>)}</details>
+          <div className="business-actions" style={{ marginTop: 16 }}><button className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(output)}><Copy size={16} />Sao chép</button><button className="btn btn-primary" disabled={busy || saving || submitted || !output.trim() || (mode === 'narration' && !title.trim())} onClick={submit}><Send size={16} />{submitted ? 'Đã gửi chờ thẩm định' : saving ? 'Đang gửi…' : mode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}</button></div>
+        </>}
+      </section>
+    </div>}
+  </div>;
 }

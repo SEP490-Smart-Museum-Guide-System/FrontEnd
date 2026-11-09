@@ -28,15 +28,17 @@ import IndoorMapManager from './components/indoor_maps/IndoorMapManager';
 export default function App() {
   const { activeTab, setActiveTab, isAuthenticated, currentMuseum, currentRole, dataErrors, loading, reload } = useApp();
   const [selectedStudioArtifact, setSelectedStudioArtifact] = useState(null);
+  const [selectedStudioMode, setSelectedStudioMode] = useState('narration');
   const [questionDrafts, setQuestionDrafts] = useState(null);
 
-  const handleOpenAIStudio = (artifact) => {
+  const handleOpenAIStudio = (artifact, mode = 'narration') => {
     setSelectedStudioArtifact(artifact);
+    setSelectedStudioMode(mode);
     setActiveTab('ai_studio');
   };
 
   const renderContent = () => {
-    const sources = { overview: Object.keys(loading), artifacts: ['artifacts'], curation_artifacts: ['artifacts'], museums: ['museums'], spaces: ['museums'], users: [], transactions: [], tours: ['tours'], reviews: ['reviews'], review_moderation: ['reviews'], support: ['systemCases'], curation_queue: ['curationQueue'], submission_status: ['curationQueue'] }[activeTab] || [];
+    const sources = { overview: Object.keys(loading), artifacts: ['artifacts'], curation_artifacts: ['artifacts'], ai_studio: ['museums', 'artifacts'], museums: ['museums'], spaces: ['museums'], users: [], transactions: [], tours: ['tours'], reviews: ['reviews'], review_moderation: ['reviews'], support: ['systemCases'], curation_queue: ['curationQueue'], submission_status: ['curationQueue'] }[activeTab] || [];
     if (sources.some(key => loading[key])) return <p role="status">Đang tải dữ liệu…</p>;
     if (sources.some(key => dataErrors[key])) return <p role="alert">Chưa tải được dữ liệu cho màn hình này. Hãy thử lại bằng nút phía trên.</p>;
     if (activeTab === 'audit') return <p role="status">Máy chủ chưa cung cấp API nhật ký hệ thống.</p>;
@@ -58,7 +60,7 @@ export default function App() {
       case 'curation_artifacts':
         return <ArtifactList onOpenAIStudio={handleOpenAIStudio} />;
       case 'ai_studio':
-        return <AIContentStudio initialArtifact={selectedStudioArtifact} onOpenQuestionBank={drafts => { setQuestionDrafts(drafts); setActiveTab('question_bank'); }} />;
+        return <AIContentStudio initialArtifact={selectedStudioArtifact} initialMode={selectedStudioMode} onOpenQuestionBank={drafts => { setQuestionDrafts(drafts); setActiveTab('question_bank'); }} />;
       case 'curation_queue':
         return <CurationCenter />;
       case 'submission_status':
@@ -75,7 +77,7 @@ export default function App() {
       case 'topics':
         return ['administrator', 'museumStaff'].includes(currentRole) ? <TopicManager key={currentMuseum?.id} /> : null;
       case 'question_bank':
-        return ['administrator', 'museumStaff', 'curator'].includes(currentRole) ? <QuestionBank key={currentMuseum?.id} imported={questionDrafts} /> : null;
+        return ['administrator', 'museumStaff', 'curator'].includes(currentRole) ? <QuestionBank key={currentMuseum?.id} imported={questionDrafts} onOpenAI={artifact => handleOpenAIStudio(artifact, 'quiz')} /> : null;
       case 'badges':
         return currentRole === 'administrator' ? <BadgeManager /> : null;
       case 'users':
