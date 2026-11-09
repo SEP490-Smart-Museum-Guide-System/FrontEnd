@@ -9,6 +9,8 @@ import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import {
   Landmark,
+  ExternalLink,
+  Navigation,
   Building2,
   Layers,
   MapPin,
@@ -23,6 +25,8 @@ import {
   Globe
 } from 'lucide-react';
 import MuseumMapPreview from './MuseumMapPreview';
+import MuseumStaffAssignModal from './MuseumStaffAssignModal';
+import { ShieldCheck } from 'lucide-react';
 
 export default function MuseumManager() {
   const {
@@ -44,6 +48,8 @@ export default function MuseumManager() {
   const [isEditingMuseum, setIsEditingMuseum] = useState(false);
   const [isAddingMuseum, setIsAddingMuseum] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isAssigningStaff, setIsAssigningStaff] = useState(false);
+  const [assignedStaff, setAssignedStaff] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newCoverFile, setNewCoverFile] = useState(null);
@@ -66,6 +72,21 @@ export default function MuseumManager() {
   const activeMuseum = currentRole === 'museumStaff'
     ? currentMuseum
     : museums.find(m => m.id === selectedMuseumId) || museums[0];
+
+  // Tải danh sách nhân viên phụ trách bảo tàng
+  const loadAssignedStaff = async () => {
+    if (!activeMuseum?.id) return;
+    try {
+      const data = await backend(`admin/assignments?museumId=${activeMuseum.id}`);
+      setAssignedStaff(Array.isArray(data) ? data : []);
+    } catch {
+      setAssignedStaff([]);
+    }
+  };
+
+  useEffect(() => {
+    loadAssignedStaff();
+  }, [activeMuseum?.id]);
 
   const [structure, setStructure] = useState({ id: null, buildings: [], loading: false, error: '' });
   useEffect(() => {
@@ -179,10 +200,10 @@ export default function MuseumManager() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }} className="font-serif">
-            Cấu Trúc Không Gian & Phòng Trưng Bày
+            Quản lý bảo tàng
           </h2>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-500)', marginTop: '4px' }}>
-            Quản lý thông tin bảo tàng, không gian trưng bày và trạng thái hiển thị cho khách trên Google Maps.
+            Quản lý thông tin cơ bản, trạng thái hoạt động và phân công nhân viên phụ trách bảo tàng.
           </p>
         </div>
 
@@ -200,10 +221,11 @@ export default function MuseumManager() {
           <button
             type="button"
             disabled={!activeMuseum}
-            onClick={() => { selectMuseum(activeMuseum.id); setActiveTab('indoor_maps'); }}
+            onClick={() => { selectMuseum(activeMuseum.id); setActiveTab('spaces'); }}
             className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Plus size={16} /> Quản lý phòng & bản đồ
+            <FolderTree size={16} /> Cấu trúc bảo tàng
           </button>
         </div>
       </div>
@@ -247,11 +269,7 @@ export default function MuseumManager() {
         </div>
       )}
 
-      <MuseumMapPreview
-        museums={museums}
-        currentRole={currentRole}
-        onToggleVisibility={toggleMuseumGoogleMapsVisibility}
-      />
+
 
       {!activeMuseum && <div className="card" style={{ padding: 24 }}>Chưa có bảo tàng để hiển thị. Hãy thêm bảo tàng hoặc thử tải lại dữ liệu.</div>}
       {activeMuseum && <>
@@ -283,6 +301,17 @@ export default function MuseumManager() {
             </div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-600)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <MapPin size={14} color="var(--color-burgundy-700)" /> {activeMuseum?.address}
+              {activeMuseum?.address && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeMuseum.address)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '0.75rem', color: 'var(--color-burgundy-700)', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none', background: '#FDF2F2', padding: '2px 8px', borderRadius: '4px', fontWeight: '500' }}
+                  title="Mở chỉ đường trên Google Maps"
+                >
+                  <Navigation size={12} /> Chỉ đường <ExternalLink size={11} />
+                </a>
+              )}
               {activeMuseum?.openingHours && (
                 <span style={{ marginLeft: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <Clock size={13} color="var(--color-gold-600)" /> {activeMuseum?.openingHours}
@@ -303,6 +332,38 @@ export default function MuseumManager() {
                 } catch (e) { showToast(e.message, 'error'); } finally { setIsSubmitting(false); }
               }}>Gỡ ảnh bảo tàng</button>
             </>}
+            {/* Hiển thị nhân viên phụ trách */}
+            <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
+              <div style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-charcoal-800)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={16} color="var(--color-gold-600)" />
+                Nhân viên phụ trách ({assignedStaff.length}):
+              </div>
+              {assignedStaff.length === 0 ? (
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)', fontStyle: 'italic' }}>
+                  Chưa có nhân viên nào được phân công. Bấm "Phân công nhân viên" để gán.
+                </span>
+              ) : (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {assignedStaff.map(a => (
+                    <span
+                      key={a.id}
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        background: '#F1F5F9',
+                        color: 'var(--color-charcoal-700)',
+                        border: '1px solid #E2E8F0',
+                        fontWeight: '500'
+                      }}
+                    >
+                      👤 {a.userName || a.userEmail || `Staff #${a.userId?.substring(0, 6)}`}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
               {(currentRole === 'museumStaff' || currentRole === 'administrator') && (
                 <button
@@ -310,9 +371,27 @@ export default function MuseumManager() {
                   type="button"
                   onClick={handleOpenEditMuseum}
                 >
-                  <Edit3 size={14} /> Chỉnh sửa thông tin bảo tàng
+                  <Edit3 size={14} /> Chỉnh sửa thông tin
                 </button>
               )}
+              {currentRole === 'administrator' && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  onClick={() => setIsAssigningStaff(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Users size={14} /> Phân công nhân viên
+                </button>
+              )}
+              <button
+                className="btn btn-secondary btn-sm"
+                type="button"
+                onClick={() => { selectMuseum(activeMuseum.id); setActiveTab('spaces'); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FolderTree size={14} /> Cấu trúc không gian &rarr;
+              </button>
               {currentRole === 'administrator' && (
                 <button
                   className="btn btn-sm"
@@ -336,87 +415,7 @@ export default function MuseumManager() {
         </div>
       </div>
 
-      {/* Spatial structure comes from the museum API. */}
-      {structure.loading && <p role="status">Đang tải cấu trúc bảo tàng…</p>}
-      {structure.error && <p role="alert">{structure.error}</p>}
-      {!structure.loading && !structure.error && !buildings.length && <p>Chưa có cấu trúc phòng trưng bày.</p>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {buildings.map(bld => (
-          <div key={bld.id} className="card">
-            <div className="card-header" style={{ background: '#FAF7F2' }}>
-              <div className="card-title">
-                <Building2 size={20} color="var(--color-burgundy-700)" />
-                <span>{bld.name}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)', fontWeight: 'normal' }}>
-                  (Mã: {bld.code})
-                </span>
-              </div>
-              <span style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', fontWeight: '500' }}>
-                {bld.floors?.length || 0} Tầng không gian
-              </span>
-            </div>
 
-            <div className="card-body" style={{ padding: '20px 24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {bld.floors?.map(flr => (
-                  <div key={flr.id} style={{ background: '#FAF8F5', padding: '16px 20px', borderRadius: '10px', border: '1px solid var(--color-paper-border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FolderTree size={16} color="var(--color-gold-600)" />
-                        <h4 style={{ fontSize: '0.9375rem', fontWeight: '700', color: 'var(--color-charcoal-900)' }}>
-                          {flr.name}
-                        </h4>
-                      </div>
-                      <span style={{ fontSize: '0.75rem', background: '#E2E8F0', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
-                        {flr.galleries?.length || 0} Phòng trưng bày
-                      </span>
-                    </div>
-
-                    {/* Galleries Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-                      {flr.galleries?.map(gal => {
-                        const countInGal = artifacts.filter(a => a.galleryId === gal.id).length;
-                        return (
-                          <div
-                            key={gal.id}
-                            style={{
-                              background: '#FFFFFF',
-                              padding: '14px 16px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--color-paper-border)',
-                              boxShadow: 'var(--shadow-sm)'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                              <strong style={{ fontSize: '0.875rem', color: 'var(--color-burgundy-900)' }}>
-                                {gal.name}
-                              </strong>
-                              <span style={{ fontSize: '0.675rem', fontFamily: 'monospace', background: '#F1F5F9', padding: '2px 6px', borderRadius: '4px' }}>
-                                {gal.code}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)', marginBottom: '8px' }}>
-                              {gal.description}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
-                              <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-charcoal-700)' }}>
-                                🏺 {countInGal} Hiện vật
-                              </span>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--color-success)', fontWeight: '600' }}>
-                                Phòng trưng bày
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
 
       </>}
 
@@ -603,6 +602,15 @@ export default function MuseumManager() {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Modal Phân công nhân viên */}
+      {isAssigningStaff && activeMuseum && (
+        <MuseumStaffAssignModal
+          museum={activeMuseum}
+          onClose={() => setIsAssigningStaff(false)}
+          onAssigned={loadAssignedStaff}
+        />
       )}
 
       {/* Delete/Deactivate Confirmation Modal */}

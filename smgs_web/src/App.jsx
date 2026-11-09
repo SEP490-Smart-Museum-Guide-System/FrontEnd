@@ -13,6 +13,7 @@ import AIContentStudio from './components/ai_studio/AIContentStudio';
 import CurationCenter from './components/curation/CurationCenter';
 import SubmissionStatus from './components/curation/SubmissionStatus';
 import MuseumManager from './components/museums/MuseumManager';
+import MuseumStructureTree from './components/museums/MuseumStructureTree';
 
 import TourManager from './components/tours/TourManager';
 import ReviewManager from './components/reviews/ReviewManager';
@@ -50,8 +51,9 @@ export default function App() {
       case 'indoor_maps':
         return <IndoorMapManager />;
       case 'museums':
-      case 'spaces':
         return <MuseumManager />;
+      case 'spaces':
+        return <MuseumStructureTree />;
       case 'artifacts':
       case 'curation_artifacts':
         return <ArtifactList onOpenAIStudio={handleOpenAIStudio} />;

@@ -1,0 +1,442 @@
+# GHI CHÚ TỔNG HỢP – CẢI TIẾN QUẢN LÝ BẢO TÀNG VÀ HIỆN VẬT
+
+**Dự án:** SEP490 – SMGS (Smart Museum Guide System)  
+**Ngày ghi nhận:** 09/11/2026  
+**Trạng thái:** Đã thống nhất phương án thiết kế
+
+---
+
+## 1. Chỉnh sửa chức năng Thêm hiện vật
+
+### 1.1. Vấn đề hiện tại
+
+Form "Thêm hiện vật" đang có các trường:
+
+- Tên hiện vật
+- Mã hiện vật
+- Bảo tàng
+- Phòng trưng bày
+- Quyền truy cập
+
+### 1.2. Yêu cầu thay đổi
+
+**Loại bỏ trường "Quyền truy cập" khỏi form Thêm hiện vật.**
+
+Chi tiết:
+- Xóa dropdown "Quyền truy cập" (hiện mặc định là "Miễn phí").
+- Điều chỉnh lại giao diện để không xuất hiện khoảng trống sau khi xóa.
+- Kiểm tra frontend và backend liên quan đến trường này.
+- Không tự ý xóa cột trong database nếu các chức năng khác vẫn đang sử dụng.
+- Giữ nguyên các trường còn lại.
+
+Các chức năng quản lý ảnh, âm thanh, mô hình 3D và thuyết minh hiện vật tiếp tục được xử lý trong trang chi tiết hiện vật.
+
+---
+
+## 2. Chức năng Tạo bảo tàng
+
+### 2.1. Đánh giá giao diện hiện tại
+
+Giao diện "Thêm Bảo Tàng Mới Vào Hệ Thống" hiện tại tương đối hợp lý.
+
+Các trường được giữ nguyên:
+
+1. Tên bảo tàng.
+2. Tỉnh / Thành phố.
+3. Giờ mở cửa.
+4. Giờ đóng cửa.
+5. Ngày mở cửa trong tuần.
+6. Địa chỉ cụ thể.
+7. Vĩ độ (Latitude).
+8. Kinh độ (Longitude).
+9. Ảnh đại diện.
+10. Giới thiệu bảo tàng.
+
+### 2.2. Những thay đổi đề xuất
+
+- Không thêm trường "Số tòa nhà".
+- Không thêm trường "Số tầng".
+- Không yêu cầu tạo phòng trưng bày trong lúc tạo bảo tàng.
+- Không yêu cầu upload sơ đồ tầng trong lúc tạo bảo tàng.
+- Có thể bổ sung chức năng chọn vị trí trực tiếp trên bản đồ để tự động lấy vĩ độ và kinh độ.
+
+**Nguyên tắc:** Form tạo bảo tàng chỉ tập trung vào thông tin cơ bản của bảo tàng.
+
+---
+
+## 3. Tự động tạo cấu trúc mặc định khi tạo bảo tàng
+
+### 3.1. Quyết định đã thống nhất
+
+Khi System Admin tạo một bảo tàng mới, hệ thống phải tự động tạo:
+
+- 01 tòa nhà mặc định: **Tòa nhà chính**.
+- 01 tầng mặc định thuộc tòa nhà đó: **Tầng trệt**.
+
+Cấu trúc:
+
+Bảo tàng mới  
+└── Tòa nhà chính  
+　　└── Tầng trệt
+
+### 3.2. Quy tắc
+
+- Mỗi bảo tàng mới luôn có ít nhất một tòa nhà và một tầng sau khi khởi tạo thành công.
+- Không tạo phòng trưng bày mặc định.
+- Không tạo sơ đồ tầng mặc định.
+- Không bắt buộc phải có sơ đồ tầng mới được tạo phòng trưng bày.
+- Museum Staff có thể bổ sung tòa nhà và tầng sau này.
+- Không cần yêu cầu System Admin nhập số lượng tòa nhà hoặc tầng.
+
+### 3.3. Yêu cầu kỹ thuật
+
+Việc tạo bảo tàng, tòa nhà mặc định và tầng mặc định nên thực hiện trong cùng một database transaction.
+
+Nếu một bước thất bại, toàn bộ transaction phải rollback để tránh trường hợp bảo tàng được tạo nhưng thiếu cấu trúc mặc định.
+
+Lưu ý: Cần kiểm tra cấu trúc database hiện tại trước khi triển khai, tránh tạo dữ liệu trùng lặp.
+
+---
+
+## 4. Cây phân cấp quản lý bảo tàng
+
+### 4.1. Cấu trúc thống nhất
+
+Bảo tàng  
+└── Tòa nhà  
+　　└── Tầng  
+　　　　└── Phòng trưng bày  
+　　　　　　└── Hiện vật
+
+### 4.2. Quy tắc quan hệ
+
+- Một bảo tàng có thể có nhiều tòa nhà.
+- Một tòa nhà thuộc một bảo tàng.
+- Một tòa nhà có thể có nhiều tầng.
+- Một tầng thuộc một tòa nhà.
+- Một tầng có thể có nhiều phòng trưng bày.
+- Một phòng trưng bày thuộc một tầng.
+- Hiện vật có thể được gán vào phòng trưng bày.
+- Mỗi tầng có thể được liên kết với sơ đồ bản đồ trong nhà.
+
+### 4.3. Điều kiện tạo dữ liệu
+
+- Muốn tạo tòa nhà: Bảo tàng phải tồn tại.
+- Muốn tạo tầng: Tòa nhà phải tồn tại.
+- Muốn tạo phòng trưng bày: Tầng phải tồn tại.
+- Muốn tạo sơ đồ tầng: Tầng phải tồn tại.
+- Muốn đặt vị trí hiện vật trên sơ đồ: Cần có sơ đồ phù hợp và dữ liệu vị trí liên quan.
+
+**Lưu ý:** Cấu trúc phân cấp được giữ cố định ở database nhưng giao diện phải đơn giản, không bắt người dùng tạo lại các đối tượng mặc định.
+
+---
+
+## 5. Phân chia trách nhiệm System Admin và Museum Staff
+
+### 5.1. System Admin
+
+System Admin chịu trách nhiệm quản trị hệ thống ở cấp toàn quốc.
+
+Các chức năng:
+
+- Tạo bảo tàng mới.
+- Chỉnh sửa thông tin cơ bản của bảo tàng.
+- Quản lý trạng thái hoạt động của bảo tàng.
+- Vô hiệu hóa bảo tàng.
+- Quản lý tài khoản và phân quyền.
+- Phân công Museum Staff phụ trách bảo tàng.
+- Xem và giám sát dữ liệu bảo tàng trên toàn hệ thống.
+
+System Admin không trực tiếp thực hiện các công việc vận hành thường ngày như:
+
+- Tạo tòa nhà thủ công.
+- Tạo tầng thủ công.
+- Tạo phòng trưng bày.
+- Upload sơ đồ tầng.
+- Thiết lập vị trí phòng và hiện vật trên bản đồ.
+
+Ngoại lệ: Hệ thống tự tạo tòa nhà và tầng mặc định khi System Admin tạo bảo tàng.
+
+### 5.2. Museum Staff
+
+Museum Staff chịu trách nhiệm quản lý cấu trúc và nội dung của bảo tàng được phân công.
+
+Các chức năng:
+
+- Xem bảo tàng mình phụ trách.
+- Thêm, sửa và quản lý tòa nhà.
+- Thêm, sửa và quản lý tầng.
+- Thêm, sửa và quản lý phòng trưng bày.
+- Upload và quản lý sơ đồ tầng.
+- Thiết lập vị trí phòng trưng bày trên sơ đồ.
+- Thiết lập vị trí hiện vật.
+- Quản lý nội dung hiện vật theo quyền được cấp.
+
+Museum Staff chỉ được thao tác với bảo tàng được phân công.
+
+### 5.3. Nguyên tắc phân quyền
+
+- System Admin quản lý hệ thống và phân công nhân sự.
+- Museum Staff quản lý cấu trúc và vận hành bảo tàng.
+- Backend phải kiểm tra quyền truy cập API.
+- Không được chỉ ẩn các nút trên frontend mà bỏ qua kiểm tra quyền ở backend.
+- Cần kiểm tra quyền sở hữu hoặc quyền được phân công đối với từng bảo tàng.
+
+Trong tương lai có thể bổ sung vai trò Museum Manager để phân biệt người quản lý cấu trúc với nhân viên nhập liệu. Tuy nhiên, chưa bắt buộc triển khai thêm vai trò này trong phạm vi hiện tại.
+
+---
+
+## 6. Cải tiến giao diện System Admin
+
+### 6.1. Giao diện hiện tại
+
+Trang "Cấu Trúc Không Gian & Phòng Trưng Bày" đang trộn lẫn nhiều chức năng:
+
+- Quản lý bảo tàng.
+- Hiển thị điểm đến Google Maps.
+- Quản lý phòng trưng bày.
+- Quản lý cấu trúc bảo tàng.
+
+Điều này khiến giao diện chưa rõ trách nhiệm giữa System Admin và Museum Staff.
+
+### 6.2. Phương án đề xuất
+
+Đổi tên menu:
+
+**"Bảo tàng & Google Maps" → "Quản lý bảo tàng".**
+
+Trang này chỉ nên hiển thị:
+
+- Danh sách bảo tàng.
+- Thông tin cơ bản.
+- Ảnh đại diện.
+- Địa chỉ.
+- Trạng thái hoạt động.
+- Nhân viên phụ trách.
+- Chức năng thêm bảo tàng.
+- Chức năng chỉnh sửa bảo tàng.
+- Chức năng phân công nhân viên.
+- Chức năng xem chi tiết.
+- Chức năng vô hiệu hóa bảo tàng.
+
+Không hiển thị các form tạo tòa nhà, tầng và phòng tại trang System Admin.
+
+### 6.3. Phần bản đồ
+
+Dự án sử dụng OpenStreetMap cho bản đồ và Google Maps để mở chỉ đường ngoài ứng dụng.
+
+Vì vậy:
+
+- Không nên đặt tên menu khiến người dùng hiểu rằng hệ thống sử dụng Google Maps làm bản đồ chính.
+- Có thể chuyển các chức năng xem vị trí và chỉ đường vào trang chi tiết bảo tàng.
+- Không cần hiển thị khu vực thông tin Google Maps quá lớn trong trang quản lý.
+
+---
+
+## 7. Cải tiến giao diện Quản lý phòng và bản đồ trong nhà
+
+### 7.1. Vấn đề hiện tại
+
+Giao diện đang có nhiều khu vực chức năng:
+
+- Quản lý tòa nhà, tầng và phòng trưng bày.
+- Phân công nhân viên quản lý bản đồ.
+- Tạo tòa nhà và tầng thực tế.
+- Chọn sơ đồ hiện có.
+- Tạo sơ đồ mới.
+
+Các form được hiển thị đồng thời khiến giao diện dài, rối và khó xác định thứ tự thao tác.
+
+Đặc biệt, chức năng "Thêm tòa nhà" đang xuất hiện ở nhiều vị trí.
+
+### 7.2. Phương án đã chọn
+
+Chuyển chức năng quản lý cấu trúc sang Museum Staff.
+
+Thiết kế một trang:
+
+**"Cấu trúc bảo tàng"**
+
+Sử dụng giao diện dạng cây phân cấp:
+
+Bảo tàng thành phố HCM  
+└── Tòa nhà chính  
+　　├── Tầng trệt  
+　　│　├── Phòng lịch sử  
+　　│　└── Phòng văn hóa  
+　　└── Tầng 1  
+　　　　└── Phòng trưng bày A
+
+Các phòng ở trên chỉ là dữ liệu minh họa, không phải dữ liệu cần tự động tạo.
+
+### 7.3. Yêu cầu giao diện
+
+- Hiển thị danh sách tòa nhà.
+- Cho phép mở rộng hoặc thu gọn từng tòa nhà.
+- Hiển thị các tầng thuộc tòa nhà.
+- Hiển thị các phòng thuộc tầng.
+- Có nút thêm tòa nhà.
+- Có nút thêm tầng trong từng tòa nhà.
+- Có nút thêm phòng trong từng tầng.
+- Có chức năng chỉnh sửa và xóa theo từng đối tượng.
+- Có chức năng quản lý sơ đồ riêng cho từng tầng.
+- Sử dụng modal hoặc giao diện riêng cho thao tác thêm/sửa.
+- Không hiển thị tất cả form nhập liệu cùng lúc.
+- Có trạng thái rỗng và hướng dẫn khi chưa có phòng hoặc sơ đồ.
+
+---
+
+## 8. Quản lý bản đồ trong nhà
+
+### 8.1. Nguyên tắc
+
+Bản đồ trong nhà được quản lý theo tầng.
+
+Museum Staff sẽ:
+
+1. Chọn tòa nhà.
+2. Chọn tầng.
+3. Upload sơ đồ tầng.
+4. Thiết lập vị trí phòng trưng bày.
+5. Thiết lập vị trí hiện vật.
+6. Lưu cấu hình bản đồ.
+
+### 8.2. Yêu cầu
+
+- Không bắt buộc upload sơ đồ khi tạo tầng.
+- Có thể bổ sung sơ đồ sau.
+- Mỗi sơ đồ cần liên kết đúng tầng.
+- Khi thay đổi hoặc xóa sơ đồ cần kiểm tra dữ liệu vị trí liên quan.
+- Không được làm mất dữ liệu phòng trưng bày và hiện vật khi thay đổi sơ đồ.
+
+---
+
+## 9. Phân công Museum Staff
+
+### 9.1. Vấn đề hiện tại
+
+Giao diện đang yêu cầu System Admin nhập mã UUID của tài khoản nhân viên để phân công.
+
+Cách này không thân thiện với người sử dụng.
+
+### 9.2. Đề xuất cải tiến
+
+Thay ô nhập UUID bằng chức năng:
+
+- Tìm kiếm nhân viên theo tên hoặc email.
+- Hiển thị danh sách tài khoản phù hợp.
+- Chọn nhân viên.
+- Nhấn "Phân công".
+
+Backend vẫn sử dụng ID/UUID của nhân viên để lưu quan hệ.
+
+Không yêu cầu System Admin phải biết hoặc nhập thủ công UUID.
+
+---
+
+## 10. Quy tắc xóa và bảo toàn dữ liệu
+
+### 10.1. Xóa tòa nhà
+
+Nếu tòa nhà đang chứa tầng, phòng hoặc dữ liệu liên quan thì không được xóa trực tiếp mà chưa xử lý các quan hệ phụ thuộc.
+
+### 10.2. Xóa tầng
+
+Nếu tầng đang chứa phòng trưng bày, sơ đồ hoặc vị trí hiện vật thì cần kiểm tra và xử lý dữ liệu trước khi xóa.
+
+### 10.3. Xóa phòng trưng bày
+
+Nếu phòng đang chứa hiện vật, hệ thống cần yêu cầu chuyển hiện vật hoặc xử lý quan hệ trước khi xóa.
+
+### 10.4. Nguyên tắc chung
+
+- Không tự động xóa dây chuyền dữ liệu quan trọng.
+- Cần có xác nhận cho thao tác nguy hiểm.
+- Ưu tiên bảo toàn dữ liệu hiện vật.
+- Kiểm tra các quan hệ và ràng buộc database hiện tại.
+- Cân nhắc soft delete hoặc vô hiệu hóa khi phù hợp.
+
+---
+
+## 11. Luồng hoạt động cuối cùng
+
+### Giai đoạn 1 – System Admin
+
+1. System Admin mở trang Quản lý bảo tàng.
+2. Chọn "Thêm bảo tàng mới".
+3. Nhập thông tin cơ bản.
+4. Nhấn "Tạo bảo tàng mới".
+5. Backend tạo bảo tàng.
+6. Hệ thống tự tạo "Tòa nhà chính".
+7. Hệ thống tự tạo "Tầng trệt" thuộc tòa nhà chính.
+8. System Admin phân công Museum Staff.
+
+### Giai đoạn 2 – Museum Staff
+
+1. Museum Staff đăng nhập.
+2. Truy cập bảo tàng được phân công.
+3. Mở trang "Cấu trúc bảo tàng".
+4. Xem tòa nhà chính và tầng trệt đã có sẵn.
+5. Tạo thêm tòa nhà nếu cần.
+6. Tạo thêm tầng nếu cần.
+7. Tạo các phòng trưng bày.
+8. Upload sơ đồ cho từng tầng.
+9. Thiết lập vị trí phòng và hiện vật.
+10. Tiếp tục quản lý nội dung bảo tàng.
+
+---
+
+## 12. Các yêu cầu triển khai dành cho Codex
+
+Khi bắt đầu chỉnh sửa dự án, Codex cần:
+
+1. Quét cấu trúc frontend và backend hiện tại.
+2. Kiểm tra các bảng database liên quan đến Museum, Building, Floor, Room, Map và Artifact.
+3. Kiểm tra các API tạo bảo tàng, tòa nhà, tầng và phòng.
+4. Kiểm tra cơ chế phân quyền System Admin và Museum Staff.
+5. Tái sử dụng các chức năng và API hiện có nếu phù hợp.
+6. Không tạo bảng hoặc API trùng chức năng.
+7. Triển khai tự động tạo tòa nhà chính và tầng trệt khi tạo bảo tàng.
+8. Chuyển chức năng quản lý cấu trúc sang Museum Staff.
+9. Thiết kế lại giao diện quản lý theo dạng cây phân cấp.
+10. Cải tiến chức năng phân công nhân viên.
+11. Loại bỏ trường Quyền truy cập khỏi form Thêm hiện vật.
+12. Kiểm tra toàn bộ luồng hoạt động sau khi thay đổi.
+13. Không tự ý xóa dữ liệu hiện có hoặc thay đổi database gây mất dữ liệu.
+
+---
+
+## 13. Những vấn đề chưa chốt hoặc cần kiểm tra
+
+- Có cần hỗ trợ khu trưng bày ngoài trời không thuộc tòa nhà hay không.
+- Có cần vai trò Museum Manager riêng trong tương lai không.
+- Museum Staff có được phép chỉnh sửa một phần thông tin cơ bản của bảo tàng hay không.
+- Cách xử lý xóa, vô hiệu hóa và chuyển dữ liệu khi tòa nhà hoặc tầng đã có phòng và hiện vật.
+- Database hiện tại đã hỗ trợ đầy đủ quan hệ Museum → Building → Floor → Room hay chưa.
+- Quy tắc xử lý các bảo tàng cũ chưa có tòa nhà và tầng mặc định.
+- Cơ chế quản lý nhiều nhân viên trong cùng một bảo tàng.
+
+Các vấn đề này cần được kiểm tra trước khi triển khai, không nên tự ý quyết định thay đổi database.
+
+---
+
+## 14. Kết luận – Phương án đã thống nhất
+
+**System Admin:**
+- Tạo bảo tàng.
+- Quản lý thông tin và trạng thái bảo tàng.
+- Phân công nhân viên.
+- Giám sát toàn bộ hệ thống.
+
+**Hệ thống tự động:**
+- Tạo 1 Tòa nhà chính.
+- Tạo 1 Tầng trệt thuộc Tòa nhà chính.
+
+**Museum Staff:**
+- Quản lý tòa nhà.
+- Quản lý tầng.
+- Quản lý phòng trưng bày.
+- Quản lý sơ đồ trong nhà.
+- Quản lý vị trí và nội dung hiện vật.
+
+**Nguyên tắc thiết kế:** Đơn giản hóa thao tác cho người dùng, phân quyền rõ ràng, bảo toàn dữ liệu hiện có và đảm bảo khả năng mở rộng khi hệ thống quản lý nhiều bảo tàng.

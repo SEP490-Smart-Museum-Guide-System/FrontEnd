@@ -46,7 +46,6 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
             {form.galleryId && !galleries.some(g => String(g.id) === String(form.galleryId)) && <option value={form.galleryId}>{artifact?.galleryName || `Phòng #${form.galleryId}`}</option>}
             {galleries.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select></label>
-          <label className="form-group">Quyền truy cập<select className="form-select" value={form.accessLevel} onChange={e => change('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Trả phí</option></select></label>
           <p>Ảnh, âm thanh và mô hình 3D được quản lý trong chi tiết hiện vật. Thuyết minh được gửi kiểm duyệt riêng; vị trí được thiết lập trên bản đồ bảo tàng.</p>
         </div>
         <div className="modal-footer"><button className="btn btn-secondary" type="button" disabled={busy} onClick={close}>Hủy</button><button className="btn btn-primary" disabled={busy || !form.museumId || !form.name.trim()}>{busy ? 'Đang lưu…' : 'Lưu hiện vật'}</button></div>

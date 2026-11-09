@@ -34,7 +34,7 @@ export default function Sidebar() {
           title: 'Quản trị hệ thống',
           items: [
             { id: 'overview', label: 'Tổng quan hệ thống', icon: LayoutDashboard },
-            { id: 'museums', label: 'Bảo tàng & Google Maps', icon: Landmark },
+            { id: 'museums', label: 'Quản lý bảo tàng', icon: Landmark },
             { id: 'indoor_maps', label: 'Bản đồ trong bảo tàng', icon: Compass },
             { id: 'artifacts', label: 'Kho hiện vật', icon: Layers },
             { id: 'topics', label: 'Chủ đề hiện vật', icon: Layers },
@@ -101,7 +101,7 @@ export default function Sidebar() {
           title: 'Bàn làm việc Nghiệp vụ',
           items: [
             { id: 'overview', label: 'Bàn làm việc', icon: LayoutDashboard },
-            { id: 'spaces', label: 'Thông tin & bản đồ bảo tàng', icon: Building2 },
+            { id: 'spaces', label: 'Cấu trúc bảo tàng', icon: Building2 },
             { id: 'indoor_maps', label: 'Bản đồ trong bảo tàng', icon: Compass },
             { id: 'artifacts', label: 'Quản lý Hiện vật & QR', icon: Layers },
             { id: 'topics', label: 'Chủ đề hiện vật', icon: Layers },
