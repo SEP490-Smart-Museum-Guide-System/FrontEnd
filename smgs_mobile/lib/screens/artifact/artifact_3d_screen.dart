@@ -6,6 +6,7 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 import '../../models/artifact.dart';
 import '../../widgets/museum_ui.dart';
+import '../../widgets/sketchfab_viewer.dart';
 
 class Artifact3DScreen extends StatefulWidget {
   const Artifact3DScreen({super.key, required this.artifact});
@@ -19,6 +20,8 @@ class Artifact3DScreen extends StatefulWidget {
 class _Artifact3DScreenState extends State<Artifact3DScreen> {
   int _resetKey = 0;
   bool _autoRotate = true;
+  bool get _isSketchfab => RegExp(r'^https://sketchfab\.com/models/[0-9a-f]{32}/embed$', caseSensitive: false)
+      .hasMatch(widget.artifact.modelUrl ?? '');
 
   bool get _isTest {
     if (kIsWeb) return false;
@@ -85,7 +88,9 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
                             ),
                           ),
                         )
-                      : ModelViewer(
+                      : _isSketchfab
+                          ? SketchfabViewer(url: widget.artifact.modelUrl!.trim())
+                          : ModelViewer(
                           key: ValueKey('model_viewer_$_resetKey'),
                           src: widget.artifact.modelUrl!.trim(),
                           alt: 'Mô hình 3D ${widget.artifact.name}',
@@ -101,7 +106,7 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
                         ),
                 ),
               ),
-              Positioned(
+              if (!_isSketchfab) Positioned(
                 left: 16,
                 right: 16,
                 bottom: 14,

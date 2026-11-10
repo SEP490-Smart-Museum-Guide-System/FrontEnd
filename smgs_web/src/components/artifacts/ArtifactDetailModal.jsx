@@ -9,6 +9,7 @@ import { getPublishedArtifactContentApi } from '../../services/contentSubmission
 import { generateSpeechApi } from '../../services/ttsApi';
 import { uploadReferenceImageApi, deleteReferenceImagesApi, checkVisionHealthApi } from '../../services/visionApi';
 import { checkScanHealthApi, submitScanJobApi, getScanJobStatusApi, approveScanJobApi } from '../../services/scan3dApi';
+import ArtifactModelViewer from '../common/ArtifactModelViewer';
 import {
   X,
   QrCode,
@@ -684,15 +685,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     border: '1px solid var(--color-paper-border)',
                     position: 'relative'
                   }}>
-                    <model-viewer
-                      src={reconstructedGlbUrl || artifact.modelUrl}
-                      alt={artifact.name}
-                      auto-rotate
-                      camera-controls
-                      ar
-                      shadow-intensity="1"
-                      style={{ width: '100%', height: '100%' }}
-                    />
+                    <ArtifactModelViewer url={reconstructedGlbUrl || artifact.modelUrl} name={artifact.name} />
                     <div style={{
                       position: 'absolute',
                       bottom: '16px',

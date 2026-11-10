@@ -3,6 +3,7 @@ import { Field, ErrorNotice, useAction } from '../common/BusinessUI';
 import React, { useEffect, useState } from 'react';
 import MediaUpload from '../common/MediaUpload';
 import { mediaApi } from '../../services/mediaApi';
+import ArtifactModelViewer, { isSketchfabUrl } from '../common/ArtifactModelViewer';
 
 function Preview({ path, model = false }) {
   const [url, setUrl] = useState('');
@@ -16,13 +17,14 @@ function Preview({ path, model = false }) {
     return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [path]);
   if (!url) return <p role="status">{error || 'Đang tải xem trước…'}</p>;
-  return model ? <model-viewer src={url} camera-controls alt="Mô hình hiện vật" style={{ width: '100%', height: 300 }} />
+  return model ? <ArtifactModelViewer url={url} style={{ height: 300 }} />
     : <img src={url} alt="Ảnh hiện vật" style={{ maxWidth: 240, maxHeight: 180, objectFit: 'contain' }} />;
 }
 
 export default function ArtifactMediaPanel({ artifactId, readOnly }) {
   const [media, setMedia] = useState([]), [model, setModel] = useState(null), [error, setError] = useState('');
   const [version, setVersion] = useState(0), [busy, setBusy] = useState(false);
+  const [sketchfabUrl, setSketchfabUrl] = useState('');
   const path = `artifacts/${artifactId}`;
   useEffect(() => {
     if (!Number.isInteger(Number(artifactId)) || Number(artifactId) <= 0) return;
@@ -39,6 +41,13 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
     try { await mediaApi(endpoint, { method: 'DELETE' }); setVersion(v => v + 1); }
     catch (e) { setError(e.message); } finally { setBusy(false); }
   }
+  async function saveSketchfab(e) {
+    e.preventDefault(); setBusy(true); setError('');
+    try {
+      await backend(`${path}/model-3d/sketchfab`, { method: 'PUT', body: { url: sketchfabUrl.trim() } });
+      setSketchfabUrl(''); setVersion(v => v + 1);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
   return <section style={{ padding: 16, border: '1px solid var(--color-paper-border)', borderRadius: 12, marginBottom: 20 }}>
     <h3>Ảnh và mô hình hiện vật</h3>
     {error && <p role="alert">{error}</p>}
@@ -48,7 +57,8 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
       {!readOnly && <button type="button" disabled={busy} onClick={() => remove(`${path}/media/${item.id}`)}>Xóa ảnh</button>}
     </div>)}</div>
     {!readOnly && <MediaUpload path={`${path}/model-3d`} model label={model ? 'Thay mô hình' : 'Tải mô hình'} onSaved={() => setVersion(v => v + 1)} />}
-    {model && <>{!readOnly && <ModelSettings key={`${model.id}-${version}`} artifactId={artifactId} model={model} onSaved={() => setVersion(v => v + 1)} />}<Preview key={`${model.id}-${version}`} path={`${path}/model-3d/file`} model />
+    {!readOnly && <form onSubmit={saveSketchfab} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><input className="form-input" type="url" required placeholder="Link model hoặc embed Sketchfab" aria-label="Link Sketchfab" value={sketchfabUrl} onChange={e => setSketchfabUrl(e.target.value)} style={{ flex: 1, minWidth: 280 }} /><button type="submit" disabled={busy}>Gắn link 3D</button></form>}
+    {model && <>{!readOnly && <ModelSettings key={`${model.id}-${version}`} artifactId={artifactId} model={model} onSaved={() => setVersion(v => v + 1)} />}{isSketchfabUrl(model.modelUrl) ? <ArtifactModelViewer url={model.modelUrl} name={model.name} style={{ height: 300 }} /> : <Preview key={`${model.id}-${version}`} path={`${path}/model-3d/file`} model />}
       {!readOnly && <button type="button" disabled={busy} onClick={() => remove(`${path}/model-3d`)}>Xóa mô hình</button>}</>}
   </section>;
 }
