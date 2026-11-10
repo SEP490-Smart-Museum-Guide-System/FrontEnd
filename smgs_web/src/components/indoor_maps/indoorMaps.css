@@ -22,3 +22,6 @@
 .indoor-message { background: #edf8ee; color: #245c2e; border: 1px solid #a6caaa; }
 .indoor-page summary { cursor: pointer; font-weight: 600; }
 @media (max-width: 1000px) { .indoor-editor { grid-template-columns: 1fr; } }
+
+.indoor-management [role="tablist"] { border-bottom: 1px solid #ded5c9; padding-bottom: 10px; }
+.indoor-management [role="tab"][aria-selected="true"] { background: var(--color-burgundy-700, #6b2e2e); color: white; }

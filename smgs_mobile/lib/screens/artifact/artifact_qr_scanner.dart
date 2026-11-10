@@ -57,68 +57,9 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => MuseumPage(
-            back: true,
-            title: data['name'] as String,
-            subtitle: data['museumName'] as String,
-            children: [
-              const Notice(
-                'Đã ghi nhận lượt quét. Câu đố và điểm được hệ thống cập nhật nếu đủ điều kiện.',
-              ),
-              if (data['code'] != null) Text('Mã hiện vật: ${data['code']}'),
-              if (data['galleryId'] != null)
-                Text('Phòng trưng bày: ${data['galleryId']}'),
-              if ((data['contents'] as List).isEmpty)
-                const Notice('Hiện vật chưa có nội dung được xuất bản.'),
-              for (final content in data['contents'] as List) ...[
-                const SizedBox(height: 20),
-                Text(
-                  '${content['title']} (${content['languageCode']})',
-                  style: AppTextStyles.cardTitle,
-                ),
-                const SizedBox(height: 8),
-                SelectableText(
-                  content['description'] as String,
-                  style: AppTextStyles.bodyLarge,
-                ),
-              ],
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'Khám phá chi tiết hiện vật',
-                icon: Icons.auto_awesome,
-                onPressed: () {
-                  final contentsList = data['contents'] as List? ?? [];
-                  final firstContent = contentsList.isNotEmpty
-                      ? contentsList[0] as Map<String, dynamic>
-                      : null;
-                  final a = Artifact(
-                    id: data['id']?.toString() ?? '',
-                    name: data['name'] as String,
-                    category: 'Hiện vật di sản',
-                    museumId: data['museumId']?.toString() ?? '',
-                    imageUrl: Artifact.fromBackendJson(data).imageUrl,
-                    period: '',
-                    location:
-                        data['galleryName'] as String? ?? 'Phòng trưng bày',
-                    summary:
-                        firstContent?['title'] as String? ??
-                        data['name'] as String,
-                    story: firstContent?['description'] as String? ?? '',
-                    aiGuide: 'Hỏi Trợ lý AI về ${data['name']}',
-                    quizPrompt: 'Tìm hiểu về ${data['name']}',
-                    modelUrl: Artifact.fromBackendJson(data).modelUrl,
-                  );
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => ArtifactDetailScreen(
-                        artifact: a,
-                        museumName: data['museumName'] as String? ?? 'Bảo tàng',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+          builder: (_) => ArtifactDetailScreen(
+            artifact: Artifact.fromBackendJson(data),
+            museumName: data['museumName'] as String? ?? 'Bảo tàng',
           ),
         ),
       );

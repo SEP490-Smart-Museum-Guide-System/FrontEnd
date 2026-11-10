@@ -357,7 +357,7 @@ export default function MuseumManager() {
                         fontWeight: '500'
                       }}
                     >
-                      👤 {a.userName || a.userEmail || `Staff #${a.userId?.substring(0, 6)}`}
+                      👤 {a.userFullName || a.userEmail || `Staff #${a.userId?.substring(0, 6)}`}
                     </span>
                   ))}
                 </div>
