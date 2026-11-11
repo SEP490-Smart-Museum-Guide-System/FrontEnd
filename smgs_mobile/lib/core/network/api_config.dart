@@ -122,5 +122,5 @@ class ApiConfig {
   static String scanJobStatusUrl(String jobId) =>
       '$scanBaseUrl/api/v1/scans/$jobId';
   static String scanDownloadGlbUrl(String jobId) =>
-      '$scanBaseUrl/api/v1/scans/$jobId/model.glb';
+      '$scanBaseUrl/api/v1/scans/$jobId/model';
 }

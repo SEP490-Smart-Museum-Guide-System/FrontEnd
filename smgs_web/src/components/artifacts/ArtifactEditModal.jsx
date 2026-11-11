@@ -35,8 +35,8 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
       <div className="modal-header"><h3>{artifact?.id ? 'Chỉnh sửa hiện vật' : 'Thêm hiện vật'}</h3><button type="button" disabled={busy} onClick={close}>Đóng</button></div>
       <form onSubmit={save}>
         <div className="modal-body" style={{ display: 'grid', gap: 16 }}>
-          <label className="form-group">Tên hiện vật<input className="form-input" required value={form.name} onChange={e => change('name', e.target.value)} /></label>
-          <label className="form-group">Mã hiện vật<input className="form-input" value={form.code} onChange={e => change('code', e.target.value)} /></label>
+          <label className="form-group">Tên hiện vật<input className="form-input" required maxLength={200} value={form.name} onChange={e => change('name', e.target.value)} /></label>
+          <label className="form-group">Mã hiện vật<input className="form-input" maxLength={100} value={form.code} onChange={e => change('code', e.target.value)} /></label>
           <label className="form-group">Bảo tàng<select className="form-select" required disabled={!!artifact?.id || currentRole !== 'administrator'} value={form.museumId} onChange={e => setForm(prev => ({ ...prev, museumId: e.target.value, galleryId: '' }))}>
             <option value="">Chọn bảo tàng</option>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select></label>

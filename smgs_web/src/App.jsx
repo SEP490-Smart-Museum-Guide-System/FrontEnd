@@ -4,6 +4,7 @@ import TopicManager from './components/artifacts/TopicManager';
 import BadgeManager from './components/analytics/BadgeManager';
 import CommerceManager from './components/transactions/CommerceManager';
 import React, { useState } from 'react';
+import { ShieldAlert, CreditCard } from 'lucide-react';
 import { useApp } from './context/AppContext';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -41,9 +42,32 @@ export default function App() {
     const sources = { overview: Object.keys(loading), artifacts: ['artifacts'], curation_artifacts: ['artifacts'], ai_studio: ['museums', 'artifacts'], museums: ['museums'], spaces: ['museums'], users: [], transactions: [], tours: ['tours'], reviews: ['reviews'], review_moderation: ['reviews'], support: ['systemCases'], curation_queue: ['curationQueue'], submission_status: ['curationQueue'] }[activeTab] || [];
     if (sources.some(key => loading[key])) return <p role="status">Đang tải dữ liệu…</p>;
     if (sources.some(key => dataErrors[key])) return <p role="alert">Chưa tải được dữ liệu cho màn hình này. Hãy thử lại bằng nút phía trên.</p>;
-    if (activeTab === 'audit') return <p role="status">Máy chủ chưa cung cấp API nhật ký hệ thống.</p>;
-    if (activeTab === 'refunds') return <p role="status">Máy chủ chưa cung cấp API yêu cầu hoàn tiền. Chưa có dữ liệu để hiển thị.</p>;
-    if (activeTab === 'transactions' && currentRole === 'systemStaff') return <p role="status">API giao dịch hiện chưa hỗ trợ quyền Nhân viên hệ thống.</p>;
+    if (activeTab === 'audit') {
+      return (
+        <div className="card" style={{ padding: '40px 24px', textAlign: 'center', maxWidth: '640px', margin: '40px auto' }}>
+          <ShieldAlert size={40} color="var(--color-burgundy-700)" style={{ margin: '0 auto 16px' }} />
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-burgundy-900)', marginBottom: '8px' }}>
+            Nhật ký kiểm toán hệ thống
+          </h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-600)', lineHeight: '1.6', margin: 0 }}>
+            Máy chủ hiện chưa kích hoạt API nhật ký kiểm toán trực tiếp cho giao diện quản trị. Mọi hoạt động bảo mật và giao dịch vẫn được lưu vết độc lập trên hệ thống máy chủ.
+          </p>
+        </div>
+      );
+    }
+    if (activeTab === 'transactions' && currentRole === 'systemStaff') {
+      return (
+        <div className="card" style={{ padding: '40px 24px', textAlign: 'center', maxWidth: '640px', margin: '40px auto' }}>
+          <CreditCard size={40} color="var(--color-burgundy-700)" style={{ margin: '0 auto 16px' }} />
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-burgundy-900)', marginBottom: '8px' }}>
+            Đối soát giao dịch hệ thống
+          </h3>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-600)', lineHeight: '1.6', margin: 0 }}>
+            Theo quy định phân quyền, quyền Nhân viên hệ thống theo dõi và hỗ trợ khiếu nại qua mục "Hỗ trợ & khiếu nại". Báo cáo doanh thu và đối soát chi tiết được phân quyền cho Quản trị viên và Nhân viên bảo tàng phụ trách.
+          </p>
+        </div>
+      );
+    }
     if (!currentMuseum && ['artifacts', 'curation_artifacts', 'ai_studio', 'curation_queue', 'submission_status', 'tours', 'reviews', 'spaces', 'topics', 'question_bank'].includes(activeTab)) {
       return <p role="status">{loading.museums ? 'Đang tải bảo tàng…' : 'Chưa có bảo tàng để hiển thị. Hãy tải lại hoặc kiểm tra phân công tài khoản.'}</p>;
     }

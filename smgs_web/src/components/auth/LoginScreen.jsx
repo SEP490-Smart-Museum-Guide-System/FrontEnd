@@ -15,7 +15,7 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(email.trim(), password);
       if (!result?.success) setError(result?.error || 'Email hoặc mật khẩu chưa đúng.');
     } finally {
       setLoading(false);

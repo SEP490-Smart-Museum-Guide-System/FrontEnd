@@ -122,6 +122,14 @@ export default function MuseumManager() {
     event.preventDefault();
     if (submitLock.current) return;
     if (!/^(?!00)\d{2}$/.test(museumForm.cityCode || '')) { showToast('Hãy chọn tỉnh / thành phố hợp lệ.', 'warning'); return; }
+    if (museumForm.latitude !== '' && museumForm.latitude !== null && museumForm.latitude !== undefined) {
+      const lat = Number(museumForm.latitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) { showToast('Vĩ độ (Latitude) phải nằm trong khoảng từ -90 đến 90.', 'warning'); return; }
+    }
+    if (museumForm.longitude !== '' && museumForm.longitude !== null && museumForm.longitude !== undefined) {
+      const lng = Number(museumForm.longitude);
+      if (isNaN(lng) || lng < -180 || lng > 180) { showToast('Kinh độ (Longitude) phải nằm trong khoảng từ -180 đến 180.', 'warning'); return; }
+    }
     submitLock.current = true;
     setIsSubmitting(true);
     try {
@@ -142,6 +150,14 @@ export default function MuseumManager() {
     if (!newMuseumData.name.trim()) {
       showToast('Vui lòng nhập tên bảo tàng.', 'warning');
       return;
+    }
+    if (newMuseumData.latitude !== '' && newMuseumData.latitude !== null && newMuseumData.latitude !== undefined) {
+      const lat = Number(newMuseumData.latitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) { showToast('Vĩ độ (Latitude) phải nằm trong khoảng từ -90 đến 90.', 'warning'); return; }
+    }
+    if (newMuseumData.longitude !== '' && newMuseumData.longitude !== null && newMuseumData.longitude !== undefined) {
+      const lng = Number(newMuseumData.longitude);
+      if (isNaN(lng) || lng < -180 || lng > 180) { showToast('Kinh độ (Longitude) phải nằm trong khoảng từ -180 đến 180.', 'warning'); return; }
     }
     submitLock.current = true;
     setIsSubmitting(true);
@@ -463,6 +479,8 @@ export default function MuseumManager() {
                     <input
                       type="number"
                       step="any"
+                      min="-90"
+                      max="90"
                       className="form-input"
                       value={museumForm.latitude ?? ''}
                       onChange={e => setMuseumForm(prev => ({ ...prev, latitude: e.target.value }))}
@@ -475,6 +493,8 @@ export default function MuseumManager() {
                     <input
                       type="number"
                       step="any"
+                      min="-180"
+                      max="180"
                       className="form-input"
                       value={museumForm.longitude ?? ''}
                       onChange={e => setMuseumForm(prev => ({ ...prev, longitude: e.target.value }))}
@@ -556,6 +576,8 @@ export default function MuseumManager() {
                     <input
                       type="number"
                       step="any"
+                      min="-90"
+                      max="90"
                       className="form-input"
                       value={newMuseumData.latitude}
                       onChange={e => setNewMuseumData(prev => ({ ...prev, latitude: e.target.value }))}
@@ -568,6 +590,8 @@ export default function MuseumManager() {
                     <input
                       type="number"
                       step="any"
+                      min="-180"
+                      max="180"
                       className="form-input"
                       value={newMuseumData.longitude}
                       onChange={e => setNewMuseumData(prev => ({ ...prev, longitude: e.target.value }))}
