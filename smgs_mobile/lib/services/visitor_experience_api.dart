@@ -36,12 +36,17 @@ class VisitorExperienceApi {
   static Future<Map<String, dynamic>> startVisit(
     int museumId, {
     int? tourId,
+    String? personalizedTourId,
   }) async {
     final data = Map<String, dynamic>.from(
       await BackendApi.request(
         'visits',
         method: 'POST',
-        body: {'museumId': museumId, 'tourId': tourId},
+        body: {
+          'museumId': museumId,
+          'tourId': tourId,
+          'personalizedTourId': ?personalizedTourId,
+        },
       ),
     );
     VisitorSession.activeVisit = data;

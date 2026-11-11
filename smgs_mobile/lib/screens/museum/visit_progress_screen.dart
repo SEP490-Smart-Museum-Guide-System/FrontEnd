@@ -57,6 +57,8 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                 style: AppTextStyles.cardTitle,
               ),
               Text(backendStatus(visit['status'])),
+              if (visit['personalizedTourId'] != null)
+                const Text('Hành trình cá nhân · Thứ tự điểm dừng đã được lưu'),
               Text('Bắt đầu: ${visit['startedAt']}'),
               TextButton(
                 onPressed: reload,

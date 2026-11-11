@@ -1,4 +1,4 @@
-import 'published_tours_screen.dart';
+import 'personalized_tour_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
@@ -8,142 +8,13 @@ import '../artifact/artifact_detail_screen.dart';
 import '../../services/app_services.dart';
 import '../../widgets/museum_route_map.dart';
 
-class ToursScreen extends StatefulWidget {
+class ToursScreen extends StatelessWidget {
   const ToursScreen({super.key, this.standalone = false, this.museumId = ''});
   final bool standalone;
   final String museumId;
   @override
-  State<ToursScreen> createState() => _ToursScreenState();
-}
-
-class _ToursScreenState extends State<ToursScreen> {
-  int _duration = 60;
-  final Set<String> _interests = {'Lịch sử'};
-  String get _interest => _interests.join(', ');
-  late String _museumId = widget.museumId.isNotEmpty
-      ? widget.museumId
-      : (AppServices.catalog.museums.firstOrNull?.id ?? '');
-  @override
-  Widget build(BuildContext context) => MuseumPage(
-    back: widget.standalone,
-    title: 'Đi theo điều\nbạn yêu thích.',
-    eyebrow: 'Hành trình của bạn',
-    subtitle: 'Một lộ trình vừa vặn với thời gian và sự tò mò của bạn.',
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: MuseumPhoto(museumId: _museumId, height: 180),
-      ),
-      const SectionHeading('Bạn muốn ghé thăm đâu?'),
-      DropdownButtonFormField<String>(
-        initialValue: _museumId.isEmpty ? null : _museumId,
-        isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Bảo tàng'),
-        items: AppServices.catalog.museums
-            .map(
-              (m) => DropdownMenuItem(
-                value: m.id,
-                child: Text(m.name, style: AppTextStyles.bodySmall),
-              ),
-            )
-            .toList(),
-        onChanged: (value) => setState(() => _museumId = value!),
-      ),
-      const SectionHeading('Bạn có bao nhiêu thời gian?'),
-      Wrap(
-        spacing: 10,
-        runSpacing: 8,
-        children: [30, 60, 90, 120]
-            .map(
-              (v) => ChoiceChip(
-                label: Text('$v phút'),
-                selected: _duration == v,
-                checkmarkColor: AppColors.antiqueIvory,
-                labelStyle: AppTextStyles.bodyMedium.copyWith(
-                  color: _duration == v
-                      ? AppColors.antiqueIvory
-                      : AppColors.darkBrown,
-                ),
-                onSelected: (_) => setState(() => _duration = v),
-              ),
-            )
-            .toList(),
-      ),
-      const SectionHeading('Điều gì khiến bạn tò mò?'),
-      Wrap(
-        spacing: 10,
-        runSpacing: 8,
-        children: ['Lịch sử', 'Nghệ thuật', 'Văn hóa', 'Khoa học']
-            .map(
-              (v) => ChoiceChip(
-                label: Text(v),
-                selected: _interests.contains(v),
-                checkmarkColor: AppColors.antiqueIvory,
-                labelStyle: AppTextStyles.bodyMedium.copyWith(
-                  color: _interests.contains(v)
-                      ? AppColors.antiqueIvory
-                      : AppColors.darkBrown,
-                ),
-                onSelected: (selected) => setState(() {
-                  selected ? _interests.add(v) : _interests.remove(v);
-                }),
-              ),
-            )
-            .toList(),
-      ),
-      const SizedBox(height: 28),
-      if (_interests.isEmpty)
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: Notice('Chọn ít nhất một sở thích để tạo hành trình.'),
-        ),
-      PrimaryButton(
-        label: 'Gợi ý hành trình',
-        icon: Icons.route_outlined,
-        onPressed: _interests.isEmpty || _museumId.isEmpty
-            ? null
-            : () async {
-                try {
-                  final realId = int.tryParse(_museumId);
-                  if (realId != null) {
-                    openPage(
-                      context,
-                      PublishedToursScreen(
-                        museumId: realId,
-                        maxMinutes: _duration,
-                      ),
-                    );
-                    return;
-                  }
-                  final stops = await AppServices.tours.plan(
-                    _museumId,
-                    _duration,
-                    _interests,
-                  );
-                  if (!context.mounted) return;
-                  openPage(
-                    context,
-                    TourRouteScreen(
-                      stops: stops,
-                      duration: _duration,
-                      interest: _interest,
-                    ),
-                  );
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(e.toString())));
-                  }
-                }
-              },
-      ),
-      const SizedBox(height: 18),
-      const Notice(
-        'Các hành trình được tải từ máy chủ và lọc theo thời gian. Sở thích chưa được máy chủ hỗ trợ lọc.',
-      ),
-    ],
-  );
+  Widget build(BuildContext context) =>
+      PersonalizedTourBuilder(standalone: standalone, museumId: museumId);
 }
 
 class TourRouteScreen extends StatefulWidget {

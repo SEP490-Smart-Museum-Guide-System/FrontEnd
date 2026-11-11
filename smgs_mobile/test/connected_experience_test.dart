@@ -9,6 +9,7 @@ import 'package:smgs_mobile/screens/museum/visit_progress_screen.dart';
 import 'package:smgs_mobile/screens/profile/order_detail_screen.dart';
 import 'package:smgs_mobile/screens/profile/profile_screen.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_qr_scanner.dart';
+import 'package:smgs_mobile/screens/artifact/artifact_detail_screen.dart';
 import 'package:smgs_mobile/widgets/primary_button.dart';
 import 'widget_test.dart' show host, screenSize, tapText;
 
@@ -311,7 +312,14 @@ void main() {
           await tapText(tester, 'Xem thông tin hiện vật');
           expect(recorded?['visitId'], 23);
           expect(recorded?['qrCode'], 'REAL-QR');
-          expect(find.textContaining('Đã ghi nhận lượt quét.'), findsOneWidget);
+          expect(find.byType(ArtifactDetailScreen), findsOneWidget);
+          expect(
+            tester
+                .widget<ArtifactDetailScreen>(find.byType(ArtifactDetailScreen))
+                .artifact
+                .id,
+            '11',
+          );
         },
         () => MockClient((request) async {
           if (request.url.path == '/api/visits/me') {

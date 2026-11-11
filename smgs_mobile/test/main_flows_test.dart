@@ -15,9 +15,7 @@ import 'package:smgs_mobile/screens/profile/history_screen.dart';
 import 'package:smgs_mobile/screens/profile/services_screen.dart';
 import 'package:smgs_mobile/screens/tours/tours_screen.dart';
 import 'package:smgs_mobile/screens/explore/explore_screen.dart';
-import 'package:smgs_mobile/widgets/primary_button.dart';
 import 'package:smgs_mobile/widgets/narration_player.dart';
-import 'package:smgs_mobile/widgets/museum_route_map.dart';
 
 import 'widget_test.dart' show host, tapText, screenSize;
 
@@ -185,32 +183,20 @@ void main() {
   });
 
   apiTestWidgets(
-    'Tour requires interests, supports multiple interests, skipping and early end',
+    'Unavailable museum data never creates a local sample itinerary',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       await tester.pumpWidget(host(const ToursScreen()));
       await tester.pumpAndSettle();
-      await tapText(tester, 'Lịch sử');
       expect(
-        tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
-        isNull,
+        find.textContaining('Cá nhân hóa là lựa chọn thêm.'),
+        findsOneWidget,
       );
-      await tapText(tester, 'Nghệ thuật');
-      await tapText(tester, 'Khoa học');
-      await tapText(tester, 'Gợi ý hành trình');
-      final route = tester.widget<TourRouteScreen>(
-        find.byType(TourRouteScreen),
-      );
-      expect(route.interest, contains('Nghệ thuật'));
-      expect(route.interest, contains('Khoa học'));
-      await tapText(tester, 'Bắt đầu hành trình');
-      expect(find.byType(MuseumRouteMap), findsOneWidget);
-      await tapText(tester, 'Bỏ qua điểm này');
-      await tapText(tester, 'Kết thúc sớm hành trình');
-      final record = VisitStore.instance.history.single.tours.single;
-      expect(record.skippedIds, hasLength(1));
-      expect(record.completed, isFalse);
-      expect(VisitStore.instance.completedTours, 0);
+      expect(find.text('Xem tour có sẵn'), findsOneWidget);
+      expect(find.text('Tham quan tự do'), findsOneWidget);
+      await tapText(tester, 'Gợi ý theo sở thích');
+      expect(find.byType(TourRouteScreen), findsNothing);
+      expect(VisitStore.instance.history, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
