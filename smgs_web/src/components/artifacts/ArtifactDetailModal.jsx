@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit, readOnly = false }) {
-  const { downloadArtifactQr, regenerateArtifactQr, currentRole } = useApp();
+  const { downloadArtifactQr, regenerateArtifactQr, currentRole, showToast } = useApp();
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copiedQR, setCopiedQR] = useState(false);
@@ -160,7 +160,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
   const handleSyncReferenceToVision = async (imageItem) => {
     if (!imageItem.file) {
-      alert('Ảnh này không có tệp nguồn trong phiên để đồng bộ lại.');
+      showToast('Ảnh này không có tệp nguồn trong phiên để đồng bộ lại.', 'warning');
       return;
     }
     const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
@@ -176,7 +176,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   const handleSyncAllReferences = async () => {
     const unsynced = referenceImages.filter(img => img.file && !img.status?.includes('Đã index'));
     if (!unsynced.length) {
-      alert('Tất cả ảnh tham chiếu mới đã được đồng bộ vào AI Vision.');
+      showToast('Tất cả ảnh tham chiếu mới đã được đồng bộ vào AI Vision.', 'info');
       return;
     }
     setIsSyncingVision(true);
@@ -204,10 +204,10 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     try {
       await deleteReferenceImagesApi({ artifactId: targetArtifactId });
       setReferenceImages(prev => prev.map(img => ({ ...img, status: 'Đã gỡ bỏ khỏi AI Vision' })));
-      alert('Đã gỡ bỏ toàn bộ vector tham chiếu trên AI Vision.');
+      showToast('Đã gỡ bỏ toàn bộ vector tham chiếu trên AI Vision.', 'success');
       checkVisionHealthApi().then(setVisionHealth).catch(() => {});
     } catch (err) {
-      alert('Lỗi khi gỡ vector: ' + err.message);
+      showToast('Lỗi khi gỡ vector: ' + err.message, 'error');
     }
   };
 
@@ -228,7 +228,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
   const handleStart3DScan = async () => {
     if (scanFiles.length < 5 || scanFiles.length > 80) {
-      alert('Vui lòng chọn ít nhất 5 ảnh JPG/PNG của cùng một hiện vật (tối đa 80 ảnh).');
+      showToast('Vui lòng chọn ít nhất 5 ảnh JPG/PNG của cùng một hiện vật (tối đa 80 ảnh).', 'warning');
       return;
     }
     setIsSubmittingScan(true);
@@ -272,9 +272,9 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     try {
       await approveScanJobApi(scanJob.scanJobId);
       setScanJob(prev => prev ? { ...prev, status: 'COMPLETED' } : null);
-      alert('Đã duyệt bản dựng. Hãy lưu mô hình vào hồ sơ hiện vật để xuất bản cho khách.');
+      showToast('Đã duyệt bản dựng. Hãy lưu mô hình vào hồ sơ hiện vật để xuất bản cho khách.', 'success');
     } catch (err) {
-      alert('Lỗi phê duyệt: ' + err.message);
+      showToast('Lỗi phê duyệt: ' + err.message, 'error');
     }
   };
 
@@ -358,7 +358,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog" style={{ maxWidth: '980px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
-        <div className="modal-header">
+        <div className="modal-header" style={{ flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               width: '40px',
@@ -393,7 +393,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         </div>
 
         {/* Navigation Tabs */}
-        <div className="artifact-modal-tabs" style={{
+        <div className="artifact-modal-tabs" style={{ flexShrink: 0,
           display: 'flex',
           borderBottom: '1px solid var(--color-paper-border)',
           background: '#FDFCF9',
@@ -445,7 +445,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         </div>
 
         {/* Modal Body */}
-        <div className="modal-body">
+        <div className="modal-body" style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
           <ArtifactContentManager key={`contents-${artifact.id}`} artifactId={artifact.backendId || artifact.id} canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)} canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)} />
           <ArtifactMediaPanel key={artifact.id} artifactId={artifact.backendId || artifact.id} readOnly={readOnly || !['administrator', 'museumStaff'].includes(currentRole)} />
           {activeTab === 'overview' && (
@@ -1200,7 +1200,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         </div>
 
         {/* Modal Footer */}
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ flexShrink: 0 }}>
           <button type="button" onClick={onClose} className="btn btn-secondary">
             Đóng cửa sổ
           </button>

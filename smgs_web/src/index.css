@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: 'Noto Sans';
   src: url('/fonts/NotoSans.ttf') format('truetype');
   font-display: swap;
@@ -766,13 +766,17 @@ button {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 200;
+  z-index: 100000;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .toast {
+  pointer-events: auto;
+  border: 1px solid var(--color-paper-border);
+  max-width: 480px;
   background: var(--color-paper-card);
   border-radius: 10px;
   padding: 14px 18px;
@@ -791,6 +795,14 @@ button {
 
 .toast.toast-warning {
   border-left-color: var(--color-warning);
+}
+
+.toast.toast-error {
+  border-left-color: var(--color-danger, #DC2626);
+}
+
+.toast.toast-info {
+  border-left-color: var(--color-info, #2563EB);
 }
 
 @keyframes slideInRight {

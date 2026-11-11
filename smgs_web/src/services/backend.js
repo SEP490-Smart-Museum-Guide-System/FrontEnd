@@ -40,9 +40,15 @@ export function museumView(m) {
     status: m.isActive ? 'active' : 'inactive', googleMapsVisible: m.isActive, buildings: [] };
 }
 export function artifactView(a) {
+  const imageMedia = a.media?.filter(m => m.mediaType === 'image') || [];
+  const imageUrls = imageMedia.map(m => m.fileUrl).filter(Boolean);
+  const primaryImage = imageUrls[0] || a.image || '';
+  const allImages = imageUrls.length > 0 ? imageUrls : (primaryImage ? [primaryImage] : []);
   return { ...a, backendId: a.id, code: a.code || '', qrCode: a.qrCode || '', category: a.topics?.map(t => t.name).filter(Boolean).join(', ') || '',
     era: '', period: '', dating: '', material: '', theme: '', dimensions: '', galleryName: a.galleryName || '',
-    image: a.media?.find(m => m.mediaType === 'image')?.fileUrl || '',
+    image: primaryImage,
+    images: allImages,
+    imageCount: allImages.length,
     status: a.isActive ? 'published' : 'draft', has3DModel: !!a.model3D,
     modelUrl: a.model3D?.modelUrl || '', referenceImages: [], audioDuration: '',
     audioUrl: a.media?.find(m => m.mediaType === 'audio')?.fileUrl || '',
@@ -62,14 +68,18 @@ export function accountView(a) {
     permissions: [], lastLogin: 'Chưa có dữ liệu', status: a.isActive ? 'active' : 'inactive' };
 }
 export function reviewView(r, museums) {
+  const isGuid = typeof r.visitorId === 'string' && /^[0-9a-f-]{36}$/i.test(r.visitorId);
+  const visitorName = r.visitorName || (isGuid ? 'Khách tham quan' : r.visitorId) || 'Khách tham quan';
   return { ...r, museumName: museums.find(m => m.id === r.museumId)?.name || `Bảo tàng #${r.museumId}`,
-    visitorName: r.visitorId, rating: r.overallRating, comment: r.comment || '',
+    visitorName, rating: r.overallRating, comment: r.comment || '',
     timestamp: r.createdAt, date: r.createdAt, targetName: `Lượt tham quan #${r.visitId}`, targetType: 'museum',
     officialReply: r.staffResponse?.content || '', replyDate: r.staffResponse?.createdAt || '',
     status: r.staffResponse ? 'replied' : 'pending_reply', hidden: r.moderationStatus === 'Hidden' };
 }
 export function complaintView(c) {
-  return { ...c, type: 'complaint', title: c.subject, description: c.body, detail: c.body, visitor: c.visitorId,
-    museum: '', priority: '', note: c.resolutionNote || '',
+  const isGuid = typeof c.visitorId === 'string' && /^[0-9a-f-]{36}$/i.test(c.visitorId);
+  const visitorDisplay = c.visitorName || (isGuid ? 'Khách tham quan' : c.visitorId) || 'Khách tham quan';
+  return { ...c, type: 'complaint', title: c.subject, description: c.body, detail: c.body, visitor: visitorDisplay,
+    visitorName: visitorDisplay, museum: '', priority: '', note: c.resolutionNote || '',
     status: ({ Open: 'new', New: 'new', InProgress: 'in_progress', Resolved: 'resolved', Closed: 'resolved' })[c.status] || 'new' };
 }

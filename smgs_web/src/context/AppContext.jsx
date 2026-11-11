@@ -6,6 +6,50 @@ import { createArtifactApi, updateArtifactApi, deleteArtifactApi, downloadArtifa
 import { approveCurationContentApi, rejectCurationContentApi } from '../services/curationApi';
 import { submitArtifactContentApi } from '../services/contentSubmissionApi';
 
+export const KNOWN_STAFF_ACCOUNTS = {
+  '50c0fccd-a4e3-4e27-b372-985970f78a9f': 'Nhân viên Bảo tàng',
+  'f7a575c8-3243-4199-98d9-d9ccbc8e002d': 'Quản trị viên Hệ thống',
+  '1acc4faa-d36b-49fe-b82a-9f1bce275cf2': 'Chuyên gia Duyệt nội dung',
+  'cf344f82-2d6c-4a25-bf16-092fb80f2f7f': 'Nhân viên Hỗ trợ',
+};
+
+export function resolveSubmitterName(createdBy, isAiGenerated = false, users = [], currentUser = null) {
+  if (!createdBy) return isAiGenerated ? 'Trợ lý Di sản AI' : 'Nhân viên Bảo tàng';
+  const raw = String(createdBy).trim();
+  const lower = raw.toLowerCase();
+  if (KNOWN_STAFF_ACCOUNTS[lower]) return KNOWN_STAFF_ACCOUNTS[lower];
+  if (currentUser) {
+    if (String(currentUser.id).toLowerCase() === lower || String(currentUser.email).toLowerCase() === lower) {
+      return currentUser.name || 'Nhân viên Bảo tàng';
+    }
+  }
+  const matchedUser = Array.isArray(users) ? users.find(u => String(u.id).toLowerCase() === lower || String(u.email).toLowerCase() === lower) : null;
+  if (matchedUser?.name || matchedUser?.fullName) {
+    return matchedUser.name || matchedUser.fullName;
+  }
+  const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
+  if (isGuid) {
+    return isAiGenerated ? 'Trợ lý Di sản AI' : 'Nhân viên Bảo tàng';
+  }
+  return raw;
+}
+
+export function formatCurationDate(dateStr) {
+  if (!dateStr) return 'Vừa xong';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes} ${day}/${month}/${year}`;
+  } catch {
+    return String(dateStr);
+  }
+}
+
 const AppContext = createContext();
 export function AppProvider({ children }) {
   const [session, setSession] = useState(readWebSession);
@@ -95,7 +139,7 @@ function DataProvider({ children, session, login, endSession }) {
           museumId: artifacts.find(a => a.id === c.artifactId)?.museumId,
           targetArtifactName: artifacts.find(a => a.id === c.artifactId)?.name || `Hiện vật #${c.artifactId}`,
           proposedContent: c.description || '', changesSummary: c.description || '', submittedDate: c.createdAt,
-          feedback: c.reviewNote || '', submittedBy: c.createdBy || '', type: c.isAiGenerated ? 'audio_narration' : 'artifact_update', priority: 'normal' }));
+          feedback: c.reviewNote || '', submittedBy: resolveSubmitterName(c.createdBy, c.isAiGenerated, users, currentUser), type: c.isAiGenerated ? 'audio_narration' : 'artifact_update', priority: 'normal' }));
       }, setCurationQueue);
     }
     if (['administrator', 'systemStaff'].includes(currentRole)) load('reviews', async () => (await allPages('feedbacks', options)).map(r => reviewView(r, museums)), setReviews);

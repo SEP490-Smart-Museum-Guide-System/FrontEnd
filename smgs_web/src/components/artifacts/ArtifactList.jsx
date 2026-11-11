@@ -14,10 +14,12 @@ import {
   Award,
   Grid,
   List,
-  Volume2
+  Volume2,
+  Images
 } from 'lucide-react';
 import ArtifactDetailModal from './ArtifactDetailModal';
 import ArtifactEditModal from './ArtifactEditModal';
+import ArtifactPhotoGalleryModal from './ArtifactPhotoGalleryModal';
 
 
 export default function ArtifactList({ onOpenAIStudio }) {
@@ -40,6 +42,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [editingArtifact, setEditingArtifact] = useState(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [galleryArtifact, setGalleryArtifact] = useState(null);
 
   // Filter artifacts
   const scopedArtifacts = currentRole === 'administrator' 
@@ -245,18 +248,24 @@ export default function ArtifactList({ onOpenAIStudio }) {
                 {filteredArtifacts.length > 0 ? (
                   filteredArtifacts.map(art => (
                     <tr key={art.id}>
-                      {/* Image Thumbnail */}
+                      {/* Image Thumbnail with +N Facebook-style badge & Lightbox click */}
                       <td>
-                        <div style={{
-                          width: '56px',
-                          height: '56px',
-                          borderRadius: '8px',
-                          overflow: 'hidden',
-                          border: '1px solid var(--color-paper-border)',
-                          background: '#1A1F26',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => setSelectedArtifact(art)}
+                        <div
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            border: '1px solid var(--color-paper-border)',
+                            background: '#1A1F26',
+                            cursor: 'pointer',
+                            position: 'relative'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGalleryArtifact(art);
+                          }}
+                          title="Nhấn để xem từng ảnh (như bài đăng Facebook)"
                         >
                           <img
                             src={art.image || '/assets/images/placeholder.svg'}
@@ -264,6 +273,25 @@ export default function ArtifactList({ onOpenAIStudio }) {
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                           />
+                          {art.images && art.images.length > 1 && (
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '2px',
+                              right: '2px',
+                              background: 'rgba(0, 0, 0, 0.78)',
+                              color: '#fff',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              lineHeight: '1.2',
+                              pointerEvents: 'none',
+                              border: '1px solid rgba(255, 255, 255, 0.25)',
+                              backdropFilter: 'blur(2px)'
+                            }}>
+                              +{art.images.length - 1}
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -396,12 +424,20 @@ export default function ArtifactList({ onOpenAIStudio }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
           {filteredArtifacts.map(art => (
             <div key={art.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{
-                position: 'relative',
-                height: '180px',
-                background: '#1A1F26',
-                overflow: 'hidden'
-              }}>
+              <div
+                style={{
+                  position: 'relative',
+                  height: '180px',
+                  background: '#1A1F26',
+                  overflow: 'hidden',
+                  cursor: 'pointer'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setGalleryArtifact(art);
+                }}
+                title="Nhấn để xem từng ảnh (như bài đăng Facebook)"
+              >
                 <img
                   src={art.image || '/assets/images/placeholder.svg'}
                   alt={art.name}
@@ -418,6 +454,27 @@ export default function ArtifactList({ onOpenAIStudio }) {
                     {art.status === 'published' ? 'Đã xuất bản' : 'Chờ duyệt'}
                   </span>
                 </div>
+                {art.images && art.images.length > 1 && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '10px',
+                    background: 'rgba(0,0,0,0.76)',
+                    color: '#FFF',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(3px)'
+                  }}>
+                    <Images size={13} />
+                    <span>+{art.images.length - 1} ảnh</span>
+                  </div>
+                )}
                 {art.has3DModel && (
                   <div style={{
                     position: 'absolute',
@@ -512,6 +569,14 @@ export default function ArtifactList({ onOpenAIStudio }) {
               return await updateArtifact(artData);
             }
           }}
+        />
+      )}
+
+      {/* Facebook-style Photo Gallery Modal */}
+      {galleryArtifact && (
+        <ArtifactPhotoGalleryModal
+          artifact={galleryArtifact}
+          onClose={() => setGalleryArtifact(null)}
         />
       )}
     </div>

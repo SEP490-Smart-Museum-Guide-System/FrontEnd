@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allPages, backend, artifactView, museumView } from '../src/services/backend.js';
+import { allPages, backend, artifactView, museumView, reviewView, complaintView } from '../src/services/backend.js';
 
 globalThis.localStorage = { getItem: () => null };
 const response = data => new Response(JSON.stringify({ data }));
@@ -46,6 +46,13 @@ test('adapters do not invent geographic, media, QR or analytics values', () => {
   assert.equal(artifact.qrCode, '');
   assert.equal(artifact.scansCount, undefined);
   assert.equal(artifact.modelUrl, '');
+});
+
+test('reviewView and complaintView convert raw GUIDs to user-friendly visitor labels', () => {
+  const review = reviewView({ id: 1, museumId: 7, visitorId: '50c0fccd-a4e3-4e27-b372-985970f78a9f', overallRating: 5 }, [{ id: 7, name: 'Bảo tàng Lịch sử' }]);
+  assert.equal(review.visitorName, 'Khách tham quan');
+  const complaint = complaintView({ id: 2, subject: 'Khiếu nại', body: 'Chi tiết', visitorId: '50c0fccd-a4e3-4e27-b372-985970f78a9f', status: 'Open' });
+  assert.equal(complaint.visitorName, 'Khách tham quan');
 });
 
 test('array endpoints with pagination fetch the next page while preserving filters', async t => {

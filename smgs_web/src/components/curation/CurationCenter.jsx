@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Search
 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useApp, resolveSubmitterName, formatCurationDate } from '../../context/AppContext';
 import { getCurationContentByIdApi } from '../../services/curationApi';
 
 const statusLabel = {
@@ -46,6 +46,8 @@ export default function CurationCenter() {
     curationQueue,
     artifacts,
     currentMuseum,
+    users,
+    currentUser,
     approveCurationItem,
     rejectCurationItem,
     requestRevisionCurationItem
@@ -266,6 +268,8 @@ export default function CurationCenter() {
           {filteredItems.length > 0 ? (
             filteredItems.map(item => {
               const Icon = typeIcon[item.type] || FileText;
+              const submitterDisplay = resolveSubmitterName(item.submittedBy, item.isAiGenerated, users, currentUser);
+              const dateDisplay = formatCurationDate(item.submittedDate);
               return (
                 <article
                   className="role-dashboard-row"
@@ -312,7 +316,7 @@ export default function CurationCenter() {
                         )}
                       </div>
                       <small style={{ color: 'var(--color-charcoal-500)', display: 'block', marginTop: '2px' }}>
-                        Hiện vật: <strong style={{ color: 'var(--color-burgundy-700)' }}>{item.targetArtifactName || item.artifactName || `Hiện vật #${item.targetArtifactId}`}</strong> · Người nộp: {item.submittedBy || 'Nhân viên bảo tàng'} · {item.submittedDate || 'Vừa xong'}
+                        Hiện vật: <strong style={{ color: 'var(--color-burgundy-700)' }}>{item.targetArtifactName || item.artifactName || `Hiện vật #${item.targetArtifactId}`}</strong> · Người nộp: {submitterDisplay} · {dateDisplay}
                       </small>
                       <p style={{ margin: '6px 0 0', color: 'var(--color-charcoal-700)', fontSize: '.82rem', lineHeight: 1.4 }}>
                         {item.changesSummary}
@@ -377,7 +381,7 @@ export default function CurationCenter() {
                   {selected.title}
                 </h2>
                 <p style={{ color: 'var(--color-charcoal-500)', fontSize: '.8rem', marginTop: '2px' }}>
-                  Hiện vật tham chiếu: <strong>{selected.targetArtifactName || selected.artifactName || `Hiện vật #${selected.targetArtifactId}`}</strong> (ID: {selected.targetArtifactId}) · Đệ trình bởi: {selected.submittedBy || 'Nhân viên bảo tàng'} ({selected.submittedDate || 'Vừa xong'})
+                  Hiện vật tham chiếu: <strong>{selected.targetArtifactName || selected.artifactName || `Hiện vật #${selected.targetArtifactId}`}</strong> (ID: {selected.targetArtifactId}) · Đệ trình bởi: {resolveSubmitterName(selected.submittedBy, selected.isAiGenerated, users, currentUser)} ({formatCurationDate(selected.submittedDate)})
                 </p>
               </div>
 
