@@ -325,19 +325,24 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
           </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="artifact-modal-tabs" style={{ flexShrink: 0,
-          display: 'flex',
-          borderBottom: '1px solid var(--color-paper-border)',
-          background: '#FDFCF9',
-          padding: '0 24px'
-        }}>
+        {/* Navigation Tabs - Clean, no horizontal scroll */}
+        <div
+          className="artifact-modal-tabs"
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            borderBottom: '1px solid var(--color-paper-border)',
+            background: '#FDFCF9',
+            padding: '0 20px',
+            gap: '4px'
+          }}
+        >
           {[
-            { id: 'overview', label: 'Tổng quan & Thuyết minh', icon: Layers },
-            { id: '3d', label: 'Xem Mô hình 3D (AR)', icon: Box, badge: has3DModel ? 'Sẵn sàng' : 'Chưa có' },
-            { id: 'qr', label: 'Mã QR & Nhận diện', icon: QrCode },
+            { id: 'overview', label: 'Tổng quan', icon: Layers },
+            { id: '3d', label: 'Mô hình 3D', icon: Box, badge: has3DModel ? '3D' : null },
+            { id: 'qr', label: 'Mã QR & Vision', icon: QrCode },
             { id: 'multilingual', label: 'Đa ngôn ngữ', icon: Globe },
-            { id: 'quizzes', label: `Câu hỏi tương tác (${artifact.quizzes?.length || 0})`, icon: HelpCircle }
+            { id: 'quizzes', label: 'Quiz & Câu hỏi', icon: HelpCircle, badge: artifact.quizzes?.length ? `${artifact.quizzes.length}` : null }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -349,26 +354,33 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '14px 18px',
-                  fontSize: '0.875rem',
+                  gap: '7px',
+                  padding: '12px 14px',
+                  fontSize: '0.84rem',
                   fontWeight: isActive ? '600' : '500',
                   color: isActive ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-600)',
-                  borderBottom: isActive ? '3px solid var(--color-burgundy-700)' : '3px solid transparent',
+                  borderBottom: isActive ? '2px solid var(--color-burgundy-700)' : '2px solid transparent',
                   background: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  cursor: 'pointer',
                   transition: 'all var(--transition-fast)'
                 }}
               >
-                <Icon size={16} />
+                <Icon size={15} />
                 <span>{tab.label}</span>
                 {tab.badge && (
-                  <span style={{
-                    fontSize: '0.675rem',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    background: has3DModel ? '#DCFCE7' : '#F1F5F9',
-                    color: has3DModel ? '#166534' : '#64748B'
-                  }}>
+                  <span
+                    style={{
+                      fontSize: '0.675rem',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      background: has3DModel || tab.id === 'quizzes' ? '#DCFCE7' : '#F1F5F9',
+                      color: has3DModel || tab.id === 'quizzes' ? '#166534' : '#64748B',
+                      fontWeight: '700'
+                    }}
+                  >
                     {tab.badge}
                   </span>
                 )}
@@ -378,9 +390,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         </div>
 
         {/* Modal Body */}
-        <div className="modal-body" style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {activeTab !== '3d' && <ArtifactContentManager key={`contents-${artifact.id}`} artifactId={artifact.backendId || artifact.id} canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)} canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)} />}
-          {activeTab === 'overview' && <ArtifactMediaPanel key={artifact.id} artifactId={artifact.backendId || artifact.id} readOnly={readOnly || !['administrator', 'museumStaff'].includes(currentRole)} />}
+        <div className="modal-body" style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '20px 24px' }}>
           {activeTab === 'overview' && (
             <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '28px' }}>
               {/* Left Column: Image & Audio */}
@@ -601,6 +611,22 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     Chỉnh sửa thông số
                   </button>
                 </div>}
+
+                {!readOnly && ['administrator', 'museumStaff', 'curator'].includes(currentRole) && (
+                  <details style={{ marginTop: '20px', borderRadius: '10px', border: '1px solid var(--color-paper-border)', background: '#FAF7F2', padding: '12px 16px' }}>
+                    <summary style={{ cursor: 'pointer', fontWeight: '600', fontSize: '0.84rem', color: 'var(--color-burgundy-900)' }}>
+                      ⚙️ Lịch sử biên tập & Đệ trình bản thuyết minh mới
+                    </summary>
+                    <div style={{ marginTop: '14px' }}>
+                      <ArtifactContentManager
+                        key={`contents-${artifact.id}`}
+                        artifactId={artifact.backendId || artifact.id}
+                        canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)}
+                        canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)}
+                      />
+                    </div>
+                  </details>
+                )}
               </div>
             </div>
           )}
