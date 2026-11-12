@@ -1,5 +1,7 @@
 # SMGS · Smart Museum Guide System — Frontend
 
+**Tạo 3D từ FE (Museum Staff):** chọn folder ảnh → dựng CPU → xem thử → lưu/bỏ. Xem [cách chạy và trạng thái kiểm chứng](<../AI-System/3D Scan/STAFF_WEB_GUIDE.md>).
+
 Frontend của **Smart Museum Guide System (SMGS)**. Dự án hỗ trợ hành trình tham quan bảo tàng, quản trị nội dung di sản và vận hành hệ thống. Frontend đã có các luồng gọi BE cho đăng nhập và dữ liệu nghiệp vụ; một số phần AI/3D vẫn đang ở phạm vi thử nghiệm. Không coi toàn bộ giao diện là dữ liệu mô phỏng hoặc toàn bộ chức năng đã end-to-end.
 
 **Xưởng nội dung AI 09/11/2026:** Admin/Museum Staff gọi BE để sinh bản nháp thuyết minh hoặc quiz tiếng Việt bằng model ONNX local, thay đầu ra mô phỏng. Quiz mở đúng Ngân hàng câu hỏi để sửa/lưu; narration gửi cả mô tả và văn bản đọc sang kiểm duyệt. Không tự xuất bản, không tạo lịch sử từ ảnh. Xem [hợp đồng, cách chạy và kết quả kiểm thử](../AI-System/AI_STUDIO_LOCAL_2026_11_09.md).

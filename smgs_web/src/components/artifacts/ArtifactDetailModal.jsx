@@ -30,6 +30,7 @@ import {
 export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit, readOnly = false }) {
   const { downloadArtifactQr, regenerateArtifactQr, currentRole, showToast } = useApp();
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
+  const [has3DModel, setHas3DModel] = useState(!!artifact?.has3DModel);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copiedQR, setCopiedQR] = useState(false);
   const [qrImgError, setQrImgError] = useState(false);
@@ -333,7 +334,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         }}>
           {[
             { id: 'overview', label: 'Tổng quan & Thuyết minh', icon: Layers },
-            { id: '3d', label: 'Xem Mô hình 3D (AR)', icon: Box, badge: artifact.has3DModel ? 'Sẵn sàng' : 'Chưa có' },
+            { id: '3d', label: 'Xem Mô hình 3D (AR)', icon: Box, badge: has3DModel ? 'Sẵn sàng' : 'Chưa có' },
             { id: 'qr', label: 'Mã QR & Nhận diện', icon: QrCode },
             { id: 'multilingual', label: 'Đa ngôn ngữ', icon: Globe },
             { id: 'quizzes', label: `Câu hỏi tương tác (${artifact.quizzes?.length || 0})`, icon: HelpCircle }
@@ -365,8 +366,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     fontSize: '0.675rem',
                     padding: '2px 6px',
                     borderRadius: '4px',
-                    background: artifact.has3DModel ? '#DCFCE7' : '#F1F5F9',
-                    color: artifact.has3DModel ? '#166534' : '#64748B'
+                    background: has3DModel ? '#DCFCE7' : '#F1F5F9',
+                    color: has3DModel ? '#166534' : '#64748B'
                   }}>
                     {tab.badge}
                   </span>
@@ -608,6 +609,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
             key={artifact.backendId || artifact.id}
             artifactId={artifact.backendId || artifact.id}
             name={artifact.name}
+            onModelChange={setHas3DModel}
             canManage={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)}
           />}
 

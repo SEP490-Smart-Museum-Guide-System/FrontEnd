@@ -7,7 +7,7 @@ import { prepareScanDataset, startArtifactScan, getScanJobs, getScanJob, getScan
 const running = s => ['QUEUED', 'PROCESSING', 'FINALIZING'].includes(s);
 const labels = { QUEUED: 'Đang chờ xử lý', PROCESSING: 'Đang dựng bằng CPU', FINALIZING: 'Đang kiểm tra GLB', REVIEW_REQUIRED: 'Đã dựng xong — xem thử trước khi lưu', FAILED: 'Dựng thất bại', COMPLETED: 'Đã lưu vào hiện vật', DISCARDED: 'Đã bỏ kết quả' };
 
-export default function Artifact3DPanel({ artifactId, name, canManage = false }) {
+export default function Artifact3DPanel({ artifactId, name, canManage = false, onModelChange }) {
   const validId = Number.isInteger(Number(artifactId)) && Number(artifactId) > 0;
   const path = `artifacts/${artifactId}/model-3d`;
   const [model, setModel] = useState(null), [savedUrl, setSavedUrl] = useState('');
@@ -33,16 +33,17 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false })
     mediaApi(path, { signal: controller.signal }).then(async item => {
       if (controller.signal.aborted) return;
       setModel(item);
+      onModelChange?.(!!item);
       if (isSketchfabUrl(item?.modelUrl)) setSavedUrl(item.modelUrl);
       else if (item) {
         const blob = await mediaApi(path + '/file', { blob: true, signal: controller.signal });
         if (controller.signal.aborted) return;
         objectUrl = URL.createObjectURL(blob); setSavedUrl(objectUrl);
       }
-    }).catch(e => { if (controller.signal.aborted) return; if (e.status === 404) setModel(null); else setError(e.message); })
+    }).catch(e => { if (controller.signal.aborted) return; if (e.status === 404) { setModel(null); onModelChange?.(false); } else setError(e.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [path, revision, validId]);
+  }, [path, revision, validId, onModelChange]);
   useEffect(() => {
     if (!canManage || !validId) return;
     const controller = new AbortController();
@@ -130,6 +131,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false })
         <button className="btn btn-gold" disabled={busy || running(job?.status) || !files.length} onClick={start}>Tạo mô hình 3D</button>
         {jobError && <p role="alert">{jobError}</p>}
         {job && <div style={{ marginTop: 16 }}><p><strong>{labels[job.status] || job.status}</strong> · {job.progress || 0}%</p><progress max="100" value={job.progress || 0} />
+          {running(job.status) && <p>Tiến độ cập nhật theo giai đoạn. Xử lý CPU có thể giữ một mức trong vài phút.</p>}
           <p>Mã tác vụ: {job.scanJobId}</p>{job.mode === 'benchmark' && <p>Benchmark có dùng OBJ để hiệu chỉnh camera.</p>}{job.error && <p role="alert">{job.error}</p>}
           {job.status === 'REVIEW_REQUIRED' && <button className="btn btn-secondary" disabled={busy} onClick={viewScan}>Xem kết quả AI</button>}
           {['REVIEW_REQUIRED', 'FAILED'].includes(job.status) && <button className="btn btn-secondary" disabled={busy} onClick={discard}>Bỏ kết quả scan</button>}

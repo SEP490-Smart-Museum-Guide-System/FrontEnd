@@ -28,6 +28,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
     addArtifact,
     updateArtifact,
     deleteArtifact,
+    loadArtifacts,
     selectedMuseumId,
     currentRole
   } = useApp();
@@ -542,7 +543,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
         <ArtifactDetailModal
           artifact={selectedArtifact}
           readOnly={!['administrator', 'museumStaff'].includes(currentRole)}
-          onClose={() => setSelectedArtifact(null)}
+          onClose={() => { setSelectedArtifact(null); loadArtifacts(); }}
           onOpenAIStudio={(art) => {
             setSelectedArtifact(null);
             onOpenAIStudio(art);
