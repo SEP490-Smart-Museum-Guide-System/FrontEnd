@@ -39,6 +39,8 @@ export default function ArtifactList({ onOpenAIStudio }) {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [filterTreasureOnly, setFilterTreasureOnly] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = (selectedGallery !== 'all' ? 1 : 0) + (selectedStatus !== 'all' ? 1 : 0) + (filterTreasureOnly ? 1 : 0);
 
   // Modals state
   const [selectedArtifact, setSelectedArtifact] = useState(null);
@@ -147,87 +149,106 @@ export default function ArtifactList({ onOpenAIStudio }) {
         </div>
       </div>
 
-      {/* Filter and Control Bar */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      {/* Compact Search + Filter Bar */}
+      <div className="card filter-bar" style={{ padding: '12px 20px', marginBottom: '24px' }}>
+        {/* Primary row: Search + Quick filters + View toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Search box */}
-          <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
             <Search size={16} color="var(--color-charcoal-400)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               className="form-input"
-              style={{ paddingLeft: '36px' }}
-              placeholder="Tìm theo tên hiện vật, mã hiện vật, mã QR, thời kỳ..."
+              style={{ paddingLeft: '36px', paddingRight: '36px' }}
+              placeholder="Tìm hiện vật, mã, QR, chất liệu..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {searchTerm && <button type="button" onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-charcoal-400)', padding: '4px' }} title="Xóa tìm kiếm">✕</button>}
           </div>
 
-          {/* Gallery Filter */}
-          <select
-            className="form-select"
-            style={{ width: 'auto', minWidth: '180px' }}
-            value={selectedGallery}
-            onChange={(e) => setSelectedGallery(e.target.value)}
+          {/* Filter toggle button */}
+          <button
+            type="button"
+            className={`btn btn-secondary btn-sm ${showFilters ? 'filter-active' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ gap: '6px', position: 'relative' }}
           >
-            <option value="all">Tất cả phòng trưng bày</option>
-            {galleryList.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-
-          {/* Status Filter */}
-          <select
-            className="form-select"
-            style={{ width: 'auto', minWidth: '150px' }}
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="published">Đã xuất bản</option>
-            <option value="pending_review">Chờ kiểm duyệt</option>
-            <option value="draft">Bản nháp</option>
-          </select>
-
-          {/* National Treasure Toggle */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', cursor: 'pointer', fontWeight: '600' }}>
-            <input
-              type="checkbox"
-              checked={filterTreasureOnly}
-              onChange={(e) => setFilterTreasureOnly(e.target.checked)}
-            />
-            <span>⭐ Chỉ Bảo vật Quốc gia</span>
-          </label>
+            <Filter size={15} />
+            <span>Lọc</span>
+            {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
+          </button>
 
           {/* View Mode Switcher */}
-          <div style={{ display: 'flex', border: '1px solid var(--color-paper-border)', borderRadius: '8px', overflow: 'hidden' }}>
+          <div className="view-switcher">
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              style={{
-                padding: '7px 12px',
-                background: viewMode === 'table' ? 'var(--color-paper-accent)' : '#FFF',
-                color: viewMode === 'table' ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-500)',
-                borderRight: '1px solid var(--color-paper-border)'
-              }}
+              className={viewMode === 'table' ? 'active' : ''}
               title="Xem dạng Bảng"
             >
-              <List size={16} />
+              <List size={15} />
             </button>
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              style={{
-                padding: '7px 12px',
-                background: viewMode === 'grid' ? 'var(--color-paper-accent)' : '#FFF',
-                color: viewMode === 'grid' ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-500)'
-              }}
+              className={viewMode === 'grid' ? 'active' : ''}
               title="Xem dạng Thẻ ảnh"
             >
-              <Grid size={16} />
+              <Grid size={15} />
             </button>
           </div>
         </div>
+
+        {/* Expandable filter panel */}
+        {showFilters && (
+          <div className="filter-panel">
+            <div className="filter-panel-row">
+              <div className="filter-chip-group">
+                <select
+                  className="form-select form-select-sm"
+                  value={selectedGallery}
+                  onChange={(e) => setSelectedGallery(e.target.value)}
+                >
+                  <option value="all">Tất cả phòng trưng bày</option>
+                  {galleryList.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select form-select-sm"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="published">Đã xuất bản</option>
+                  <option value="pending_review">Chờ kiểm duyệt</option>
+                  <option value="draft">Bản nháp</option>
+                </select>
+
+                <label className="filter-chip-toggle">
+                  <input
+                    type="checkbox"
+                    checked={filterTreasureOnly}
+                    onChange={(e) => setFilterTreasureOnly(e.target.checked)}
+                  />
+                  <span>⭐ Bảo vật Quốc gia</span>
+                </label>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  className="btn-link-reset"
+                  onClick={() => { setSelectedGallery('all'); setSelectedStatus('all'); setFilterTreasureOnly(false); }}
+                >
+                  Xóa bộ lọc
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Artifacts Display: Table View */}
@@ -364,32 +385,40 @@ export default function ArtifactList({ onOpenAIStudio }) {
                         </span>
                       </td>
 
-                      {/* Actions */}
-                      <td style={{ textAlign: 'right' }}>
-                        <ActionGroup>
+                      {/* Actions - hover to reveal, condensed */}
+                      <td className="row-actions-cell">
+                        <ActionGroup visible={1}>
                           <button
                             type="button"
                             onClick={() => setSelectedArtifact(art)}
                             className="btn btn-secondary btn-sm"
                             title="Xem chi tiết & QR"
                           >
-                            <Eye size={14} /> Chi tiết
+                            <Eye size={14} /> Xem
                           </button>
+                          {['administrator', 'museumStaff'].includes(currentRole) && <button
+                            type="button"
+                            onClick={() => setEditingArtifact(art)}
+                            className="btn btn-secondary btn-sm"
+                            title="Chỉnh sửa hiện vật"
+                          >
+                            <Edit2 size={14} /> Sửa
+                          </button>}
                           {['administrator', 'museumStaff'].includes(currentRole) && <button
                             type="button"
                             onClick={() => onOpenAIStudio(art)}
                             className="btn btn-gold btn-sm"
                             title="Mở xưởng nội dung AI"
                           >
-                            <Sparkles size={14} />
+                            <Sparkles size={14} /> AI Studio
                           </button>}
                           {['administrator', 'museumStaff'].includes(currentRole) && <button
                             type="button"
-                            onClick={() => setEditingArtifact(art)}
+                            onClick={() => setGalleryArtifact(art)}
                             className="btn btn-secondary btn-sm"
-                            title="Chỉnh sửa"
+                            title="Xem thư viện ảnh"
                           >
-                            <Edit2 size={14} />
+                            <Images size={14} /> Thư viện ảnh
                           </button>}
                           {currentRole === 'administrator' && (
                             <button
@@ -403,7 +432,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                               style={{ color: 'var(--color-danger)' }}
                               title="Xóa hiện vật"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={14} /> Xóa
                             </button>
                           )}
                         </ActionGroup>
@@ -507,7 +536,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   {art.shortDesc}
                 </p>
 
-                <ActionGroup>
+                <ActionGroup visible={1}>
                   <button
                     type="button"
                     onClick={() => setSelectedArtifact(art)}
@@ -518,19 +547,19 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   </button>
                   {['administrator', 'museumStaff'].includes(currentRole) && <button
                     type="button"
-                    onClick={() => onOpenAIStudio(art)}
-                    className="btn btn-gold btn-sm"
-                    title="Xưởng nội dung AI"
-                  >
-                    <Sparkles size={14} />
-                  </button>}
-                  {['administrator', 'museumStaff'].includes(currentRole) && <button
-                    type="button"
                     onClick={() => setEditingArtifact(art)}
                     className="btn btn-secondary btn-sm"
                     title="Sửa"
                   >
-                    <Edit2 size={14} />
+                    <Edit2 size={14} /> Sửa
+                  </button>}
+                  {['administrator', 'museumStaff'].includes(currentRole) && <button
+                    type="button"
+                    onClick={() => onOpenAIStudio(art)}
+                    className="btn btn-gold btn-sm"
+                    title="Xưởng nội dung AI"
+                  >
+                    <Sparkles size={14} /> AI
                   </button>}
                 </ActionGroup>
               </div>

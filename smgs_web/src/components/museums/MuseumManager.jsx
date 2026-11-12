@@ -339,16 +339,36 @@ export default function MuseumManager() {
               {activeMuseum?.description}
             </p>
 
-            {['administrator', 'museumStaff'].includes(currentRole) && Number(activeMuseum?.backendId || activeMuseum?.id) > 0 && <>
-              <MediaUpload key={activeMuseum?.id} path={`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`} label="Ảnh bảo tàng"
-                onSaved={data => setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: data.coverImageUrl, coverImageUrl: data.coverImageUrl } : m))} />
-              <button type="button" disabled={isSubmitting} onClick={async () => {
-                setIsSubmitting(true);
-                try { await mediaApi(`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`, { method: 'DELETE' });
-                  setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: '', coverImageUrl: '' } : m)); showToast('Đã gỡ ảnh bảo tàng.');
-                } catch (e) { showToast(e.message, 'error'); } finally { setIsSubmitting(false); }
-              }}>Gỡ ảnh bảo tàng</button>
-            </>}
+            {['administrator', 'museumStaff'].includes(currentRole) && Number(activeMuseum?.backendId || activeMuseum?.id) > 0 && (
+              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <MediaUpload key={activeMuseum?.id} path={`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`} label="Tải ảnh bảo tàng mới"
+                    onSaved={data => setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: data.coverImageUrl, coverImageUrl: data.coverImageUrl } : m))} />
+                </div>
+                {(activeMuseum?.image || activeMuseum?.coverImageUrl) && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--color-danger)' }}
+                    disabled={isSubmitting}
+                    onClick={async () => {
+                      setIsSubmitting(true);
+                      try {
+                        await mediaApi(`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`, { method: 'DELETE' });
+                        setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: '', coverImageUrl: '' } : m));
+                        showToast('Đã gỡ ảnh bảo tàng.');
+                      } catch (e) {
+                        showToast(e.message, 'error');
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    <Trash2 size={13} /> Gỡ ảnh
+                  </button>
+                )}
+              </div>
+            )}
             {/* Hiển thị nhân viên phụ trách */}
             <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
               <div style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-charcoal-800)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>

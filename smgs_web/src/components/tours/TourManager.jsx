@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ActionGroup from '../common/ActionGroup';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import {
@@ -157,15 +158,16 @@ export default function TourManager() {
           {!museumTours.length && <p>Chưa có hành trình trong bảo tàng này.</p>}
           {museumTours.map(tour => (
             <div key={tour.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-              {tour.status !== "published" && <button className="btn btn-secondary" onClick={() => publishTour(tour)}>Xuất bản hành trình</button>}
               <div className="card-header" style={{ background: '#FAF7F2' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Compass size={18} color="var(--color-burgundy-700)" />
                   <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-charcoal-500)', fontFamily: 'monospace' }}>
-                    {tour.code} · {tour.status === "published" ? "Đã xuất bản" : "Bản nháp"}
+                    {tour.code}
                   </span>
                 </div>
-                <span className="badge-status">{tour.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</span>
+                <span className={`badge-status ${tour.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
+                  {tour.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+                </span>
               </div>
 
               <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -192,11 +194,20 @@ export default function TourManager() {
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
                     Bảo tàng: {tour.museumName}
                   </span>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>Chỉnh sửa tuyến tham quan</button>
+                  <ActionGroup visible={1}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>
+                      Chỉnh sửa
+                    </button>
+                    {tour.status !== "published" && (
+                      <button type="button" className="btn btn-gold btn-sm" onClick={() => publishTour(tour)}>
+                        Xuất bản hành trình
+                      </button>
+                    )}
+                  </ActionGroup>
                 </div>
               </div>
             </div>

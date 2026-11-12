@@ -33,21 +33,54 @@ export default function ActionGroup({ children, label = 'Thao tác khác', visib
     ? React.cloneElement(child, { 'aria-label': child.props['aria-label'] || child.props.title }) : child;
   return <div className="action-group">
     {items.slice(0, visible).map(named)}
-    {items.length > visible && <button ref={trigger} type="button" className="btn btn-secondary btn-sm action-trigger"
-      aria-label={label} aria-expanded={!!position} aria-controls={position ? id : undefined}
-      onClick={() => {
-        if (position) return close();
-        const rect = trigger.current.getBoundingClientRect();
-        setPosition({ right: Math.max(12, window.innerWidth - rect.right),
-          ...(rect.bottom + 280 < window.innerHeight ? { top: rect.bottom + 6 } : { bottom: window.innerHeight - rect.top + 6 }) });
-      }}><MoreHorizontal size={18} /><span>Thêm</span></button>}
-    {position && createPortal(<div ref={panel} id={id} className="action-popover" role="group" aria-label={label}
-      style={position} onBlur={e => { if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget) && e.relatedTarget !== trigger.current) close(); }}>
-      {items.slice(visible).map((child, index) => React.cloneElement(child, {
-        key: child.key || index, className: 'action-option', style: undefined,
-        onClick: e => { child.props.onClick?.(e); close(true); },
-        children: child.props.title || child.props.children,
-      }))}
-    </div>, document.body)}
+    {items.length > visible && (
+      <button
+        ref={trigger}
+        type="button"
+        className="btn btn-secondary btn-sm action-trigger"
+        aria-label={label}
+        aria-expanded={!!position}
+        aria-controls={position ? id : undefined}
+        title={label}
+        onClick={() => {
+          if (position) return close();
+          const rect = trigger.current.getBoundingClientRect();
+          setPosition({
+            right: Math.max(12, window.innerWidth - rect.right),
+            ...(rect.bottom + 280 < window.innerHeight ? { top: rect.bottom + 6 } : { bottom: window.innerHeight - rect.top + 6 })
+          });
+        }}
+      >
+        <MoreHorizontal size={16} />
+        <span className="action-trigger-label">Thao tác</span>
+      </button>
+    )}
+    {position && createPortal(
+      <div
+        ref={panel}
+        id={id}
+        className="action-popover"
+        role="group"
+        aria-label={label}
+        style={position}
+        onBlur={e => {
+          if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget) && e.relatedTarget !== trigger.current) close();
+        }}
+      >
+        {items.slice(visible).map((child, index) =>
+          React.cloneElement(child, {
+            key: child.key || index,
+            className: `action-option ${child.props.className || ''}`.replace(/\bbtn\b|\bbtn-[a-z0-9-]+\b/g, '').trim(),
+            style: undefined,
+            onClick: e => {
+              child.props.onClick?.(e);
+              close(true);
+            },
+            children: child.props.children || child.props.title,
+          })
+        )}
+      </div>,
+      document.body
+    )}
   </div>;
 }

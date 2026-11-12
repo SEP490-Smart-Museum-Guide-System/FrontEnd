@@ -213,13 +213,69 @@ export default function Header() {
           </button>
 
           {isSwitchOpen && (
-            <div role="menu" style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100,
-              background: 'var(--color-paper-card)', padding: '16px', borderRadius: '8px', boxShadow: 'var(--shadow-xl)' }}>
-              <strong>{currentUser?.name}</strong>
-              <p>{currentUser?.email}</p>
-              <p>{currentRoleInfo.label}</p>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={logout}>
-                <LogOut size={13} /> Đăng xuất để đổi tài khoản
+            <div
+              role="menu"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                zIndex: 1000,
+                minWidth: '260px',
+                background: '#fffdf9',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid var(--color-paper-border)',
+                boxShadow: '0 16px 40px rgba(58, 38, 28, 0.16)',
+                animation: 'menuAppear 140ms ease-out'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid var(--color-paper-border)' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
+                  color: '#FFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: '700',
+                  fontSize: '0.95rem'
+                }}>
+                  {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--color-charcoal-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentUser?.name}
+                  </strong>
+                  <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--color-charcoal-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentUser?.email}
+                  </span>
+                </div>
+              </div>
+              <div style={{ marginBottom: '14px' }}>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '0.72rem',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  background: currentRoleInfo.badgeBg,
+                  color: currentRoleInfo.badgeText,
+                  fontWeight: '700'
+                }}>
+                  {currentRoleInfo.label}
+                </span>
+                <p style={{ fontSize: '0.74rem', color: 'var(--color-charcoal-500)', marginTop: '4px', lineHeight: 1.4 }}>
+                  {currentRoleInfo.accountDesc}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={logout}
+                style={{ width: '100%', justifyContent: 'center', gap: '6px', color: 'var(--color-danger)' }}
+              >
+                <LogOut size={14} /> Đăng xuất tài khoản
               </button>
             </div>
           )}
