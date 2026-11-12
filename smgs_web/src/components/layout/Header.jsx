@@ -224,15 +224,7 @@ export default function Header() {
             </div>
           )}
         </div>
-        {/* Quick Logout Button */}
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm topbar-logout"
-          onClick={logout}
-          title="Đăng xuất khỏi hệ thống"
-        >
-          <LogOut size={15} /> <span>Đăng xuất</span>
-        </button>
+
       </div>
     </header>
   );

@@ -67,12 +67,12 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
   return <section style={{ padding: 16, border: '1px solid var(--color-paper-border)', borderRadius: 12, marginBottom: 20 }}>
     <h3>Ảnh và mô hình hiện vật</h3>
     {error && <p role="alert">{error}</p>}
-    {!readOnly && <MediaUpload path={`${path}/media`} onSaved={() => { setVersion(v => v + 1); showToast('Đã tải lên tệp media thành công.', 'success'); }} />}
+    {!readOnly && <MediaUpload multiple path={`${path}/media`} onSaved={() => { setVersion(v => v + 1); }} />}
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>{media.map(item => <div key={item.id}>
       <Preview path={`${path}/media/${item.id}/file`} /><p>{item.title}</p>
       {!readOnly && <button type="button" disabled={busy} onClick={() => remove(`${path}/media/${item.id}`)}>Xóa ảnh</button>}
     </div>)}</div>
-    {!readOnly && <MediaUpload path={`${path}/model-3d`} model label={model ? 'Thay mô hình' : 'Tải mô hình'} onSaved={() => { setVersion(v => v + 1); showToast('Đã tải mô hình 3D thành công.', 'success'); }} />}
+    {!readOnly && <MediaUpload path={`${path}/model-3d`} model label={model ? 'Thay mô hình' : 'Tải mô hình'} onSaved={() => { setVersion(v => v + 1); }} />}
     {!readOnly && <form onSubmit={saveSketchfab} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><input className="form-input" type="url" required placeholder="Link model hoặc embed Sketchfab" aria-label="Link Sketchfab" value={sketchfabUrl} onChange={e => setSketchfabUrl(e.target.value)} style={{ flex: 1, minWidth: 280 }} /><button type="submit" disabled={busy}>Gắn link 3D</button></form>}
     {model && <>{!readOnly && <ModelSettings key={`${model.id}-${version}`} artifactId={artifactId} model={model} onSaved={() => { setVersion(v => v + 1); showToast('Đã cập nhật cấu hình mô hình 3D.', 'success'); }} />}{isSketchfabUrl(model.modelUrl) ? <ArtifactModelViewer url={model.modelUrl} name={model.name} style={{ height: 300 }} /> : <Preview key={`${model.id}-${version}`} path={`${path}/model-3d/file`} model />}
       {!readOnly && <button type="button" disabled={busy} onClick={() => remove(`${path}/model-3d`)}>Xóa mô hình</button>}</>}
@@ -81,7 +81,7 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
 
 function ModelSettings({ artifactId, model, onSaved }) {
   const { showToast } = useApp();
-  const [form, setForm] = useState({ name: model.name || '', posterUrl: model.posterUrl || '', autoRotate: model.autoRotate, cameraOrbit: model.cameraOrbit || '', fieldOfView: model.fieldOfView || '', scale: model.scale }), action = useAction();
+  const [form, setForm] = useState({ name: model.name || '', posterUrl: model.posterUrl || '', autoRotate: model.autoRotate, cameraOrbit: model.cameraOrbit || '', fieldOfView: model.fieldOfView || '', scale: model.scale }), action = useAction(null);
   const change = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
   return <details><summary>Cấu hình mô hình 3D</summary><form style={{ display: 'grid', gap: 12 }} onSubmit={e => {
     e.preventDefault();

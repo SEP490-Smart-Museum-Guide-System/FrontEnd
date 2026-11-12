@@ -164,7 +164,6 @@ export default function SystemOperations({ mode = 'support' }) {
                     type="button"
                     onClick={() => {
                       moderateReview(item.id, !item.hidden);
-                      showToast(item.hidden ? 'Đã bỏ ẩn phản hồi.' : 'Đã ẩn phản hồi khỏi hệ thống.');
                     }}
                   >
                     {item.hidden ? 'Hiện lại phản hồi' : 'Ẩn phản hồi'}
@@ -489,7 +488,6 @@ export default function SystemOperations({ mode = 'support' }) {
                           className="btn btn-secondary btn-sm"
                           onClick={() => {
                             updateSystemCase(item.id, 'in_progress', notes[item.id] || 'Đang xác minh');
-                            showToast('Đã tiếp nhận xử lý khiếu nại.');
                           }}
                         >
                           Tiếp nhận
@@ -500,7 +498,6 @@ export default function SystemOperations({ mode = 'support' }) {
                         className="btn btn-primary btn-sm"
                         onClick={() => {
                           updateSystemCase(item.id, 'resolved', notes[item.id] || 'Đã giải quyết thỏa đáng.');
-                          showToast('Đã hoàn tất hỗ trợ khách.');
                         }}
                       >
                         Hoàn tất hỗ trợ

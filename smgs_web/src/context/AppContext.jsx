@@ -84,10 +84,17 @@ function DataProvider({ children, session, login, endSession }) {
   const [dataErrors, setDataErrors] = useState({}), [loading, setLoading] = useState({});
   const [toasts, setToasts] = useState([]), [refresh, setRefresh] = useState(0);
   const reload = useCallback(() => setRefresh(n => n + 1), []);
-  const showToast = (message, type = 'success') => {
-    const id = crypto.randomUUID(); setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
-  };
+  const toastTimers = useRef(new Map());
+  useEffect(() => () => { toastTimers.current.forEach(clearTimeout); toastTimers.current.clear(); }, []);
+  const dismissToast = useCallback(id => {
+    clearTimeout(toastTimers.current.get(id)); toastTimers.current.delete(id);
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+  const showToast = useCallback((message, type = 'success') => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev.filter(t => t.message !== message), { id, message, type }].slice(-4));
+    toastTimers.current.set(id, setTimeout(() => dismissToast(id), type === 'success' ? 6000 : 10000));
+  }, [dismissToast]);
   const unavailable = message => { showToast(message, 'warning'); return { success: false, error: message }; };
   // Only BE may create persisted audit entries.
   const logAction = () => {};
@@ -155,8 +162,8 @@ function DataProvider({ children, session, login, endSession }) {
     }
     return () => controller.abort();
   }, [session, currentRole, currentMuseum, museums, artifacts, refresh]);
-  async function mutate(request, message) {
-    try { const data = await request(); reload(); showToast(message); return { success: true, data }; }
+  async function mutate(request, message, { notify = true } = {}) {
+    try { const data = await request(); reload(); if (notify) showToast(message); return { success: true, data }; }
     catch (e) { showToast(e.message, 'warning'); return { success: false, error: e.message }; }
   }
   function requireId(id) {
@@ -167,8 +174,8 @@ function DataProvider({ children, session, login, endSession }) {
   const updateMuseum = (id, form, file) => mutate(() => updateMuseumApi(requireId(id), form, file), 'Đã cập nhật bảo tàng.');
   const deleteMuseum = id => mutate(() => deleteMuseumApi(requireId(id)), 'Đã vô hiệu hóa bảo tàng.');
   const artifactPayload = a => ({ museumId: requireId(a.museumId || currentMuseum?.id), galleryId: a.galleryId ? requireId(a.galleryId) : null, name: a.name, code: a.code || null, qrCode: a.qrCode || null, accessLevel: a.accessLevel || 'free' });
-  const addArtifact = a => mutate(async () => (await createArtifactApi(artifactPayload(a))).data, 'Đã thêm hiện vật.');
-  const updateArtifact = a => mutate(() => updateArtifactApi(requireId(a.id), artifactPayload(a)), 'Đã lưu thông tin cơ bản. Nội dung thuyết minh và media được lưu riêng.');
+  const addArtifact = (a, options) => mutate(async () => (await createArtifactApi(artifactPayload(a))).data, 'Đã thêm hiện vật.', options);
+  const updateArtifact = (a, options) => mutate(() => updateArtifactApi(requireId(a.id), artifactPayload(a)), 'Đã lưu thông tin cơ bản. Nội dung thuyết minh và media được lưu riêng.', options);
   const deleteArtifact = id => mutate(() => deleteArtifactApi(requireId(id)), 'Đã xóa hiện vật.');
   const downloadArtifactQr = (id, name) => mutate(() => downloadArtifactQrImageApi(requireId(id), name), 'Đã tải mã QR.');
   const regenerateArtifactQr = id => mutate(() => regenerateArtifactQrApi(requireId(id)), 'Đã tạo lại mã QR.');
@@ -196,6 +203,6 @@ function DataProvider({ children, session, login, endSession }) {
     isLoadingMuseums: !!loading.museums, isLoadingArtifacts: !!loading.artifacts, isLoadingCuration: !!loading.curationQueue,
     loadCities: reload, loadMuseums: reload, loadArtifacts: reload, loadCurationQueue: reload,
     createMuseum, updateMuseum, deleteMuseum, addArtifact, updateArtifact, deleteArtifact, downloadArtifactQr, regenerateArtifactQr, submitToCuration, approveCurationItem, rejectCurationItem, requestRevisionCurationItem,
-    addTour, updateTour, publishTour, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast }}>{children}</AppContext.Provider>;
+    addTour, updateTour, publishTour, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast, dismissToast }}>{children}</AppContext.Provider>;
 }
 export function useApp() { const context = useContext(AppContext); if (!context) throw new Error('useApp must be used within AppProvider'); return context; }

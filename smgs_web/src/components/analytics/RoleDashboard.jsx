@@ -168,7 +168,7 @@ export default function RoleDashboard({ onNavigate }) {
           <ShieldCheck size={24} color="var(--color-burgundy-700)" />
           <h2 className="card-title">{config.asideTitle}</h2>
           <p>{config.asideText}</p>
-          <button type="button" className="btn btn-primary" onClick={() => onNavigate(config.asideAction[1])}>
+          <button type="button" className="btn btn-secondary" onClick={() => onNavigate(config.asideAction[1])}>
             {config.asideAction[0]} <ArrowRight size={16} />
           </button>
         </aside>

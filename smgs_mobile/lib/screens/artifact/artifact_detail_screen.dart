@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
-import '../../widgets/artifact_photo.dart';
+import '../../widgets/artifact_gallery.dart';
 import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
 import '../../data/visit_store.dart';
@@ -29,6 +29,9 @@ class ArtifactDetailScreen extends StatefulWidget {
 class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   Map<String, dynamic>? _publishedContent;
   String? _contentError;
+  List<String>? _photos;
+  bool _photoError = false;
+  bool _loadingPhotos = false;
 
   @override
   void initState() {
@@ -39,6 +42,21 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
       }
     });
     _loadPublishedContent();
+    _loadPhotos();
+  }
+
+  Future<void> _loadPhotos() async {
+    final id = int.tryParse(widget.artifact.id);
+    if (id == null) return;
+    setState(() { _loadingPhotos = true; _photoError = false; });
+    try {
+      final json = await DiscoveryApiService.fetchArtifactDetail(id);
+      if (mounted) setState(() => _photos = Artifact.fromBackendJson(json).photos);
+    } catch (_) {
+      if (mounted) setState(() => _photoError = true);
+    } finally {
+      if (mounted) setState(() => _loadingPhotos = false);
+    }
   }
 
   Future<void> _loadPublishedContent() async {
@@ -67,7 +85,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
     final story = _publishedContent?['description'] as String? ?? a.story;
     return StoryScaffold(
       title: a.name,
-      photo: ArtifactPhoto(artifact: a, height: 300),
+      photo: ArtifactGallery(photos: _photos ?? a.photos, name: a.name),
       actions: [
         ListenableBuilder(
           listenable: VisitStore.instance,
@@ -76,7 +94,10 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                 ? 'Bỏ lưu hiện vật'
                 : 'Lưu hiện vật',
             child: TextButton.icon(
-              onPressed: () => VisitStore.instance.toggleSave(a.id),
+              onPressed: () {
+                VisitStore.instance.toggleSave(a.id);
+                ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(VisitStore.instance.saved.contains(a.id) ? 'Đã lưu hiện vật vào bộ sưu tập.' : 'Đã bỏ lưu hiện vật.')));
+              },
               icon: Icon(
                 VisitStore.instance.saved.contains(a.id)
                     ? Icons.bookmark
@@ -91,6 +112,11 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         ),
       ],
       children: [
+        if (_loadingPhotos) const LinearProgressIndicator(),
+        if (_photoError) Row(children: [
+          const Expanded(child: Text('Chưa tải đủ ảnh hiện vật.')),
+          TextButton(onPressed: _loadPhotos, child: const Text('Thử lại')),
+        ]),
         Text(
           a.id == 'artifact_1'
               ? 'Trống đồng Ngọc Lũ · Ảnh: VuThiAnh, Wikimedia Commons'
@@ -163,35 +189,21 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           icon: Icons.chat_bubble_outline,
           onPressed: () => openPage(context, AiGuideScreen(artifact: a)),
         ),
-        const SizedBox(height: 12),
-        SecondaryButton(
-          label: 'Bản thuyết minh',
-          icon: Icons.menu_book_outlined,
-          onPressed: () => openPage(context, NarrationScreen(artifact: a)),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          icon: const Icon(Icons.more_horiz), label: const Text('Thuyết minh, chỉ đường & 3D'),
+          onPressed: () => showModalBottomSheet<void>(context: context, showDragHandle: true,
+            builder: (sheetContext) {
+              void go(Widget screen) { Navigator.pop(sheetContext); openPage(context, screen); }
+              return SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 16), child: Column(mainAxisSize: MainAxisSize.min, children: [
+                ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Đọc & nghe thuyết minh'), trailing: const Icon(Icons.chevron_right), onTap: () => go(NarrationScreen(artifact: a))),
+                if (int.tryParse(a.museumId) != null && int.tryParse(a.id) != null)
+                  ListTile(leading: const Icon(Icons.directions_walk), title: const Text('Chỉ đường tới hiện vật'), trailing: const Icon(Icons.chevron_right), onTap: () => go(VisitorDirectoryScreen(museumId: int.parse(a.museumId), initialArtifactId: int.parse(a.id), museumName: widget.museumName))),
+                if (a.modelUrl?.isNotEmpty == true)
+                  ListTile(leading: const Icon(Icons.view_in_ar_outlined), title: const Text('Xem mô hình 3D'), trailing: const Icon(Icons.chevron_right), onTap: () => go(Artifact3DScreen(artifact: a))),
+              ])));
+            }),
         ),
-        if (int.tryParse(a.museumId) != null && int.tryParse(a.id) != null) ...[
-          const SizedBox(height: 12),
-          SecondaryButton(
-            label: 'Vị trí & chỉ đường tới hiện vật',
-            icon: Icons.directions_walk,
-            onPressed: () => openPage(
-              context,
-              VisitorDirectoryScreen(
-                museumId: int.parse(a.museumId),
-                initialArtifactId: int.parse(a.id),
-                museumName: widget.museumName,
-              ),
-            ),
-          ),
-        ],
-        if (a.modelUrl != null && a.modelUrl!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          SecondaryButton(
-            label: 'Xem mô hình 3D',
-            icon: Icons.view_in_ar_outlined,
-            onPressed: () => openPage(context, Artifact3DScreen(artifact: a)),
-          ),
-        ],
         const SectionHeading('Những điều còn lưu lại'),
         ScrollReveal(child: Text(story, style: AppTextStyles.bodyLarge)),
         const SizedBox(height: 24),
@@ -248,7 +260,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                     )
                   else ...[
                     PrimaryButton(
-                      label: 'Làm Quiz ngay (+20 điểm)',
+                      label: 'Khám phá câu đố',
                       icon: Icons.play_arrow,
                       onPressed: () =>
                           openPage(context, QuizScreen(artifact: a)),
@@ -256,7 +268,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                     const SizedBox(height: 8),
                     if (!isDeferred)
                       SecondaryButton(
-                        label: 'Để khi rảnh làm sau (Tích lũy cuối ngày)',
+                        label: 'Lưu để làm sau',
                         icon: Icons.alarm_add_outlined,
                         onPressed: () {
                           store.deferQuiz(a.id);

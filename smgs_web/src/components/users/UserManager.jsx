@@ -8,7 +8,7 @@ export default function UserManager() {
   const list = useData('accounts', signal => allPages('admin/accounts', { signal }), []);
   const roles = useData('roles', signal => backend('admin/roles', { signal }), []);
   const [query, setQuery] = useState(''), [role, setRole] = useState(''), [editing, setEditing] = useState(null), [allScopes, setAllScopes] = useState(false);
-  const action = useAction();
+  const action = useAction('Đã cập nhật tài khoản và phân công.');
   const refresh = () => { list.reload(); reloadApp(); };
   const rows = list.data.filter(u => (!role || u.roles.includes(role)) && `${u.fullName} ${u.email} ${u.phoneNumber || ''}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi')));
   return <div><PageTitle description="Tài khoản, vai trò và phạm vi phụ trách được quản lý tại một nơi.">Người dùng & phân quyền</PageTitle>
@@ -28,7 +28,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
   const isNew = !account.id;
   const [form, setForm] = useState({ fullName: account.fullName, email: account.email, phoneNumber: account.phoneNumber || '', password: '' });
   const [role, setRole] = useState(account.roles[0] || roles.find(r => r === 'Museum Staff') || roles[0] || '');
-  const action = useAction();
+  const action = useAction('Đã cập nhật tài khoản và phân công.');
   const change = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
   async function save(e) {
     e.preventDefault();
@@ -50,7 +50,7 @@ function Assignments({ id, eligible, onSaved }) {
   const list = useData(`assignments:${id}`, signal => backend(`admin/accounts/${id}/assignments`, { signal }), []);
   const [museumId, setMuseumId] = useState(''), [galleryId, setGalleryId] = useState(''), [artifactId, setArtifactId] = useState('');
   const galleries = useData(`galleries:${museumId}`, signal => museumId ? backend(`museums/${museumId}/galleries`, { signal }) : Promise.resolve([]), []);
-  const action = useAction();
+  const action = useAction('Đã cập nhật tài khoản và phân công.');
   const refresh = () => { list.reload(); onSaved(); };
   return <><h4>Phạm vi phụ trách</h4><ErrorNotice>{action.error}</ErrorNotice><LoadState resource={list}>{!list.data.length && <Empty>Chưa có phân công.</Empty>}{list.data.map(a => <div className="business-actions" key={a.id}><span>{a.museumName}{a.galleryName ? ` · ${a.galleryName}` : ''}{a.artifactName ? ` · ${a.artifactName}` : ''}</span><button className="btn btn-secondary btn-sm" disabled={action.busy} onClick={() => { if (window.confirm('Thu hồi phân công này?')) action.run(() => backend(`admin/accounts/${id}/assignments/${a.id}`, { method: 'DELETE' }), refresh); }}>Thu hồi</button></div>)}</LoadState>
     {eligible ? <form onSubmit={e => { e.preventDefault(); action.run(() => backend(`admin/accounts/${id}/assignments`, { method: 'POST', body: { museumId: Number(museumId), galleryId: galleryId ? Number(galleryId) : null, artifactId: artifactId ? Number(artifactId) : null } }), refresh); }}>
@@ -67,6 +67,6 @@ function GlobalAssignments({ users, onClose, onSaved }) {
   const [museumId, setMuseum] = useState(''), [userId, setUser] = useState('');
   const query = new URLSearchParams({ ...(museumId ? { museumId } : {}), ...(userId ? { userId } : {}) }).toString();
   const data = useData(`all-assignments:${query}`, signal => backend(`admin/assignments${query ? `?${query}` : ''}`, { signal }), []);
-  const action = useAction();
+  const action = useAction('Đã cập nhật tài khoản và phân công.');
   return <Modal title="Danh sách phân công toàn hệ thống" onClose={onClose} busy={action.busy}><div className="business-toolbar"><Field label="Lọc bảo tàng"><select className="form-select" value={museumId} onChange={e => setMuseum(e.target.value)}><option value="">Tất cả bảo tàng</option>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field><Field label="Lọc tài khoản"><select className="form-select" value={userId} onChange={e => setUser(e.target.value)}><option value="">Tất cả tài khoản</option>{users.map(u => <option key={u.id} value={u.id}>{u.fullName} · {u.email}</option>)}</select></Field></div><ErrorNotice>{action.error}</ErrorNotice><LoadState resource={data}>{!data.data.length && <Empty>Chưa có phân công phù hợp.</Empty>}{data.data.map(a => <article className="card business-card" key={a.id}><strong>{a.userFullName}</strong><p>{a.userEmail}</p><p>{a.museumName}{a.galleryName ? ` · ${a.galleryName}` : ''}{a.artifactName ? ` · ${a.artifactName}` : ''}</p><button className="btn btn-secondary" disabled={action.busy} onClick={() => { if (window.confirm('Thu hồi phân công này?')) action.run(() => backend(`admin/assignments/${a.id}`, { method: 'DELETE' }), () => { data.reload(); onSaved(); }); }}>Thu hồi phân công</button></article>)}</LoadState></Modal>;
 }

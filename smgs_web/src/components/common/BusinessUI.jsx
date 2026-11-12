@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useApp } from '../../context/AppContext';
 
 export function useData(key, loader, initial = null) {
   const loadRef = useRef(loader); loadRef.current = loader;
@@ -15,15 +16,16 @@ export function useData(key, loader, initial = null) {
   }, [key, revision]);
   return { ...(state.key === key ? state : { data: initial, busy: true, error: '' }), reload: () => setRevision(n => n + 1) };
 }
-export function useAction() {
+export function useAction(successMessage = 'Thao tác đã hoàn tất.') {
+  const { showToast } = useApp();
   const lock = useRef(false), alive = useRef(true);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const run = async (request, after) => {
     if (lock.current) return false;
     lock.current = true; setBusy(true); setError('');
-    try { const data = await request(); if (alive.current) await after?.(data); return true; }
-    catch (e) { if (alive.current) setError(e.message); return false; }
+    try { const data = await request(); if (successMessage) showToast(successMessage); if (alive.current) await after?.(data); return true; }
+    catch (e) { if (alive.current) setError(e.message); showToast(e.message || 'Không thể hoàn tất thao tác. Vui lòng thử lại.', 'error'); return false; }
     finally { lock.current = false; if (alive.current) setBusy(false); }
   };
   return { busy, error, run };

@@ -1,4 +1,5 @@
 ﻿import './components/common/business.css';
+import './components/common/refined.css';
 import QuestionBank from './components/curation/QuestionBank';
 import TopicManager from './components/artifacts/TopicManager';
 import BadgeManager from './components/analytics/BadgeManager';
@@ -127,7 +128,7 @@ export default function App() {
         <Header />
         <main className="page-body">
           {Object.values(loading).some(Boolean) && <p role="status">Đang tải dữ liệu từ máy chủ…</p>}
-          {Object.entries(dataErrors).filter(([, error]) => error).map(([key, error]) => <p role="alert" key={key}>{error} <button className="btn btn-secondary btn-sm" onClick={reload}>Thử lại</button></p>)}
+          {Object.values(dataErrors).some(Boolean) && <details className="business-error"><summary>Một số dữ liệu chưa tải được</summary>{[...new Set(Object.values(dataErrors).filter(Boolean))].map(error => <p key={error}>{error}</p>)}<button className="btn btn-secondary btn-sm" onClick={reload}>Tải lại dữ liệu</button></details>}
           {renderContent()}
         </main>
       </div>

@@ -2,11 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { backend } from '../../services/backend';
+import { uploadBatch } from '../../services/uploadBatch';
 import { uploadMedia, validateMediaFile } from '../../services/mediaApi';
 import { UploadCloud, X, AlertCircle } from 'lucide-react';
 
 export default function ArtifactEditModal({ artifact, onClose, onSave }) {
-  const { currentMuseum, museums, currentRole, showToast } = useApp();
+  const { currentMuseum, museums, currentRole, showToast, loadArtifacts } = useApp();
   const [form, setForm] = useState({
     id: artifact?.id, name: artifact?.name || '', code: artifact?.code || '',
     museumId: artifact?.museumId ?? currentMuseum?.id ?? '', galleryId: artifact?.galleryId ?? '',
@@ -19,6 +20,8 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [filePreviews, setFilePreviews] = useState([]);
   const fileInputRef = useRef(null);
+  const saveLock = useRef(false);
+  const savedId = useRef(artifact?.id);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -79,33 +82,38 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
 
   async function save(event) {
     event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setUploadStatus('');
+    if (saveLock.current) return;
+    saveLock.current = true; setBusy(true); setError(''); setUploadStatus('');
     try {
-      const result = await onSave(form);
-      if (result?.success) {
-        const targetId = result.data?.id || form.id;
-        if (targetId && selectedFiles.length > 0) {
-          for (let i = 0; i < selectedFiles.length; i++) {
-            const f = selectedFiles[i];
-            setUploadStatus(`Đang tải ảnh (${i + 1}/${selectedFiles.length}): ${f.name}…`);
-            const formData = new FormData();
-            formData.append('file', f);
-            formData.append('mediaType', 'image');
-            formData.append('title', f.name.replace(/\.[^/.]+$/, ''));
-            formData.append('sortOrder', i);
-            await uploadMedia(`artifacts/${targetId}/media`, formData);
-          }
-        }
-        showToast?.(`Đã lưu hiện vật${selectedFiles.length > 0 ? ` kèm ${selectedFiles.length} hình ảnh` : ''}.`);
+      const result = await onSave({ ...form, id: savedId.current });
+      if (!result?.success) { setError(result?.error || 'Chưa lưu được hiện vật.'); return; }
+      const targetId = result.data?.id || savedId.current;
+      if (!targetId) throw new Error('Máy chủ chưa trả mã hiện vật. Không thể tải ảnh.');
+      savedId.current = targetId;
+      setForm(previous => ({ ...previous, id: targetId }));
+      const batch = await uploadBatch(selectedFiles, {
+        upload: async (file, progress) => {
+          const data = new FormData(); data.append('file', file);
+          data.append('mediaType', 'image'); data.append('title', file.name.replace(/\.[^/.]+$/, ''));
+          return uploadMedia(`artifacts/${targetId}/media`, data, progress);
+        },
+        onProgress: ({ file, index, total, progress }) => setUploadStatus(`Ảnh ${index + 1}/${total}: ${file.name} · ${progress === 100 ? 'đang lưu…' : `${progress}%`}`),
+      });
+      setSelectedFiles(batch.failed.map(item => item.file));
+      loadArtifacts();
+      if (batch.failed.length) {
+        const message = `Thông tin hiện vật đã lưu; ${batch.saved.length}/${selectedFiles.length} ảnh tải thành công. ${batch.failed.length} ảnh còn lại chưa lưu.`;
+        setError(message + ' ' + batch.failed.map(item => `${item.file.name}: ${item.message}`).join(' '));
+        showToast(message, 'warning');
+      } else {
+        showToast(`Đã lưu hiện vật${batch.saved.length ? ` và ${batch.saved.length} ảnh` : ''}.`);
         onClose();
       }
     } catch (err) {
-      setError(err.message || 'Lỗi khi lưu hiện vật hoặc tải ảnh.');
+      setError(err.message || 'Không thể lưu hiện vật.');
+      showToast(err.message || 'Không thể lưu hiện vật.', 'error');
     } finally {
-      setBusy(false);
-      setUploadStatus('');
+      saveLock.current = false; setBusy(false); setUploadStatus('');
     }
   }
 

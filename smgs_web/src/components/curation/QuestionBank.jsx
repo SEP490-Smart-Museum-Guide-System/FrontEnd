@@ -10,7 +10,7 @@ export default function QuestionBank({ imported, onOpenAI }) {
   const [savedDrafts, setSavedDrafts] = useState([]);
   const selected = scoped.some(a => String(a.id) === artifactId) ? artifactId : '';
   const data = useData(`questions:${selected}`, async signal => selected ? Promise.all([allPages(`question-bank/questions?artifactId=${selected}`, { signal, pagedArray: true }), backend(`question-bank/quizzes?artifactId=${selected}`, { signal })]) : [[], []], [[], []]);
-  const [modal, setModal] = useState(null), action = useAction();
+  const [modal, setModal] = useState(null), action = useAction('Đã lưu thay đổi vào ngân hàng câu hỏi.');
   const canReview = ['administrator', 'curator'].includes(currentRole);
   const canGenerate = ['administrator', 'museumStaff'].includes(currentRole);
   return <div><PageTitle description="Chuẩn bị câu hỏi, kiểm duyệt đáp án và xuất bản bộ câu hỏi cho khách tham quan.">Ngân hàng câu hỏi</PageTitle>{currentRole === 'administrator' && <select className="form-select" aria-label="Bảo tàng đang quản lý" value={currentMuseum?.id || ''} onChange={e => setSelectedMuseumId(Number(e.target.value))}><option value="" disabled>Chọn bảo tàng</option>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>}
@@ -28,7 +28,7 @@ function QuestionModal({ modal, artifactId, questions, onClose, onSaved }) {
   const [options, setOptions] = useState(seed?.options.map(o => o.content) || ['', '']);
   const [correct, setCorrect] = useState(seed ? seed.options.findIndex(o => o.isCorrect) : 0);
   const [note, setNote] = useState(''), [approve, setApprove] = useState(true), [title, setTitle] = useState(''), [count, setCount] = useState(1), [ids, setIds] = useState([]);
-  const action = useAction();
+  const action = useAction('Đã lưu thay đổi vào ngân hàng câu hỏi.');
   async function save(e) {
     e.preventDefault();
     if (modal.type === 'review') return action.run(() => backend(`question-bank/questions/${q.id}/review`, { method: 'POST', body: { approve, note: note.trim() || null } }), onSaved);

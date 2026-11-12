@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   LayoutDashboard,
@@ -123,7 +123,26 @@ export default function Sidebar() {
     }
   };
 
-  const navSections = getNavSections();
+  const original = getNavSections().flatMap(section => section.items);
+  const groups = currentRole === 'administrator' ? [
+    ['Tổng quan & quản trị', ['overview', 'museums', 'users']],
+    ['Nội dung & trải nghiệm', ['artifacts', 'indoor_maps', 'topics', 'ai_studio', 'question_bank', 'badges']],
+    ['Kinh doanh & nhật ký', ['transactions', 'audit']],
+  ] : currentRole === 'museumStaff' ? [
+    ['Công việc chính', ['overview', 'artifacts', 'ai_studio', 'submission_status']],
+    ['Không gian & trải nghiệm', ['spaces', 'indoor_maps', 'topics', 'question_bank', 'tours']],
+    ['Phản hồi & doanh thu', ['reviews', 'transactions']],
+  ] : currentRole === 'curator' ? [
+    ['Thẩm định', ['overview', 'curation_queue', 'question_bank']],
+    ['Tra cứu & nhật ký', ['artifacts', 'audit']],
+  ] : [
+    ['Hỗ trợ khách', ['overview', 'support', 'refunds']],
+    ['Giám sát hệ thống', ['review_moderation', 'operations', 'transactions', 'audit']],
+  ];
+  const navSections = groups.map(([title, ids]) => ({ title, items: ids.map(id => original.find(item => item.id === id)).filter(Boolean) }));
+  const activeSection = navSections.find(section => section.items.some(item => item.id === activeTab))?.title;
+  const [expanded, setExpanded] = useState(() => new Set([navSections[0].title, activeSection]));
+  useEffect(() => { setExpanded(previous => new Set([...previous, activeSection])); }, [activeSection]);
 
   return (
     <aside className="sidebar">
@@ -141,8 +160,9 @@ export default function Sidebar() {
       {/* Navigation Menu */}
       <div className="sidebar-menu">
         {navSections.map((sec, sIdx) => (
-          <div key={sIdx} style={{ marginBottom: '12px' }}>
-            <div className="sidebar-section-title">{sec.title}</div>
+          <section key={sec.title} className="nav-section">
+            <button type="button" className="nav-section-toggle" aria-expanded={expanded.has(sec.title)} aria-controls={`nav-section-${sIdx}`} onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(sec.title)) next.delete(sec.title); else next.add(sec.title); return next; })}>{sec.title}<span aria-hidden="true">{expanded.has(sec.title) ? '−' : '+'}</span></button>
+            <div id={`nav-section-${sIdx}`} hidden={!expanded.has(sec.title)}>
             {sec.items.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -152,9 +172,9 @@ export default function Sidebar() {
                   type="button"
                   onClick={() => setActiveTab(item.id)}
                   className={`sidebar-item ${isActive ? 'active' : ''}`}
-                  style={item.highlight ? { color: 'var(--color-gold-400)', fontWeight: '600' } : {}}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon size={18} color={item.highlight && !isActive ? 'var(--color-gold-400)' : 'currentColor'} />
+                  <Icon size={18} />
                   <span>{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="badge">{item.badge}</span>
@@ -162,7 +182,8 @@ export default function Sidebar() {
                 </button>
               );
             })}
-          </div>
+            </div>
+          </section>
         ))}
       </div>
 

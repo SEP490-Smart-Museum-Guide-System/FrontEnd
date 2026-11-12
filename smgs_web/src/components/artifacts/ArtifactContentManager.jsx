@@ -13,7 +13,7 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
 
   const [form, setForm] = useState({ title: '', description: '', narrationText: '', audioUrl: '' });
   const [successMsg, setSuccessMsg] = useState('');
-  const action = useAction();
+  const action = useAction(null);
 
   const change = e => {
     setSuccessMsg('');

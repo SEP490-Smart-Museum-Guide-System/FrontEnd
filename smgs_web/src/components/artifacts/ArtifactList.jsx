@@ -1,3 +1,4 @@
+import ActionGroup from '../common/ActionGroup';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
@@ -365,14 +366,14 @@ export default function ArtifactList({ onOpenAIStudio }) {
 
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <ActionGroup>
                           <button
                             type="button"
                             onClick={() => setSelectedArtifact(art)}
                             className="btn btn-secondary btn-sm"
                             title="Xem chi tiết & QR"
                           >
-                            <Eye size={14} />
+                            <Eye size={14} /> Chi tiết
                           </button>
                           {['administrator', 'museumStaff'].includes(currentRole) && <button
                             type="button"
@@ -405,7 +406,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                               <Trash2 size={14} />
                             </button>
                           )}
-                        </div>
+                        </ActionGroup>
                       </td>
                     </tr>
                   ))
@@ -506,7 +507,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   {art.shortDesc}
                 </p>
 
-                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px' }}>
+                <ActionGroup>
                   <button
                     type="button"
                     onClick={() => setSelectedArtifact(art)}
@@ -531,7 +532,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   >
                     <Edit2 size={14} />
                   </button>}
-                </div>
+                </ActionGroup>
               </div>
             </div>
           ))}
@@ -564,10 +565,10 @@ export default function ArtifactList({ onOpenAIStudio }) {
             setIsCreatingNew(false);
           }}
           onSave={async (artData) => {
-            if (isCreatingNew) {
-              return await addArtifact(artData);
+            if (!artData.id) {
+              return await addArtifact(artData, { notify: false });
             } else {
-              return await updateArtifact(artData);
+              return await updateArtifact(artData, { notify: false });
             }
           }}
         />

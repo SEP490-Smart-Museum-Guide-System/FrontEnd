@@ -1,3 +1,4 @@
+import ActionGroup from '../common/ActionGroup';
 import { backend } from '../../services/backend';
 import MediaUpload from '../common/MediaUpload';
 import { mediaApi } from '../../services/mediaApi';
@@ -380,7 +381,7 @@ export default function MuseumManager() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+            <ActionGroup>
               {(currentRole === 'museumStaff' || currentRole === 'administrator') && (
                 <button
                   className="btn btn-secondary btn-sm"
@@ -426,7 +427,7 @@ export default function MuseumManager() {
                   <Trash2 size={14} /> {activeMuseum?.status === 'inactive' ? 'Đã vô hiệu hóa' : 'Vô hiệu hóa bảo tàng'}
                 </button>
               )}
-            </div>
+            </ActionGroup>
           </div>
         </div>
       </div>
