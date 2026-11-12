@@ -8,8 +8,7 @@ import { getArtifactQrImageUrl } from '../../services/artifactApi';
 import { getPublishedArtifactContentApi } from '../../services/contentSubmissionApi';
 import { generateSpeechApi } from '../../services/ttsApi';
 import { uploadReferenceImageApi, deleteReferenceImagesApi, checkVisionHealthApi } from '../../services/visionApi';
-import { checkScanHealthApi, submitScanJobApi, getScanJobStatusApi, approveScanJobApi } from '../../services/scan3dApi';
-import ArtifactModelViewer from '../common/ArtifactModelViewer';
+import Artifact3DPanel from './Artifact3DPanel';
 import {
   X,
   QrCode,
@@ -211,73 +210,6 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     }
   };
 
-  const [scanHealth, setScanHealth] = useState(null);
-  const [scanFiles, setScanFiles] = useState([]);
-  const [scanJob, setScanJob] = useState(null);
-  const [isSubmittingScan, setIsSubmittingScan] = useState(false);
-  const [scanError, setScanError] = useState(null);
-  const [reconstructedGlbUrl, setReconstructedGlbUrl] = useState(null);
-  const pollTimerRef = useRef(null);
-
-  useEffect(() => {
-    checkScanHealthApi().then(setScanHealth).catch(() => {});
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
-  }, []);
-
-  const handleStart3DScan = async () => {
-    if (scanFiles.length < 5 || scanFiles.length > 80) {
-      showToast('Vui lòng chọn ít nhất 5 ảnh JPG/PNG của cùng một hiện vật (tối đa 80 ảnh).', 'warning');
-      return;
-    }
-    setIsSubmittingScan(true);
-    setScanError(null);
-    const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
-    try {
-      const job = await submitScanJobApi({
-        artifactId: targetArtifactId,
-        files: scanFiles
-      });
-      setScanJob(job);
-      setIsSubmittingScan(false);
-
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-      pollTimerRef.current = setInterval(async () => {
-        try {
-          const status = await getScanJobStatusApi(job.scanJobId);
-          setScanJob(status);
-          if (status.status === 'REVIEW_REQUIRED' || status.status === 'COMPLETED') {
-            clearInterval(pollTimerRef.current);
-            if (status.modelUrl) {
-              setReconstructedGlbUrl(status.modelUrl);
-            }
-          } else if (status.status === 'FAILED') {
-            clearInterval(pollTimerRef.current);
-            setScanError(status.errorMessage || 'Quá trình tái tạo 3D thất bại.');
-          }
-        } catch (e) {
-          clearInterval(pollTimerRef.current);
-          setScanError(e.message || 'Chưa tải được tiến trình dựng 3D. Vui lòng thử lại.');
-        }
-      }, 3000);
-    } catch (err) {
-      setIsSubmittingScan(false);
-      setScanError(err.message || 'Không thể kết nối dịch vụ 3D Scan (Port 8002).');
-    }
-  };
-
-  const handleApprove3DModel = async () => {
-    if (!scanJob?.scanJobId) return;
-    try {
-      await approveScanJobApi(scanJob.scanJobId);
-      setScanJob(prev => prev ? { ...prev, status: 'COMPLETED' } : null);
-      showToast('Đã duyệt bản dựng. Hãy lưu mô hình vào hồ sơ hiện vật để xuất bản cho khách.', 'success');
-    } catch (err) {
-      showToast('Lỗi phê duyệt: ' + err.message, 'error');
-    }
-  };
-
   useEffect(() => {
     const backendId = typeof artifact?.id === 'number' ? artifact.id : artifact?.backendId;
     if (backendId) {
@@ -446,8 +378,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
         {/* Modal Body */}
         <div className="modal-body" style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          <ArtifactContentManager key={`contents-${artifact.id}`} artifactId={artifact.backendId || artifact.id} canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)} canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)} />
-          <ArtifactMediaPanel key={artifact.id} artifactId={artifact.backendId || artifact.id} readOnly={readOnly || !['administrator', 'museumStaff'].includes(currentRole)} />
+          {activeTab !== '3d' && <ArtifactContentManager key={`contents-${artifact.id}`} artifactId={artifact.backendId || artifact.id} canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)} canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)} />}
+          {activeTab === 'overview' && <ArtifactMediaPanel key={artifact.id} artifactId={artifact.backendId || artifact.id} readOnly={readOnly || !['administrator', 'museumStaff'].includes(currentRole)} />}
           {activeTab === 'overview' && (
             <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '28px' }}>
               {/* Left Column: Image & Audio */}
@@ -672,165 +604,13 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
             </div>
           )}
 
-          {/* 3D Model Tab */}
-          {activeTab === '3d' && (
-            <div>
-              {(artifact.modelUrl || reconstructedGlbUrl) ? (
-                <div>
-                  <div style={{
-                    height: '420px',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: 'radial-gradient(circle, #2A303C 0%, #121519 100%)',
-                    border: '1px solid var(--color-paper-border)',
-                    position: 'relative'
-                  }}>
-                    <ArtifactModelViewer url={reconstructedGlbUrl || artifact.modelUrl} name={artifact.name} />
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '16px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'rgba(0, 0, 0, 0.7)',
-                      color: '#FFFFFF',
-                      padding: '6px 16px',
-                      borderRadius: '20px',
-                      fontSize: '0.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <Box size={14} color="var(--color-gold-400)" />
-                      <span>Dùng chuột kéo để xoay 360° • Cuộn để phóng to/thu nhỏ • Hỗ trợ AR di động</span>
-                    </div>
-                  </div>
-                  <p style={{ marginTop: '12px', fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', textAlign: 'center' }}>
-                    Mô hình 3D định dạng GLTF/GLB tương thích với WebGL và ứng dụng di động SMGS.
-                  </p>
-                </div>
-              ) : (
-                <div style={{ padding: '40px 20px', background: '#F8F5EE', borderRadius: '12px', border: '1px dashed var(--color-paper-border)', textAlign: 'center' }}>
-                  <Box size={40} color="var(--color-charcoal-400)" style={{ margin: '0 auto 12px' }} />
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '600', marginBottom: '6px' }}>Chưa có mô hình 3D xuất bản</h4>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', maxWidth: '440px', margin: '0 auto 16px' }}>
-                    Hiện vật này có thể được tái tạo số hóa bằng bộ ảnh đa góc thông qua microservice 3D Scan (COLMAP) hoặc tải lên file GLB có sẵn.
-                  </p>
-                  {!readOnly && (
-                    <button type="button" onClick={() => onEdit(artifact)} className="btn btn-secondary btn-sm">
-                      Tải lên file GLB có sẵn
-                    </button>
-                  )}
-                </div>
-              )}
+          {activeTab === '3d' && <Artifact3DPanel
+            key={artifact.backendId || artifact.id}
+            artifactId={artifact.backendId || artifact.id}
+            name={artifact.name}
+            canManage={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)}
+          />}
 
-              {/* 3D Photogrammetry Scan Service Section */}
-              <section className="card" style={{ marginTop: '20px', padding: '18px', background: '#FAF7F2', border: '1px solid #EADCC8' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: 0 }}>
-                        Tái tạo 3D bằng AI Photogrammetry (COLMAP)
-                      </h4>
-                      <span style={{
-                        fontSize: '0.675rem',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        background: scanHealth?.ok ? '#DCFCE7' : '#FEF3C7',
-                        color: scanHealth?.ok ? '#166534' : '#92400E',
-                        fontWeight: '600'
-                      }}>
-                        {scanHealth?.ok ? '3D Scan Service (Port 8002): Sẵn sàng' : '3D Scan: Ngoại tuyến'}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.785rem', color: 'var(--color-charcoal-600)', margin: 0 }}>
-                      Bắt đầu với 5 ảnh JPG/PNG của cùng một hiện vật. Chụp các góc gần nhau, giữ phần chi tiết chung giữa các ảnh. Bộ ít ảnh có thể dựng thất bại hoặc thiếu chi tiết; Giám tuyển cần kiểm tra trước khi xuất bản.
-                    </p>
-                  </div>
-
-                  {!readOnly && (
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
-                        + Chọn ảnh quét ({scanFiles.length} ảnh)
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png"
-                          multiple
-                          style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []).filter(f => ['image/jpeg', 'image/png'].includes(f.type));
-                            setScanFiles(files);
-                          }}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        disabled={isSubmittingScan || scanFiles.length < 5 || scanFiles.length > 80}
-                        onClick={handleStart3DScan}
-                        className="btn btn-gold btn-sm"
-                      >
-                        {isSubmittingScan ? (
-                          <>
-                            <RefreshCw size={13} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
-                            <span>Đang khởi tạo...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Box size={13} />
-                            <span>Bắt đầu dựng 3D</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {scanError && (
-                  <div style={{ marginTop: '12px', padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '6px', fontSize: '0.75rem', color: '#991B1B' }}>
-                    {scanError}
-                  </div>
-                )}
-
-                {scanJob && (
-                  <div style={{ marginTop: '14px', padding: '12px', background: '#FFF', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>
-                        Tác vụ 3D: <code>{scanJob.scanJobId}</code>
-                      </span>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontWeight: '700',
-                        background: scanJob.status === 'COMPLETED' ? '#DCFCE7' : scanJob.status === 'REVIEW_REQUIRED' ? '#FEF3C7' : scanJob.status === 'FAILED' ? '#FEE2E2' : '#EFF6FF',
-                        color: scanJob.status === 'COMPLETED' ? '#166534' : scanJob.status === 'REVIEW_REQUIRED' ? '#92400E' : scanJob.status === 'FAILED' ? '#991B1B' : '#1E40AF'
-                      }}>
-                        {scanJob.status}
-                      </span>
-                    </div>
-
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-600)', margin: '0 0 10px' }}>
-                      {scanJob.status === 'QUEUED' && 'Đang xếp hàng chờ tài nguyên máy tính...'}
-                      {scanJob.status === 'PROCESSING' && 'Đang tính toán đặc trưng điểm & phục dựng lưới 3D bằng COLMAP...'}
-                      {scanJob.status === 'REVIEW_REQUIRED' && 'Tái tạo 3D hoàn tất! Vui lòng kiểm tra mô hình phía trên và bấm phê duyệt.'}
-                      {scanJob.status === 'COMPLETED' && 'Mô hình 3D đã được Giám tuyển phê duyệt xuất bản.'}
-                    </p>
-
-                    {scanJob.status === 'REVIEW_REQUIRED' && !readOnly && (
-                      <button
-                        type="button"
-                        onClick={handleApprove3DModel}
-                        className="btn btn-primary btn-sm"
-                      >
-                        <Check size={14} /> Phê duyệt & Xuất bản mô hình 3D
-                      </button>
-                    )}
-                  </div>
-                )}
-              </section>
-            </div>
-          )}
-
-          {/* QR Code Tab */}
           {activeTab === 'qr' && (
             <div>
             <div className="artifact-detail-grid" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '28px', alignItems: 'center' }}>
