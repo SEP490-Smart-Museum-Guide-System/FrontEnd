@@ -6,7 +6,6 @@ import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
 import '../../data/visit_store.dart';
 import '../ai_guide/ai_guide_screen.dart';
-import 'quiz_screen.dart';
 import '../../widgets/narration_player.dart';
 import '../profile/profile_screen.dart';
 import 'artifact_3d_screen.dart';
@@ -212,8 +211,6 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           listenable: VisitStore.instance,
           builder: (context, _) {
             final store = VisitStore.instance;
-            final isDeferred = store.isQuizDeferred(a.id);
-            final isCompleted = store.quizScores.containsKey(a.id);
             final nextArtifact = store.getNextArtifact(a);
 
             return Panel(
@@ -242,64 +239,19 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    isCompleted
-                        ? 'Bạn đã hoàn thành bài thử tài cho hiện vật này (Đạt ${store.quizScores[a.id]}/2 câu).'
-                        : isDeferred
-                        ? 'Bạn đã đánh dấu để xem lại trong phiên này. Danh sách câu đố chính thức được tải từ hệ thống.'
-                        : 'Mở danh sách câu đố để xem bài được hệ thống cấp cho hiện vật này.',
-                    style: AppTextStyles.bodyMedium,
+                  const Text(
+                    'Làm câu hỏi đã được mở từ lượt quét hiện vật của bạn.',
                   ),
-                  const SizedBox(height: 16),
-                  if (isCompleted)
-                    SecondaryButton(
-                      label: 'Làm lại câu đố khác',
-                      icon: Icons.refresh,
-                      onPressed: () =>
-                          openPage(context, QuizScreen(artifact: a)),
-                    )
-                  else ...[
-                    PrimaryButton(
-                      label: 'Khám phá câu đố',
-                      icon: Icons.play_arrow,
-                      onPressed: () =>
-                          openPage(context, QuizScreen(artifact: a)),
-                    ),
-                    const SizedBox(height: 8),
-                    if (!isDeferred)
-                      SecondaryButton(
-                        label: 'Lưu để làm sau',
-                        icon: Icons.alarm_add_outlined,
-                        onPressed: () {
-                          store.deferQuiz(a.id);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Đã lưu câu đố vào mục Quiz tích lũy cuối ngày.',
-                              ),
-                              backgroundColor: AppColors.deepBurgundy,
-                            ),
-                          );
-                        },
-                      )
-                    else
-                      TextButton.icon(
-                        onPressed: () =>
-                            openPage(context, const DailyQuizScreen()),
-                        icon: const Icon(
-                          Icons.check_circle_outline,
-                          color: Color(0xFF2E6B3E),
-                          size: 18,
-                        ),
-                        label: const Text(
-                          'Đã lưu · Xem danh sách Quiz trong ngày',
-                          style: TextStyle(
-                            color: Color(0xFF2E6B3E),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
+                  PrimaryButton(
+                    label: 'Làm Quiz ngay',
+                    onPressed: () =>
+                        openPage(context, DailyQuizScreen(artifactId: a.id)),
+                  ),
+                  SecondaryButton(
+                    label: 'Chọn câu hỏi để trả lời sau',
+                    onPressed: () =>
+                        openPage(context, DailyQuizScreen(artifactId: a.id)),
+                  ),
                   if (nextArtifact != null) ...[
                     const SizedBox(height: 12),
                     const Divider(height: 1),

@@ -49,7 +49,7 @@ export function artifactView(a) {
     image: primaryImage,
     images: allImages,
     imageCount: allImages.length,
-    status: a.isActive ? 'published' : 'draft', has3DModel: !!a.model3D,
+    status: a.isActive ? 'active' : 'inactive', has3DModel: !!a.model3D,
     modelUrl: a.model3D?.modelUrl || '', referenceImages: [], audioDuration: '',
     audioUrl: a.media?.find(m => m.mediaType === 'audio')?.fileUrl || '',
     shortDesc: '', fullDesc: '', quizzes: [], multilingual: {}, approvedAiContent: [] };
@@ -82,4 +82,26 @@ export function complaintView(c) {
   return { ...c, type: 'complaint', title: c.subject, description: c.body, detail: c.body, visitor: visitorDisplay,
     visitorName: visitorDisplay, museum: '', priority: '', note: c.resolutionNote || '',
     status: ({ Open: 'new', New: 'new', InProgress: 'in_progress', Resolved: 'resolved', Closed: 'resolved' })[c.status] || 'new' };
+}
+
+export const artifactReviewLabels = {
+  draft: 'Chưa được kiểm duyệt',
+  pending_review: 'Đợi kiểm duyệt',
+  published: 'Đã kiểm duyệt',
+  rejected: 'Đã bị từ chối',
+};
+
+export function latestArtifactReviews(versions) {
+  const latest = new Map();
+  for (const version of versions) {
+    if (!['pending_review', 'published', 'rejected'].includes(version.status)) continue;
+    const id = version.targetArtifactId;
+    const previous = latest.get(id);
+    const created = Date.parse(version.createdAt);
+    const previousCreated = Date.parse(previous?.createdAt);
+    if (!previous || created > previousCreated || (created === previousCreated && version.id > previous.id)) {
+      latest.set(id, version);
+    }
+  }
+  return latest;
 }

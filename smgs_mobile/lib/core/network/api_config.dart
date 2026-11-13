@@ -25,6 +25,16 @@ class ApiConfig {
 
   static String mediaUrl(String? value) {
     if (value == null || value.isEmpty) return '';
+    final uri = Uri.tryParse(value);
+    final museumCover = uri == null
+        ? null
+        : RegExp(r'/api(/museums/\d+/image/[^/]+)$').firstMatch(uri.path);
+    if (museumCover != null) {
+      // Older cover URLs may contain the host used by the admin during upload.
+      return Uri.parse(
+        '$baseUrl${museumCover.group(1)}',
+      ).replace(query: uri!.hasQuery ? uri.query : null).toString();
+    }
     if (value.startsWith('/')) {
       return Uri.parse(baseUrl).resolve(value).toString();
     }

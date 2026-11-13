@@ -125,6 +125,21 @@ class _VisitorDirectoryScreenState extends State<VisitorDirectoryScreen> {
                 onPressed: reload,
                 child: const Text('Cập nhật vị trí & sơ đồ'),
               ),
+              const SectionHeading('Sơ đồ đã xuất bản'),
+              if (maps.isEmpty)
+                const Notice(
+                  'Bảo tàng chưa xuất bản sơ đồ. Sơ đồ nháp của nhân viên chưa hiển thị cho khách.',
+                ),
+              for (final map in maps)
+                ActionTile(
+                  title: map['name'].toString(),
+                  subtitle: [
+                    map['buildingName'],
+                    map['floorName'],
+                  ].whereType<String>().join(' · '),
+                  icon: Icons.map_outlined,
+                  onTap: () => _openMap(map),
+                ),
               if (floors.isNotEmpty) ...[
                 DropdownButtonFormField<int>(
                   key: ValueKey('floor:$floor'),
@@ -228,21 +243,6 @@ class _VisitorDirectoryScreenState extends State<VisitorDirectoryScreen> {
                       ],
                     ),
                   ),
-                ),
-              const SectionHeading('Sơ đồ đã xuất bản'),
-              if (maps.isEmpty)
-                const Notice(
-                  'Bảo tàng chưa xuất bản sơ đồ. Sơ đồ nháp của nhân viên chưa hiển thị cho khách.',
-                ),
-              for (final map in maps)
-                ActionTile(
-                  title: map['name'].toString(),
-                  subtitle: [
-                    map['buildingName'],
-                    map['floorName'],
-                  ].whereType<String>().join(' · '),
-                  icon: Icons.map_outlined,
-                  onTap: () => _openMap(map),
                 ),
             ],
           );

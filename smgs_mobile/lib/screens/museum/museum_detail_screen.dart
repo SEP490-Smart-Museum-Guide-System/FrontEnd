@@ -124,6 +124,14 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
     return StoryScaffold(
       title: museum.name,
       heroTag: widget.heroTag,
+      floatingActionButton: int.tryParse(museum.id) == null
+          ? null
+          : FloatingActionButton.small(
+              heroTag: null,
+              tooltip: 'Mở bản đồ bảo tàng',
+              onPressed: () => _openIndoorMap(context),
+              child: const Icon(Icons.map_outlined),
+            ),
       photo: MuseumPhoto(
         museumId: museum.id,
         imageUrl: museum.imageUrl,

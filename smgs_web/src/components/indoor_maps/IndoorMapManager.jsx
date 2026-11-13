@@ -36,7 +36,7 @@ export default function IndoorMapManager() {
   const [buildingName, setBuildingName] = useState('');
   const [floorName, setFloorName] = useState('');
   const [level, setLevel] = useState('0');
-  const [mode, setMode] = useState('existing');
+  const [mode, setMode] = useState('new');
   const [selectedMapId, setSelectedMapId] = useState('');
   const alive = useRef(true);
 
@@ -86,7 +86,6 @@ export default function IndoorMapManager() {
     finally { if (alive.current) setBusy(false); }
   }
   function discard() { return !dirty || window.confirm('Bỏ các thay đổi chưa lưu để tiếp tục?'); }
-  async function refreshStructure() { setStructure(await indoorApi(`museums/${museumId}/indoor-structure`)); }
   async function refreshMaps() { setMaps(await indoorApi(`museums/${museumId}/indoor-maps`)); }
   async function open(id) {
     const [document, options] = await Promise.all([indoorApi(`indoor-maps/${id}/draft`), indoorApi(`indoor-maps/${id}/links`)]);
@@ -160,19 +159,10 @@ export default function IndoorMapManager() {
     {uploadProgress !== null && <progress value={uploadProgress} max="100" aria-label="Tiến trình tải sơ đồ" />}
     {!busy && !museums.length && <p>Bạn chưa được phân công quản lý bảo tàng. Liên hệ quản trị viên để được cấp quyền.</p>}
     <fieldset disabled={busy}>
-      <label>Bảo tàng<select value={museumId} onChange={e => { if (discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
+      <label>Bảo tàng<select value={museumId} onChange={e => { if (discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
 
-      {structure?.layout === 'unknown' && <div className="indoor-box"><h2>Xác định cấu trúc bảo tàng</h2>
-        <p>Chưa có thông tin phân tầng. Chọn theo cấu trúc thực tế; hệ thống không tự tạo tầng.</p>
-        <div className="indoor-row">{[['single', 'Dùng mặt bằng chung, không phân tầng'], ['floors', 'Quản lý theo tòa nhà và tầng']].map(([value, label]) =>
-          <button key={value} type="button" onClick={() => run(async () => { await indoorApi(`museums/${museumId}/indoor-structure`, { method: 'PUT', body: { layout: value } }); await refreshStructure(); })}>{label}</button>)}</div>
-      </div>}
-      {structure?.layout === 'floors' && !structure.floors.length && (
-        <div className="indoor-box" style={{ padding: '16px', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '8px', color: '#92400E' }}>
-          <strong>Chưa có tầng thực tế:</strong> Bảo tàng chưa có danh sách tầng để liên kết sơ đồ. Vui lòng vào trang <strong>Cấu trúc bảo tàng</strong> để tạo tòa nhà và các tầng.
-        </div>
-      )}
-      {structure && structure.layout !== 'unknown' && <div className="indoor-box indoor-management">
+      {structure && !structure.floors.length && <p>Vào Cấu trúc bảo tàng để thêm tòa nhà và tầng trước khi tạo sơ đồ.</p>}
+      {structure && <div className="indoor-box indoor-management">
         <h2>Quản lý sơ đồ bảo tàng</h2>
         <div className="indoor-row" role="tablist" aria-label="Quản lý sơ đồ bảo tàng">{[['existing', 'Sơ đồ hiện có'], ['new', 'Tạo sơ đồ mới']].map(([value, label]) => <button type="button" role="tab" id={`map-tab-${value}`} aria-controls="map-management-panel" aria-selected={mode === value} key={value} onClick={() => { if (mode !== value && discard()) setMode(value); }}>{label}</button>)}</div>
         <div role="tabpanel" id="map-management-panel" aria-labelledby={`map-tab-${mode}`}>
@@ -185,15 +175,14 @@ export default function IndoorMapManager() {
             {maps.filter(m => String(m.id) === selectedMapId).map(m => <p key={m.id}>{m.publishedAt ? 'Đã xuất bản' : 'Bản nháp'}{m.revision != null ? ` · Phiên bản ${m.revision}` : ''}</p>)}
             <button type="button" disabled={!selectedMapId} onClick={() => { if (discard()) run(() => open(selectedMapId)); }}>Chỉnh sửa sơ đồ</button>
           </> : <>
-            {structure.layout === 'floors' ? <div className="indoor-row">
+            <div className="indoor-row">
               <label>Chọn tòa nhà<select value={buildingId} onChange={e => { setBuildingId(e.target.value); setFloorId(''); }}><option value="">Chọn tòa nhà</option>{options(structure.buildings)}</select></label>
               <label>Chọn tầng<select value={floorId} disabled={!buildingId} onChange={e => setFloorId(e.target.value)}><option value="">Chọn tầng</option>{options(structure.floors.filter(f => String(f.buildingId) === buildingId))}</select></label>
-            </div> : <p>Tạo sơ đồ mặt bằng chung của bảo tàng.</p>}
-            {maps.some(m => structure.layout === 'floors' ? String(m.floorId) === floorId : m.floorId == null) && <p role="status">Phạm vi này đã có sơ đồ. Chọn tab Sơ đồ hiện có để chỉnh sửa.</p>}
-            <button type="button" disabled={(structure.layout === 'floors' && !floorId) || maps.some(m => structure.layout === 'floors' ? String(m.floorId) === floorId : m.floorId == null)} onClick={() => { if (discard()) run(async () => {
+            </div>
+            {maps.some(m => String(m.floorId) === floorId) && <p role="status">Phạm vi này đã có sơ đồ. Chọn tab Sơ đồ hiện có để chỉnh sửa.</p>}
+            <button type="button" disabled={!floorId || maps.some(m => String(m.floorId) === floorId)} onClick={() => { if (discard()) run(async () => {
               const floor = structure.floors.find(f => String(f.id) === floorId);
-              const name = floor ? `${floor.buildingName || structure.buildings.find(b => b.id === floor.buildingId)?.name || ''} / ${floor.name || 'Tầng ' + floor.levelNo}` : 'Sơ đồ bảo tàng';
-              const id = await indoorApi(`museums/${museumId}/indoor-maps`, { method: 'POST', body: { floorId: structure.layout === 'floors' ? Number(floorId) : null, name: (floor ? `Sơ đồ ${floor.name || 'Tầng ' + floor.levelNo}` : name).slice(0, 200) } });
+              const id = await indoorApi(`museums/${museumId}/indoor-maps`, { method: 'POST', body: { floorId: Number(floorId), name: `Sơ đồ ${floor.name || 'Tầng ' + floor.levelNo}`.slice(0, 200) } });
               await refreshMaps(); await open(id); setSelectedMapId(String(id)); setMode('existing');
             }); }}>Tạo sơ đồ mới</button>
           </>}

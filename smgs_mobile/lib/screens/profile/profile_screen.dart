@@ -110,6 +110,13 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => openPage(context, const DailyQuizScreen()),
           ),
           ActionTile(
+            title: 'Trả lời sau',
+            subtitle: 'Các bộ câu hỏi bạn đã lưu trong ngày.',
+            icon: Icons.alarm,
+            onTap: () =>
+                openPage(context, const DailyQuizScreen(deferredOnly: true)),
+          ),
+          ActionTile(
             title: 'Kết quả thử tài',
             subtitle: 'Các lượt làm và kết quả được hệ thống lưu.',
             icon: Icons.workspace_premium_outlined,

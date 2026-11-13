@@ -245,12 +245,14 @@ class StoryScaffold extends StatelessWidget {
     required this.photo,
     required this.children,
     this.heroTag,
+    this.floatingActionButton,
     this.actions = const [],
   });
   final String title;
   final Widget photo;
   final List<Widget> children, actions;
   final Object? heroTag;
+  final Widget? floatingActionButton;
 
   @override
   Widget build(BuildContext context) {
@@ -262,6 +264,7 @@ class StoryScaffold extends StatelessWidget {
             child: Hero(tag: heroTag!, child: photo),
           );
     return Scaffold(
+      floatingActionButton: floatingActionButton,
       body: HeritagePaper(
         child: CustomScrollView(
           slivers: [
@@ -328,7 +331,8 @@ class StoryScaffold extends StatelessWidget {
                 24,
                 16,
                 24,
-                32 + MediaQuery.paddingOf(context).bottom,
+                (floatingActionButton == null ? 32 : 88) +
+                    MediaQuery.paddingOf(context).bottom,
               ),
               sliver: SliverList.list(children: children),
             ),

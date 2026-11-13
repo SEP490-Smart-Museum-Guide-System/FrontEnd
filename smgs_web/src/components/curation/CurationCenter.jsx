@@ -5,14 +5,11 @@ import {
   CheckSquare,
   Eye,
   MessageSquare,
-  Send,
   X,
   FileText,
   HelpCircle,
   Volume2,
   Sparkles,
-  Smartphone,
-  Columns,
   AlertCircle,
   ShieldCheck,
   Search
@@ -49,16 +46,14 @@ export default function CurationCenter() {
     users,
     currentUser,
     approveCurationItem,
-    rejectCurationItem,
-    requestRevisionCurationItem
+    rejectCurationItem
   } = useApp();
 
   const [filter, setFilter] = useState('pending_review');
   const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState('');
-  const [decision, setDecision] = useState(''); // 'approve' | 'revision' | 'reject'
-  const [previewMode, setPreviewMode] = useState('diff'); // 'diff' | 'mobile'
+  const [decision, setDecision] = useState(''); // 'approve' | 'reject'
   const [checklist, setChecklist] = useState({
     factualAccuracy: true,
     heritageTone: true,
@@ -109,7 +104,6 @@ export default function CurationCenter() {
     setSelected(item);
     setNote(item.feedback || '');
     setDecision('');
-    setPreviewMode('diff');
     setChecklist({
       factualAccuracy: true,
       heritageTone: true,
@@ -144,15 +138,13 @@ export default function CurationCenter() {
   const submitDecision = async () => {
     if (!decision || !selected) return;
     if (decision !== 'approve' && !note.trim()) {
-      alert('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi yêu cầu hiệu đính hoặc từ chối.');
+      alert('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi từ chối.');
       return;
     }
 
     let result;
     if (decision === 'approve') {
       result = await approveCurationItem(selected.id, note || 'Đã thẩm định phê duyệt theo quy chuẩn lưu trữ và truyền thông di sản bảo tàng.');
-    } else if (decision === 'revision') {
-      result = await requestRevisionCurationItem(selected.id, note);
     } else if (decision === 'reject') {
       result = await rejectCurationItem(selected.id, note);
     }
@@ -337,7 +329,7 @@ export default function CurationCenter() {
                       }}
                       style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Eye size={14} /> Thẩm định Diff
+                      <Eye size={14} /> Thẩm định
                     </button>
                   </div>
                 </article>
@@ -386,32 +378,6 @@ export default function CurationCenter() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {/* Switch between Diff View and Mobile Preview */}
-                <div style={{
-                  display: 'flex',
-                  background: 'var(--color-paper-accent)',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--color-paper-border)'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode('diff')}
-                    className={`btn btn-sm ${previewMode === 'diff' ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
-                  >
-                    <Columns size={13} /> So sánh Diff
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode('mobile')}
-                    className={`btn btn-sm ${previewMode === 'mobile' ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px' }}
-                  >
-                    <Smartphone size={13} /> Xem thử Mobile
-                  </button>
-                </div>
-
                 <button type="button" className="btn btn-secondary btn-sm" onClick={closeItem}>
                   <X size={16} />
                 </button>
@@ -492,237 +458,169 @@ export default function CurationCenter() {
               )}
 
               {/* VIEW 1: SIDE-BY-SIDE DIFF VIEW */}
-              {previewMode === 'diff' && (
-                <div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                    gap: '16px'
+              <div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {/* Left Column: Current Published Version */}
+                  <article style={{
+                    border: '1px solid var(--color-paper-border)',
+                    borderRadius: '10px',
+                    padding: '16px',
+                    background: 'var(--color-paper-card)'
                   }}>
-                    {/* Left Column: Current Published Version */}
-                    <article style={{
-                      border: '1px solid var(--color-paper-border)',
-                      borderRadius: '10px',
-                      padding: '16px',
-                      background: 'var(--color-paper-card)'
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingBottom: '10px',
+                      marginBottom: '12px',
+                      borderBottom: '1px solid var(--color-paper-border)'
                     }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingBottom: '10px',
-                        marginBottom: '12px',
-                        borderBottom: '1px solid var(--color-paper-border)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: 'var(--color-charcoal-400)'
-                          }} />
-                          <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-800)' }}>
-                            BẢN HIỆN TẠI (Đang xuất bản)
-                          </strong>
-                        </div>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--color-charcoal-500)' }}>v1.0 Live</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: 'var(--color-charcoal-400)'
+                        }} />
+                        <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-800)' }}>
+                          BẢN HIỆN TẠI (Đang xuất bản)
+                        </strong>
                       </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--color-charcoal-500)' }}>v1.0 Live</span>
+                    </div>
 
+                    <div style={{
+                      fontSize: '0.85rem',
+                      lineHeight: 1.6,
+                      color: 'var(--color-charcoal-700)',
+                      whiteSpace: 'pre-line',
+                      background: '#FFF',
+                      padding: '12px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-paper-border)',
+                      minHeight: '130px',
+                      maxHeight: '240px',
+                      overflowY: 'auto'
+                    }}>
+                      {selected.currentVersion || 'Hiện chưa có nội dung được phê duyệt trước đây cho phân mục này.'}
+                    </div>
+                  </article>
+
+                  {/* Right Column: Proposed Revision */}
+                  <article style={{
+                    border: '1.5px solid var(--color-gold-400)',
+                    borderRadius: '10px',
+                    padding: '16px',
+                    background: '#FFFDF8',
+                    boxShadow: 'var(--shadow-gold)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingBottom: '10px',
+                      marginBottom: '12px',
+                      borderBottom: '1px solid var(--color-gold-200)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: 'var(--color-success)'
+                        }} />
+                        <strong style={{ fontSize: '0.875rem', color: 'var(--color-burgundy-900)' }}>
+                          NỘI DUNG ĐỆ TRÌNH (Bản đề xuất sửa đổi)
+                        </strong>
+                      </div>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        background: 'var(--color-gold-100)',
+                        color: 'var(--color-gold-700)',
+                        fontWeight: '700'
+                      }}>
+                        MỚI ĐỆ TRÌNH
+                      </span>
+                    </div>
+
+                    {/* Display as Quiz cards if JSON */}
+                    {isQuiz && parsedProposedQuiz ? (
+                      <div style={{ display: 'grid', gap: '10px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                        {parsedProposedQuiz.map((q, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              background: '#FFF',
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--color-gold-300)'
+                            }}
+                          >
+                            <strong style={{ fontSize: '0.825rem', color: 'var(--color-charcoal-900)' }}>
+                              Câu {idx + 1}: {q.question}
+                            </strong>
+                            <div style={{ marginTop: '6px', display: 'grid', gap: '4px' }}>
+                              {q.options.map((opt, oIdx) => (
+                                <div
+                                  key={oIdx}
+                                  style={{
+                                    fontSize: '0.78rem',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    background: oIdx === q.correctIndex ? 'var(--color-success-bg)' : '#F9F9F9',
+                                    color: oIdx === q.correctIndex ? 'var(--color-success)' : 'var(--color-charcoal-700)',
+                                    fontWeight: oIdx === q.correctIndex ? '600' : 'normal',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                  }}
+                                >
+                                  <span>{String.fromCharCode(65 + oIdx)}. {opt}</span>
+                                  {oIdx === q.correctIndex && <Check size={13} />}
+                                </div>
+                              ))}
+                            </div>
+                            {q.explanation && (
+                              <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: 'var(--color-charcoal-600)', fontStyle: 'italic' }}>
+                                Giải thích: {q.explanation}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
                       <div style={{
                         fontSize: '0.85rem',
                         lineHeight: 1.6,
-                        color: 'var(--color-charcoal-700)',
+                        color: 'var(--color-charcoal-900)',
                         whiteSpace: 'pre-line',
                         background: '#FFF',
                         padding: '12px 14px',
                         borderRadius: '6px',
-                        border: '1px solid var(--color-paper-border)',
+                        border: '1px solid var(--color-gold-200)',
                         minHeight: '130px',
                         maxHeight: '240px',
                         overflowY: 'auto'
                       }}>
-                        {selected.currentVersion || 'Hiện chưa có nội dung được phê duyệt trước đây cho phân mục này.'}
+                        {selected.proposedContent}
                       </div>
-                    </article>
-
-                    {/* Right Column: Proposed Revision */}
-                    <article style={{
-                      border: '1.5px solid var(--color-gold-400)',
-                      borderRadius: '10px',
-                      padding: '16px',
-                      background: '#FFFDF8',
-                      boxShadow: 'var(--shadow-gold)'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingBottom: '10px',
-                        marginBottom: '12px',
-                        borderBottom: '1px solid var(--color-gold-200)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: 'var(--color-success)'
-                          }} />
-                          <strong style={{ fontSize: '0.875rem', color: 'var(--color-burgundy-900)' }}>
-                            NỘI DUNG ĐỆ TRÌNH (Bản đề xuất sửa đổi)
-                          </strong>
-                        </div>
-                        <span style={{
-                          fontSize: '0.72rem',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          background: 'var(--color-gold-100)',
-                          color: 'var(--color-gold-700)',
-                          fontWeight: '700'
-                        }}>
-                          MỚI ĐỆ TRÌNH
-                        </span>
-                      </div>
-
-                      {/* Display as Quiz cards if JSON */}
-                      {isQuiz && parsedProposedQuiz ? (
-                        <div style={{ display: 'grid', gap: '10px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
-                          {parsedProposedQuiz.map((q, idx) => (
-                            <div
-                              key={idx}
-                              style={{
-                                background: '#FFF',
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--color-gold-300)'
-                              }}
-                            >
-                              <strong style={{ fontSize: '0.825rem', color: 'var(--color-charcoal-900)' }}>
-                                Câu {idx + 1}: {q.question}
-                              </strong>
-                              <div style={{ marginTop: '6px', display: 'grid', gap: '4px' }}>
-                                {q.options.map((opt, oIdx) => (
-                                  <div
-                                    key={oIdx}
-                                    style={{
-                                      fontSize: '0.78rem',
-                                      padding: '4px 8px',
-                                      borderRadius: '4px',
-                                      background: oIdx === q.correctIndex ? 'var(--color-success-bg)' : '#F9F9F9',
-                                      color: oIdx === q.correctIndex ? 'var(--color-success)' : 'var(--color-charcoal-700)',
-                                      fontWeight: oIdx === q.correctIndex ? '600' : 'normal',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '6px'
-                                    }}
-                                  >
-                                    <span>{String.fromCharCode(65 + oIdx)}. {opt}</span>
-                                    {oIdx === q.correctIndex && <Check size={13} />}
-                                  </div>
-                                ))}
-                              </div>
-                              {q.explanation && (
-                                <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: 'var(--color-charcoal-600)', fontStyle: 'italic' }}>
-                                  Giải thích: {q.explanation}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{
-                          fontSize: '0.85rem',
-                          lineHeight: 1.6,
-                          color: 'var(--color-charcoal-900)',
-                          whiteSpace: 'pre-line',
-                          background: '#FFF',
-                          padding: '12px 14px',
-                          borderRadius: '6px',
-                          border: '1px solid var(--color-gold-200)',
-                          minHeight: '130px',
-                          maxHeight: '240px',
-                          overflowY: 'auto'
-                        }}>
-                          {selected.proposedContent}
-                        </div>
-                      )}
-                    </article>
-                  </div>
+                    )}
+                  </article>
                 </div>
-              )}
+              </div>
 
-              {/* VIEW 2: VISITOR MOBILE PREVIEW (Mô phỏng trải nghiệm khách tham quan) */}
-              {previewMode === 'mobile' && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  padding: '10px 0',
-                  background: 'var(--color-paper-bg)',
-                  borderRadius: '12px',
-                  border: '1px solid var(--color-paper-border)'
-                }}>
-                  <div style={{
-                    width: '320px',
-                    minHeight: '480px',
-                    background: '#F4EBDD',
-                    borderRadius: '24px',
-                    border: '8px solid #2E2521',
-                    boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}>
-                    <div style={{
-                      height: '4px',
-                      width: '40px',
-                      background: '#555',
-                      borderRadius: '2px',
-                      margin: '0 auto 8px'
-                    }} />
-
-                    <div style={{
-                      background: '#FFF',
-                      padding: '12px',
-                      borderRadius: '12px',
-                      border: '1px solid #E5D6C5'
-                    }}>
-                      <span style={{ fontSize: '0.65rem', color: '#6B2E2E', fontWeight: '700', textTransform: 'uppercase' }}>
-                        {typeName[selected.type]}
-                      </span>
-                      <h4 style={{ fontSize: '0.9rem', margin: '4px 0', color: '#2E2521' }}>
-                        {selected.targetArtifactName}
-                      </h4>
-                      <p style={{ fontSize: '0.75rem', color: '#555', margin: 0, lineHeight: 1.4, whiteSpace: 'pre-line' }}>
-                        {isQuiz && parsedProposedQuiz ? (
-                          `Đã nạp ${parsedProposedQuiz.length} câu hỏi quiz tương tác vào bài học di sản.`
-                        ) : (
-                          selected.proposedContent.slice(0, 320) + (selected.proposedContent.length > 320 ? '...' : '')
-                        )}
-                      </p>
-                    </div>
-
-                    <div style={{
-                      marginTop: 'auto',
-                      padding: '8px',
-                      background: '#6B2E2E',
-                      borderRadius: '8px',
-                      textAlign: 'center',
-                      color: '#FFF',
-                      fontSize: '0.75rem',
-                      fontWeight: '600'
-                    }}>
-                      Giao diện hiển thị trực tiếp cho Khách
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Feedback Note Input */}
               {selected.status === 'pending_review' && (
                 <div style={{ marginTop: '4px' }}>
                   <label className="form-label" style={{ fontWeight: '600', fontSize: '0.8125rem', color: 'var(--color-charcoal-800)', marginBottom: '4px' }}>
-                    Ghi chú Chuyên môn của Giám tuyển (Bắt buộc nếu Yêu cầu hiệu đính / Từ chối):
+                    Ghi chú Chuyên môn của Giám tuyển (Bắt buộc khi từ chối):
                   </label>
                   <textarea
                     className="form-textarea"
@@ -786,15 +684,6 @@ export default function CurationCenter() {
 
                   <button
                     type="button"
-                    className="btn btn-secondary btn-sm"
-                    style={{ color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }}
-                    onClick={() => setDecision('revision')}
-                  >
-                    <Send size={14} /> Yêu cầu hiệu đính
-                  </button>
-
-                  <button
-                    type="button"
                     className="btn btn-primary btn-sm"
                     style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)' }}
                     onClick={() => setDecision('approve')}
@@ -809,7 +698,7 @@ export default function CurationCenter() {
             {decision && (
               <div style={{
                 padding: '14px 24px',
-                background: decision === 'approve' ? 'var(--color-success-bg)' : decision === 'revision' ? 'var(--color-warning-bg)' : 'var(--color-danger-bg)',
+                background: decision === 'approve' ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
                 borderTop: '1px solid var(--color-paper-border)',
                 display: 'flex',
                 alignItems: 'center',
@@ -821,8 +710,6 @@ export default function CurationCenter() {
                   Xác nhận hành động: <strong>
                     {decision === 'approve'
                       ? 'PHÊ DUYỆT & XUẤT BẢN NGAY CHO KHÁCH THAM QUAN'
-                      : decision === 'revision'
-                      ? 'GỬI TRẢ NHÂN VIÊN BẢO TÀNG HIỆU ĐÍNH LẠI'
                       : 'TỪ CHỐI HỒ SƠ ĐỆ TRÌNH NÀY'}
                   </strong>
                 </div>
@@ -839,7 +726,7 @@ export default function CurationCenter() {
                     type="button"
                     className="btn btn-primary btn-sm"
                     style={{
-                      background: decision === 'approve' ? 'var(--color-success)' : decision === 'revision' ? 'var(--color-warning)' : 'var(--color-danger)',
+                      background: decision === 'approve' ? 'var(--color-success)' : 'var(--color-danger)',
                       borderColor: 'transparent'
                     }}
                     onClick={submitDecision}

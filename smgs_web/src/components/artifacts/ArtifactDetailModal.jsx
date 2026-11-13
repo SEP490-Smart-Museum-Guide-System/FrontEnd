@@ -1,3 +1,4 @@
+import { artifactReviewLabels } from '../../services/backend';
 import ArtifactContentManager from './ArtifactContentManager';
 import ArtifactMediaPanel from './ArtifactMediaPanel';
 import React, { useState, useEffect, useRef } from 'react';
@@ -28,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit, readOnly = false }) {
-  const { downloadArtifactQr, regenerateArtifactQr, currentRole, showToast } = useApp();
+  const { artifactReviewStatus, downloadArtifactQr, regenerateArtifactQr, currentRole, showToast } = useApp();
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
   const [has3DModel, setHas3DModel] = useState(!!artifact?.has3DModel);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -311,8 +312,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 {artifact.isNationalTreasure && (
                   <span className="badge-status badge-treasure">⭐ Bảo vật Quốc gia</span>
                 )}
-                <span className={`badge-status badge-${artifact.status}`}>
-                  {artifact.status === 'published' ? 'Đã xuất bản' : artifact.status === 'pending_review' ? 'Chờ duyệt' : 'Bản nháp'}
+                <span className={`badge-status badge-${artifactReviewStatus(artifact.id) ?? "draft"}`}>
+                  {artifactReviewLabels[artifactReviewStatus(artifact.id)] ?? 'Chưa tải được trạng thái'}
                 </span>
               </div>
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-500)', marginTop: '2px' }}>

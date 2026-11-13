@@ -1,3 +1,4 @@
+import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/artifact_scan_service.dart';
 import 'dart:typed_data';
@@ -366,7 +367,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           _scanRequest?.visitId != widget.visitId) {
         _scanRequest = ScanRequest(code, visitId: widget.visitId);
       }
-      await _scanRequest!.record();
+      final recognition = await _scanRequest!.record();
+      if (mounted) showEarnedBadges(context, recognition['newBadges']);
       if (!mounted) return;
       setState(() {
         _routeError = null;
@@ -422,6 +424,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             )
             .toList() ??
         [];
+
+    final position = _startMarker;
+    final map = _map;
+    final labelWidth = map?.imageWidth.clamp(0.0, 156.0).toDouble() ?? 0.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5F0),
@@ -591,45 +597,146 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                         child: GestureDetector(
                                           onTap: () =>
                                               _selectDestination(marker),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                              milliseconds: 200,
-                                            ),
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: isStart
-                                                  ? const Color(0xFF2563EB)
-                                                  : isSelected
-                                                  ? const Color(0xFF227C64)
-                                                  : const Color(0xFF873C32),
-                                              border: Border.all(
-                                                color: Colors.white,
-                                                width: isSelected || isStart
-                                                    ? 3
-                                                    : 2,
+                                          child: Tooltip(
+                                            message: marker.label,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 200,
                                               ),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Colors.black26,
-                                                  blurRadius: 4,
-                                                  offset: Offset(0, 2),
+                                              width: 36,
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: isStart
+                                                    ? const Color(0xFF2563EB)
+                                                    : isSelected
+                                                    ? const Color(0xFF227C64)
+                                                    : const Color(0xFF873C32),
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: isSelected || isStart
+                                                      ? 3
+                                                      : 2,
                                                 ),
-                                              ],
-                                            ),
-                                            child: Icon(
-                                              marker.type == 'artifact'
-                                                  ? Icons.museum_outlined
-                                                  : Icons.place,
-                                              size: 18,
-                                              color: Colors.white,
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: Colors.black26,
+                                                    blurRadius: 4,
+                                                    offset: Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Icon(
+                                                marker.type == 'artifact'
+                                                    ? Icons.museum_outlined
+                                                    : Icons.place,
+                                                size: 18,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       );
                                     },
                                   ),
+                                  if (map != null)
+                                    for (final marker in map.markers.where(
+                                      (m) =>
+                                          m.isActive &&
+                                          m.type == 'artifact' &&
+                                          m.label.trim().isNotEmpty,
+                                    ))
+                                      Positioned(
+                                        left:
+                                            (marker.x * map.imageWidth -
+                                                    labelWidth / 2)
+                                                .clamp(
+                                                  0.0,
+                                                  map.imageWidth - labelWidth,
+                                                )
+                                                .toDouble(),
+                                        top: (marker.y * map.imageHeight + 20)
+                                            .clamp(
+                                              0.0,
+                                              (map.imageHeight - 28).clamp(
+                                                0.0,
+                                                map.imageHeight,
+                                              ),
+                                            )
+                                            .toDouble(),
+                                        width: labelWidth,
+                                        child: IgnorePointer(
+                                          child: Center(
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                child: Text(
+                                                  marker.label,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFF612D25),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  if (position != null && map != null)
+                                    Positioned(
+                                      left:
+                                          (position.x * map.imageWidth -
+                                                  labelWidth / 2)
+                                              .clamp(
+                                                0.0,
+                                                map.imageWidth - labelWidth,
+                                              )
+                                              .toDouble(),
+                                      top: position.y * map.imageHeight >= 52
+                                          ? position.y * map.imageHeight - 52
+                                          : position.y * map.imageHeight + 22,
+                                      width: labelWidth,
+                                      child: IgnorePointer(
+                                        child: Center(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: const Color(0xFF2563EB),
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'Vị trí hiện tại',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: Color(0xFF1749A8),
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             )
@@ -1182,25 +1289,6 @@ class _IndoorMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final nodeMap = {for (final n in map.nodes) n.id: n};
 
-    // 1. Draw subtle background corridors (edges)
-    final edgePaint = Paint()
-      ..color = const Color(0xFF800020).withValues(alpha: 0.3)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    for (final edge in map.edges) {
-      final u = nodeMap[edge.fromNodeId];
-      final v = nodeMap[edge.toNodeId];
-      if (u == null || v == null) continue;
-
-      canvas.drawLine(
-        Offset(u.x * map.imageWidth, u.y * map.imageHeight),
-        Offset(v.x * map.imageWidth, v.y * map.imageHeight),
-        edgePaint,
-      );
-    }
-
-    // 2. Draw Dijkstra Route in Bold Green
     if (routeNodeIds.length > 1) {
       final routePaint = Paint()
         ..color = const Color(0xFF227C64)
@@ -1226,7 +1314,8 @@ class _IndoorMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _IndoorMapPainter oldDelegate) {
-    return oldDelegate.routeNodeIds != routeNodeIds ||
+    return oldDelegate.map != map ||
+        oldDelegate.routeNodeIds != routeNodeIds ||
         oldDelegate.startNodeId != startNodeId ||
         oldDelegate.destinationMarker != destinationMarker;
   }

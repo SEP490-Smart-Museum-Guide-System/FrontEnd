@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allPages, backend, artifactView, museumView, reviewView, complaintView } from '../src/services/backend.js';
+import { allPages, backend, artifactView, latestArtifactReviews, museumView, reviewView, complaintView } from '../src/services/backend.js';
 
 globalThis.localStorage = { getItem: () => null };
 const response = data => new Response(JSON.stringify({ data }));
@@ -64,4 +64,17 @@ test('array endpoints with pagination fetch the next page while preserving filte
   const rows = await allPages('question-bank/questions?artifactId=11', { pagedArray: true });
   assert.equal(rows.length, 51); assert.equal(calls.length, 2);
   assert.ok(calls.every(url => url.includes('artifactId=11')));
+});
+
+test('artifact status reflects activity', () => {
+  assert.equal(artifactView({ isActive: true }).status, 'active');
+  assert.equal(artifactView({ isActive: false }).status, 'inactive');
+});
+
+test('latest submitted artifact version determines review status', () => {
+  const row = (id, status) => ({ id, status, targetArtifactId: 7, createdAt: `2026-11-${id}` });
+  for (const status of ['pending_review', 'published', 'rejected']) {
+    assert.equal(latestArtifactReviews([row(12, status), row(11, 'published'), row(13, 'archived')]).get(7).status, status);
+  }
+  assert.equal(latestArtifactReviews([]).has(7), false);
 });

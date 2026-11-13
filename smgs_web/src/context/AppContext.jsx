@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { clearWebSession, readWebSession, requestLogin, saveWebSession } from '../services/auth';
-import { backend, allPages, apiRoles, museumView, artifactView, tourView, accountView, reviewView, complaintView } from '../services/backend';
+import { backend, allPages, latestArtifactReviews, apiRoles, museumView, artifactView, tourView, accountView, reviewView, complaintView } from '../services/backend';
 import { createMuseumApi, updateMuseumApi, deleteMuseumApi } from '../services/museumApi';
 import { createArtifactApi, updateArtifactApi, deleteArtifactApi, downloadArtifactQrImageApi, regenerateArtifactQrApi } from '../services/artifactApi';
 import { approveCurationContentApi, rejectCurationContentApi } from '../services/curationApi';
@@ -141,7 +141,7 @@ function DataProvider({ children, session, login, endSession }) {
       load('curationQueue', async () => {
         const contents = currentRole === 'curator'
           ? (await Promise.all(['pending_review', 'published', 'rejected', 'archived'].map(status => allPages(`artifact-contents?museumId=${currentMuseum.id}&status=${status}`, options)))).flat()
-          : (await Promise.all(artifacts.filter(a => museumIds.includes(a.museumId)).map(a => backend(`artifacts/${a.id}/contents/versions`, options)))).flat();
+          : (await Promise.all(artifacts.filter(a => currentRole === 'administrator' || museumIds.includes(a.museumId)).map(a => backend(`artifacts/${a.id}/contents/versions`, options)))).flat();
         return contents.map(c => ({ ...c, backendId: c.id, targetArtifactId: c.artifactId,
           museumId: artifacts.find(a => a.id === c.artifactId)?.museumId,
           targetArtifactName: artifacts.find(a => a.id === c.artifactId)?.name || `Hiện vật #${c.artifactId}`,
@@ -182,7 +182,6 @@ function DataProvider({ children, session, login, endSession }) {
   const submitToCuration = item => mutate(() => submitArtifactContentApi(requireId(item.targetArtifactId), { languageCode: item.languageCode || 'vi', title: item.title, description: item.proposedContent || item.content || '', ...(item.narrationText ? { narrationText: item.narrationText } : {}), isAiGenerated: item.isAiGenerated ?? true }), 'Đã gửi bản thảo lên máy chủ.');
   const approveCurationItem = (id, note) => mutate(() => approveCurationContentApi(requireId(id), note), 'Đã xuất bản nội dung.');
   const rejectCurationItem = (id, note) => mutate(() => rejectCurationContentApi(requireId(id), note), 'Đã từ chối nội dung.');
-  const requestRevisionCurationItem = () => unavailable('Máy chủ chưa có thao tác trả về bản nháp. Hãy từ chối và ghi rõ yêu cầu chỉnh sửa.');
   const tourPayload = t => ({ title: t.title, description: t.description || '', estimatedMinutes: parseInt(t.duration, 10), artifactIds: t.artifacts.map(requireId) });
   const addTour = t => mutate(() => backend(`tours?museumId=${requireId(t.museumId)}`, { method: 'POST', body: tourPayload(t) }), 'Đã tạo bản nháp hành trình.');
   const updateTour = t => mutate(() => backend(`tours/${requireId(t.id)}`, { method: 'PUT', body: { revision: t.revision, tour: tourPayload(t) } }), 'Đã lưu bản nháp hành trình.');
@@ -198,11 +197,15 @@ function DataProvider({ children, session, login, endSession }) {
   const toggleUserStatus = id => mutate(() => backend(`admin/accounts/${id}/status`, { method: 'PATCH', body: { isActive: users.find(u => u.id === id)?.status !== 'active' } }), 'Đã cập nhật tài khoản.');
   const refundTransaction = () => unavailable('Máy chủ chưa cung cấp API hoàn tiền. Chưa có giao dịch nào được hoàn tiền.');
   const toggleMuseumGoogleMapsVisibility = () => unavailable('Máy chủ chưa có trường hiển thị bản đồ độc lập. Danh sách công khai hiện theo trạng thái hoạt động của bảo tàng.');
+  const artifactReviews = latestArtifactReviews(curationQueue);
+  const artifactReviewStatus = id => loading.curationQueue || dataErrors.curationQueue
+    ? null
+    : artifactReviews.get(id)?.status ?? 'draft';
   return <AppContext.Provider value={{ currentUser, currentRole, isAuthenticated, login, logout, selectedMuseumId, setSelectedMuseumId, currentMuseum, activeTab, setActiveTab, registerNavigationGuard,
-    museums, setMuseums, cities, artifacts, tours, curationQueue, users, passPackages, transactions, reviews, systemCases, exhibitions: [], auditLogs: [], dataErrors, loading, reload,
+    museums, setMuseums, cities, artifacts, artifactReviewStatus, tours, curationQueue, users, passPackages, transactions, reviews, systemCases, exhibitions: [], auditLogs: [], dataErrors, loading, reload,
     isLoadingMuseums: !!loading.museums, isLoadingArtifacts: !!loading.artifacts, isLoadingCuration: !!loading.curationQueue,
     loadCities: reload, loadMuseums: reload, loadArtifacts: reload, loadCurationQueue: reload,
-    createMuseum, updateMuseum, deleteMuseum, addArtifact, updateArtifact, deleteArtifact, downloadArtifactQr, regenerateArtifactQr, submitToCuration, approveCurationItem, rejectCurationItem, requestRevisionCurationItem,
+    createMuseum, updateMuseum, deleteMuseum, addArtifact, updateArtifact, deleteArtifact, downloadArtifactQr, regenerateArtifactQr, submitToCuration, approveCurationItem, rejectCurationItem,
     addTour, updateTour, publishTour, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast, dismissToast }}>{children}</AppContext.Provider>;
 }
 export function useApp() { const context = useContext(AppContext); if (!context) throw new Error('useApp must be used within AppProvider'); return context; }

@@ -1,12 +1,18 @@
 import '../../widgets/backend_panel.dart';
+import '../../widgets/earned_badges.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/museum_ui.dart';
 import '../../services/backend_api.dart';
 import '../../services/app_services.dart';
 
 class DailyQuizScreen extends StatefulWidget {
-  const DailyQuizScreen({super.key, this.artifactId});
+  const DailyQuizScreen({
+    super.key,
+    this.artifactId,
+    this.deferredOnly = false,
+  });
   final String? artifactId;
+  final bool deferredOnly;
   @override
   State<DailyQuizScreen> createState() => _DailyQuizScreenState();
 }
@@ -25,7 +31,10 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
       final result = await BackendApi.request(
         'quiz-attempts',
         method: 'POST',
-        body: {'dailyEntryId': id, 'mode': 'later'},
+        body: {
+          'dailyEntryId': id,
+          'mode': widget.deferredOnly ? 'later' : 'immediate',
+        },
       );
       if (mounted) {
         await Navigator.of(context).push(
@@ -36,6 +45,36 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
           ),
         );
       }
+      if (mounted) {
+        setState(() => _entries = BackendApi.request('daily-quizzes/today'));
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _defer(int id, bool deferred) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await BackendApi.request(
+        'daily-quizzes/$id/deferred?deferred=$deferred',
+        method: 'PUT',
+      );
+      if (!mounted) return;
+      setState(() => _entries = BackendApi.request('daily-quizzes/today'));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            deferred ? 'Đã lưu vào Trả lời sau trong ngày.' : 'Đã bỏ lưu.',
+          ),
+        ),
+      );
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -46,7 +85,9 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
   @override
   Widget build(BuildContext context) => MuseumPage(
     back: true,
-    title: 'Câu hỏi trong ngày',
+    title: widget.deferredOnly
+        ? 'Trả lời sau trong ngày'
+        : 'Câu hỏi trong ngày',
     eyebrow: 'Thử tài khám phá',
     children: [
       const Notice(
@@ -70,8 +111,9 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
               .cast<Map<String, dynamic>>()
               .where(
                 (e) =>
-                    widget.artifactId == null ||
-                    e['artifactId'].toString() == widget.artifactId,
+                    (widget.artifactId == null ||
+                        e['artifactId'].toString() == widget.artifactId) &&
+                    (!widget.deferredOnly || e['status'] == 'deferred'),
               )
               .toList();
           if (entries.isEmpty) {
@@ -84,16 +126,37 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
           return Column(
             children: entries
                 .map(
-                  (e) => ActionTile(
-                    title:
-                        AppServices.catalog.artifacts
-                            .where((a) => a.id == e['artifactId'].toString())
-                            .firstOrNull
-                            ?.name ??
-                        'Hiện vật #${e['artifactId']}',
-                    subtitle: 'Bộ câu hỏi #${e['quizId']}',
-                    icon: Icons.quiz_outlined,
-                    onTap: () => _start(e['id'] as int),
+                  (e) => Column(
+                    children: [
+                      ActionTile(
+                        title:
+                            AppServices.catalog.artifacts
+                                .where(
+                                  (a) => a.id == e['artifactId'].toString(),
+                                )
+                                .firstOrNull
+                                ?.name ??
+                            'Hiện vật #${e['artifactId']}',
+                        subtitle:
+                            'Bộ câu hỏi #${e['quizId']} · ${e['status'] == 'deferred' ? 'Đã lưu làm sau' : backendStatus(e['status'])}',
+                        icon: Icons.quiz_outlined,
+                        onTap: () => _start(e['id'] as int),
+                      ),
+                      if (e['status'] == 'pending' || e['status'] == 'deferred')
+                        TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () => _defer(
+                                  e['id'] as int,
+                                  e['status'] != 'deferred',
+                                ),
+                          child: Text(
+                            e['status'] == 'deferred'
+                                ? 'Bỏ lưu'
+                                : 'Trả lời sau',
+                          ),
+                        ),
+                    ],
                   ),
                 )
                 .toList(),
@@ -128,6 +191,7 @@ class _BackendQuizAttemptScreenState extends State<BackendQuizAttemptScreen> {
         body: {'questionId': questionId, 'optionId': optionId},
       );
       if (mounted) setState(() => _attempt = Map<String, dynamic>.from(result));
+      if (mounted) showEarnedBadges(context, result['newBadges']);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -207,6 +271,7 @@ class _BackendQuizAttemptScreenState extends State<BackendQuizAttemptScreen> {
       Text(
         '${_attempt['correctCount']}/${_attempt['totalQuestions']} câu đúng · ${_attempt['score']}/100',
       ),
+      Text('${_attempt['pointsEarned'] ?? 0} điểm đã nhận trong lượt này'),
       if (_error != null) Notice(_error!),
       for (final q
           in (_attempt['questions'] as List).cast<Map<String, dynamic>>())

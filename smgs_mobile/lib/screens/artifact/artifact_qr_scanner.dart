@@ -1,3 +1,4 @@
+import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/backend_api.dart';
 import '../../services/app_services.dart';
@@ -53,7 +54,8 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
       }
       final request = _scanRequest!;
       final data = await ArtifactScanService.scan(code);
-      await request.record();
+      final recognition = await request.record();
+      if (mounted) showEarnedBadges(context, recognition['newBadges']);
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(

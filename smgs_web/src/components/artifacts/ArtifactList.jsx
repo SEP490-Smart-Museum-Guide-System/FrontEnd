@@ -1,4 +1,5 @@
 import ActionGroup from '../common/ActionGroup';
+import { artifactReviewLabels } from '../../services/backend';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
@@ -26,6 +27,7 @@ import ArtifactPhotoGalleryModal from './ArtifactPhotoGalleryModal';
 export default function ArtifactList({ onOpenAIStudio }) {
   const {
     artifacts,
+    artifactReviewStatus,
     addArtifact,
     updateArtifact,
     deleteArtifact,
@@ -56,7 +58,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
     if (selectedGallery !== 'all' && art.galleryName !== selectedGallery) {
       return false;
     }
-    if (selectedStatus !== 'all' && art.status !== selectedStatus) {
+    if (selectedStatus !== 'all' && artifactReviewStatus(art.id) !== selectedStatus) {
       return false;
     }
     if (filterTreasureOnly && !art.isNationalTreasure) {
@@ -222,9 +224,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   onChange={(e) => setSelectedStatus(e.target.value)}
                 >
                   <option value="all">Tất cả trạng thái</option>
-                  <option value="published">Đã xuất bản</option>
-                  <option value="pending_review">Chờ kiểm duyệt</option>
-                  <option value="draft">Bản nháp</option>
+                  {Object.entries(artifactReviewLabels).map(([status, label]) => <option key={status} value={status}>{label}</option>)}
                 </select>
 
                 <label className="filter-chip-toggle">
@@ -263,7 +263,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   <th>Vị trí trưng bày</th>
                   <th>Niên đại & Chất liệu</th>
                   <th style={{ textAlign: 'center' }}>Tính năng số</th>
-                  <th>Trạng thái</th>
+                  <th>Kiểm duyệt</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
@@ -380,8 +380,8 @@ export default function ArtifactList({ onOpenAIStudio }) {
 
                       {/* Status */}
                       <td>
-                        <span className={`badge-status badge-${art.status}`}>
-                          {art.status === 'published' ? 'Đã xuất bản' : art.status === 'pending_review' ? 'Chờ duyệt' : 'Bản nháp'}
+                        <span className={`badge-status badge-${artifactReviewStatus(art.id) ?? "draft"}`}>
+                          {artifactReviewLabels[artifactReviewStatus(art.id)] ?? 'Chưa tải được trạng thái'}
                         </span>
                       </td>
 
@@ -481,8 +481,8 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   )}
                 </div>
                 <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
-                  <span className={`badge-status badge-${art.status}`}>
-                    {art.status === 'published' ? 'Đã xuất bản' : 'Chờ duyệt'}
+                  <span className={`badge-status badge-${artifactReviewStatus(art.id) ?? "draft"}`}>
+                    {artifactReviewLabels[artifactReviewStatus(art.id)] ?? 'Chưa tải được trạng thái'}
                   </span>
                 </div>
                 {art.images && art.images.length > 1 && (
