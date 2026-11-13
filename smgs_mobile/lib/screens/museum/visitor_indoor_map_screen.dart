@@ -769,7 +769,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                         FloatingActionButton.small(
                           heroTag: 'my_loc_btn',
                           backgroundColor: const Color(0xFF2563EB),
-                          tooltip: 'Vị trí của bạn',
+                          tooltip: 'Điểm xuất phát đã xác nhận',
                           onPressed: () => _centerOnCoordinates(
                             _startMarker!.x,
                             _startMarker!.y,

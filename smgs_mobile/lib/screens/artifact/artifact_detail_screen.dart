@@ -47,10 +47,15 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   Future<void> _loadPhotos() async {
     final id = int.tryParse(widget.artifact.id);
     if (id == null) return;
-    setState(() { _loadingPhotos = true; _photoError = false; });
+    setState(() {
+      _loadingPhotos = true;
+      _photoError = false;
+    });
     try {
       final json = await DiscoveryApiService.fetchArtifactDetail(id);
-      if (mounted) setState(() => _photos = Artifact.fromBackendJson(json).photos);
+      if (mounted) {
+        setState(() => _photos = Artifact.fromBackendJson(json).photos);
+      }
     } catch (_) {
       if (mounted) setState(() => _photoError = true);
     } finally {
@@ -95,7 +100,17 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
             child: TextButton.icon(
               onPressed: () {
                 VisitStore.instance.toggleSave(a.id);
-                ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(VisitStore.instance.saved.contains(a.id) ? 'Đã lưu hiện vật vào bộ sưu tập.' : 'Đã bỏ lưu hiện vật.')));
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        VisitStore.instance.saved.contains(a.id)
+                            ? 'Đã lưu hiện vật vào bộ sưu tập.'
+                            : 'Đã bỏ lưu hiện vật.',
+                      ),
+                    ),
+                  );
               },
               icon: Icon(
                 VisitStore.instance.saved.contains(a.id)
@@ -112,10 +127,13 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
       ],
       children: [
         if (_loadingPhotos) const LinearProgressIndicator(),
-        if (_photoError) Row(children: [
-          const Expanded(child: Text('Chưa tải đủ ảnh hiện vật.')),
-          TextButton(onPressed: _loadPhotos, child: const Text('Thử lại')),
-        ]),
+        if (_photoError)
+          Row(
+            children: [
+              const Expanded(child: Text('Chưa tải đủ ảnh hiện vật.')),
+              TextButton(onPressed: _loadPhotos, child: const Text('Thử lại')),
+            ],
+          ),
         Text(
           a.id == 'artifact_1'
               ? 'Trống đồng Ngọc Lũ · Ảnh: VuThiAnh, Wikimedia Commons'
@@ -190,18 +208,56 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         ),
         const SizedBox(height: 8),
         TextButton.icon(
-          icon: const Icon(Icons.more_horiz), label: const Text('Thuyết minh, chỉ đường & 3D'),
-          onPressed: () => showModalBottomSheet<void>(context: context, showDragHandle: true,
+          icon: const Icon(Icons.more_horiz),
+          label: const Text('Thuyết minh, chỉ đường & 3D'),
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            showDragHandle: true,
             builder: (sheetContext) {
-              void go(Widget screen) { Navigator.pop(sheetContext); openPage(context, screen); }
-              return SafeArea(child: Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 16), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ListTile(leading: const Icon(Icons.menu_book_outlined), title: const Text('Đọc & nghe thuyết minh'), trailing: const Icon(Icons.chevron_right), onTap: () => go(NarrationScreen(artifact: a))),
-                if (int.tryParse(a.museumId) != null && int.tryParse(a.id) != null)
-                  ListTile(leading: const Icon(Icons.directions_walk), title: const Text('Chỉ đường tới hiện vật'), trailing: const Icon(Icons.chevron_right), onTap: () => go(VisitorDirectoryScreen(museumId: int.parse(a.museumId), initialArtifactId: int.parse(a.id), museumName: widget.museumName))),
-                if (a.modelUrl?.isNotEmpty == true)
-                  ListTile(leading: const Icon(Icons.view_in_ar_outlined), title: const Text('Xem mô hình 3D'), trailing: const Icon(Icons.chevron_right), onTap: () => go(Artifact3DScreen(artifact: a))),
-              ])));
-            }),
+              void go(Widget screen) {
+                Navigator.pop(sheetContext);
+                openPage(context, screen);
+              }
+
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.menu_book_outlined),
+                        title: const Text('Đọc & nghe thuyết minh'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => go(NarrationScreen(artifact: a)),
+                      ),
+                      if (int.tryParse(a.museumId) != null &&
+                          int.tryParse(a.id) != null)
+                        ListTile(
+                          leading: const Icon(Icons.directions_walk),
+                          title: const Text('Chỉ đường tới hiện vật'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => go(
+                            VisitorDirectoryScreen(
+                              museumId: int.parse(a.museumId),
+                              initialArtifactId: int.parse(a.id),
+                              museumName: widget.museumName,
+                            ),
+                          ),
+                        ),
+                      if (a.modelUrl?.isNotEmpty == true)
+                        ListTile(
+                          leading: const Icon(Icons.view_in_ar_outlined),
+                          title: const Text('Xem mô hình 3D'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => go(Artifact3DScreen(artifact: a)),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
         const SectionHeading('Những điều còn lưu lại'),
         ScrollReveal(child: Text(story, style: AppTextStyles.bodyLarge)),

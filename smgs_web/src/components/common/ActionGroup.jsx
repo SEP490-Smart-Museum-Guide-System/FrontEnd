@@ -70,13 +70,13 @@ export default function ActionGroup({ children, label = 'Thao tác khác', visib
         {items.slice(visible).map((child, index) =>
           React.cloneElement(child, {
             key: child.key || index,
-            className: `action-option ${child.props.className || ''}`.replace(/\bbtn\b|\bbtn-[a-z0-9-]+\b/g, '').trim(),
+            className: ['action-option', ...(child.props.className || '').split(' ').filter(name => name && name !== 'btn' && !name.startsWith('btn-'))].join(' '),
             style: undefined,
             onClick: e => {
               child.props.onClick?.(e);
               close(true);
             },
-            children: child.props.children || child.props.title,
+            children: child.props.title || child.props.children,
           })
         )}
       </div>,
