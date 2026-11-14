@@ -29,17 +29,43 @@ function MuseumCommerce({ museumId }) {
   </>;
 }
 function CommerceForm({ modal, museumId, resources, artifacts, onClose, onSaved }) {
+  const { showToast } = useApp();
   const r = modal.value, product = modal.type === 'product';
   const [form, setForm] = useState({ name: r?.name || '', kind: r?.kind || 'digital', accessLevel: r?.accessLevel || 'free', artifactId: r?.artifactId || '', scopeReference: r?.scopeReference || '', price: r?.price ?? '', currency: r?.currency || 'VND', seats: r?.seats ?? 1, validityHours: r?.validityHours ?? '', isActive: r?.isActive ?? false, resourceIds: r?.resourceIds || [] });
   const action = useAction('Đã lưu thay đổi dịch vụ và giao dịch.');
   const change = (key, value) => setForm(p => ({ ...p, [key]: value }));
   async function save(e) {
     e.preventDefault();
+    if (product) {
+      if (!form.resourceIds.length) {
+        showToast('Vui lòng tích chọn ít nhất một nội dung/quyền được cấp cho gói này.', 'warning');
+        return;
+      }
+      if (form.isActive && (form.validityHours === '' || Number(form.validityHours) < 1)) {
+        showToast('Khi công khai gói dịch vụ, bắt buộc phải nhập thời hạn sử dụng (giờ).', 'warning');
+        return;
+      }
+      const selected = resources.filter(res => form.resourceIds.includes(res.id));
+      const hasAdmission = selected.some(res => res.kind === 'admission');
+      const hasDigital = selected.some(res => res.kind === 'digital');
+      if (form.kind === 'digital' && hasAdmission) {
+        showToast('Gói "Nội dung số" chỉ được cấp các quyền Nội dung số. Vui lòng bỏ chọn quyền Vé vào cửa hoặc đổi loại gói sang "Gói kết hợp".', 'warning');
+        return;
+      }
+      if (form.kind === 'admission' && hasDigital) {
+        showToast('Gói "Vé vào cửa" chỉ được cấp các quyền Vé vào cửa. Vui lòng bỏ chọn quyền Nội dung số hoặc đổi loại gói sang "Gói kết hợp".', 'warning');
+        return;
+      }
+      if (form.kind === 'combo' && (!hasAdmission || !hasDigital)) {
+        showToast('Gói "Gói kết hợp (combo)" bắt buộc phải chọn cả quyền Vé vào cửa và quyền Nội dung số.', 'warning');
+        return;
+      }
+    }
     const body = product ? { name: form.name.trim(), kind: form.kind, price: Number(form.price), currency: form.currency.toUpperCase(), seats: Number(form.seats), validityHours: form.validityHours === '' ? null : Number(form.validityHours), validityStartsAt: form.validityHours === '' ? null : 'payment', resourceIds: form.resourceIds, isActive: form.isActive } : { name: form.name.trim(), kind: form.kind, accessLevel: form.accessLevel, artifactId: form.artifactId ? Number(form.artifactId) : null, scopeReference: form.scopeReference.trim() || null };
     await action.run(() => backend(`commerce/museums/${museumId}/${product ? 'products' : 'resources'}${r ? `/${r.id}` : ''}`, { method: r ? 'PUT' : 'POST', body }), onSaved);
   }
   return <Modal title={product ? 'Cấu hình gói dịch vụ' : 'Cấu hình nội dung / quyền'} onClose={onClose} busy={action.busy}><form onSubmit={save}><ErrorNotice>{action.error}</ErrorNotice><Field label="Tên"><input className="form-input" required maxLength={200} value={form.name} onChange={e => change('name', e.target.value)} /></Field><Field label="Loại"><select className="form-select" value={form.kind} onChange={e => change('kind', e.target.value)}><option value="digital">Nội dung số</option><option value="admission">Vé vào cửa</option>{product && <option value="combo">Gói kết hợp</option>}</select></Field>
-    {product ? <><Field label="Giá"><input className="form-input" type="number" min="0.01" max="999999999999" step="0.01" required value={form.price} onChange={e => change('price', e.target.value)} /></Field><Field label="Loại tiền"><input className="form-input" required pattern="[A-Za-z]{3}" maxLength={3} value={form.currency} onChange={e => change('currency', e.target.value)} /></Field><Field label="Số người"><input className="form-input" type="number" required min={1} max={1000} value={form.seats} onChange={e => change('seats', e.target.value)} /></Field><Field label="Thời hạn tính từ lúc thanh toán (giờ)"><input className="form-input" type="number" min={1} max={87600} value={form.validityHours} onChange={e => change('validityHours', e.target.value)} /></Field><p className="business-muted">Để trống thời hạn nếu gói chưa sẵn sàng cho khách mua.</p><label className="business-check"><input type="checkbox" checked={form.isActive} onChange={e => change('isActive', e.target.checked)} />Công khai gói dịch vụ</label><h4>Nội dung được cấp quyền</h4>{resources.map(r => <label className="business-check" key={r.id}><input type="checkbox" checked={form.resourceIds.includes(r.id)} onChange={e => change('resourceIds', e.target.checked ? [...form.resourceIds, r.id] : form.resourceIds.filter(id => id !== r.id))} />{r.name}</label>)}{!resources.length && <Empty>Tạo nội dung / quyền trước khi tạo gói dịch vụ.</Empty>}</> : <><Field label="Mức truy cập"><select className="form-select" value={form.accessLevel} onChange={e => change('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Trả phí</option></select></Field><Field label="Hiện vật liên quan"><select className="form-select" value={form.artifactId} onChange={e => change('artifactId', e.target.value)}><option value="">Không gắn hiện vật</option>{artifacts.map(a => <option value={a.id} key={a.id}>{a.name}</option>)}</select></Field><Field label="Tham chiếu phạm vi (nếu có)"><input className="form-input" maxLength={200} value={form.scopeReference} onChange={e => change('scopeReference', e.target.value)} /></Field></>}
+    {product ? <><Field label="Giá"><input className="form-input" type="number" min="0.01" max="999999999999" step="0.01" required value={form.price} onChange={e => change('price', e.target.value)} /></Field><Field label="Loại tiền"><input className="form-input" required pattern="[A-Za-z]{3}" maxLength={3} value={form.currency} onChange={e => change('currency', e.target.value)} /></Field><Field label="Số người"><input className="form-input" type="number" required min={1} max={1000} value={form.seats} onChange={e => change('seats', e.target.value)} /></Field><Field label="Thời hạn tính từ lúc thanh toán (giờ)"><input className="form-input" type="number" min="1" max={87600} required={form.isActive} value={form.validityHours} onChange={e => change('validityHours', e.target.value)} /></Field><p className="business-muted">{form.isActive ? 'Bắt buộc nhập số giờ khi mở bán công khai.' : 'Để trống thời hạn nếu gói chưa sẵn sàng cho khách mua.'}</p><label className="business-check"><input type="checkbox" checked={form.isActive} onChange={e => change('isActive', e.target.checked)} />Công khai gói dịch vụ</label><h4>Nội dung được cấp quyền</h4>{resources.map(r => <label className="business-check" key={r.id}><input type="checkbox" checked={form.resourceIds.includes(r.id)} onChange={e => change('resourceIds', e.target.checked ? [...form.resourceIds, r.id] : form.resourceIds.filter(id => id !== r.id))} /><span>{r.name}</span><small style={{ marginLeft: '6px', color: 'var(--color-charcoal-500)', fontSize: '0.75rem' }}>({r.kind === 'admission' ? 'Vé vào cửa' : 'Nội dung số'})</small></label>)}{!resources.length && <Empty>Tạo nội dung / quyền trước khi tạo gói dịch vụ.</Empty>}</> : <><Field label="Mức truy cập"><select className="form-select" value={form.accessLevel} onChange={e => change('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Trả phí</option></select></Field><Field label="Hiện vật liên quan"><select className="form-select" value={form.artifactId} onChange={e => change('artifactId', e.target.value)}><option value="">Không gắn hiện vật</option>{artifacts.map(a => <option value={a.id} key={a.id}>{a.name}</option>)}</select></Field><Field label="Tham chiếu phạm vi (nếu có)"><input className="form-input" maxLength={200} value={form.scopeReference} onChange={e => change('scopeReference', e.target.value)} /></Field></>}
     <button className="btn btn-primary" disabled={action.busy || (product && !form.resourceIds.length)}>{action.busy ? 'Đang lưu…' : 'Lưu cấu hình'}</button></form></Modal>;
 }
 function ManagedOrder({ id, onClose, onSaved }) {

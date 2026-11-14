@@ -15,7 +15,7 @@ export default function ToastContainer() {
         const isWarning = toast.type === 'warning';
         const isInfo = toast.type === 'info';
         const className = `toast ${isError ? 'toast-error' : isWarning ? 'toast-warning' : isInfo ? 'toast-info' : 'toast-success'}`;
-        return createPortal(
+        return (
           <div key={toast.id} className={className} role={isError ? "alert" : "status"}>
             {isError ? (
               <AlertCircle size={20} color="var(--color-danger, #DC2626)" style={{ flexShrink: 0 }} />

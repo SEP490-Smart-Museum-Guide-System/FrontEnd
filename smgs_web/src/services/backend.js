@@ -12,7 +12,12 @@ export async function backend(path, { method = 'GET', body, signal, timeoutMs = 
   });
   const result = await response.json().catch(() => null);
   if (!response.ok || result?.isSuccess === false) {
-    throw new Error(result?.message || `Không thể tải hoặc lưu dữ liệu (${response.status}).`);
+    const errorMsg =
+      result?.message ||
+      (result?.errors ? Object.values(result.errors).flat().join(', ') : null) ||
+      result?.title ||
+      `Không thể tải hoặc lưu dữ liệu (${response.status}).`;
+    throw new Error(errorMsg);
   }
   if (!result || !Object.hasOwn(result, 'data')) throw new Error('Phản hồi máy chủ không hợp lệ.');
   return result.data;

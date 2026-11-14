@@ -33,6 +33,11 @@ function visitorPreviewIndex() {
 
 const proxy = {
   '/api': { target: 'http://127.0.0.1:5169', changeOrigin: true },
+  '/vietqr': {
+    target: 'https://vietqr.app',
+    changeOrigin: true,
+    rewrite: (path) => path.replace(/^\/vietqr/, '')
+  },
   '/ai-tts': {
     target: 'http://127.0.0.1:8000',
     changeOrigin: true,

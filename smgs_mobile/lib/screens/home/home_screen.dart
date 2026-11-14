@@ -1,6 +1,9 @@
 import '../../widgets/game_tutorial_overlay.dart';
 import 'package:flutter/material.dart';
 
+import '../../widgets/backend_panel.dart';
+import '../../services/backend_api.dart';
+import '../museum/visit_progress_screen.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../widgets/visitor_handbook_sheet.dart';
@@ -180,6 +183,99 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppColors.mutedGold,
                     ),
                   ],
+                ),
+                BackendPanel(
+                  resourceKey: 'home-active-visit',
+                  load: () => BackendApi.list('visits/me?status=InProgress'),
+                  builder: (data, reload) {
+                    final list = (data as List).cast<Map<String, dynamic>>();
+                    if (list.isEmpty) return const SizedBox.shrink();
+                    final v = list.first;
+                    final mName = AppServices.catalog.museumName(v['museumId'].toString());
+                    return Container(
+                      margin: const EdgeInsets.only(top: 14),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.mutedGold, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.darkBrown.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.deepBurgundy.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: AppColors.deepBurgundy,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.deepBurgundy,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'ĐANG THAM QUAN',
+                                        style: TextStyle(
+                                          color: AppColors.antiqueIvory,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text('#${v['id']}', style: AppTextStyles.caption),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  mName,
+                                  style: AppTextStyles.cardTitle.copyWith(fontSize: 15),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.deepBurgundy,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: const Size(0, 36),
+                            ),
+                            onPressed: () {
+                              openPage(
+                                context,
+                                VisitProgressScreen(visitId: v['id'] as int),
+                              );
+                              reload();
+                            },
+                            child: const Text('Xem tiến độ', style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 14),
                 Align(

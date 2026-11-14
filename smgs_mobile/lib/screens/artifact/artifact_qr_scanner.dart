@@ -324,6 +324,8 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
           Expanded(
             child: ChoiceChip(
               showCheckmark: false,
+              selectedColor: AppColors.deepBurgundy,
+              backgroundColor: AppColors.card,
               label: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -351,6 +353,8 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
           Expanded(
             child: ChoiceChip(
               showCheckmark: false,
+              selectedColor: AppColors.deepBurgundy,
+              backgroundColor: AppColors.card,
               label: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

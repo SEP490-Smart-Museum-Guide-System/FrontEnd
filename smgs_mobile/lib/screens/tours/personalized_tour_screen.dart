@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/app_services.dart';
+import '../../services/backend_api.dart';
 import '../../services/personalized_tour_api.dart';
 import '../../services/visitor_experience_api.dart';
+import '../../widgets/backend_panel.dart';
 import '../../widgets/museum_ui.dart';
 import '../museum/visit_progress_screen.dart';
 import '../artifact/artifact_detail_screen.dart';
@@ -126,6 +128,90 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
       eyebrow: 'Hành trình của bạn',
       subtitle: 'Chọn tour có sẵn, khám phá tự do hoặc thử một gợi ý cá nhân.',
       children: [
+        BackendPanel(
+          resourceKey: 'active-visit-banner',
+          load: () => BackendApi.list('visits/me?status=InProgress'),
+          builder: (data, reload) {
+            final activeVisits = (data as List).cast<Map<String, dynamic>>();
+            if (activeVisits.isEmpty) return const SizedBox.shrink();
+            final v = activeVisits.first;
+            final mName = AppServices.catalog.museumName(v['museumId'].toString());
+            return Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.mutedGold, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.darkBrown.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.deepBurgundy,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'ĐANG THAM QUAN',
+                          style: TextStyle(
+                            color: AppColors.antiqueIvory,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text('#${v['id']}', style: AppTextStyles.caption),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    mName,
+                    style: AppTextStyles.cardTitle.copyWith(fontSize: 17),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    v['personalizedTourId'] != null
+                        ? 'Hành trình cá nhân AI đang diễn ra'
+                        : (v['tourId'] != null ? 'Tour tham quan bảo tàng' : 'Lượt tham quan tự do'),
+                    style: AppTextStyles.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Xem tiến độ chuyến đi',
+                          icon: Icons.map_outlined,
+                          height: 42,
+                          onPressed: () {
+                            openPage(
+                              context,
+                              VisitProgressScreen(visitId: v['id'] as int),
+                            );
+                            reload();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
         DropdownButtonFormField<String>(
           initialValue: id == null ? null : _museumId,
           isExpanded: true,
@@ -347,6 +433,103 @@ class _PersonalizedTourDetailScreenState
   bool _busy = false;
   String? _error;
 
+  Future<void> _showActiveVisitConflictDialog(Map<String, dynamic> active) async {
+    final activeId = active['id'] as int;
+    final museumName = _plan['museumName'] as String? ?? 'bảo tàng này';
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.deepBurgundy, size: 24),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Chuyến đi đang diễn ra',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkBrown,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bạn đang có chuyến tham quan #$activeId tại $museumName chưa kết thúc.',
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Bạn có thể xem tiếp tiến độ chuyến đi này, hoặc kết thúc chuyến cũ để bắt đầu hành trình cá nhân AI vừa tạo.',
+              style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: const Text('Đóng'),
+          ),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.deepBurgundy,
+              side: const BorderSide(color: AppColors.deepBurgundy),
+            ),
+            onPressed: () => Navigator.pop(ctx, 'end_and_start'),
+            child: const Text('Kết thúc cũ & Bắt đầu mới'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
+            onPressed: () => Navigator.pop(ctx, 'continue'),
+            child: const Text('Xem tiến độ chuyến đang đi'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || action == null || action == 'cancel') return;
+
+    if (action == 'continue') {
+      await _pushTourPage(
+        context,
+        VisitProgressScreen(visitId: activeId),
+      );
+    } else if (action == 'end_and_start') {
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+      try {
+        await BackendApi.request('visits/$activeId/complete', method: 'POST', body: {});
+        VisitorSession.clear();
+        final newVisit = await VisitorExperienceApi.startVisit(
+          _plan['museumId'] as int,
+          personalizedTourId: _plan['id'] as String,
+        );
+        if (!mounted) return;
+        await _pushTourPage(
+          context,
+          VisitProgressScreen(visitId: newVisit['id'] as int),
+        );
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _error = 'Lưu ý: Không thể tự đóng chuyến cũ: ${e.toString().replaceFirst("Exception: ", "")}. Hãy mở chuyến cũ để kiểm tra.';
+          });
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _act({bool start = false}) async {
     setState(() {
       _busy = true;
@@ -359,15 +542,35 @@ class _PersonalizedTourDetailScreenState
         setState(() => _plan = saved);
       }
       if (start) {
+        Map<String, dynamic>? visit;
         final existing = VisitorSession.activeVisit;
-        final visit =
-            existing?['personalizedTourId'] == _plan['id'] &&
-                existing?['status'] == 'InProgress'
-            ? existing!
-            : await VisitorExperienceApi.startVisit(
-                _plan['museumId'] as int,
-                personalizedTourId: _plan['id'] as String,
-              );
+        if (existing?['personalizedTourId'] == _plan['id'] &&
+            existing?['status'] == 'InProgress') {
+          visit = existing!;
+        } else {
+          try {
+            visit = await VisitorExperienceApi.startVisit(
+              _plan['museumId'] as int,
+              personalizedTourId: _plan['id'] as String,
+            );
+          } catch (e) {
+            final msg = e.toString();
+            if (msg.contains('đang có lượt tham quan') || msg.contains('409')) {
+              try {
+                final list = await BackendApi.list('visits/me?status=InProgress');
+                final active = list.firstWhere(
+                  (v) => v['museumId'] == _plan['museumId'],
+                  orElse: () => list.isNotEmpty ? list.first : <String, dynamic>{},
+                );
+                if (active.isNotEmpty && mounted) {
+                  await _showActiveVisitConflictDialog(active);
+                  return;
+                }
+              } catch (_) {}
+            }
+            rethrow;
+          }
+        }
         if (!mounted) return;
         await _pushTourPage(
           context,
@@ -443,7 +646,30 @@ class _PersonalizedTourDetailScreenState
           ),
           const SizedBox(height: 12),
         ],
-        if (_error != null) Notice(_error!),
+        if (_error != null) ...[
+          Notice(_error!),
+          if (_error!.contains('lượt tham quan')) ...[
+            const SizedBox(height: 8),
+            SecondaryButton(
+              label: 'Mở tiến độ chuyến đi đang diễn ra',
+              icon: Icons.map_outlined,
+              onPressed: () async {
+                final list = await BackendApi.list('visits/me?status=InProgress');
+                final active = list.firstWhere(
+                  (v) => v['museumId'] == _plan['museumId'],
+                  orElse: () => list.isNotEmpty ? list.first : <String, dynamic>{},
+                );
+                if (active.isNotEmpty && mounted) {
+                  await _pushTourPage(
+                    context,
+                    VisitProgressScreen(visitId: active['id'] as int),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
         if (stops.isNotEmpty) ...[
           PrimaryButton(
             label: _busy ? 'Đang xử lý…' : 'Bắt đầu hành trình này',

@@ -51,65 +51,74 @@ class MuseumPage extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) {
-    final body = SoftEntrance(
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-          children: [
-            if (eyebrow != null) ...[
-              Row(
-                children: [
-                  Expanded(child: Eyebrow(eyebrow!)),
-                  const SizedBox(width: 12),
-                  const HeritageSeal(size: 34),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-            AnimatedSwitcher(
-              duration: reduceHeritageMotion(context)
-                  ? Duration.zero
-                  : HeritageMotion.standard,
-              switchInCurve: HeritageMotion.curve,
-              child: Text(
-                title,
-                key: ValueKey(title),
-                style: AppTextStyles.display.copyWith(
-                  color: AppColors.deepBurgundy,
-                  fontSize: 32,
-                  height: 1.3,
+    final body = HeritagePaper(
+      child: SoftEntrance(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            children: [
+              if (eyebrow != null) ...[
+                Row(
+                  children: [
+                    Expanded(child: Eyebrow(eyebrow!)),
+                    const SizedBox(width: 12),
+                    const HeritageSeal(size: 34),
+                  ],
                 ),
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 10),
+                const SizedBox(height: 16),
+              ],
               AnimatedSwitcher(
                 duration: reduceHeritageMotion(context)
                     ? Duration.zero
-                    : HeritageMotion.fast,
+                    : HeritageMotion.standard,
+                switchInCurve: HeritageMotion.curve,
                 child: Text(
-                  subtitle!,
-                  key: ValueKey(subtitle),
-                  style: AppTextStyles.bodyMedium,
+                  title,
+                  key: ValueKey(title),
+                  style: AppTextStyles.display.copyWith(
+                    color: AppColors.deepBurgundy,
+                    fontSize: 32,
+                    height: 1.3,
+                  ),
                 ),
               ),
-            ],
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Container(width: 40, height: 2, color: AppColors.deepBurgundy),
-                const Expanded(child: Divider(height: 1, thickness: 1)),
+              if (subtitle != null) ...[
+                const SizedBox(height: 10),
+                AnimatedSwitcher(
+                  duration: reduceHeritageMotion(context)
+                      ? Duration.zero
+                      : HeritageMotion.fast,
+                  child: Text(
+                    subtitle!,
+                    key: ValueKey(subtitle),
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ),
               ],
-            ),
-            const SizedBox(height: 24),
-            ...children,
-          ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(width: 40, height: 2, color: AppColors.deepBurgundy),
+                  const Expanded(child: Divider(height: 1, thickness: 1)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ...children,
+            ],
+          ),
         ),
       ),
     );
     return back
         ? Scaffold(
-            appBar: AppBar(title: const Text('Cẩm nang bảo tàng')),
+            backgroundColor: AppColors.antiqueIvory,
+            appBar: AppBar(
+              backgroundColor: AppColors.antiqueIvory,
+              surfaceTintColor: Colors.transparent,
+              foregroundColor: AppColors.darkBrown,
+              elevation: 0,
+              title: const Text('Cẩm nang bảo tàng'),
+            ),
             body: body,
           )
         : body;

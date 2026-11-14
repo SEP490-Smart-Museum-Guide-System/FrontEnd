@@ -94,13 +94,11 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                   icon: Icons.qr_code_scanner,
                   onPressed: _busy
                       ? null
-                      : () async {
+                      : () {
                           VisitorSession.activeVisit = visit;
-                          await Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  ArtifactQrScanner(visitId: widget.visitId),
-                            ),
+                          openPage(
+                            context,
+                            ArtifactQrScanner(visitId: widget.visitId),
                           );
                           reload();
                         },
