@@ -35,11 +35,26 @@ export default function MediaUpload({ path, model = false, multiple = false, onS
     lock.current = false;
   }
   return <div className="media-upload" aria-busy={busy}>
-    <label className="upload-dropzone"><UploadCloud size={24} />
-      <strong>{busy ? 'Đang tải và lưu…' : label}</strong>
-      <span>{model ? 'GLB · tối đa 100 MB' : `${multiple ? 'Chọn nhiều ảnh · ' : ''}PNG, JPEG, WebP · tối đa 15 MB/ảnh`}</span>
-      <input type="file" aria-label={label} accept={model ? '.glb' : '.png,.jpg,.jpeg,.webp'} multiple={!model && multiple} disabled={busy}
-        onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; upload(files); }} />
+    <label className="upload-dropzone">
+      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px', border: '1px solid var(--color-paper-border)' }}>
+        <UploadCloud size={24} color="var(--color-burgundy-900)" />
+      </div>
+      <strong style={{ fontSize: '0.92rem', color: 'var(--color-burgundy-900)' }}>{busy ? 'Đang tải và lưu…' : label}</strong>
+      <span style={{ fontSize: '0.76rem', color: 'var(--color-charcoal-500)', marginTop: '2px', marginBottom: '8px' }}>
+        {model ? 'GLB · tối đa 100 MB' : `${multiple ? 'Chọn nhiều ảnh · ' : ''}PNG, JPEG, WebP · tối đa 15 MB/ảnh`}
+      </span>
+      <span className="btn btn-secondary btn-sm" style={{ pointerEvents: 'none', fontSize: '0.78rem', height: '32px', gap: '6px' }}>
+        <UploadCloud size={14} /> Chọn tệp từ thiết bị
+      </span>
+      <input
+        type="file"
+        aria-label={label}
+        accept={model ? '.glb' : '.png,.jpg,.jpeg,.webp'}
+        multiple={!model && multiple}
+        disabled={busy}
+        style={{ display: 'none' }}
+        onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; upload(files); }}
+      />
     </label>
     {busy && <div role="status" className="upload-progress">
       <span>{progress ? `${progress.index + 1}/${progress.total} · ${progress.file.name}` : 'Đang chuẩn bị tệp…'}</span>

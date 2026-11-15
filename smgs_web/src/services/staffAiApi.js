@@ -4,7 +4,7 @@ export async function generateStaffDraft(artifactId, options, signal) {
   const id = Number(artifactId);
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Hãy chọn hiện vật đã lưu trên máy chủ.');
   if (!['narration', 'quiz'].includes(options.mode)) throw new Error('Chế độ tạo bản nháp không hợp lệ.');
-  const result = await backend(`artifacts/${id}/ai/drafts`, { method: 'POST', body: options, signal, timeoutMs: 115000 });
+  const result = await backend(`artifacts/${id}/ai/drafts`, { method: 'POST', body: options, signal, timeoutMs: 240000 });
   if (result?.artifactId !== id || result.mode !== options.mode || result.isDraft !== true || result.languageCode !== 'vi' || !result.draft || typeof result.source?.text !== 'string') {
     throw new Error('Phản hồi AI không đúng hiện vật hoặc không phải bản nháp tiếng Việt.');
   }

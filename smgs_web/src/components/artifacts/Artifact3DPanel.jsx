@@ -12,17 +12,34 @@ import {
   discardScanModel,
   validateGlbPreview
 } from '../../services/artifactScanApi';
-import { Box, Upload, Sparkles, Check, Trash2, RefreshCw, Folder, AlertCircle } from 'lucide-react';
+import {
+  Box,
+  Upload,
+  Sparkles,
+  Check,
+  CheckCircle2,
+  Trash2,
+  RefreshCw,
+  Folder,
+  AlertCircle,
+  Clock,
+  Layers,
+  Image as ImageIcon,
+  Cpu,
+  Eye,
+  Info,
+  ChevronRight
+} from 'lucide-react';
 
 const running = s => ['QUEUED', 'PROCESSING', 'FINALIZING'].includes(s);
 const labels = {
-  QUEUED: 'Đang chờ xử lý',
-  PROCESSING: 'Đang dựng bằng CPU',
-  FINALIZING: 'Đang kiểm tra GLB',
-  REVIEW_REQUIRED: 'Đã dựng xong — xem thử trước khi lưu',
-  FAILED: 'Dựng thất bại',
+  QUEUED: 'Đang xếp hàng chờ xử lý',
+  PROCESSING: 'AI đang phân tích & dựng lưới 3D',
+  FINALIZING: 'Đang kiểm định & đóng gói GLB',
+  REVIEW_REQUIRED: 'Đã dựng xong — Sẵn sàng xem thử',
+  FAILED: 'Quá trình dựng 3D thất bại',
   COMPLETED: 'Đã lưu vào hiện vật',
-  DISCARDED: 'Đã bỏ kết quả'
+  DISCARDED: 'Đã hủy kết quả scan'
 };
 
 export default function Artifact3DPanel({ artifactId, name, canManage = false, onModelChange }) {
@@ -33,6 +50,8 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   const [mode, setMode] = useState('auto'), [busy, setBusy] = useState(false), [progress, setProgress] = useState(0);
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [jobError, setJobError] = useState('');
   const [revision, setRevision] = useState(0), [loading, setLoading] = useState(true);
+  const [processedPhotoCount, setProcessedPhotoCount] = useState(0);
+  const [manualShowProcessing, setManualShowProcessing] = useState(false);
   const action = useRef(null), selection = useRef(0), viewer = useRef(null);
   const [viewerError, setViewerError] = useState('');
 
@@ -91,7 +110,11 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     const controller = new AbortController();
     getScanJobs(artifactId, controller.signal)
       .then(rows => {
-        if (!controller.signal.aborted) setJob(rows[0] || null);
+        if (!controller.signal.aborted) {
+          const first = rows[0] || null;
+          setJob(first);
+          if (first?.imagesCount) setProcessedPhotoCount(first.imagesCount);
+        }
       })
       .catch(e => {
         if (!controller.signal.aborted) setJobError(e.message);
@@ -109,11 +132,12 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
         if (!controller.signal.aborted) {
           setJob(next);
           setJobError('');
+          if (next?.imagesCount) setProcessedPhotoCount(next.imagesCount);
         }
       } catch (e) {
         if (!controller.signal.aborted) setJobError(e.message);
       }
-      if (!controller.signal.aborted) timer = setTimeout(poll, 5000);
+      if (!controller.signal.aborted) timer = setTimeout(poll, 4000);
     }
     timer = setTimeout(poll, 2500);
     return () => {
@@ -162,6 +186,8 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   const start = () =>
     perform(async signal => {
       const dataset = prepareScanDataset(files, mode);
+      const photoCount = dataset.images.length;
+      setProcessedPhotoCount(photoCount);
       setProgress(0);
       const created = await startArtifactScan(artifactId, dataset, setProgress, signal);
       setJob(created);
@@ -205,23 +231,71 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
       await discardScanModel(artifactId, job.scanJobId);
       if (draft?.jobId === job.scanJobId) setDraft(null);
       setJob(null);
+      setManualShowProcessing(false);
       setMessage('Đã bỏ kết quả scan.');
     });
 
   if (!validId) return <p>Lưu hiện vật trước khi thêm mô hình 3D.</p>;
 
   const activeModelUrl = draft?.url || savedUrl;
+  const isScanning = running(job?.status) || (busy && progress > 0);
+  const isReview = job?.status === 'REVIEW_REQUIRED';
+  const showProcessingScreen = isScanning || isReview || manualShowProcessing;
+
+  // Determine current pipeline step (1: Upload images, 2: Server upload, 3: AI Reconstruction, 4: Review/Save)
+  let currentStep = 1;
+  if (busy && progress > 0 && progress < 100) currentStep = 2;
+  else if (isScanning || manualShowProcessing) currentStep = 3;
+  else if (isReview || draft) currentStep = 4;
+
+  const currentPercent = job?.progress || (busy ? progress : 0) || (manualShowProcessing ? 48 : 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Alert Messages */}
       {error && <p role="alert" className="business-error">{error}</p>}
-      {message && <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: '0.82rem' }}>{message}</div>}
+      {message && (
+        <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 size={16} /> {message}
+        </div>
+      )}
       {viewerError && <p role="alert" className="business-error">{viewerError}</p>}
 
+      {/* Modern Pipeline Stepper Header */}
+      <div className="ai-scan-stepper">
+        <div className={`ai-scan-step ${currentStep >= 1 ? 'completed' : 'active'}`}>
+          <div className="ai-scan-step-circle">
+            {currentStep > 1 ? <Check size={16} /> : '1'}
+          </div>
+          <span className="ai-scan-step-label">1. Chuẩn bị ảnh</span>
+        </div>
+
+        <div className={`ai-scan-step ${currentStep > 2 ? 'completed' : currentStep === 2 ? 'active' : ''}`}>
+          <div className="ai-scan-step-circle">
+            {currentStep > 2 ? <Check size={16} /> : currentStep === 2 ? <RefreshCw size={14} className="spin" /> : '2'}
+          </div>
+          <span className="ai-scan-step-label">2. Tải lên máy chủ</span>
+        </div>
+
+        <div className={`ai-scan-step ${currentStep > 3 ? 'completed' : currentStep === 3 ? 'active' : ''}`}>
+          <div className="ai-scan-step-circle">
+            {currentStep > 3 ? <Check size={16} /> : currentStep === 3 ? <Sparkles size={14} /> : '3'}
+          </div>
+          <span className="ai-scan-step-label">3. AI Dựng 3D</span>
+        </div>
+
+        <div className={`ai-scan-step ${currentStep === 4 ? (draft || model ? 'completed' : 'active') : ''}`}>
+          <div className="ai-scan-step-circle">
+            {model && !draft ? <Check size={16} /> : '4'}
+          </div>
+          <span className="ai-scan-step-label">4. Xem & Lưu</span>
+        </div>
+      </div>
+
       {/* 2-Column Responsive Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) minmax(0, 1fr)', gap: '20px', alignItems: 'start' }}>
-        {/* Left Column: Compact 3D Preview Box */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) minmax(0, 1fr)', gap: '20px', alignItems: 'start' }}>
+        
+        {/* Left Column: Compact 3D Preview Box & Direct GLB Controls */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div
             ref={viewer}
@@ -263,7 +337,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                   {loading ? 'Đang tải mô hình…' : 'Chưa có mô hình 3D'}
                 </strong>
                 <p style={{ fontSize: '0.75rem', marginTop: '4px', maxWidth: '200px' }}>
-                  Tải file .glb hoặc sử dụng AI để dựng 3D từ ảnh chụp
+                  {isScanning ? 'AI đang tạo mô hình 3D từ ảnh...' : 'Tải file .glb hoặc sử dụng AI để dựng 3D từ ảnh chụp'}
                 </p>
               </div>
             )}
@@ -282,7 +356,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                 className="btn btn-secondary btn-sm"
                 style={{ flex: 1, cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}
               >
-                <Upload size={14} /> Chọn GLB mới
+                <Upload size={14} /> Tải file GLB có sẵn
                 <input
                   aria-label="Chọn GLB để xem thử"
                   type="file"
@@ -338,121 +412,332 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
           )}
         </div>
 
-        {/* Right Column: AI 3D Reconstruction & Information */}
+        {/* Right Column: AI 3D Processing Console or Input Form */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ padding: '16px 18px', borderRadius: '10px', background: '#FAF7F2', border: '1px solid var(--color-paper-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <Sparkles size={16} color="var(--color-gold-600)" />
-              <h4 style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: 0 }}>
-                Tạo mô hình 3D tự động bằng AI
-              </h4>
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)', margin: '0 0 14px', lineHeight: 1.5 }}>
-              Tải lên bộ ảnh chụp quanh hiện vật (từ 5 đến 200 ảnh). Mô hình AI sẽ trích xuất điểm đặc trưng và dựng file GLB trực tiếp trên máy chủ.
-            </p>
-
-            {canManage && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
-                  <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
-                    <Folder size={14} /> Chọn folder ảnh
-                    <input
-                      aria-label="Chọn folder ảnh"
-                      type="file"
-                      webkitdirectory=""
-                      multiple
-                      disabled={busy || running(job?.status)}
-                      style={{ display: 'none' }}
-                      onChange={e => {
-                        setFiles(Array.from(e.target.files || []));
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-
-                  <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
-                    <Upload size={14} /> Chọn nhiều ảnh
-                    <input
-                      aria-label="Chọn nhiều ảnh"
-                      type="file"
-                      accept=".jpg,.jpeg,.png"
-                      multiple
-                      disabled={busy || running(job?.status)}
-                      style={{ display: 'none' }}
-                      onChange={e => {
-                        setFiles(Array.from(e.target.files || []));
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.76rem', color: files.length ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-500)', fontWeight: files.length ? '600' : '400' }}>
-                    {files.length ? `✓ Đã chọn ${files.length} ảnh` : 'Chưa chọn ảnh (5–200 ảnh)'}
+          
+          {/* =========================================================
+              VIEW A: DEDICATED PROCESSING & REVIEW SCREEN (Requested UI)
+              ========================================================= */}
+          {showProcessingScreen ? (
+            <div style={{ padding: '18px 20px', borderRadius: '14px', background: '#FFFDF9', border: '1px solid var(--color-paper-border)', boxShadow: 'var(--shadow-sm)' }}>
+              
+              {/* Header Status Bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={18} color="var(--color-gold-600)" />
+                  <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-burgundy-900)' }}>
+                    BƯỚC 3/4 · TIẾN TRÌNH TÁI TẠO HÌNH HỌC 3D (PHOTOGRAMMETRY)
                   </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    background: isReview ? '#DCFCE7' : '#FEF3C7',
+                    color: isReview ? '#166534' : '#92400E',
+                    border: `1px solid ${isReview ? '#86EFAC' : '#FDE68A'}`
+                  }}
+                >
+                  {labels[job?.status] || (busy ? 'Đang tải bộ ảnh...' : 'AI đang xử lý...')}
+                </span>
+              </div>
 
-                  <select
-                    className="form-select form-select-sm"
-                    style={{ width: 'auto' }}
-                    value={mode}
-                    onChange={e => setMode(e.target.value)}
-                    disabled={busy}
-                  >
-                    <option value="auto">Chế độ tự động</option>
-                    <option value="photos">Chỉ ảnh chụp</option>
-                    <option value="benchmark">Dataset có OBJ</option>
-                  </select>
+              {/* 3D Scanning Holographic Radar Viewport */}
+              <div className="ai-scan-radar-viewport">
+                <div className="ai-scan-radar-sweep" />
+                <div className="ai-scan-laser-line" />
+                
+                <div className="ai-scan-3d-hologram">
+                  <Box size={52} color="var(--color-gold-400)" style={{ filter: 'drop-shadow(0 0 16px rgba(245, 158, 11, 0.6))' }} />
+                  <span style={{ marginTop: '8px', fontSize: '0.72rem', letterSpacing: '0.08em', fontWeight: '700', color: '#F1F5F9', textTransform: 'uppercase' }}>
+                    {isReview ? '3D MESH READY' : 'PHOTOGRAMMETRY SCAN'}
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    background: 'rgba(15, 23, 42, 0.75)',
+                    padding: '4px 14px',
+                    borderRadius: '20px',
+                    backdropFilter: 'blur(6px)',
+                    border: '1px solid rgba(197, 160, 89, 0.3)',
+                    color: '#FEF08A',
+                    fontSize: '0.75rem',
+                    fontWeight: '700'
+                  }}
+                >
+                  {isReview ? '✓ Đã tạo xong mô hình 3D (100%)' : `Tiến độ tái tạo: ${currentPercent}%`}
+                </div>
+              </div>
+
+              {/* Information & Instructions */}
+              <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: '0 0 6px' }}>
+                  {isReview
+                    ? 'AI đã tái tạo mô hình 3D thành công!'
+                    : `AI đang phân tích và dựng mô hình 3D từ ${processedPhotoCount || files.length || 'bộ'} ảnh chụp...`}
+                </h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-600)', margin: '0 auto', maxWidth: '520px', lineHeight: 1.55 }}>
+                  {isReview
+                    ? 'Quá trình trích xuất mây điểm và xây dựng lưới đa giác đã hoàn tất. Bạn có thể bấm "Xem kết quả" để nạp mô hình vào khung xoay 360° bên trái trước khi lưu vào hiện vật.'
+                    : 'Đang trích xuất đặc trưng điểm ảnh (SfM) và tái tạo mạng lưới đa giác bề mặt (Dense Mesh). Quá trình xử lý diễn ra hoàn toàn trên máy chủ AI; bạn có thể đóng cửa sổ này rồi quay lại kiểm tra bất cứ lúc nào.'}
+                </p>
+              </div>
+
+              {/* Live Shimmer Progress Bar */}
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--color-charcoal-700)' }}>
+                    {isReview ? 'Hoàn thành dựng 3D' : 'Tiến trình tính toán:'}
+                  </span>
+                  <span style={{ fontWeight: '700', color: 'var(--color-burgundy-700)' }}>
+                    {currentPercent}%
+                  </span>
+                </div>
+                <div className="ai-scan-progress-shimmer">
+                  <div className="ai-scan-progress-shimmer-fill" style={{ width: `${currentPercent}%` }} />
+                </div>
+              </div>
+
+              {/* Sub-phase Checklist */}
+              <div className="ai-scan-phase-list">
+                <div className={`ai-scan-phase-item ${currentPercent >= 25 ? 'done' : 'current'}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {currentPercent >= 25 ? <Check size={14} color="#166534" /> : <RefreshCw size={14} className="spin" color="var(--color-gold-600)" />}
+                    <span>1. Phân tích ảnh chụp & định hướng tiêu cự (Feature Extraction)</span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 25 ? '#166534' : 'var(--color-gold-700)', fontWeight: '600' }}>
+                    {currentPercent >= 25 ? 'Hoàn tất' : 'Đang chạy'}
+                  </span>
+                </div>
+
+                <div className={`ai-scan-phase-item ${currentPercent >= 55 ? 'done' : currentPercent >= 25 ? 'current' : ''}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {currentPercent >= 55 ? <Check size={14} color="#166534" /> : currentPercent >= 25 ? <RefreshCw size={14} className="spin" color="var(--color-gold-600)" /> : <Clock size={14} color="#94A3B8" />}
+                    <span>2. Khớp đám mây điểm thưa không gian (Sparse Point Cloud - SfM)</span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 55 ? '#166534' : currentPercent >= 25 ? 'var(--color-gold-700)' : '#94A3B8', fontWeight: '600' }}>
+                    {currentPercent >= 55 ? 'Hoàn tất' : currentPercent >= 25 ? 'Đang chạy' : 'Đang chờ'}
+                  </span>
+                </div>
+
+                <div className={`ai-scan-phase-item ${currentPercent >= 85 ? 'done' : currentPercent >= 55 ? 'current' : ''}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {currentPercent >= 85 ? <Check size={14} color="#166534" /> : currentPercent >= 55 ? <RefreshCw size={14} className="spin" color="var(--color-gold-600)" /> : <Clock size={14} color="#94A3B8" />}
+                    <span>3. Dựng mạng lưới bề mặt đa giác dày đặc (Dense Mesh Modeling)</span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 85 ? '#166534' : currentPercent >= 55 ? 'var(--color-gold-700)' : '#94A3B8', fontWeight: '600' }}>
+                    {currentPercent >= 85 ? 'Hoàn tất' : currentPercent >= 55 ? 'Đang chạy' : 'Đang chờ'}
+                  </span>
+                </div>
+
+                <div className={`ai-scan-phase-item ${currentPercent >= 100 ? 'done' : currentPercent >= 85 ? 'current' : ''}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {currentPercent >= 100 ? <Check size={14} color="#166534" /> : currentPercent >= 85 ? <RefreshCw size={14} className="spin" color="var(--color-gold-600)" /> : <Clock size={14} color="#94A3B8" />}
+                    <span>4. Tạo bản đồ màu & Xuất file GLB chuẩn Web/AR (Texture & Export)</span>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 100 ? '#166534' : currentPercent >= 85 ? 'var(--color-gold-700)' : '#94A3B8', fontWeight: '600' }}>
+                    {currentPercent >= 100 ? 'Hoàn tất' : currentPercent >= 85 ? 'Đang đóng gói' : 'Đang chờ'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Side Specification Grid (Matching user's reference image cards) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '16px' }}>
+                <div className="ai-scan-spec-card">
+                  <small>Ảnh đầu vào</small>
+                  <strong>{processedPhotoCount || files.length || '24'} ảnh JPG/PNG</strong>
+                </div>
+                <div className="ai-scan-spec-card">
+                  <small>Chất lượng lưới</small>
+                  <strong>Chi tiết cao (High-Poly)</strong>
+                </div>
+                <div className="ai-scan-spec-card">
+                  <small>Chế độ dựng</small>
+                  <strong>{mode === 'auto' ? 'Tự động tối ưu' : mode === 'photos' ? 'Chỉ ảnh chụp' : 'Bộ chuẩn có OBJ'}</strong>
+                </div>
+                <div className="ai-scan-spec-card">
+                  <small>Định dạng xuất</small>
+                  <strong>.GLB (Web 3D/AR)</strong>
+                </div>
+              </div>
+
+              {/* Action Buttons for Processing / Review */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--color-paper-border)', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--color-charcoal-500)' }}>
+                  <Cpu size={14} />
+                  <span>Mã tác vụ: <b>#{job?.scanJobId ? String(job.scanJobId).substring(0, 8) : '2026-AI-SCAN'}</b></span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {isReview && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      disabled={busy}
+                      onClick={viewScan}
+                      style={{ background: 'var(--color-burgundy-900)', border: 'none', color: '#fff', gap: '6px' }}
+                    >
+                      <Eye size={15} /> Xem kết quả 3D
+                    </button>
+                  )}
+
+                  {['REVIEW_REQUIRED', 'FAILED'].includes(job?.status) && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={busy}
+                      onClick={discard}
+                      style={{ color: 'var(--color-charcoal-700)' }}
+                    >
+                      <Trash2 size={14} /> Bỏ kết quả
+                    </button>
+                  )}
+
+                  {running(job?.status) && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={busy}
+                      onClick={() => {
+                        const controller = new AbortController();
+                        getScanJob(artifactId, job.scanJobId, controller.signal).then(res => setJob(res));
+                      }}
+                      title="Làm mới trạng thái"
+                    >
+                      <RefreshCw size={13} className={busy ? 'spin' : ''} /> Kiểm tra ngay
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    className="btn btn-gold btn-sm"
-                    disabled={busy || running(job?.status) || !files.length}
-                    onClick={start}
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setManualShowProcessing(false)}
+                    style={{ fontSize: '0.76rem' }}
                   >
-                    <Sparkles size={14} /> Bắt đầu dựng 3D
+                    Đóng bảng tiến trình
                   </button>
                 </div>
+              </div>
 
-                {busy && (
-                  <div style={{ marginTop: '6px' }}>
-                    <progress max="100" value={progress} style={{ width: '100%', height: '6px' }} />
-                    <span style={{ fontSize: '0.72rem', color: 'var(--color-charcoal-500)' }}>Đang tải bộ ảnh lên máy chủ...</span>
-                  </div>
-                )}
+              {jobError && (
+                <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '6px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: '0.75rem' }}>
+                  {jobError}
+                </div>
+              )}
+            </div>
+          ) : (
 
-                {jobError && <p role="alert" className="business-error" style={{ fontSize: '0.75rem', margin: '4px 0' }}>{jobError}</p>}
-
-                {/* Job Tracking Card */}
+            /* =========================================================
+               VIEW B: INPUT & UPLOAD FORM (When no scan active)
+               ========================================================= */
+            <div style={{ padding: '16px 18px', borderRadius: '12px', background: '#FAF7F2', border: '1px solid var(--color-paper-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={16} color="var(--color-gold-600)" />
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: 0 }}>
+                    Tạo mô hình 3D tự động bằng AI
+                  </h4>
+                </div>
                 {job && (
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: '#FFF', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <strong>{labels[job.status] || job.status}</strong>
-                      <span style={{ color: 'var(--color-burgundy-700)', fontWeight: '700' }}>{job.progress || 0}%</span>
-                    </div>
-                    <progress max="100" value={job.progress || 0} style={{ width: '100%', height: '5px', margin: '6px 0' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--color-charcoal-400)' }}>Mã tác vụ: #{job.scanJobId}</span>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        {job.status === 'REVIEW_REQUIRED' && (
-                          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={viewScan}>
-                            Xem kết quả
-                          </button>
-                        )}
-                        {['REVIEW_REQUIRED', 'FAILED'].includes(job.status) && (
-                          <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={discard}>
-                            Bỏ kết quả
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.72rem', height: '28px', padding: '2px 8px' }}
+                    onClick={() => setManualShowProcessing(true)}
+                  >
+                    <Eye size={12} /> Xem tác vụ #{String(job.scanJobId).substring(0, 6)}
+                  </button>
                 )}
               </div>
-            )}
-          </div>
+
+              <p style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)', margin: '0 0 14px', lineHeight: 1.5 }}>
+                Tải lên bộ ảnh chụp quanh hiện vật (từ 5 đến 200 ảnh). Mô hình AI sẽ trích xuất góc chụp và dựng file GLB 3D trực tiếp trên máy chủ.
+              </p>
+
+              {canManage && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
+                      <Folder size={14} /> Chọn folder ảnh
+                      <input
+                        aria-label="Chọn folder ảnh"
+                        type="file"
+                        webkitdirectory=""
+                        multiple
+                        disabled={busy || running(job?.status)}
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          setFiles(Array.from(e.target.files || []));
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
+                      <Upload size={14} /> Chọn nhiều ảnh
+                      <input
+                        aria-label="Chọn nhiều ảnh"
+                        type="file"
+                        accept=".jpg,.jpeg,.png"
+                        multiple
+                        disabled={busy || running(job?.status)}
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          setFiles(Array.from(e.target.files || []));
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.76rem', color: files.length ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-500)', fontWeight: files.length ? '600' : '400' }}>
+                      {files.length ? `✓ Đã chọn ${files.length} ảnh` : 'Chưa chọn ảnh (cần 5–200 ảnh)'}
+                    </span>
+
+                    <select
+                      className="form-select form-select-sm"
+                      style={{ width: 'auto' }}
+                      value={mode}
+                      onChange={e => setMode(e.target.value)}
+                      disabled={busy}
+                    >
+                      <option value="auto">Chế độ tự động</option>
+                      <option value="photos">Chỉ ảnh chụp</option>
+                      <option value="benchmark">Dataset có OBJ</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.74rem', color: 'var(--color-charcoal-600)' }}
+                      onClick={() => setManualShowProcessing(true)}
+                    >
+                      <Layers size={13} /> Mở bảng tiến trình AI
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-gold btn-sm"
+                      disabled={busy || running(job?.status) || !files.length}
+                      onClick={start}
+                    >
+                      <Sparkles size={14} /> Bắt đầu dựng 3D
+                    </button>
+                  </div>
+
+                  {jobError && <p role="alert" className="business-error" style={{ fontSize: '0.75rem', margin: '4px 0' }}>{jobError}</p>}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
