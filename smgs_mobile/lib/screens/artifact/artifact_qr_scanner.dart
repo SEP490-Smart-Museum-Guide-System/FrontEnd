@@ -141,9 +141,20 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
     }
   }
 
+  Future<void> _captureFromCamera() async {
+    try {
+      final picked = await pickImageFromDevice(useCamera: true);
+      if (picked != null) {
+        await _runVisionRecognition(picked.bytes, picked.filename);
+      }
+    } catch (e) {
+      setState(() => _error = 'Không thể mở máy ảnh: $e');
+    }
+  }
+
   Future<void> _pickAndRecognize() async {
     try {
-      final picked = await pickImageFromDevice();
+      final picked = await pickImageFromDevice(useCamera: false);
       if (picked != null) {
         await _runVisionRecognition(picked.bytes, picked.filename);
       }
@@ -399,13 +410,19 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
               PrimaryButton(
                 label: _busy
                     ? 'Đang phân tích vector…'
-                    : 'Chọn ảnh từ máy để nhận diện',
-                icon: Icons.file_upload_outlined,
+                    : 'Chụp ảnh qua Camera',
+                icon: Icons.camera_alt_outlined,
+                onPressed: _busy ? null : _captureFromCamera,
+              ),
+              const SizedBox(height: 10),
+              SecondaryButton(
+                label: 'Chọn ảnh từ thư viện thiết bị',
+                icon: Icons.photo_library_outlined,
                 onPressed: _busy ? null : _pickAndRecognize,
               ),
               const SizedBox(height: 12),
               const Notice(
-                'Bấm "Chọn ảnh từ máy" để tải ảnh chụp hiện vật bất kỳ từ máy tính hoặc điện thoại.',
+                'Giơ camera về phía hiện vật tại tủ trưng bày để chụp và nhận diện thông minh, hoặc tải ảnh có sẵn từ thư viện.',
               ),
             ],
           ),

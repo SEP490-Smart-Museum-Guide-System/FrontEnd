@@ -6,6 +6,6 @@ class PickedImageData {
   const PickedImageData({required this.bytes, required this.filename});
 }
 
-Future<PickedImageData?> pickImageFromDevice() async {
+Future<PickedImageData?> pickImageFromDevice({bool useCamera = false}) async {
   return null;
 }

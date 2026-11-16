@@ -4,9 +4,12 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'image_picker_stub.dart';
 
-Future<PickedImageData?> pickImageFromDevice() async {
+Future<PickedImageData?> pickImageFromDevice({bool useCamera = false}) async {
   final completer = Completer<PickedImageData?>();
   final input = html.FileUploadInputElement()..accept = 'image/*';
+  if (useCamera) {
+    input.setAttribute('capture', 'environment');
+  }
   input.click();
 
   input.onChange.listen((event) {
