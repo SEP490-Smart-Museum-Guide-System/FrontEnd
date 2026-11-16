@@ -4,6 +4,7 @@ import { Field, ErrorNotice, useAction } from '../common/BusinessUI';
 import React, { useEffect, useState } from 'react';
 import MediaUpload from '../common/MediaUpload';
 import { mediaApi } from '../../services/mediaApi';
+import { uploadReferenceImageApi } from '../../services/visionApi';
 import ArtifactModelViewer, { isSketchfabUrl } from '../common/ArtifactModelViewer';
 
 function Preview({ path, model = false }) {
@@ -26,6 +27,7 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
   const { showToast } = useApp();
   const [media, setMedia] = useState([]), [model, setModel] = useState(null), [error, setError] = useState('');
   const [version, setVersion] = useState(0), [busy, setBusy] = useState(false);
+  const [aiSyncing, setAiSyncing] = useState(false);
   const [sketchfabUrl, setSketchfabUrl] = useState('');
   const path = `artifacts/${artifactId}`;
   useEffect(() => {
@@ -64,14 +66,73 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
       setBusy(false);
     }
   }
+
+  async function syncToAiVision(item) {
+    setAiSyncing(true);
+    try {
+      const blob = await mediaApi(`${path}/media/${item.id}/file`, { blob: true });
+      const res = await uploadReferenceImageApi({ artifactId, file: blob });
+      if (res.ok) {
+        showToast(`Đã lập chỉ mục vector cho Hiện vật #${artifactId} vào AI Vision thành công!`, 'success');
+      } else {
+        showToast(res.message || 'Không thể lập chỉ mục AI Vision', 'error');
+      }
+    } catch (e) {
+      showToast(e.message || 'Lỗi khi gửi ảnh sang AI Vision (Port 8001)', 'error');
+    } finally {
+      setAiSyncing(false);
+    }
+  }
+
+  async function uploadDirectToAiVision(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAiSyncing(true);
+    try {
+      const res = await uploadReferenceImageApi({ artifactId, file });
+      if (res.ok) {
+        showToast(`Đã nạp ảnh tham chiếu "${file.name}" cho Hiện vật #${artifactId} vào AI Vision!`, 'success');
+      } else {
+        showToast(res.message || 'Lỗi nạp ảnh tham chiếu', 'error');
+      }
+    } catch (e) {
+      showToast(e.message || 'Lỗi kết nối AI Vision (Port 8001)', 'error');
+    } finally {
+      setAiSyncing(false);
+      e.target.value = '';
+    }
+  }
+
   return <section style={{ padding: 16, border: '1px solid var(--color-paper-border)', borderRadius: 12, marginBottom: 20 }}>
     <h3>Ảnh và mô hình hiện vật</h3>
     {error && <p role="alert">{error}</p>}
     {!readOnly && <MediaUpload multiple path={`${path}/media`} onSaved={() => { setVersion(v => v + 1); }} />}
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>{media.map(item => <div key={item.id}>
-      <Preview path={`${path}/media/${item.id}/file`} /><p>{item.title}</p>
-      {!readOnly && <button type="button" disabled={busy} onClick={() => remove(`${path}/media/${item.id}`)}>Xóa ảnh</button>}
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>{media.map(item => <div key={item.id} style={{ border: '1px solid var(--color-paper-border, #eee)', borderRadius: 8, padding: 8 }}>
+      <Preview path={`${path}/media/${item.id}/file`} /><p style={{ margin: '6px 0', fontSize: '0.85rem' }}>{item.title || item.fileName}</p>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {!readOnly && <button type="button" className="btn btn-xs btn-outline" disabled={aiSyncing} onClick={() => syncToAiVision(item)} title="Gửi ảnh này sang AI Vision (Port 8001) để lập chỉ mục nhận diện">Đồng bộ AI</button>}
+        {!readOnly && <button type="button" disabled={busy} onClick={() => remove(`${path}/media/${item.id}`)}>Xóa ảnh</button>}
+      </div>
     </div>)}</div>
+
+    {/* AI Vision Reference Management */}
+    <div style={{ marginTop: 16, marginBottom: 16, padding: 12, background: 'var(--color-bg-secondary, #faf7f2)', borderRadius: 8, border: '1px dashed var(--color-gold, #c5a059)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <strong style={{ fontSize: '0.9rem' }}>🤖 Nhận diện AI Vision (Port 8001)</strong>
+          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-muted, #666)' }}>
+            Nạp ảnh hiện vật vào kho vector để khách tham quan nhận diện bằng camera góc tự do qua mô hình CLIP ViT-B/32.
+          </p>
+        </div>
+        {!readOnly && (
+          <label className="btn btn-sm btn-outline" style={{ cursor: aiSyncing ? 'wait' : 'pointer', margin: 0 }}>
+            {aiSyncing ? 'Đang trích xuất vector…' : '+ Tải ảnh tham chiếu AI'}
+            <input type="file" accept="image/*" onChange={uploadDirectToAiVision} disabled={aiSyncing} style={{ display: 'none' }} />
+          </label>
+        )}
+      </div>
+    </div>
+
     {!readOnly && <MediaUpload path={`${path}/model-3d`} model label={model ? 'Thay mô hình' : 'Tải mô hình'} onSaved={() => { setVersion(v => v + 1); }} />}
     {!readOnly && <form onSubmit={saveSketchfab} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><input className="form-input" type="url" required placeholder="Link model hoặc embed Sketchfab" aria-label="Link Sketchfab" value={sketchfabUrl} onChange={e => setSketchfabUrl(e.target.value)} style={{ flex: 1, minWidth: 280 }} /><button type="submit" disabled={busy}>Gắn link 3D</button></form>}
     {model && <>{!readOnly && <ModelSettings key={`${model.id}-${version}`} artifactId={artifactId} model={model} onSaved={() => { setVersion(v => v + 1); showToast('Đã cập nhật cấu hình mô hình 3D.', 'success'); }} />}{isSketchfabUrl(model.modelUrl) ? <ArtifactModelViewer url={model.modelUrl} name={model.name} style={{ height: 300 }} /> : <Preview key={`${model.id}-${version}`} path={`${path}/model-3d/file`} model />}

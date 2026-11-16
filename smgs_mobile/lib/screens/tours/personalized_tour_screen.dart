@@ -130,7 +130,13 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
       children: [
         BackendPanel(
           resourceKey: 'active-visit-banner',
-          load: () => BackendApi.list('visits/me?status=InProgress'),
+          load: () async {
+            try {
+              return await BackendApi.list('visits/me?status=InProgress');
+            } catch (_) {
+              return <Map<String, dynamic>>[];
+            }
+          },
           builder: (data, reload) {
             final activeVisits = (data as List).cast<Map<String, dynamic>>();
             if (activeVisits.isEmpty) return const SizedBox.shrink();
@@ -587,65 +593,42 @@ class _PersonalizedTourDetailScreenState
   @override
   Widget build(BuildContext context) {
     final stops = (_plan['stops'] as List).cast<Map<String, dynamic>>();
+    final interests = (_plan['interests'] as List).cast<String>();
+    final estMinutes = _plan['estimatedMinutes'] as num? ?? 0;
+    final availMinutes = _plan['availableMinutes'] as num? ?? 60;
+    final museumName = _plan['museumName'] as String? ?? 'Bảo tàng';
+    final notice = _plan['notice'] as String? ?? '';
+
     return MuseumPage(
       back: true,
-      title: 'Một hành trình\ndành cho bạn.',
-      eyebrow: 'Gợi ý cá nhân',
-      subtitle: _plan['museumName'] as String,
+      title: 'Hành trình AI\ndành riêng cho bạn.',
+      eyebrow: 'Lộ trình tham quan cá nhân hóa',
+      subtitle: museumName,
       children: [
-        Text(
-          '${stops.length} điểm dừng · ${tourMinutes(_plan['estimatedMinutes'] as num)} / ${_plan['availableMinutes']} phút',
-          style: AppTextStyles.cardTitle,
+        // 1. Hero Itinerary Card (May đo bởi AI)
+        _buildHeroItineraryCard(
+          stops,
+          interests,
+          estMinutes,
+          availMinutes,
+          museumName,
+          notice,
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: (_plan['interests'] as List)
-              .map((i) => Chip(label: Text(i as String)))
-              .toList(),
-        ),
-        const SizedBox(height: 16),
-        Notice(_plan['notice'] as String),
-        const SectionHeading('Các điểm dừng'),
-        for (final stop in stops) ...[
-          Panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${stop['orderNo']}. ${stop['name']}',
-                  style: AppTextStyles.cardTitle,
-                ),
-                const SizedBox(height: 8),
-                Text(stop['galleryName'] as String),
-                Text(
-                  '${tourMinutes(stop['visitMinutes'] as num)} phút khám phá · ${tourMinutes(stop['walkMinutes'] as num)} phút chuẩn bị/di chuyển',
-                ),
-                const SizedBox(height: 8),
-                Text(stop['reason'] as String),
-                TextButton(
-                  onPressed: () {
-                    final artifact = AppServices.catalog.artifacts
-                        .where((a) => a.id == stop['artifactId'].toString())
-                        .firstOrNull;
-                    if (artifact != null) {
-                      openPage(
-                        context,
-                        ArtifactDetailScreen(
-                          artifact: artifact,
-                          museumName: _plan['museumName'] as String,
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Xem hiện vật'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
+        const SizedBox(height: 20),
+
+        // 2. Section Heading
+        const SectionHeading('Lộ trình các trạm dừng'),
+        const SizedBox(height: 8),
+
+        // 3. Vertical Connected Timeline Stations
+        for (var i = 0; i < stops.length; i++) ...[
+          if (i > 0) _buildTravelConnector(stops[i]),
+          _buildStationNode(stops[i], i + 1, museumName),
         ],
+
+        const SizedBox(height: 20),
+
+        // 4. Error Notice if any
         if (_error != null) ...[
           Notice(_error!),
           if (_error!.contains('lượt tham quan')) ...[
@@ -654,10 +637,12 @@ class _PersonalizedTourDetailScreenState
               label: 'Mở tiến độ chuyến đi đang diễn ra',
               icon: Icons.map_outlined,
               onPressed: () async {
-                final list = await BackendApi.list('visits/me?status=InProgress');
+                final list =
+                    await BackendApi.list('visits/me?status=InProgress');
                 final active = list.firstWhere(
                   (v) => v['museumId'] == _plan['museumId'],
-                  orElse: () => list.isNotEmpty ? list.first : <String, dynamic>{},
+                  orElse: () =>
+                      list.isNotEmpty ? list.first : <String, dynamic>{},
                 );
                 if (active.isNotEmpty && mounted) {
                   await _pushTourPage(
@@ -670,26 +655,616 @@ class _PersonalizedTourDetailScreenState
             const SizedBox(height: 8),
           ],
         ],
+
+        // 5. Action Panel
         if (stops.isNotEmpty) ...[
-          PrimaryButton(
-            label: _busy ? 'Đang xử lý…' : 'Bắt đầu hành trình này',
-            icon: Icons.play_arrow_outlined,
-            onPressed: _busy ? null : () => _act(start: true),
+          Panel(
+            gold: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PrimaryButton(
+                  label: _busy ? 'Đang xử lý…' : 'Bắt đầu hành trình này',
+                  icon: Icons.play_arrow_outlined,
+                  onPressed: _busy ? null : () => _act(start: true),
+                ),
+                const SizedBox(height: 10),
+                SecondaryButton(
+                  label: _plan['isSaved'] == true
+                      ? 'Đã lưu vào hành trình của bạn'
+                      : 'Lưu để đi sau',
+                  icon: Icons.bookmark_outline,
+                  onPressed:
+                      _busy || _plan['isSaved'] == true ? null : () => _act(),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
-          SecondaryButton(
-            label: _plan['isSaved'] == true
-                ? 'Đã lưu vào hành trình của bạn'
-                : 'Lưu để đi sau',
-            icon: Icons.bookmark_outline,
-            onPressed: _busy || _plan['isSaved'] == true ? null : () => _act(),
-          ),
         ],
-        TextButton(
-          onPressed: _busy ? null : () => Navigator.pop(context),
-          child: const Text('Quay lại lựa chọn tham quan'),
+
+        Center(
+          child: TextButton(
+            onPressed: _busy ? null : () => Navigator.pop(context),
+            child: const Text('Quay lại lựa chọn tham quan'),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeroItineraryCard(
+    List<Map<String, dynamic>> stops,
+    List<String> interests,
+    num estMinutes,
+    num availMinutes,
+    String museumName,
+    String notice,
+  ) {
+    final ratio = availMinutes > 0
+        ? (estMinutes / availMinutes).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2C1914), Color(0xFF1B0E0A)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.mutedGold.withValues(alpha: 0.5),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.mutedGold.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.mutedGold.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 13, color: AppColors.mutedGold),
+                    SizedBox(width: 5),
+                    Text(
+                      'AI TỐI ƯU LỘ TRÌNH',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.6,
+                        color: AppColors.antiqueIvory,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Text(
+                  museumName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.antiqueIvory,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 3 Metric Blocks
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.mutedGold.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '${stops.length}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.antiqueIvory,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Điểm dừng',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.mutedGold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 32,
+                  color: AppColors.mutedGold.withValues(alpha: 0.25),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        "${tourMinutes(estMinutes)}' / ${availMinutes}'",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.antiqueIvory,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Dự kiến / Dành ra',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.mutedGold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 32,
+                  color: AppColors.mutedGold.withValues(alpha: 0.25),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        '${interests.length}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.antiqueIvory,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Chủ đề khớp',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.mutedGold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Time budget ratio bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: Container(
+              height: 5,
+              color: Colors.white.withValues(alpha: 0.1),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: ratio,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.mutedGold, Colors.amberAccent],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Matched Interests Pills
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: interests
+                .map(
+                  (item) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.deepBurgundy.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.mutedGold.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check,
+                          size: 11,
+                          color: AppColors.mutedGold,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          item,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.antiqueIvory,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+
+          if (notice.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: AppColors.mutedGold,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      notice,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.antiqueIvory.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTravelConnector(Map<String, dynamic> nextStop) {
+    final walk = nextStop['walkMinutes'] as num? ?? 2;
+    final gallery = nextStop['galleryName'] as String? ?? 'Phòng tiếp theo';
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 18, top: 4, bottom: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 2.5,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.mutedGold,
+                  AppColors.mutedGold.withValues(alpha: 0.3),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.mutedGold.withValues(alpha: 0.3),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.directions_walk,
+                  size: 14,
+                  color: AppColors.deepBurgundy,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${tourMinutes(walk)} phút di chuyển sang $gallery',
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkBrown,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStationNode(
+    Map<String, dynamic> stop,
+    int orderNo,
+    String museumName,
+  ) {
+    final artifactId = stop['artifactId']?.toString() ?? '';
+    final artifact = AppServices.catalog.artifacts
+        .where((a) => a.id == artifactId)
+        .firstOrNull;
+
+    final visitMin = stop['visitMinutes'] as num? ?? 5;
+    final gallery = stop['galleryName'] as String? ?? 'Gian trưng bày';
+    final name = stop['name'] as String? ?? 'Hiện vật';
+    final reason = stop['reason'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Station Header Row
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.deepBurgundy,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.mutedGold, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.deepBurgundy.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$orderNo',
+                      style: const TextStyle(
+                        color: AppColors.antiqueIvory,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: AppTextStyles.cardTitle),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.room,
+                            size: 12,
+                            color: AppColors.deepBurgundy,
+                          ),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              gallery,
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.secondaryText,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.mutedGold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.mutedGold.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 12,
+                        color: AppColors.deepBurgundy,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${tourMinutes(visitMin)} phút',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.deepBurgundy,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Content row with Thumbnail & Reason Callout
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    color: AppColors.antiqueIvory,
+                    child: artifact?.imageUrl.isNotEmpty == true
+                        ? Image.network(
+                            artifact!.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.museum_outlined,
+                              size: 32,
+                              color: AppColors.deepBurgundy,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.museum_outlined,
+                            size: 32,
+                            color: AppColors.deepBurgundy,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (reason.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.antiqueIvory.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.mutedGold.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome,
+                                size: 13,
+                                color: AppColors.mutedGold,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  reason,
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontStyle: FontStyle.italic,
+                                    color: AppColors.darkBrown,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      if (artifact != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: InkWell(
+                            onTap: () {
+                              openPage(
+                                context,
+                                ArtifactDetailScreen(
+                                  artifact: artifact,
+                                  museumName: museumName,
+                                ),
+                              );
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 6,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Xem hiện vật',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.deepBurgundy,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 11,
+                                    color: AppColors.deepBurgundy,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

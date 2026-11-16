@@ -59,6 +59,14 @@ class Artifact {
     final id = json['id']?.toString() ?? '';
     final name = json['name'] as String? ?? 'Hiện vật di sản';
     final galleryName = json['galleryName'] as String? ?? 'Phòng trưng bày';
+    final contentsList = (json['contents'] as List? ?? []).whereType<Map>();
+    final contentDesc = contentsList.firstWhere(
+      (c) => c['languageCode']?.toString().toLowerCase() == 'vi',
+      orElse: () => contentsList.isNotEmpty ? contentsList.first : const {},
+    )['description'] as String?;
+    final story = (json['description'] as String?)?.isNotEmpty == true
+        ? json['description'] as String
+        : (contentDesc ?? '');
     return Artifact(
       id: id,
       name: name,
@@ -68,8 +76,10 @@ class Artifact {
       imageUrls: images,
       period: json['period'] as String? ?? '',
       location: galleryName,
-      summary: 'Hiện vật $name lưu giữ tại bảo tàng. Mã: ${json['code'] ?? id}',
-      story: json['description'] as String? ?? '',
+      summary: (contentDesc ?? '').isNotEmpty
+          ? contentDesc!
+          : 'Hiện vật $name lưu giữ tại bảo tàng. Mã: ${json['code'] ?? id}',
+      story: story,
       aiGuide: 'Bạn có thể hỏi Trợ lý AI về chi tiết hiện vật $name.',
       quizPrompt: 'Tìm hiểu về $name',
       modelUrl: json['model3D'] == null

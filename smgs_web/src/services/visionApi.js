@@ -5,7 +5,7 @@
  */
 
 const VISION_BASE = (import.meta.env?.VITE_VISION_API_URL ?? '/ai-vision').replace(/\/+$/, '');
-const DEFAULT_SERVICE_KEY = import.meta.env?.VITE_AI_SERVICE_API_KEY || 'local-curator-key';
+const DEFAULT_SERVICE_KEY = import.meta.env?.VITE_AI_SERVICE_API_KEY || 'smgs-secret-key-local-2026';
 
 /**
  * Check health and number of indexed reference embeddings

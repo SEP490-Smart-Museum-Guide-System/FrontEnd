@@ -8,17 +8,108 @@ export default function QuestionBank({ imported, onOpenAI }) {
   const scoped = artifacts.filter(a => a.museumId === currentMuseum?.id);
   const [artifactId, setArtifactId] = useState(imported?.artifactId?.toString() || '');
   const [savedDrafts, setSavedDrafts] = useState([]);
+  const [batchBusy, setBatchBusy] = useState(false);
   const selected = scoped.some(a => String(a.id) === artifactId) ? artifactId : '';
   const data = useData(`questions:${selected}`, async signal => selected ? Promise.all([allPages(`question-bank/questions?artifactId=${selected}`, { signal, pagedArray: true }), backend(`question-bank/quizzes?artifactId=${selected}`, { signal })]) : [[], []], [[], []]);
   const [modal, setModal] = useState(null), action = useAction('Đã lưu thay đổi vào ngân hàng câu hỏi.');
   const canReview = ['administrator', 'curator'].includes(currentRole);
   const canGenerate = ['administrator', 'museumStaff'].includes(currentRole);
+
+  const unsavedDrafts = (imported?.drafts || [])
+    .map((draft, index) => ({ draft, index }))
+    .filter(({ index }) => !savedDrafts.includes(index));
+
+  async function handleSaveAllDrafts() {
+    if (!unsavedDrafts.length || batchBusy) return;
+    setBatchBusy(true);
+    try {
+      for (const { draft, index } of unsavedDrafts) {
+        const correct = draft.options.findIndex(o => o.isCorrect);
+        await backend(`question-bank/questions?artifactId=${selected}`, {
+          method: 'POST',
+          body: {
+            content: draft.content.trim(),
+            explanation: (draft.explanation || '').trim(),
+            languageCode: 'vi',
+            options: draft.options.map((o, i) => ({
+              content: o.content.trim(),
+              isCorrect: i === (correct >= 0 ? correct : 0)
+            }))
+          }
+        });
+        setSavedDrafts(prev => [...prev, index]);
+      }
+      data.reload();
+    } catch (err) {
+      alert(err.message || 'Lỗi khi lưu câu hỏi hàng loạt.');
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
+  const pendingQuestions = (data.data[0] || []).filter(q => q.status !== 'approved');
+
+  async function handleApproveAllPending() {
+    if (!pendingQuestions.length || batchBusy) return;
+    if (!window.confirm(`Bạn có chắc muốn phê duyệt toàn bộ ${pendingQuestions.length} câu hỏi đang chờ?`)) return;
+    setBatchBusy(true);
+    try {
+      for (const q of pendingQuestions) {
+        await backend(`question-bank/questions/${q.id}/review`, {
+          method: 'POST',
+          body: { approve: true, note: 'Phê duyệt nhanh từ danh sách gợi ý AI' }
+        });
+      }
+      data.reload();
+    } catch (err) {
+      alert(err.message || 'Lỗi khi duyệt câu hỏi hàng loạt.');
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
   return <div><PageTitle description="Chuẩn bị câu hỏi, kiểm duyệt đáp án và xuất bản bộ câu hỏi cho khách tham quan.">Ngân hàng câu hỏi</PageTitle>{currentRole === 'administrator' && <select className="form-select" aria-label="Bảo tàng đang quản lý" value={currentMuseum?.id || ''} onChange={e => setSelectedMuseumId(Number(e.target.value))}><option value="" disabled>Chọn bảo tàng</option>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>}
     <div className="business-toolbar"><select className="form-select" aria-label="Hiện vật" value={selected} onChange={e => { setArtifactId(e.target.value); setModal(null); }}><option value="">Chọn hiện vật</option>{scoped.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select><button className="btn btn-secondary" onClick={data.reload}>Tải lại</button>{selected && <><button className="btn btn-primary" onClick={() => setModal({ type: 'question', value: null })}>Thêm câu hỏi</button><button className="btn btn-secondary" onClick={() => setModal({ type: 'quiz' })}>Tạo bộ câu hỏi</button></>}</div>
     {selected && canGenerate && onOpenAI && <button className="btn btn-gold" onClick={() => onOpenAI(scoped.find(a => String(a.id) === selected))}>AI gợi ý câu hỏi</button>}
-    {imported && String(imported.artifactId) === selected && <section className="card business-card"><h3>Gợi ý từ Xưởng AI</h3><p>Rà soát nội dung và đáp án trước khi lưu từng câu. Câu đã lưu vẫn cần được thẩm định trước khi đưa vào bộ câu hỏi.</p>{imported.drafts.map((draft, index) => <div className="business-actions" key={index}><span>{draft.content}</span><button className="btn btn-secondary" disabled={savedDrafts.includes(index)} onClick={() => setModal({ type: 'question', draft, draftIndex: index })}>{savedDrafts.includes(index) ? 'Đã lưu câu hỏi' : 'Chỉnh sửa & lưu câu'}</button></div>)}</section>}
-    <ErrorNotice>{action.error}</ErrorNotice><LoadState resource={data}><div className="business-grid"><section><h3>Câu hỏi</h3>{!data.data[0].length && <Empty>Chưa có câu hỏi.</Empty>}{data.data[0].map(q => <article key={q.id} className="card business-card"><strong>{q.content}</strong><p>{statusLabels[q.status] || q.status}</p><ol>{q.options.map(o => <li key={o.id}>{o.content}{o.isCorrect ? ' ✓ Đáp án đúng' : ''}</li>)}</ol><p>{q.explanation}</p>{q.reviewNote && <p>Nhận xét: {q.reviewNote}</p>}<div className="business-actions">{q.status !== 'approved' && <button className="btn btn-secondary btn-sm" onClick={() => setModal({ type: 'question', value: q })}>Chỉnh sửa</button>}{canReview && q.status !== 'approved' && <button className="btn btn-primary btn-sm" onClick={() => setModal({ type: 'review', value: q })}>Thẩm định</button>}</div></article>)}</section>
-    <section><h3>Bộ câu hỏi</h3>{!data.data[1].length && <Empty>Chưa có bộ câu hỏi.</Empty>}{data.data[1].map(q => <article key={q.id} className="card business-card"><h4>{q.title}</h4><p>{statusLabels[q.status] || q.status} · {q.questionsPerAttempt} câu mỗi lượt</p><p>{q.questions.length} câu trong bộ</p>{canReview && q.status !== 'published' && <button className="btn btn-primary" disabled={action.busy} onClick={() => { if (window.confirm('Xuất bản bộ câu hỏi này cho khách?')) action.run(() => backend(`question-bank/quizzes/${q.id}/publish`, { method: 'POST' }), data.reload); }}>Xuất bản</button>}</article>)}</section></div></LoadState>
+    {imported && String(imported.artifactId) === selected && (
+      <section className="card business-card" style={{ border: '1.5px solid var(--color-gold-500, #C4A482)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Gợi ý từ Xưởng AI ({imported.drafts.length} câu)</h3>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--color-muted-text, #776E65)' }}>
+              Rà soát nội dung trước khi lưu. Bạn có thể bấm "Lưu tất cả" hoặc chỉnh sửa từng câu.
+            </p>
+          </div>
+          {unsavedDrafts.length > 0 && (
+            <button className="btn btn-gold" disabled={batchBusy} onClick={handleSaveAllDrafts}>
+              {batchBusy ? 'Đang lưu hàng loạt…' : `Lưu tất cả (${unsavedDrafts.length} câu) vào Ngân hàng`}
+            </button>
+          )}
+        </div>
+        {imported.drafts.map((draft, index) => (
+          <div className="business-actions" key={index} style={{ marginBottom: 8, padding: '8px 12px', background: 'rgba(196,164,130,0.08)', borderRadius: 8 }}>
+            <span style={{ flex: 1 }}><strong>Câu {index + 1}:</strong> {draft.content}</span>
+            <button className="btn btn-secondary btn-sm" disabled={savedDrafts.includes(index) || batchBusy} onClick={() => setModal({ type: 'question', draft, draftIndex: index })}>
+              {savedDrafts.includes(index) ? '✓ Đã lưu câu' : 'Chỉnh sửa & lưu'}
+            </button>
+          </div>
+        ))}
+      </section>
+    )}
+    <ErrorNotice>{action.error}</ErrorNotice><LoadState resource={data}><div className="business-grid">
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <h3 style={{ margin: 0 }}>Câu hỏi ({data.data[0].length})</h3>
+          {canReview && pendingQuestions.length > 1 && (
+            <button className="btn btn-primary btn-sm" disabled={batchBusy} onClick={handleApproveAllPending}>
+              {batchBusy ? 'Đang duyệt…' : `Phê duyệt tất cả (${pendingQuestions.length} câu)`}
+            </button>
+          )}
+        </div>
+        {!data.data[0].length && <Empty>Chưa có câu hỏi.</Empty>}
+        {data.data[0].map(q => <article key={q.id} className="card business-card"><strong>{q.content}</strong><p>{statusLabels[q.status] || q.status}</p><ol>{q.options.map(o => <li key={o.id}>{o.content}{o.isCorrect ? ' ✓ Đáp án đúng' : ''}</li>)}</ol><p>{q.explanation}</p>{q.reviewNote && <p>Nhận xét: {q.reviewNote}</p>}<div className="business-actions">{q.status !== 'approved' && <button className="btn btn-secondary btn-sm" onClick={() => setModal({ type: 'question', value: q })}>Chỉnh sửa</button>}{canReview && q.status !== 'approved' && <button className="btn btn-primary btn-sm" onClick={() => setModal({ type: 'review', value: q })}>Thẩm định</button>}</div></article>)}
+      </section>
+      <section><h3>Bộ câu hỏi</h3>{!data.data[1].length && <Empty>Chưa có bộ câu hỏi.</Empty>}{data.data[1].map(q => <article key={q.id} className="card business-card"><h4>{q.title}</h4><p>{statusLabels[q.status] || q.status} · {q.questionsPerAttempt} câu mỗi lượt</p><p>{q.questions.length} câu trong bộ</p>{canReview && q.status !== 'published' && <button className="btn btn-primary" disabled={action.busy} onClick={() => { if (window.confirm('Xuất bản bộ câu hỏi này cho khách?')) action.run(() => backend(`question-bank/quizzes/${q.id}/publish`, { method: 'POST' }), data.reload); }}>Xuất bản</button>}</article>)}</section></div></LoadState>
     {modal && selected && <QuestionModal key={`${modal.type}:${modal.value?.id || 'new'}:${selected}`} modal={modal} artifactId={selected} questions={data.data[0]} onClose={() => setModal(null)} onSaved={() => { if (modal.draftIndex != null) setSavedDrafts(p => [...p, modal.draftIndex]); setModal(null); data.reload(); }} />}
   </div>;
 }

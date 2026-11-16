@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../models/experience.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/backend_panel.dart';
 import '../../services/app_services.dart';
@@ -235,11 +236,13 @@ class ServiceCheckoutScreen extends StatefulWidget {
   const ServiceCheckoutScreen({
     super.key,
     required this.museumId,
-    required this.product,
+    this.product = const {},
+    this.offer,
   });
 
   final String museumId;
   final Map<String, dynamic> product;
+  final dynamic offer;
 
   @override
   State<ServiceCheckoutScreen> createState() => _ServiceCheckoutScreenState();
@@ -256,6 +259,25 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
 
   bool _busy = false;
   String? _error;
+  Map<String, dynamic>? _order, _payment;
+
+  Map<String, dynamic> get _effectiveProduct {
+    if (widget.product.isNotEmpty) return widget.product;
+    final item = widget.offer;
+    if (item is Map<String, dynamic>) return item;
+    if (item is Map) return Map<String, dynamic>.from(item);
+    if (item is PremiumOffer) {
+      return {
+        'id': item.id,
+        'name': item.name,
+        'description': item.description,
+        'price': item.price,
+        'currency': 'VND',
+        'kind': item.kind.name,
+      };
+    }
+    return const {};
+  }
 
   @override
   void dispose() {
@@ -267,10 +289,12 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
 
   Future<void> _proceedToPayment() async {
     if (_busy) return;
-    if (_nameController.text.trim().isEmpty) {
-      setState(() => _error = 'Vui lòng nhập tên người mua.');
-      return;
-    }
+    final name = _nameController.text.trim().isNotEmpty
+        ? _nameController.text.trim()
+        : (AppServices.auth.user?.name ?? 'Khách tham quan');
+    final email = _emailController.text.trim().isNotEmpty
+        ? _emailController.text.trim()
+        : (AppServices.auth.user?.email ?? '');
 
     setState(() {
       _busy = true;
@@ -278,42 +302,56 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
     });
 
     try {
-      // 1. Tạo đơn hàng mới
-      final orderData = await BackendApi.request(
-        'commerce/orders',
-        method: 'POST',
-        body: {
-          'productId': widget.product['id'],
-          'buyerName': _nameController.text.trim(),
-          'buyerDetails': {
-            'email': _emailController.text.trim(),
-            if (_phoneController.text.trim().isNotEmpty)
-              'phone': _phoneController.text.trim(),
-          },
-        },
-      );
-      final order = Map<String, dynamic>.from(orderData as Map);
+      final p = _effectiveProduct;
+      final rawId = p['id'];
+      final productId = rawId is int ? rawId : int.tryParse(rawId.toString()) ?? rawId;
 
-      // 2. Khởi tạo thanh toán SePay VietQR
+      // 1. Tạo đơn hàng mới (hoặc tái sử dụng đơn chưa hoàn tất thanh toán)
+      final order = _order ??
+          Map<String, dynamic>.from(
+            await BackendApi.request(
+              'commerce/orders',
+              method: 'POST',
+              body: {
+                'productId': productId,
+                'buyerName': name,
+                'buyerDetails': {
+                  'email': email,
+                  if (_phoneController.text.trim().isNotEmpty)
+                    'phone': _phoneController.text.trim(),
+                },
+              },
+            ) as Map,
+          );
+      if (!mounted) return;
+      setState(() => _order = order);
+
+      // 2. Khởi tạo thanh toán (Dùng cổng SePay cho sản phẩm thông thường, hoặc fallback tương thích với offer legacy)
+      final endpoint = widget.offer != null
+          ? 'commerce/orders/${order['id']}/payments'
+          : 'commerce/orders/${order['id']}/payments/sepay';
       final paymentData = await BackendApi.request(
-        'commerce/orders/${order['id']}/payments/sepay',
+        endpoint,
         method: 'POST',
         body: {},
       );
       final payment = Map<String, dynamic>.from(paymentData as Map);
 
       if (!mounted) return;
+      setState(() => _payment = payment);
 
-      // 3. Điều hướng sang màn hình thanh toán VietQR chuyên biệt
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => VietQRPaymentScreen(
-            order: order,
-            payment: payment,
-            museumId: widget.museumId,
+      // 3. Điều hướng sang màn hình thanh toán VietQR chuyên biệt nếu có qrUrl
+      if (payment['qrUrl'] != null || payment['qrCodeUrl'] != null) {
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => VietQRPaymentScreen(
+              order: order,
+              payment: payment,
+              museumId: widget.museumId,
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -327,7 +365,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.product;
+    final p = _effectiveProduct;
     final seats = p['seats'] ?? 1;
     final validityHours = p['validityHours'] ?? 24;
 
@@ -340,6 +378,12 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
           Notice(_error!),
           const SizedBox(height: 12),
         ],
+        if (_payment != null) ...[
+          Notice(
+            'Yêu cầu thanh toán: ${_payment!['status']}. Chờ xác nhận từ hệ thống; ứng dụng chưa kích hoạt dịch vụ.',
+          ),
+          const SizedBox(height: 12),
+        ],
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +393,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
                 style: AppTextStyles.caption.copyWith(color: AppColors.mutedGold),
               ),
               const SizedBox(height: 6),
-              Text(p['name'] as String, style: AppTextStyles.sectionTitle),
+              Text(p['name']?.toString() ?? 'Dịch vụ bảo tàng', style: AppTextStyles.sectionTitle),
               const Divider(height: 24),
               _buildDetailRow('Số người sử dụng:', '$seats người'),
               _buildDetailRow('Thời hạn dịch vụ:', '$validityHours giờ sau thanh toán'),
@@ -358,12 +402,14 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
                 'Chuyển khoản VietQR tự động (SePay)',
               ),
               const Divider(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 4,
                 children: [
                   const Text('Tổng thanh toán:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   Text(
-                    '${p['price']} ${p['currency']}',
+                    '${p['price'] ?? 0} ${p['currency'] ?? 'VND'}',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -401,9 +447,23 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        if (_error != null) ...[
+          Notice(_error!),
+          const SizedBox(height: 12),
+        ],
+        if (_payment != null) ...[
+          Notice(
+            'Yêu cầu thanh toán: ${_payment!['status']}. Chờ xác nhận từ hệ thống; ứng dụng chưa kích hoạt dịch vụ.',
+          ),
+          const SizedBox(height: 12),
+        ],
         PrimaryButton(
-          label: _busy ? 'Đang tạo mã VietQR…' : 'Tiến hành thanh toán VietQR SePay',
+          label: _busy
+              ? 'Đang gửi…'
+              : _order == null
+                  ? 'Tạo đơn và yêu cầu thanh toán'
+                  : 'Thử lại yêu cầu thanh toán',
           icon: Icons.qr_code_2,
           onPressed: _busy ? null : _proceedToPayment,
         ),
@@ -417,8 +477,15 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 13))),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
@@ -558,14 +625,13 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
     // Backend trả về qrUrl (hoặc qrCodeUrl nếu có proxy)
     final rawQrUrl = (widget.payment['qrUrl'] ?? widget.payment['qrCodeUrl'] ?? '').toString();
     // Trên môi trường Web, proxy qua Vite /vietqr để vượt rào cản CORS của trình duyệt trên CanvasKit
-    final qrUrl = (kIsWeb && rawQrUrl.startsWith('https://vietqr.app'))
-        ? rawQrUrl.replaceFirst('https://vietqr.app', '/vietqr')
-        : rawQrUrl;
+    String qrUrl = rawQrUrl;
+    if (kIsWeb && rawQrUrl.startsWith('https://vietqr.app')) {
+      final proxied = rawQrUrl.replaceFirst('https://vietqr.app', '/vietqr');
+      qrUrl = Uri.base.resolve(proxied).toString();
+    }
     final bank = widget.payment['bank'] ?? 'TPBank';
     final accountNumber = widget.payment['accountNumber'] ?? '11140845389';
-    final accountHolder = widget.payment['accountHolder'] ?? 'NGUYEN DANG KHOA';
-    final amount = widget.payment['amount'] ?? widget.order['amount'];
-    final currency = widget.payment['currency'] ?? widget.order['currency'] ?? 'VND';
     final transferContent = widget.payment['transferContent'] ?? 'SMGS';
 
     return MuseumPage(
@@ -612,7 +678,7 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Thẻ chứa mã QR SePay
+        // Thẻ chứa mã QR SePay (Phương án 1: Giữ Poster VietQR + 2 nút Quick-Copy 1 chạm)
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -651,7 +717,7 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
                 child: qrUrl.isNotEmpty
                     ? Image.network(
                         qrUrl,
-                        height: 320,
+                        height: 330,
                         fit: BoxFit.contain,
                         loadingBuilder: (ctx, child, progress) {
                           if (progress == null) return child;
@@ -671,21 +737,41 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
                       )
                     : const Icon(Icons.qr_code_2, size: 120, color: AppColors.darkBrown),
               ),
-              const SizedBox(height: 16),
-              _buildPaymentDetailRow('Ngân hàng:', bank as String),
-              _buildPaymentDetailRow(
-                'Số tài khoản:',
-                accountNumber as String,
-                copyable: true,
+              const SizedBox(height: 14),
+
+              // Dẫn hướng sao chép nhanh
+              Row(
+                children: [
+                  Icon(Icons.touch_app_outlined, size: 15, color: AppColors.mutedGold),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Chạm để sao chép nhanh thông tin thanh toán:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Quick-Copy Pill: STK
+              _buildQuickCopyPill(
+                icon: Icons.credit_card_outlined,
+                label: 'Số tài khoản ($bank)',
+                value: accountNumber as String,
                 onCopy: () => _copy(accountNumber, 'số tài khoản'),
               ),
-              _buildPaymentDetailRow('Chủ tài khoản:', accountHolder as String),
-              _buildPaymentDetailRow('Số tiền:', '$amount $currency'),
-              _buildPaymentDetailRow(
-                'Nội dung CK:',
-                transferContent as String,
+
+              // Quick-Copy Pill: Nội dung CK (Bắt buộc chính xác)
+              _buildQuickCopyPill(
+                icon: Icons.receipt_long_outlined,
+                label: 'Nội dung chuyển khoản (bắt buộc chính xác)',
+                value: transferContent as String,
                 highlight: true,
-                copyable: true,
                 onCopy: () => _copy(transferContent, 'nội dung chuyển khoản'),
               ),
             ],
@@ -744,48 +830,93 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
     );
   }
 
-  Widget _buildPaymentDetailRow(
-    String label,
-    String value, {
-    bool copyable = false,
+  Widget _buildQuickCopyPill({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onCopy,
     bool highlight = false,
-    VoidCallback? onCopy,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 105,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.secondaryText,
-                fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
+    return InkWell(
+      onTap: onCopy,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: highlight ? AppColors.antiqueIvory : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: highlight ? AppColors.mutedGold : Colors.grey.shade300,
+            width: highlight ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: highlight ? AppColors.deepBurgundy : AppColors.darkBrown,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.secondaryText,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: highlight ? 'monospace' : null,
+                      color: highlight ? AppColors.deepBurgundy : AppColors.darkBrown,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: highlight ? 14 : 13,
-                fontWeight: highlight ? FontWeight.bold : FontWeight.w600,
-                color: highlight ? AppColors.deepBurgundy : AppColors.darkBrown,
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: highlight
+                    ? AppColors.deepBurgundy
+                    : AppColors.darkBrown.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.copy_rounded,
+                    size: 13,
+                    color: highlight ? AppColors.antiqueIvory : AppColors.darkBrown,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Sao chép',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: highlight ? AppColors.antiqueIvory : AppColors.darkBrown,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          if (copyable)
-            IconButton(
-              icon: const Icon(Icons.copy, size: 16, color: AppColors.deepBurgundy),
-              tooltip: 'Sao chép',
-              onPressed: onCopy,
-              constraints: const BoxConstraints(),
-              padding: const EdgeInsets.all(6),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

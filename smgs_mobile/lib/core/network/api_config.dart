@@ -93,8 +93,7 @@ class ApiConfig {
       return configured.replaceFirst(RegExp(r'/+$'), '');
     }
     if (kIsWeb) {
-      final host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
-      return 'http://$host:8001';
+      return '${Uri.base.origin}/ai-vision';
     }
     if (Platform.isAndroid) return 'http://10.0.2.2:8001';
     return 'http://localhost:8001';
@@ -109,6 +108,10 @@ class ApiConfig {
       '$visionBaseUrl/api/v1/recognitions';
   static String visionReferencesUrl(dynamic artifactId) =>
       '$visionBaseUrl/api/v1/references?artifact_id=$artifactId';
+  static const String defaultVisionServiceKey = String.fromEnvironment(
+    'VISION_SERVICE_KEY',
+    defaultValue: 'smgs-secret-key-local-2026',
+  );
 
   static String get defaultScanHost {
     const configured = String.fromEnvironment('SCAN_BASE_URL');
@@ -116,8 +119,7 @@ class ApiConfig {
       return configured.replaceFirst(RegExp(r'/+$'), '');
     }
     if (kIsWeb) {
-      final host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
-      return 'http://$host:8002';
+      return '${Uri.base.origin}/ai-scan';
     }
     if (Platform.isAndroid) return 'http://10.0.2.2:8002';
     return 'http://localhost:8002';

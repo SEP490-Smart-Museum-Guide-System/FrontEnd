@@ -178,46 +178,129 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                   ),
                 ),
                 const SectionHeading('Bạn có thể hỏi'),
+                const SizedBox(height: 8),
                 ..._questions.map(
                   (q) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: SecondaryButton(
-                      label: q,
-                      onPressed: _busy ? null : () => _ask(q),
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: InkWell(
+                      onTap: _busy ? null : () => _ask(q),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.mutedGold.withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.lightbulb_outline_rounded,
+                                size: 16,
+                                color: AppColors.deepBurgundy,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                q,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.darkBrown,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 12,
+                              color: AppColors.darkBrown.withOpacity(0.35),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                if (_messages.isNotEmpty) const Divider(),
+                if (_messages.isNotEmpty) const Divider(height: 32),
                 ..._messages.map(
                   (m) => Align(
                     alignment: m.visitor
                         ? Alignment.centerRight
                         : Alignment.centerLeft,
                     child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.85,
+                      ),
                       margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: m.visitor
                             ? AppColors.deepBurgundy
                             : AppColors.card,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: Radius.circular(m.visitor ? 16 : 4),
+                          bottomRight: Radius.circular(m.visitor ? 4 : 16),
+                        ),
                         border: Border.all(
                           color: m.visitor
                               ? AppColors.deepBurgundy
                               : AppColors.border,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            m.visitor ? 'Bạn' : 'Trợ lý bảo tàng',
-                            style: AppTextStyles.caption.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: m.visitor
-                                  ? AppColors.antiqueIvory
-                                  : AppColors.deepBurgundy,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                m.visitor
+                                    ? Icons.person_outline_rounded
+                                    : Icons.auto_awesome_rounded,
+                                size: 14,
+                                color: m.visitor
+                                    ? AppColors.mutedGold
+                                    : AppColors.deepBurgundy,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                m.visitor ? 'Bạn' : 'Trợ lý bảo tàng',
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: m.visitor
+                                      ? AppColors.antiqueIvory
+                                      : AppColors.deepBurgundy,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Semantics(
@@ -228,25 +311,55 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                                 color: m.visitor
                                     ? AppColors.antiqueIvory
                                     : AppColors.darkBrown,
+                                height: 1.45,
                               ),
                             ),
                           ),
                           if (m.reply?.sources.isNotEmpty == true) ...[
-                            const Divider(height: 24),
-                            const Text(
-                              'Nội dung tham khảo',
-                              style: AppTextStyles.caption,
-                            ),
-                            ...m.reply!.sources.map(
-                              (source) => Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Semantics(
-                                  container: true,
-                                  child: Text(
-                                    '${source.title} · Phiên bản ${source.versionNo}',
-                                    style: AppTextStyles.caption,
+                            Container(
+                              margin: const EdgeInsets.only(top: 12),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.antiqueIvory.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.menu_book_rounded,
+                                        size: 13,
+                                        color: AppColors.deepBurgundy,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Nội dung tham khảo',
+                                        style: AppTextStyles.caption.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.deepBurgundy,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  ...m.reply!.sources.map(
+                                    (source) => Padding(
+                                      padding: const EdgeInsets.only(top: 3),
+                                      child: Semantics(
+                                        container: true,
+                                        child: Text(
+                                          '${source.title} · Phiên bản ${source.versionNo}',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.darkBrown,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -256,17 +369,47 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                   ),
                 ),
                 if (_busy)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Đang tìm câu trả lời…',
-                          style: AppTextStyles.bodyMedium,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                          bottomLeft: Radius.circular(4),
                         ),
-                        SizedBox(height: 10),
-                        LinearProgressIndicator(),
-                      ],
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.deepBurgundy,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Đang tìm câu trả lời…',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.darkBrown,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 if (_error != null) ...[
@@ -304,7 +447,7 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             decoration: const BoxDecoration(
               color: AppColors.card,
               border: Border(top: BorderSide(color: AppColors.border)),
@@ -321,38 +464,47 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                     enabled: !_busy,
                     textInputAction: TextInputAction.send,
                     onSubmitted: _ask,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Hỏi về hiện vật này…',
-                      labelText: 'Câu hỏi của bạn',
+                      hintStyle: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.darkBrown.withOpacity(0.4),
+                      ),
                       counterText: '',
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: const BorderSide(
+                          color: AppColors.deepBurgundy,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 64,
-                  child: Tooltip(
-                    message: 'Gửi câu hỏi',
-                    child: FilledButton(
-                      onPressed: _busy ? null : () => _ask(_input.text),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(56, 56),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.arrow_upward, size: 20),
-                          Text('Gửi'),
-                        ],
-                      ),
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: 'Gửi câu hỏi',
+                  child: FilledButton(
+                    onPressed: _busy ? null : () => _ask(_input.text),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.deepBurgundy,
+                      foregroundColor: AppColors.antiqueIvory,
+                      minimumSize: const Size(44, 44),
+                      padding: EdgeInsets.zero,
+                      shape: const CircleBorder(),
                     ),
+                    child: const Icon(Icons.arrow_upward_rounded, size: 20),
                   ),
                 ),
               ],

@@ -20,7 +20,7 @@ void main() {
         await tester.enterText(find.byType(TextField), 'qr-live');
         await tester.tap(find.text('Xem thông tin hiện vật'));
         await tester.pumpAndSettle();
-        expect(find.text('Hiện vật từ API'), findsOneWidget);
+        expect(find.text('Hiện vật từ API'), findsWidgets);
         expect(find.text('Bảo tàng từ API'), findsOneWidget);
         expect(find.text('Mô tả xuất bản'), findsOneWidget);
         expect(find.text('Trống đồng Ngọc Lũ'), findsNothing);

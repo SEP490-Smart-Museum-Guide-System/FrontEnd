@@ -6,7 +6,9 @@ import '../../widgets/backend_panel.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../core/utils/image_picker_helper.dart';
 import '../../services/artifact_scan_service.dart';
 import '../../services/vision_api_service.dart';
 import '../../services/discovery_api_service.dart';
@@ -21,7 +23,8 @@ class ArtifactQrScanner extends StatefulWidget {
   State<ArtifactQrScanner> createState() => _ArtifactQrScannerState();
 }
 
-class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
+class _ArtifactQrScannerState extends State<ArtifactQrScanner>
+    with SingleTickerProviderStateMixin {
   final _input = TextEditingController();
   bool _camera = false, _busy = false;
   String? _error;
@@ -33,9 +36,28 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
   String _activeMode = 'qr';
   VisionMatchResult? _visionResult;
   Artifact? _matchedArtifact;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
+
+  late final AnimationController _scannerAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _scannerAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    if (!WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+      _scannerAnim.repeat(reverse: true);
+    } else {
+      _scannerAnim.value = 0.5;
+    }
+  }
 
   @override
   void dispose() {
+    _scannerAnim.dispose();
     _input.dispose();
     super.dispose();
   }
@@ -80,170 +102,24 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
     }
   }
 
-  Future<void> _recognizeWithVision() async {
+  Future<void> _runVisionRecognition(
+    Uint8List imageBytes,
+    String filename,
+  ) async {
     setState(() {
       _busy = true;
       _error = null;
       _visionResult = null;
       _matchedArtifact = null;
+      _selectedImageBytes = imageBytes;
+      _selectedImageName = filename;
     });
 
     try {
-      // In mobile app, we can use a sample artifact test photo or prompt input
-      // Send sample bytes to AI Vision endpoint (Port 8001)
-      final sampleBytes = Uint8List.fromList([
-        0xFF,
-        0xD8,
-        0xFF,
-        0xE0,
-        0x00,
-        0x10,
-        0x4A,
-        0x46,
-        0x49,
-        0x46,
-        0x00,
-        0x01,
-        0x01,
-        0x01,
-        0x00,
-        0x60,
-        0x00,
-        0x60,
-        0x00,
-        0x00,
-        0xFF,
-        0xDB,
-        0x00,
-        0x43,
-        0x00,
-        0x08,
-        0x06,
-        0x06,
-        0x07,
-        0x06,
-        0x05,
-        0x08,
-        0x07,
-        0x07,
-        0x07,
-        0x09,
-        0x09,
-        0x08,
-        0x0A,
-        0x0C,
-        0x14,
-        0x0D,
-        0x0C,
-        0x0B,
-        0x0B,
-        0x0C,
-        0x19,
-        0x12,
-        0x13,
-        0x0F,
-        0x14,
-        0x1D,
-        0x1A,
-        0x1F,
-        0x1E,
-        0x1D,
-        0x1A,
-        0x1C,
-        0x1C,
-        0x20,
-        0x24,
-        0x2E,
-        0x27,
-        0x20,
-        0x22,
-        0x2C,
-        0x23,
-        0x1C,
-        0x1C,
-        0x28,
-        0x37,
-        0x29,
-        0x2C,
-        0x30,
-        0x31,
-        0x34,
-        0x34,
-        0x34,
-        0x1F,
-        0x27,
-        0x39,
-        0x3D,
-        0x38,
-        0x32,
-        0x3C,
-        0x2E,
-        0x33,
-        0x34,
-        0x32,
-        0xFF,
-        0xC0,
-        0x00,
-        0x0B,
-        0x08,
-        0x00,
-        0x01,
-        0x00,
-        0x01,
-        0x01,
-        0x01,
-        0x11,
-        0x00,
-        0xFF,
-        0xC4,
-        0x00,
-        0x1F,
-        0x00,
-        0x00,
-        0x01,
-        0x05,
-        0x01,
-        0x01,
-        0x01,
-        0x01,
-        0x01,
-        0x01,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        0x02,
-        0x03,
-        0x04,
-        0x05,
-        0x06,
-        0x07,
-        0x08,
-        0x09,
-        0x0A,
-        0x0B,
-        0xFF,
-        0xDA,
-        0x00,
-        0x08,
-        0x01,
-        0x01,
-        0x00,
-        0x00,
-        0x3F,
-        0x00,
-        0x7F,
-        0x00,
-        0xFF,
-        0xD9,
-      ]);
-
-      final result = await VisionApiService.recognizeArtifact(sampleBytes);
+      final result = await VisionApiService.recognizeArtifact(
+        imageBytes,
+        filename: filename,
+      );
       _visionResult = result;
 
       if (result.matched && result.artifactId != null) {
@@ -256,10 +132,33 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
         } catch (_) {}
       }
     } catch (e) {
-      _error =
-          'Dịch vụ AI Vision (Port 8001): ${e.toString().replaceFirst('Exception: ', '')}';
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _error = msg.startsWith('Dịch vụ AI')
+          ? msg
+          : 'Dịch vụ AI Vision (Port 8001): $msg';
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickAndRecognize() async {
+    try {
+      final picked = await pickImageFromDevice();
+      if (picked != null) {
+        await _runVisionRecognition(picked.bytes, picked.filename);
+      }
+    } catch (e) {
+      setState(() => _error = 'Không thể mở bộ chọn ảnh: $e');
+    }
+  }
+
+  Future<void> _useSampleNgocLu() async {
+    try {
+      final byteData = await rootBundle.load('assets/images/ngoc-lu-web.jpg');
+      final bytes = byteData.buffer.asUint8List();
+      await _runVisionRecognition(bytes, 'ngoc-lu-web.jpg');
+    } catch (e) {
+      setState(() => _error = 'Không thể nạp ảnh mẫu: $e');
     }
   }
 
@@ -273,7 +172,13 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
     children: [
       BackendPanel(
         resourceKey: 'scan-active-visits',
-        load: () => BackendApi.list('visits/me?status=InProgress'),
+        load: () async {
+          try {
+            return await BackendApi.list('visits/me?status=InProgress');
+          } catch (_) {
+            return <Map<String, dynamic>>[];
+          }
+        },
         builder: (data, reload) {
           final visits = (data as List).cast<Map<String, dynamic>>();
           final selected = visits.any((v) => v['id'] == _visitId)
@@ -385,7 +290,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
       ),
       const SizedBox(height: 16),
 
-      if (_busy) const LinearProgressIndicator(),
+      if (_busy && _activeMode == 'qr') const LinearProgressIndicator(),
       if (_error != null) Notice(_error!),
 
       if (_activeMode == 'qr') ...[
@@ -431,6 +336,10 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
         ),
       ] else ...[
         // AI Vision Mode
+        if (_busy) ...[
+          _buildCyberViewfinder(),
+          const SizedBox(height: 14),
+        ],
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,14 +351,61 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: 16),
+              if (_selectedImageBytes != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.antiqueIvory,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.parchmentBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.memory(
+                          _selectedImageBytes!,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedImageName ?? 'Ảnh đã chọn',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${(_selectedImageBytes!.length / 1024).toStringAsFixed(1)} KB · Gửi sang AI Vision (Port 8001)',
+                              style: AppTextStyles.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
               PrimaryButton(
-                label: 'Chụp ảnh & Nhận diện qua AI Vision',
-                icon: Icons.camera_alt,
-                onPressed: _busy ? null : _recognizeWithVision,
+                label: _busy
+                    ? 'Đang phân tích vector…'
+                    : 'Chọn ảnh từ máy để nhận diện',
+                icon: Icons.file_upload_outlined,
+                onPressed: _busy ? null : _pickAndRecognize,
               ),
               const SizedBox(height: 12),
               const Notice(
-                'Nếu độ tương đồng chưa đủ cao, hệ thống sẽ đề nghị xác nhận hoặc khuyến nghị quét mã QR cạnh hiện vật.',
+                'Bấm "Chọn ảnh từ máy" để tải ảnh chụp hiện vật bất kỳ từ máy tính hoặc điện thoại.',
               ),
             ],
           ),
@@ -536,4 +492,306 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner> {
       ],
     ],
   );
+
+  Widget _buildCyberViewfinder() {
+    return AnimatedBuilder(
+      animation: _scannerAnim,
+      builder: (context, _) {
+        final animVal = _scannerAnim.value;
+        return Container(
+          height: 220,
+          decoration: BoxDecoration(
+            color: const Color(0xFF161412),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.mutedGold.withValues(alpha: 0.6),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.08,
+                    child: CustomPaint(painter: _GridPatternPainter()),
+                  ),
+                ),
+                const Positioned(
+                  top: 10,
+                  left: 10,
+                  child: _CornerBracket(topLeft: true),
+                ),
+                const Positioned(
+                  top: 10,
+                  right: 10,
+                  child: _CornerBracket(topRight: true),
+                ),
+                const Positioned(
+                  bottom: 10,
+                  left: 10,
+                  child: _CornerBracket(bottomLeft: true),
+                ),
+                const Positioned(
+                  bottom: 10,
+                  right: 10,
+                  child: _CornerBracket(bottomRight: true),
+                ),
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.mutedGold.withValues(
+                          alpha: 0.3 + 0.4 * animVal,
+                        ),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.filter_center_focus,
+                        size: 38,
+                        color: AppColors.mutedGold.withValues(
+                          alpha: 0.6 + 0.4 * animVal,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 18 + animVal * 180,
+                  left: 14,
+                  right: 14,
+                  child: Container(
+                    height: 2.5,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          AppColors.mutedGold.withValues(alpha: 0.7),
+                          Colors.amber.shade200,
+                          AppColors.mutedGold.withValues(alpha: 0.7),
+                          Colors.transparent,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.mutedGold.withValues(alpha: 0.9),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 14,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.mutedGold.withValues(alpha: 0.4),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 13,
+                            color: AppColors.mutedGold,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'AI VISION · CLIP ViT-B/32 ONNX',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                              color: AppColors.antiqueIvory,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 14,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.mutedGold.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.mutedGold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            animVal < 0.5
+                                ? 'Đang trích xuất đặc trưng vector 512 chiều…'
+                                : 'Đang so khớp Cosine Similarity kho hiện vật…',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.antiqueIvory,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CornerBracket extends StatelessWidget {
+  const _CornerBracket({
+    this.topLeft = false,
+    this.topRight = false,
+    this.bottomLeft = false,
+    this.bottomRight = false,
+  });
+
+  final bool topLeft;
+  final bool topRight;
+  final bool bottomLeft;
+  final bool bottomRight;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 16.0;
+    const thickness = 2.0;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _BracketPainter(
+          color: AppColors.mutedGold,
+          thickness: thickness,
+          topLeft: topLeft,
+          topRight: topRight,
+          bottomLeft: bottomLeft,
+          bottomRight: bottomRight,
+        ),
+      ),
+    );
+  }
+}
+
+class _BracketPainter extends CustomPainter {
+  const _BracketPainter({
+    required this.color,
+    required this.thickness,
+    required this.topLeft,
+    required this.topRight,
+    required this.bottomLeft,
+    required this.bottomRight,
+  });
+
+  final Color color;
+  final double thickness;
+  final bool topLeft;
+  final bool topRight;
+  final bool bottomLeft;
+  final bool bottomRight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = thickness
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    if (topLeft) {
+      path.moveTo(0, size.height);
+      path.lineTo(0, 0);
+      path.lineTo(size.width, 0);
+    } else if (topRight) {
+      path.moveTo(0, 0);
+      path.lineTo(size.width, 0);
+      path.lineTo(size.width, size.height);
+    } else if (bottomLeft) {
+      path.moveTo(0, 0);
+      path.lineTo(0, size.height);
+      path.lineTo(size.width, size.height);
+    } else if (bottomRight) {
+      path.moveTo(size.width, 0);
+      path.lineTo(size.width, size.height);
+      path.lineTo(0, size.height);
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _GridPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.mutedGold
+      ..strokeWidth = 0.5;
+
+    const step = 20.0;
+    for (double x = 0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

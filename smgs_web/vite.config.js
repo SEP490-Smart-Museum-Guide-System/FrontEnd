@@ -32,7 +32,12 @@ function visitorPreviewIndex() {
 }
 
 const proxy = {
-  '/api': { target: 'http://127.0.0.1:5169', changeOrigin: true },
+  '/api': {
+    target: 'http://127.0.0.1:5169',
+    changeOrigin: true,
+    timeout: 240000,
+    proxyTimeout: 240000
+  },
   '/vietqr': {
     target: 'https://vietqr.app',
     changeOrigin: true,

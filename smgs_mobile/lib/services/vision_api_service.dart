@@ -79,12 +79,15 @@ class VisionApiService {
     String filename = 'camera_capture.jpg',
     String? serviceKey,
   }) async {
+    final key = (serviceKey != null && serviceKey.isNotEmpty)
+        ? serviceKey
+        : ApiConfig.defaultVisionServiceKey;
     final uri = Uri.parse('${ApiConfig.visionRecognitionsUrl}?top_k=3');
     final request = http.MultipartRequest('POST', uri);
 
-    // Optional service key header (defaults to empty when called via proxy or open PoC)
-    if (serviceKey != null && serviceKey.isNotEmpty) {
-      request.headers['X-Service-Key'] = serviceKey;
+    // Attach internal AI service key to pass FastAPI authentication on Port 8001
+    if (key.isNotEmpty) {
+      request.headers['X-Service-Key'] = key;
     }
 
     request.files.add(
@@ -104,6 +107,10 @@ class VisionApiService {
           detail = decoded['detail'].toString();
         }
       } catch (_) {}
+      if (response.statusCode == 503 && detail.contains('(503)')) {
+        detail =
+            'Dịch vụ AI Vision (Port 8001) chưa khởi động. Hãy chạy start-local-vision.ps1 hoặc sử dụng chế độ Quét mã QR.';
+      }
       throw Exception(detail);
     }
 

@@ -1,0 +1,3 @@
+D:\CAPSTONE\FrontEnd\obj\Debug\net8.0\SMGS.Infrastructure.dll
+D:\CAPSTONE\FrontEnd\obj\Debug\net8.0\refint\SMGS.Infrastructure.dll
+D:\CAPSTONE\FrontEnd\obj\Debug\net8.0\SMGS.Infrastructure.pdb

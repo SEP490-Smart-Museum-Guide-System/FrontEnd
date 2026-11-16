@@ -28,6 +28,7 @@ class ArtifactDetailScreen extends StatefulWidget {
 class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   Map<String, dynamic>? _publishedContent;
   String? _contentError;
+  bool _isPremiumLocked = false;
   List<String>? _photos;
   bool _photoError = false;
   bool _loadingPhotos = false;
@@ -69,14 +70,23 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
       try {
         final content = await DiscoveryApiService.fetchPublishedContent(aId);
         if (mounted) {
-          setState(() => _publishedContent = content);
+          setState(() {
+            _publishedContent = content;
+            _isPremiumLocked = false;
+          });
         }
-      } catch (_) {
+      } catch (e) {
         if (mounted) {
-          setState(
-            () => _contentError =
-                'Chưa tải được nội dung thuyết minh. Vui lòng thử lại.',
-          );
+          final errStr = e.toString().toLowerCase();
+          final isPremium = errStr.contains('403') ||
+              errStr.contains('premium') ||
+              errStr.contains('pass');
+          setState(() {
+            _isPremiumLocked = isPremium;
+            _contentError = isPremium
+                ? 'Hiện vật thuộc danh mục Premium. Cần kích hoạt Vé tham quan (Pass) còn hiệu lực để mở khóa toàn bộ thuyết minh đa ngôn ngữ và âm thanh AI.'
+                : 'Chưa tải được nội dung thuyết minh. Vui lòng thử lại.';
+          });
         }
       }
     }
@@ -158,10 +168,9 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          '${widget.museumName}\n${a.location}',
-          style: AppTextStyles.bodySmall,
-        ),
+        Text(widget.museumName, style: AppTextStyles.bodySmall),
+        if (a.location.isNotEmpty)
+          Text(a.location, style: AppTextStyles.bodySmall),
         const Divider(),
         if (_publishedContent != null)
           Container(
@@ -189,7 +198,47 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
               ],
             ),
           ),
-        if (_contentError != null) ...[
+        if (_isPremiumLocked) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppColors.mutedGold.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.mutedGold),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.workspace_premium,
+                      color: AppColors.deepBurgundy,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Bảo vật danh mục Premium',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.deepBurgundy,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _contentError ?? '',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.darkBrown,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else if (_contentError != null) ...[
           Notice(_contentError!),
           TextButton(
             onPressed: () {
@@ -200,12 +249,24 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           ),
         ],
         Text(summary, style: AppTextStyles.bodyLarge),
+        if (story.isNotEmpty && story != summary) ...[
+          const SizedBox(height: 12),
+          Text(story, style: AppTextStyles.bodyMedium),
+        ],
         const SizedBox(height: 24),
         PrimaryButton(
           label: 'Hỏi hướng dẫn viên',
           icon: Icons.chat_bubble_outline,
           onPressed: () => openPage(context, AiGuideScreen(artifact: a)),
         ),
+        if (a.id == 'artifact_1' || a.modelUrl?.isNotEmpty == true) ...[
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Xem mô hình 3D',
+            icon: Icons.view_in_ar_outlined,
+            onPressed: () => openPage(context, Artifact3DScreen(artifact: a)),
+          ),
+        ],
         const SizedBox(height: 8),
         TextButton.icon(
           icon: const Icon(Icons.more_horiz),
