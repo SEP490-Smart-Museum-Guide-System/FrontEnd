@@ -38,16 +38,24 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
     try {
       const targetCount = mode === 'quiz' ? count : 1;
       let attempts = 0;
-      const maxAttempts = targetCount === 1 ? 2 : targetCount + 3;
+      let busyRetries = 0;
+      const maxAttempts = targetCount === 1 ? 3 : targetCount + 4;
+      const maxBusyRetries = 6; // max ~30s wait for busy model
       while (drafts.length < targetCount && attempts < maxAttempts) {
         attempts++;
         setCurrentStep(drafts.length === 0 ? 2 : 3);
-        setProgress(mode === 'quiz' ? `Đang tạo câu đố ${drafts.length + 1}/${targetCount}… (ước tính ~30s/câu)` : 'Đang soạn bản thuyết minh…');
+        setProgress(mode === 'quiz' ? `Đang tạo câu đố ${drafts.length + 1}/${targetCount}… (ước tính ~50s/câu)` : 'Đang soạn bản thuyết minh…');
         try {
+          // Small delay between sequential quiz calls so the model lock has time to release
+          if (drafts.length > 0 && mode === 'quiz') {
+            await new Promise(r => setTimeout(r, 1500));
+            if (controller.signal.aborted) return;
+          }
           const response = await generateStaffDraft(artifact.id, {
             mode, sourceText, audience, tone, difficulty, excludeQuestions: drafts.map(d => d.question),
           }, controller.signal);
           if (controller.signal.aborted) return;
+          busyRetries = 0; // reset on success
           drafts.push(response.draft);
           setSource(response.source);
           setEvidence(drafts.flatMap(d => mode === 'quiz' ? [d.evidenceQuote] : d.evidenceQuotes || []));
@@ -55,6 +63,17 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
           setOutput(mode === 'quiz' ? JSON.stringify(drafts.map(d => ({ question: d.question, options: d.options, correctIndex: d.correctIndex, explanation: d.explanation })), null, 2) : response.draft.narrationText);
         } catch (itemErr) {
           if (controller.signal.aborted) return;
+          // If model is busy (503), retry with backoff instead of counting as a failed attempt
+          const isBusy = itemErr.message?.includes('đang bận') || itemErr.message?.includes('503');
+          if (isBusy && busyRetries < maxBusyRetries) {
+            busyRetries++;
+            attempts--; // don't count busy-retry as a real attempt
+            setProgress(mode === 'quiz' ? `Model đang bận, thử lại sau ${busyRetries * 5}s… (câu ${drafts.length + 1}/${targetCount})` : 'Model đang bận, thử lại…');
+            await new Promise(r => setTimeout(r, busyRetries * 5000));
+            if (controller.signal.aborted) return;
+            continue;
+          }
+          busyRetries = 0;
           console.warn(`Lần thử ${attempts} cho câu ${drafts.length + 1} chưa đạt căn cứ:`, itemErr.message);
           if (attempts >= maxAttempts && !drafts.length) {
             throw itemErr;
