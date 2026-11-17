@@ -3,6 +3,8 @@ import 'package:smgs_mobile/models/auth_session.dart';
 import 'package:smgs_mobile/services/token_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_qr_scanner.dart';
+import 'package:smgs_mobile/screens/scan/scan_screen.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +13,22 @@ import 'package:smgs_mobile/core/network/api_config.dart';
 import 'package:smgs_mobile/services/artifact_scan_service.dart';
 
 void main() {
+  testWidgets('scan tab opens the QR camera directly', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const MaterialApp(home: ScanScreen()));
+    final qrTile = find.text('Quét mã hiện vật');
+    await tester.ensureVisible(qrTile);
+    await tester.tap(qrTile);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MobileScanner), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+    expect(find.text('Nhận diện AI'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Xem thông tin hiện vật'), findsNothing);
+  });
+
   testWidgets('manual QR displays backend details without mock catalog', (
     tester,
   ) async {

@@ -1,5 +1,6 @@
 import '../../widgets/visitor_handbook_sheet.dart';
 import 'experience_history_screen.dart';
+import 'my_museum_screen.dart';
 import '../../services/backend_api.dart';
 import 'package:flutter/material.dart';
 
@@ -96,6 +97,12 @@ class ProfileScreen extends StatelessWidget {
           ),
           ActionTile(
             title: 'Hiện vật đã lưu',
+            subtitle: 'Khám phá bộ sưu tập hiện vật của bạn.',
+            icon: Icons.museum_outlined,
+            onTap: () => openPage(context, const MyMuseumScreen()),
+          ),
+          ActionTile(
+            title: 'Hiện vật yêu thích',
             subtitle: 'Những điều bạn muốn tìm hiểu thêm.',
             icon: Icons.bookmark_border,
             onTap: () => openPage(

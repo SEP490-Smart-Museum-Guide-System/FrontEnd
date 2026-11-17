@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/museum_ui.dart';
+import '../artifact/artifact_qr_scanner.dart';
 import '../artifact/qr_scan_screen.dart';
 import '../explore/explore_screen.dart';
 import '../../widgets/game_tutorial_overlay.dart';
@@ -24,7 +25,10 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _checkTour() async {
     final user = AppServices.auth.user;
     if (user != null && user.role == UserRole.visitor) {
-      final shouldShow = await GameTutorialOverlay.shouldShow(user.email, 'scan');
+      final shouldShow = await GameTutorialOverlay.shouldShow(
+        user.email,
+        'scan',
+      );
       if (shouldShow && mounted) {
         await Future.delayed(const Duration(milliseconds: 350));
         if (mounted) {
@@ -51,7 +55,7 @@ class _ScanScreenState extends State<ScanScreen> {
           title: 'Quét mã hiện vật',
           subtitle: 'Dùng mã đặt cạnh hiện vật trưng bày.',
           icon: Icons.qr_code_scanner,
-          onTap: () => openPage(context, const QRScanScreen()),
+          onTap: () => openPage(context, const ArtifactQrScanner(direct: true)),
         ),
       ),
       Container(

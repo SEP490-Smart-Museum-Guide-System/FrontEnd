@@ -17,8 +17,9 @@ import '../../widgets/museum_ui.dart';
 import 'artifact_detail_screen.dart';
 
 class ArtifactQrScanner extends StatefulWidget {
-  const ArtifactQrScanner({super.key, this.visitId});
+  const ArtifactQrScanner({super.key, this.visitId, this.direct = false});
   final int? visitId;
+  final bool direct;
   @override
   State<ArtifactQrScanner> createState() => _ArtifactQrScannerState();
 }
@@ -26,7 +27,8 @@ class ArtifactQrScanner extends StatefulWidget {
 class _ArtifactQrScannerState extends State<ArtifactQrScanner>
     with SingleTickerProviderStateMixin {
   final _input = TextEditingController();
-  bool _camera = false, _busy = false;
+  late bool _camera = widget.direct;
+  bool _busy = false;
   String? _error;
   late int? _visitId =
       widget.visitId ?? VisitorSession.activeVisit?['id'] as int?;
@@ -176,130 +178,135 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
   @override
   Widget build(BuildContext context) => MuseumPage(
     back: true,
-    title: 'Khám phá hiện vật',
+    title: widget.direct ? 'Quét mã hiện vật' : 'Khám phá hiện vật',
     subtitle: _activeMode == 'qr'
         ? 'Quét mã QR đặt cạnh hiện vật tại tủ trưng bày.'
         : 'Chụp ảnh hiện vật để nhận diện thông minh qua AI Vision (Port 8001).',
     children: [
-      BackendPanel(
-        resourceKey: 'scan-active-visits',
-        load: () async {
-          try {
-            return await BackendApi.list('visits/me?status=InProgress');
-          } catch (_) {
-            return <Map<String, dynamic>>[];
-          }
-        },
-        builder: (data, reload) {
-          final visits = (data as List).cast<Map<String, dynamic>>();
-          final selected = visits.any((v) => v['id'] == _visitId)
-              ? _visitId
-              : null;
-          return Column(
-            children: [
-              DropdownButtonFormField<int>(
-                key: ValueKey(selected),
-                initialValue: selected,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Gắn lượt quét với chuyến tham quan',
-                ),
-                items: [
-                  const DropdownMenuItem<int>(
-                    value: null,
-                    child: Text('Quét độc lập'),
+      if (!widget.direct) ...[
+        BackendPanel(
+          resourceKey: 'scan-active-visits',
+          load: () async {
+            try {
+              return await BackendApi.list('visits/me?status=InProgress');
+            } catch (_) {
+              return <Map<String, dynamic>>[];
+            }
+          },
+          builder: (data, reload) {
+            final visits = (data as List).cast<Map<String, dynamic>>();
+            final selected = visits.any((v) => v['id'] == _visitId)
+                ? _visitId
+                : null;
+            return Column(
+              children: [
+                DropdownButtonFormField<int>(
+                  key: ValueKey(selected),
+                  initialValue: selected,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Gắn lượt quét với chuyến tham quan',
                   ),
-                  ...visits.map(
-                    (v) => DropdownMenuItem<int>(
-                      value: v['id'] as int,
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: null,
+                      child: Text('Quét độc lập'),
+                    ),
+                    ...visits.map(
+                      (v) => DropdownMenuItem<int>(
+                        value: v['id'] as int,
+                        child: Text(
+                          '${AppServices.catalog.museumName(v['museumId'].toString())} · #${v['id']}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: _busy
+                      ? null
+                      : (id) => setState(() {
+                          _visitId = id;
+                          _scanRequest = null;
+                        }),
+                ),
+                TextButton(
+                  onPressed: reload,
+                  child: const Text('Cập nhật lượt tham quan'),
+                ),
+              ],
+            );
+          },
+        ),
+        // Mode selector
+        Row(
+          children: [
+            Expanded(
+              child: ChoiceChip(
+                showCheckmark: false,
+                selectedColor: AppColors.deepBurgundy,
+                backgroundColor: AppColors.card,
+                label: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.qr_code, size: 16),
+                    SizedBox(width: 6),
+                    Flexible(
                       child: Text(
-                        '${AppServices.catalog.museumName(v['museumId'].toString())} · #${v['id']}',
+                        'Quét mã QR',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                ],
-                onChanged: _busy
-                    ? null
-                    : (id) => setState(() {
-                        _visitId = id;
-                        _scanRequest = null;
-                      }),
-              ),
-              TextButton(
-                onPressed: reload,
-                child: const Text('Cập nhật lượt tham quan'),
-              ),
-            ],
-          );
-        },
-      ),
-      // Mode selector
-      Row(
-        children: [
-          Expanded(
-            child: ChoiceChip(
-              showCheckmark: false,
-              selectedColor: AppColors.deepBurgundy,
-              backgroundColor: AppColors.card,
-              label: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.qr_code, size: 16),
-                  SizedBox(width: 6),
-                  Flexible(
-                    child: Text('Quét mã QR', overflow: TextOverflow.ellipsis),
-                  ),
-                ],
-              ),
-              selected: _activeMode == 'qr',
-              onSelected: (_) => setState(() {
-                _activeMode = 'qr';
-                _error = null;
-              }),
-              checkmarkColor: AppColors.antiqueIvory,
-              labelStyle: AppTextStyles.bodyMedium.copyWith(
-                color: _activeMode == 'qr'
-                    ? AppColors.antiqueIvory
-                    : AppColors.darkBrown,
+                  ],
+                ),
+                selected: _activeMode == 'qr',
+                onSelected: (_) => setState(() {
+                  _activeMode = 'qr';
+                  _error = null;
+                }),
+                checkmarkColor: AppColors.antiqueIvory,
+                labelStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: _activeMode == 'qr'
+                      ? AppColors.antiqueIvory
+                      : AppColors.darkBrown,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ChoiceChip(
-              showCheckmark: false,
-              selectedColor: AppColors.deepBurgundy,
-              backgroundColor: AppColors.card,
-              label: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_enhance, size: 16),
-                  SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      'Nhận diện AI',
-                      overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 10),
+            Expanded(
+              child: ChoiceChip(
+                showCheckmark: false,
+                selectedColor: AppColors.deepBurgundy,
+                backgroundColor: AppColors.card,
+                label: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.camera_enhance, size: 16),
+                    SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Nhận diện AI',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              selected: _activeMode == 'vision',
-              onSelected: (_) => setState(() {
-                _activeMode = 'vision';
-                _error = null;
-              }),
-              checkmarkColor: AppColors.antiqueIvory,
-              labelStyle: AppTextStyles.bodyMedium.copyWith(
-                color: _activeMode == 'vision'
-                    ? AppColors.antiqueIvory
-                    : AppColors.darkBrown,
+                  ],
+                ),
+                selected: _activeMode == 'vision',
+                onSelected: (_) => setState(() {
+                  _activeMode = 'vision';
+                  _error = null;
+                }),
+                checkmarkColor: AppColors.antiqueIvory,
+                labelStyle: AppTextStyles.bodyMedium.copyWith(
+                  color: _activeMode == 'vision'
+                      ? AppColors.antiqueIvory
+                      : AppColors.darkBrown,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
 
       if (_busy && _activeMode == 'qr') const LinearProgressIndicator(),
       if (_error != null) Notice(_error!),
@@ -317,9 +324,11 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                   }
                 }
               },
-              errorBuilder: (context, error) => const Center(
+              errorBuilder: (context, error) => Center(
                 child: Notice(
-                  'Không mở được camera. Hãy cấp quyền máy ảnh hoặc nhập mã bên dưới. Trên web, camera cần HTTPS hoặc localhost.',
+                  widget.direct
+                      ? 'Không mở được camera. Hãy cấp quyền máy ảnh. Trên web, camera cần HTTPS hoặc localhost.'
+                      : 'Không mở được camera. Hãy cấp quyền máy ảnh hoặc nhập mã bên dưới. Trên web, camera cần HTTPS hoặc localhost.',
                 ),
               ),
             ),
@@ -330,27 +339,26 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           icon: Icons.qr_code_scanner,
           onPressed: _busy ? null : () => setState(() => _camera = !_camera),
         ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: _input,
-          enabled: !_busy,
-          decoration: const InputDecoration(
-            labelText: 'Mã QR hoặc URL trên mã QR',
+        if (!widget.direct) ...[
+          const SizedBox(height: 20),
+          TextField(
+            controller: _input,
+            enabled: !_busy,
+            decoration: const InputDecoration(
+              labelText: 'Mã QR hoặc URL trên mã QR',
+            ),
+            onSubmitted: _scan,
           ),
-          onSubmitted: _scan,
-        ),
-        const SizedBox(height: 12),
-        SecondaryButton(
-          label: 'Xem thông tin hiện vật',
-          icon: Icons.search,
-          onPressed: _busy ? null : () => _scan(_input.text),
-        ),
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Xem thông tin hiện vật',
+            icon: Icons.search,
+            onPressed: _busy ? null : () => _scan(_input.text),
+          ),
+        ],
       ] else ...[
         // AI Vision Mode
-        if (_busy) ...[
-          _buildCyberViewfinder(),
-          const SizedBox(height: 14),
-        ],
+        if (_busy) ...[_buildCyberViewfinder(), const SizedBox(height: 14)],
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,9 +416,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 const SizedBox(height: 14),
               ],
               PrimaryButton(
-                label: _busy
-                    ? 'Đang phân tích vector…'
-                    : 'Chụp ảnh qua Camera',
+                label: _busy ? 'Đang phân tích vector…' : 'Chụp ảnh qua Camera',
                 icon: Icons.camera_alt_outlined,
                 onPressed: _busy ? null : _captureFromCamera,
               ),
