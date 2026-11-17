@@ -306,7 +306,6 @@ export default function Sidebar() {
             {sec.items.map((item, itemIdx) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
-              const globalIdx = allItems.indexOf(item);
               const hasBadge = item.badge !== undefined && item.badge > 0;
               return (
                 <button
@@ -322,9 +321,6 @@ export default function Sidebar() {
                   {!collapsed && <span>{item.label}</span>}
                   {hasBadge && (
                     <span className="badge">{item.badge}</span>
-                  )}
-                  {!collapsed && globalIdx < 9 && (
-                    <kbd className="sidebar-shortcut">⌃{globalIdx + 1}</kbd>
                   )}
                 </button>
               );
