@@ -18,7 +18,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   const [mode, setMode] = useState(initialMode);
   const [sourceText, setSourceText] = useState('');
   const [audience, setAudience] = useState('general'), [tone, setTone] = useState('vivid');
-  const [count, setCount] = useState(1), [difficulty, setDifficulty] = useState('medium');
+  const [count, setCount] = useState(5), [difficulty, setDifficulty] = useState('medium');
   const [output, setOutput] = useState(''), [title, setTitle] = useState('');
   const [source, setSource] = useState(null), [evidence, setEvidence] = useState([]);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [submitted, setSubmitted] = useState(false);
@@ -35,6 +35,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
     const controller = new AbortController(); activeRequest.current = controller;
     invalidate(); setBusy(true); setCurrentStep(1);
     const drafts = [];
+    let lastItemError;
     try {
       const targetCount = mode === 'quiz' ? count : 1;
       let attempts = 0;
@@ -44,7 +45,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
       while (drafts.length < targetCount && attempts < maxAttempts) {
         attempts++;
         setCurrentStep(drafts.length === 0 ? 2 : 3);
-        setProgress(mode === 'quiz' ? `Đang tạo câu đố ${drafts.length + 1}/${targetCount}… (ước tính ~50s/câu)` : 'Đang soạn bản thuyết minh…');
+        setProgress(mode === 'quiz' ? `Đang tạo câu đố ${drafts.length + 1}/${targetCount}…` : 'Đang soạn bản thuyết minh…');
         try {
           // Small delay between sequential quiz calls so the model lock has time to release
           if (drafts.length > 0 && mode === 'quiz') {
@@ -55,6 +56,9 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             mode, sourceText, audience, tone, difficulty, excludeQuestions: drafts.map(d => d.question),
           }, controller.signal);
           if (controller.signal.aborted) return;
+          if (mode === 'quiz' && drafts.some(d => d.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' ') === response.draft.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' '))) {
+            throw new Error('AI trả lại câu hỏi đã có. Hãy tạo lại hoặc bổ sung tư liệu.');
+          }
           busyRetries = 0; // reset on success
           drafts.push(response.draft);
           setSource(response.source);
@@ -63,6 +67,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
           setOutput(mode === 'quiz' ? JSON.stringify(drafts.map(d => ({ question: d.question, options: d.options, correctIndex: d.correctIndex, explanation: d.explanation })), null, 2) : response.draft.narrationText);
         } catch (itemErr) {
           if (controller.signal.aborted) return;
+          lastItemError = itemErr;
           // If model is busy (503), retry with backoff instead of counting as a failed attempt
           const isBusy = itemErr.message?.includes('đang bận') || itemErr.message?.includes('503');
           if (isBusy && busyRetries < maxBusyRetries) {
@@ -82,9 +87,9 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
       }
       if (drafts.length > 0) {
         setCurrentStep(4);
-        showToast(mode === 'quiz' ? `Đã tạo ${drafts.length}/${targetCount} câu hỏi AI thành công!` : 'Đã tạo bản nháp AI.');
+        showToast(mode === 'quiz' ? `Đã tạo ${drafts.length}/${targetCount} câu hỏi nháp. Cần kiểm tra trước khi lưu.` : 'Đã tạo bản nháp AI.');
         if (drafts.length < targetCount) {
-          setError(`Đã hoàn tất ${drafts.length}/${targetCount} câu hỏi. Tư liệu hiện vật đã được khai thác tối đa.`);
+          setError(`Mới tạo ${drafts.length}/${targetCount} câu hỏi. Bộ câu hỏi chưa hoàn tất. ${lastItemError?.message || 'Hãy kiểm tra kết nối, hạn mức AI và tư liệu rồi thử lại.'}`);
         }
       } else {
         throw new Error('Chưa thể tạo câu hỏi nào từ tư liệu này. Hãy bổ sung tư liệu cụ thể hơn.');
@@ -92,7 +97,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
     } catch (e) {
       if (!controller.signal.aborted) setError(`${drafts.length && mode === 'quiz' ? `Đã tạo ${drafts.length}/${count} câu. ` : ''}${e.message}`);
     } finally {
-      if (!controller.signal.aborted) { setBusy(false); setProgress(''); }
+      if (activeRequest.current === controller) { setBusy(false); setProgress(''); activeRequest.current = null; }
     }
   }
 
@@ -113,7 +118,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   if (!allowed) return <p role="alert">Chức năng tạo bản nháp dành cho Quản trị viên và Nhân viên bảo tàng.</p>;
   return <div>
     <h1 style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-burgundy-900)', fontSize: '1.75rem' }}><Sparkles size={25} /> Xưởng nội dung AI</h1>
-    <p>Soạn thuyết minh và câu hỏi tiếng Việt bằng model ONNX local từ tư liệu bảo tàng. Kết quả luôn là bản nháp cần thẩm định.</p>
+    <p>Soạn thuyết minh và bộ câu hỏi tiếng Việt từ tư liệu bảo tàng. Bộ câu hỏi mặc định gồm 5 câu; kết quả luôn là bản nháp cần thẩm định.</p>
     {currentRole === 'administrator' && <div className="form-group"><label className="form-label" htmlFor="studio-museum">Bảo tàng</label><select id="studio-museum" className="form-select" value={currentMuseum?.id || ''} disabled={busy || saving} onChange={e => setSelectedMuseumId(Number(e.target.value))}>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>}
     {!available.length ? <div className="card business-card">Bảo tàng chưa có hiện vật đã lưu. Hãy tạo hiện vật và bổ sung tư liệu trước.</div> : <div className="business-grid" style={{ alignItems: 'start' }}>
       <section className="card business-card">
@@ -194,10 +199,10 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             {/* Multi-stage Stepper */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
               {[
-                { step: 1, title: 'Trích xuất tư liệu nguồn & đối chiếu niên đại hiện vật' },
+                { step: 1, title: 'Lấy tư liệu nguồn của hiện vật' },
                 { step: 2, title: `Thiết lập phong cách (${mode === 'quiz' ? `Độ khó: ${difficulty}` : `Giọng điệu: ${tone}`}) & đối tượng` },
                 { step: 3, title: mode === 'quiz' ? progress || `Đang biên soạn câu đố (1/${count})…` : progress || 'Đang tạo lời bình thuyết minh…' },
-                { step: 4, title: 'Thẩm định chéo tư liệu trích dẫn & đóng gói bản thảo' }
+                { step: 4, title: 'Kiểm tra cấu trúc và trích dẫn của bản nháp' }
               ].map(s => {
                 const isDone = s.step < currentStep;
                 const isCurrent = s.step === currentStep;

@@ -23,9 +23,11 @@ async function fixture(page, role = 'Admin') {
     if (path === 'museums/cities') return ok([]);
     if (path === 'artifacts') return ok({ items: [artifact], totalPages: 1, totalCount: 1 });
     if (path === 'artifacts/11/ai/drafts') {
+      if (state.holdAi) { await new Promise(r => setTimeout(r, 2000)); return route.fulfill({ status: 503, json: { message: 'Đã dừng fixture.' } }); }
+      if (state.aiPartial && (body.excludeQuestions?.length || 0) >= 2) return route.fulfill({ status: 502, json: { message: 'Hạn mức AI chưa đủ để tạo tiếp.' } });
       if (state.aiFailure) return route.fulfill({ status: 503, json: { message: 'Model local chưa sẵn sàng.' } });
       const draft = body.mode === 'quiz'
-        ? { question: 'Hiện vật dùng để làm gì?', options: ['Đựng nước', 'Lựa chọn B', 'Lựa chọn C', 'Lựa chọn D'], correctIndex: 0, explanation: 'Tư liệu ghi dùng để đựng nước.', evidenceQuote: 'Dùng để đựng nước.' }
+        ? { question: `Câu hỏi fixture ${(body.excludeQuestions?.length || 0) + 1}: Hiện vật dùng để làm gì?`, options: ['Đựng nước', 'Lựa chọn B', 'Lựa chọn C', 'Lựa chọn D'], correctIndex: 0, explanation: 'Tư liệu ghi dùng để đựng nước.', evidenceQuote: 'Dùng để đựng nước.' }
         : { title: 'Thuyết minh kiểm thử', narrationText: 'Hiện vật này được dùng để đựng nước theo tư liệu bảo tàng.', evidenceQuotes: ['Dùng để đựng nước.'] };
       return ok({ artifactId: 11, mode: body.mode, languageCode: 'vi', isDraft: true, source: { artifactId: 11, text: 'Dùng để đựng nước.', contentVersionId: 91, versionNo: 1 }, draft });
     }
@@ -48,7 +50,7 @@ async function fixture(page, role = 'Admin') {
     if (path === `admin/accounts/${staffId}/assignments` && method === 'POST') { const assignment = { id: 9, ...body, museumName: museum.name, galleryName: 'Phòng kiểm thử', artifactName: artifact.name }; state.accounts[0].assignments.push(assignment); return ok(assignment); }
     if (path === `admin/accounts/${staffId}/assignments/9` && method === 'DELETE') { state.accounts[0].assignments = []; return ok(true); }
     if (path === 'question-bank/questions' && method === 'GET') return ok(state.questions);
-    if (path === 'question-bank/questions' && method === 'POST') { const row = { ...body, id: 2, artifactId: 11, status: 'draft', options: body.options.map((o, i) => ({ ...o, id: i + 10 })) }; state.questions.push(row); return ok(row); }
+    if (path === 'question-bank/questions' && method === 'POST') { const row = { ...body, id: state.questions.length + 1, artifactId: 11, status: 'draft', options: body.options.map((o, i) => ({ ...o, id: i + 10 })) }; state.questions.push(row); return ok(row); }
     if (path === 'question-bank/questions/1/review') { state.questions[0].status = body.approve ? 'approved' : 'rejected'; return ok(state.questions[0]); }
     if (path === 'question-bank/quizzes' && method === 'GET') return ok(state.quizzes);
     if (path === 'question-bank/quizzes' && method === 'POST') { const row = { ...body, id: 5, status: 'draft', questions: body.questionIds.map(id => ({ questionId: id })) }; state.quizzes.push(row); return ok(row); }
@@ -212,19 +214,68 @@ test('AI quiz suggestions enter the editable question bank instead of artifact-c
   const f = await fixture(page, 'Museum Staff');
   await page.locator('.sidebar-item').filter({ hasText: 'Xưởng nội dung AI' }).click();
   await page.getByRole('button', { name: 'Bộ câu hỏi trắc nghiệm', exact: true }).click();
+  await page.getByLabel('Số lượng câu hỏi').selectOption('1');
   await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
   await expect(page.getByLabel('Nội dung bản nháp', { exact: true })).toBeVisible();
   await page.getByLabel('Nội dung bản nháp', { exact: true }).fill(JSON.stringify([{ question: 'Câu gợi ý đã hiệu đính', options: ['Dữ kiện đã kiểm chứng', 'Lựa chọn còn lại'], correctIndex: 0, explanation: 'Cần đối chiếu tài liệu bảo tàng' }]));
   await page.getByRole('button', { name: 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Gợi ý từ Xưởng AI', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Gợi ý từ Xưởng AI (1 câu)', exact: true })).toBeVisible();
   expect(f.writes.every(r => r.path.endsWith('/ai/drafts'))).toBe(true);
-  await page.getByRole('button', { name: 'Chỉnh sửa & lưu câu', exact: true }).click();
+  await page.getByRole('button', { name: 'Chỉnh sửa & lưu', exact: true }).click();
   await expect(page.getByLabel('Nội dung câu hỏi')).toHaveValue('Câu gợi ý đã hiệu đính');
   await page.getByRole('dialog').getByRole('button', { name: 'Lưu', exact: true }).click();
   await expect.poll(() => f.state.questions.length).toBe(2);
   expect(f.writes.filter(r => r.path.includes('/contents'))).toEqual([]);
   expect(f.state.questions[1].status).toBe('draft');
-  await expect(page.getByRole('button', { name: 'Đã lưu câu hỏi', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '✓ Đã lưu câu', exact: true })).toBeDisabled();
+  expect(f.errors).toEqual([]);
+});
+
+test('Museum Staff defaults to five quiz drafts and excludes all previous questions', async ({ page }) => {
+  const f = await fixture(page, 'Museum Staff');
+  await page.locator('.sidebar-item').filter({ hasText: 'Xưởng nội dung AI' }).click();
+  await page.getByRole('button', { name: 'Bộ câu hỏi trắc nghiệm', exact: true }).click();
+  await expect(page.getByLabel('Số lượng câu hỏi')).toHaveValue('5');
+  await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
+  await expect(page.getByLabel('Nội dung bản nháp')).toBeVisible({ timeout: 15000 });
+  const drafts = JSON.parse(await page.getByLabel('Nội dung bản nháp').inputValue());
+  expect(drafts).toHaveLength(5);
+  expect(new Set(drafts.map(d => d.question)).size).toBe(5);
+  const calls = f.writes.filter(r => r.path === 'artifacts/11/ai/drafts');
+  expect(calls.map(r => r.body.excludeQuestions.length)).toEqual([0, 1, 2, 3, 4]);
+  expect(calls[4].body.excludeQuestions).toEqual(drafts.slice(0, 4).map(d => d.question));
+  expect(f.writes.filter(r => !r.path.endsWith('/ai/drafts'))).toEqual([]);
+  await page.getByRole('button', { name: 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gợi ý từ Xưởng AI (5 câu)', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Lưu tất cả (5 câu) vào Ngân hàng', exact: true }).click();
+  await expect.poll(() => f.state.questions.length).toBe(6);
+  expect(f.state.questions.slice(1).every(q => q.status === 'draft')).toBe(true);
+  expect(f.writes.some(r => /review|publish|contents/.test(r.path))).toBe(false);
+  expect(f.errors).toEqual([]);
+});
+
+test('partial quiz output states two of five and preserves the actual AI failure', async ({ page }) => {
+  const f = await fixture(page, 'Museum Staff');
+  f.state.aiPartial = true;
+  await page.locator('.sidebar-item').filter({ hasText: 'Xưởng nội dung AI' }).click();
+  await page.getByRole('button', { name: 'Bộ câu hỏi trắc nghiệm', exact: true }).click();
+  await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
+  await expect(page.getByLabel('Nội dung bản nháp')).toBeVisible({ timeout: 25000 });
+  expect(JSON.parse(await page.getByLabel('Nội dung bản nháp').inputValue())).toHaveLength(2);
+  await expect(page.getByRole('alert')).toContainText('Mới tạo 2/5');
+  await expect(page.getByRole('alert')).toContainText('Hạn mức AI chưa đủ');
+  expect(f.errors).toEqual([]);
+});
+
+test('cancelling a quiz run unlocks the studio configuration', async ({ page }) => {
+  const f = await fixture(page, 'Museum Staff');
+  f.state.holdAi = true;
+  await page.locator('.sidebar-item').filter({ hasText: 'Xưởng nội dung AI' }).click();
+  await page.getByRole('button', { name: 'Bộ câu hỏi trắc nghiệm', exact: true }).click();
+  await page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true }).click();
+  await page.getByRole('button', { name: 'Hủy', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Sinh nội dung bằng AI', exact: true })).toBeEnabled();
+  await expect(page.getByLabel('Số lượng câu hỏi')).toBeEnabled();
   expect(f.errors).toEqual([]);
 });
 
