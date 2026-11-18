@@ -28,7 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkFirstTimeOnboarding());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _checkFirstTimeOnboarding(),
+    );
   }
 
   Future<void> _checkFirstTimeOnboarding() async {
@@ -75,11 +77,11 @@ class _HomeScreenState extends State<HomeScreen> {
         SliverAppBar(
           pinned: true,
           automaticallyImplyLeading: false,
-          toolbarHeight: 70,
+          toolbarHeight: 72,
           backgroundColor: AppColors.antiqueIvory,
           surfaceTintColor: Colors.transparent,
           scrolledUnderElevation: 0,
-          titleSpacing: 22,
+          titleSpacing: 24,
           title: AnimatedBuilder(
             animation: _scroll,
             builder: (context, _) {
@@ -92,12 +94,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 23,
                       color: AppColors.deepBurgundy,
                       letterSpacing: 2,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Container(width: 1, height: 30, color: AppColors.border),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       offset > 220
@@ -128,10 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () => VisitorHandbookSheet.show(context),
                   ),
                   const SizedBox(width: 8),
-                  Transform.rotate(
-                    angle: reduceHeritageMotion(context) ? 0 : offset / 700,
-                    child: const HeritageSeal(size: 38),
-                  ),
+                  const HeritageSeal(size: 36),
                 ],
               );
             },
@@ -160,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(22, 20, 22, 30),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
           sliver: SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -169,11 +168,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        _date.toUpperCase(),
+                        _date,
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.deepBurgundy,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0,
                         ),
                       ),
                     ),
@@ -191,14 +190,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     final list = (data as List).cast<Map<String, dynamic>>();
                     if (list.isEmpty) return const SizedBox.shrink();
                     final v = list.first;
-                    final mName = AppServices.catalog.museumName(v['museumId'].toString());
+                    final mName = AppServices.catalog.museumName(
+                      v['museumId'].toString(),
+                    );
                     return Container(
                       margin: const EdgeInsets.only(top: 14),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.mutedGold, width: 1.2),
+                        border: Border.all(
+                          color: AppColors.mutedGold,
+                          width: 1.2,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.darkBrown.withValues(alpha: 0.05),
@@ -212,7 +216,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.deepBurgundy.withValues(alpha: 0.1),
+                              color: AppColors.deepBurgundy.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
@@ -229,7 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.deepBurgundy,
                                         borderRadius: BorderRadius.circular(4),
@@ -244,13 +253,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 6),
-                                    Text('#${v['id']}', style: AppTextStyles.caption),
+                                    Text(
+                                      '#${v['id']}',
+                                      style: AppTextStyles.caption,
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   mName,
-                                  style: AppTextStyles.cardTitle.copyWith(fontSize: 15),
+                                  style: AppTextStyles.cardTitle.copyWith(
+                                    fontSize: 15,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -260,7 +274,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           FilledButton(
                             style: FilledButton.styleFrom(
                               backgroundColor: AppColors.deepBurgundy,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               minimumSize: const Size(0, 36),
                             ),
                             onPressed: () {
@@ -270,14 +287,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                               reload();
                             },
-                            child: const Text('Xem tiến độ', style: TextStyle(fontSize: 12)),
+                            child: const Text(
+                              'Xem tiến độ',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
                     );
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
@@ -319,7 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -332,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Text(
-                      'Chạm vào\nmiền ký ức.',
+                      'Khám phá\ndi sản Việt',
                       style: AppTextStyles.display.copyWith(
                         fontSize: 38,
                         height: 1.2,
@@ -343,160 +363,157 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 const Text(
-                  'Mỗi hiện vật, một câu chuyện đang chờ bạn.',
+                  'Tìm bảo tàng, nghe chuyện hiện vật và chọn lối tham quan',
                   style: AppTextStyles.bodySmall,
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 8),
                 Container(
                   width: 54,
                   height: 2,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.deepBurgundy, AppColors.mutedGold],
-                    ),
+                    color: AppColors.deepBurgundy,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 24),
                 Container(
                   key: HomeScreenTour.searchBarKey,
                   child: TextField(
                     controller: _search,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (value) => openPage(
-                    context,
-                    ExploreScreen(
-                      standalone: true,
-                      initialQuery: value,
-                      initialArtifacts: value.trim().isNotEmpty,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (value) => openPage(
+                      context,
+                      ExploreScreen(
+                        standalone: true,
+                        initialQuery: value,
+                        initialArtifacts: value.trim().isNotEmpty,
+                      ),
                     ),
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Tìm kiếm di sản',
-                    hintText: 'Tìm bảo tàng, hiện vật…',
-                    prefixIcon: const Icon(
-                      Icons.search_outlined,
-                      color: AppColors.deepBurgundy,
-                    ),
-                    suffixIcon: IconButton(
-                      tooltip: 'Tìm kiếm',
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: () => openPage(
-                        context,
-                        ExploreScreen(
-                          standalone: true,
-                          initialQuery: _search.text,
-                          initialArtifacts: _search.text.trim().isNotEmpty,
+                    decoration: InputDecoration(
+                      labelText: 'Tìm kiếm di sản',
+                      hintText: 'Tìm bảo tàng, hiện vật…',
+                      prefixIcon: const Icon(
+                        Icons.search_outlined,
+                        color: AppColors.deepBurgundy,
+                      ),
+                      suffixIcon: IconButton(
+                        tooltip: 'Tìm kiếm',
+                        icon: const Icon(Icons.arrow_forward),
+                        onPressed: () => openPage(
+                          context,
+                          ExploreScreen(
+                            standalone: true,
+                            initialQuery: _search.text,
+                            initialArtifacts: _search.text.trim().isNotEmpty,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   key: HomeScreenTour.scanCardKey,
                   child: HoverLift(
+                    enabled: false,
                     child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    clipBehavior: Clip.antiAlias,
-                    child: Ink(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppColors.deepBurgundy, AppColors.darkBrown],
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      clipBehavior: Clip.antiAlias,
+                      child: Ink(
+                        decoration: const BoxDecoration(
+                          color: AppColors.deepBurgundy,
                         ),
-                      ),
-                      child: Stack(
-                        children: [
-                          const Positioned(
-                            right: -28,
-                            top: -32,
-                            child: Opacity(
-                              opacity: 0.1,
-                              child: HeritageSeal(size: 112, light: true),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: widget.onScan,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.antiqueIvory.withAlpha(
-                                        12,
-                                      ),
-                                      border: Border.all(
-                                        color: AppColors.mutedGold,
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                      Icons.qr_code_scanner,
-                                      color: AppColors.antiqueIvory,
-                                      size: 25,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Giải mã một hiện vật',
-                                          style: AppTextStyles.sectionTitle
-                                              .copyWith(
-                                                fontSize: 18,
-                                                color: AppColors.antiqueIvory,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Quét mã · Mở câu chuyện',
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: AppColors.antiqueIvory,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.antiqueIvory.withAlpha(
-                                        18,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.arrow_forward,
-                                      color: AppColors.antiqueIvory,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ],
+                        child: Stack(
+                          children: [
+                            const Positioned(
+                              right: -28,
+                              top: -32,
+                              child: Opacity(
+                                opacity: 0.1,
+                                child: HeritageSeal(size: 112, light: true),
                               ),
                             ),
-                          ),
-                        ],
+                            InkWell(
+                              onTap: widget.onScan,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.antiqueIvory.withAlpha(
+                                          12,
+                                        ),
+                                        border: Border.all(
+                                          color: AppColors.mutedGold,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.qr_code_scanner,
+                                        color: AppColors.antiqueIvory,
+                                        size: 25,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Giải mã một hiện vật',
+                                            style: AppTextStyles.sectionTitle
+                                                .copyWith(
+                                                  fontSize: 18,
+                                                  color: AppColors.antiqueIvory,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Quét mã · Mở câu chuyện',
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                  color: AppColors.antiqueIvory,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.antiqueIvory.withAlpha(
+                                          18,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.arrow_forward,
+                                        color: AppColors.antiqueIvory,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-                ),
                 const SizedBox(height: 12),
                 HoverLift(
+                  enabled: false,
                   child: Material(
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
@@ -520,17 +537,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: InkWell(
                         onTap: () => VisitorHandbookSheet.show(context),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 13,
+                          ),
                           child: Row(
                             children: [
                               Container(
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: AppColors.mutedGold.withValues(alpha: 0.2),
+                                  color: AppColors.mutedGold.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppColors.mutedGold.withValues(alpha: 0.5),
+                                    color: AppColors.mutedGold.withValues(
+                                      alpha: 0.5,
+                                    ),
                                     width: 1,
                                   ),
                                 ),
@@ -540,7 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   size: 22,
                                 ),
                               ),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       style: TextStyle(
                                         fontFamily: AppTextStyles.sansFamily,
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w600,
                                         letterSpacing: 0.2,
                                         color: AppColors.mutedGold,
                                       ),
@@ -607,7 +631,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Container(
                   key: HomeScreenTour.museumSectionKey,
-                  child: ScrollReveal(
+                  child: SoftEntrance(
+                    offset: 0,
                     child: AppServices.catalog.museums.isEmpty
                         ? const EmptyState(
                             title: 'Chưa có bảo tàng',
@@ -625,7 +650,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Container(
                   key: HomeScreenTour.aiExperienceKey,
-                  child: ScrollReveal(
+                  child: SoftEntrance(
+                    offset: 0,
                     child: _ArtifactEditorial(
                       onTap: () => openPage(
                         context,
@@ -645,19 +671,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 const HomeThemes(),
                 const ChapterHeading(number: '04', title: 'Một giờ cho di sản'),
-                const ScrollReveal(child: HoverLift(child: HomeRouteCard())),
+                const SoftEntrance(
+                  offset: 0,
+                  child: HoverLift(enabled: false, child: HomeRouteCard()),
+                ),
                 const ChapterHeading(number: '05', title: 'Một điểm hẹn khác'),
-                const ScrollReveal(child: HomeMuseumStory()),
+                const SoftEntrance(offset: 0, child: HomeMuseumStory()),
                 const ChapterHeading(
                   number: '06',
                   title: 'Bạn hiểu di sản đến đâu?',
                 ),
-                const ScrollReveal(child: HoverLift(child: HomeQuizCard())),
+                const SoftEntrance(
+                  offset: 0,
+                  child: HoverLift(enabled: false, child: HomeQuizCard()),
+                ),
                 const ChapterHeading(
                   number: '07',
                   title: 'Trước khi lên đường',
                 ),
-                const ScrollReveal(child: HoverLift(child: HomeVisitGuide())),
+                const SoftEntrance(
+                  offset: 0,
+                  child: HoverLift(enabled: false, child: HomeVisitGuide()),
+                ),
                 ListenableBuilder(
                   listenable: VisitStore.instance,
                   builder: (context, _) => VisitStore.instance.viewed.isEmpty
@@ -669,7 +704,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               number: '08',
                               title: 'Trang sách còn mở',
                             ),
-                            ScrollReveal(
+                            SoftEntrance(
+                              offset: 0,
                               child: ArtifactCard(
                                 artifact: VisitStore.instance.viewed.first,
                               ),
@@ -730,6 +766,7 @@ class _ArtifactEditorial extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => HoverLift(
+    enabled: false,
     child: Material(
       color: AppColors.card,
       shape: RoundedRectangleBorder(
@@ -744,8 +781,8 @@ class _ArtifactEditorial extends StatelessWidget {
           children: [
             Stack(
               children: [
-                ParallaxPhoto(
-                  height: 235,
+                SizedBox(
+                  height: 236,
                   child: Image.asset(
                     'assets/images/ngoc-lu-web.jpg',
                     width: double.infinity,
@@ -776,7 +813,7 @@ class _ArtifactEditorial extends StatelessWidget {
                     'Tiếng vọng\ntừ ngàn xưa.',
                     style: AppTextStyles.cardTitle,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   const Text(
                     'Lần theo những vòng hoa văn, gặp lại một nền văn minh.',
                     style: AppTextStyles.bodyMedium,

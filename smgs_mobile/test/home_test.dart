@@ -64,7 +64,7 @@ void main() {
     await tester.tap(find.text('Về đầu trang'));
     await tester.pumpAndSettle();
     expect(position.pixels, 0);
-    expect(find.text('Chạm vào\nmiền ký ức.').hitTestable(), findsOneWidget);
+    expect(find.text('Khám phá\ndi sản Việt').hitTestable(), findsOneWidget);
   });
 
   apiTestWidgets(

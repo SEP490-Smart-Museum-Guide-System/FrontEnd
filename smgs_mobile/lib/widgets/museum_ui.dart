@@ -83,7 +83,7 @@ class MuseumPage extends StatelessWidget {
                 ),
               ),
               if (subtitle != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 AnimatedSwitcher(
                   duration: reduceHeritageMotion(context)
                       ? Duration.zero
@@ -98,7 +98,11 @@ class MuseumPage extends StatelessWidget {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Container(width: 40, height: 2, color: AppColors.deepBurgundy),
+                  Container(
+                    width: 40,
+                    height: 2,
+                    color: AppColors.deepBurgundy,
+                  ),
                   const Expanded(child: Divider(height: 1, thickness: 1)),
                 ],
               ),
@@ -131,9 +135,9 @@ class Eyebrow extends StatelessWidget {
   final bool light;
   @override
   Widget build(BuildContext context) => Text(
-    text.toUpperCase(),
+    text,
     style: AppTextStyles.caption.copyWith(
-      letterSpacing: 1.8,
+      letterSpacing: 0,
       fontWeight: FontWeight.w600,
       color: light ? AppColors.antiqueIvory : AppColors.deepBurgundy,
     ),

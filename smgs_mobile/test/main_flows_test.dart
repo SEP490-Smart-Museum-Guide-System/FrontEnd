@@ -45,7 +45,7 @@ void main() {
       await tester.enterText(field('Email'), 'khach@smgs.vn');
       await tester.enterText(field('Mật khẩu'), 'smgs123');
       await tapText(tester, 'Đăng nhập');
-      expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
+      expect(find.text('Khám phá\ndi sản Việt'), findsOneWidget);
       expect(AppServices.auth.user!.name, 'Minh An');
       await tapText(tester, 'Cá nhân');
       expect(find.byType(ProfileScreen), findsOneWidget);
@@ -72,7 +72,7 @@ void main() {
       await tester.enterText(field('Nhập lại mật khẩu'), 'demo123');
       await tapText(tester, 'Đăng ký tài khoản');
       expect(AppServices.auth.user!.name, 'Ngọc An');
-      expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
+      expect(find.text('Khám phá\ndi sản Việt'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -82,7 +82,7 @@ void main() {
     await tester.pumpWidget(const SMGSApp());
     await tester.pumpAndSettle();
     expect(find.text('Kiểm duyệt viên'), findsNothing);
-    expect(find.textContaining('dùng cổng web'), findsOneWidget);
+    expect(find.text('Dành cho khách tham quan bảo tàng'), findsOneWidget);
     await tester.enterText(field('Email'), 'admin@smgs.vn');
     await tester.enterText(field('Mật khẩu'), 'smgs123');
     await tapText(tester, 'Đăng nhập');
@@ -93,7 +93,7 @@ void main() {
     );
     await tester.enterText(field('Email'), 'khach@smgs.vn');
     await tapText(tester, 'Đăng nhập');
-    expect(find.text('Chạm vào\nmiền ký ức.'), findsOneWidget);
+    expect(find.text('Khám phá\ndi sản Việt'), findsOneWidget);
   });
   apiTestWidgets(
     'QR and recognition handle match, no match and museum context',
