@@ -10,43 +10,7 @@ class HeritagePaper extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) =>
-      CustomPaint(painter: _PaperPainter(), child: child);
-}
-
-class _PaperPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = AppColors.antiqueIvory,
-    );
-    final ink = Paint()
-      ..color = AppColors.mutedGold.withAlpha(14)
-      ..strokeWidth = 0.5;
-    for (var y = 0.0; y < size.height; y += 28) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), ink);
-    }
-    final grain = Paint()..color = AppColors.darkBrown.withAlpha(9);
-    final random = math.Random(17);
-    final grainCount = math.min(1800, (size.width * size.height / 320).round());
-    for (var i = 0; i < grainCount; i++) {
-      canvas.drawCircle(
-        Offset(
-          random.nextDouble() * size.width,
-          random.nextDouble() * size.height,
-        ),
-        0.45,
-        grain,
-      );
-    }
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, 4),
-      Paint()..color = AppColors.deepBurgundy,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+      Material(color: AppColors.scaffoldBackground, child: child);
 }
 
 class HeritageSeal extends StatelessWidget {
@@ -173,10 +137,12 @@ class MuseumPhoto extends StatelessWidget {
     required this.museumId,
     this.imageUrl,
     this.height = 220,
+    this.placeholderColor = AppColors.border,
   });
   final String museumId;
   final String? imageUrl;
   final double height;
+  final Color placeholderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +169,7 @@ class MuseumPhoto extends StatelessWidget {
 
   Widget _buildPlaceholder() => Container(
     height: height,
-    color: AppColors.border,
+    color: placeholderColor,
     alignment: Alignment.center,
     child: const Icon(
       Icons.account_balance_outlined,

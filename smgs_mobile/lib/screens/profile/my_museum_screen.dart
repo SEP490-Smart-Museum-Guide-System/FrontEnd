@@ -1,3 +1,4 @@
+import '../../core/theme/visitor_colors.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/api_config.dart';
 import '../../models/artifact.dart';
@@ -76,21 +77,21 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xff211710),
+    backgroundColor: VisitorColors.background,
     appBar: AppBar(
       centerTitle: true,
       toolbarHeight: 48,
       title: const Text(
         'Bảo tàng của tôi',
         style: TextStyle(
-          color: Color(0xffffe6ba),
+          color: VisitorColors.text,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor: const Color(0xff211710),
+      backgroundColor: VisitorColors.background,
       surfaceTintColor: Colors.transparent,
-      foregroundColor: const Color(0xffffe6ba),
+      foregroundColor: VisitorColors.text,
     ),
     body: SafeArea(
       child: Column(
@@ -100,7 +101,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
             child: Text(
               'Bộ sưu tập những hiện vật bạn đã khám phá',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xffe4cfb0)),
+              style: TextStyle(color: VisitorColors.secondaryText),
             ),
           ),
           if (!TokenManager.hasToken)
@@ -108,7 +109,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
               padding: EdgeInsets.all(24),
               child: Text(
                 'Vui lòng đăng nhập để xem bộ sưu tập.',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: VisitorColors.text),
               ),
             )
           else
@@ -148,24 +149,24 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                           key: ValueKey(_museumId),
                           initialValue: _museumId,
                           isExpanded: true,
-                          dropdownColor: const Color(0xff38271b),
-                          iconEnabledColor: const Color(0xffffe6ba),
-                          style: const TextStyle(color: Color(0xffffe6ba)),
+                          dropdownColor: VisitorColors.secondaryBackground,
+                          iconEnabledColor: VisitorColors.text,
+                          style: const TextStyle(color: VisitorColors.text),
                           decoration: const InputDecoration(
                             filled: true,
-                            fillColor: Color(0xff38271b),
+                            fillColor: VisitorColors.secondaryBackground,
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),
-                              borderSide: BorderSide(color: Color(0xffab8756)),
+                              borderSide: BorderSide(color: VisitorColors.border),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.all(
                                 Radius.circular(10),
                               ),
                               borderSide: BorderSide(
-                                color: Color(0xffffd087),
+                                color: VisitorColors.burgundy,
                                 width: 2,
                               ),
                             ),
@@ -204,7 +205,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                                         'Chưa có hiện vật nào trong bộ sưu tập',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          color: Color(0xffffe6ba),
+                                          color: VisitorColors.text,
                                           fontSize: 20,
                                         ),
                                       ),
@@ -217,7 +218,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                                         'Hãy quét mã QR khi tham quan để xây dựng bảo tàng của riêng bạn!',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          color: Color(0xffe4cfb0),
+                                          color: VisitorColors.secondaryText,
                                         ),
                                       ),
                                     ),
@@ -237,7 +238,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                                       child: const Text(
                                         'Khám phá hiện vật',
                                         style: TextStyle(
-                                          color: Color(0xffffd087),
+                                          color: VisitorColors.burgundy,
                                         ),
                                       ),
                                     ),
@@ -290,7 +291,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                                 Text(
                                   'Kệ ${_page + 1} / $pageCount',
                                   style: const TextStyle(
-                                    color: Color(0xffffe6ba),
+                                    color: VisitorColors.text,
                                   ),
                                 ),
                                 const SizedBox(height: 5),
@@ -299,8 +300,8 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                                   child: LinearProgressIndicator(
                                     value: (_page + 1) / pageCount,
                                     minHeight: 3,
-                                    color: const Color(0xffd4a564),
-                                    backgroundColor: const Color(0xff503a28),
+                                    color: VisitorColors.burgundy,
+                                    backgroundColor: VisitorColors.brandSoft,
                                   ),
                                 ),
                               ],
@@ -326,7 +327,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
   Widget _stat(IconData icon, int count, String label) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 15, color: const Color(0xffd4a564)),
+      Icon(icon, size: 15, color: VisitorColors.burgundy),
       const SizedBox(width: 5),
       Text.rich(
         TextSpan(
@@ -338,7 +339,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
             TextSpan(text: ' $label'),
           ],
         ),
-        style: const TextStyle(color: Color(0xffffe6ba), fontSize: 13),
+        style: const TextStyle(color: VisitorColors.text, fontSize: 13),
       ),
     ],
   );
@@ -348,8 +349,8 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
     return IconButton(
       tooltip: label,
       constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-      color: const Color(0xffffe6ba),
-      disabledColor: const Color(0xff79604b),
+      color: VisitorColors.text,
+      disabledColor: VisitorColors.border,
       icon: Icon(icon),
       onPressed: target < 0 || target >= count
           ? null
@@ -374,13 +375,13 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
       children: [
         const Text(
           'Chưa tải được bộ sưu tập.',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: VisitorColors.text),
         ),
         TextButton(
           onPressed: retry,
           child: const Text(
             'Thử lại',
-            style: TextStyle(color: Color(0xffffd087)),
+            style: TextStyle(color: VisitorColors.burgundy),
           ),
         ),
       ],

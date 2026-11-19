@@ -421,12 +421,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 (c) => ChoiceChip(
                   label: Text(c),
                   selected: _category == c,
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
                   labelStyle: AppTextStyles.bodySmall.copyWith(
                     color: _category == c
-                        ? AppColors.antiqueIvory
+                        ? AppColors.deepBurgundy
                         : AppColors.darkBrown,
                   ),
-                  checkmarkColor: AppColors.antiqueIvory,
+                  checkmarkColor: AppColors.deepBurgundy,
                   onSelected: (_) => setState(() => _category = c),
                 ),
               )

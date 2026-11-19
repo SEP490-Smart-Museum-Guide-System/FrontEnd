@@ -26,9 +26,9 @@ class ProfileScreen extends StatelessWidget {
         eyebrow: 'Người bạn của di sản',
         children: [
           Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.deepBurgundy,
+              color: AppColors.softSand,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -40,7 +40,7 @@ class ProfileScreen extends StatelessWidget {
                     border: Border.all(color: AppColors.mutedGold),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const HeritageSeal(size: 48, light: true),
+                  child: const HeritageSeal(size: 48),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -50,16 +50,14 @@ class ProfileScreen extends StatelessWidget {
                       Text(
                         'SỔ TAY DI SẢN',
                         style: AppTextStyles.caption.copyWith(
-                          color: AppColors.antiqueIvory,
-                          letterSpacing: 1.5,
+                          color: AppColors.primaryText,
+                          letterSpacing: .2,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         AppServices.auth.user?.name ?? 'Người dùng SMGS',
-                        style: AppTextStyles.sectionTitle.copyWith(
-                          color: AppColors.antiqueIvory,
-                        ),
+                        style: AppTextStyles.sectionTitle,
                       ),
                     ],
                   ),

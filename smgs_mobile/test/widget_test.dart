@@ -85,7 +85,7 @@ void main() {
       await screenSize(tester, const Size(360, 800));
       await tester.pumpWidget(const SMGSApp());
       await tester.pumpAndSettle();
-      expect(find.text('Khám phá\ndi sản Việt'), findsOneWidget);
+      expect(find.text('Mỗi hiện vật,\nmột câu chuyện'), findsOneWidget);
       expect(find.text('Home'), findsNothing);
       for (final label in [
         'Khám phá',

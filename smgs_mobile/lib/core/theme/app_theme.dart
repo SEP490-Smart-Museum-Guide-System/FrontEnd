@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'visitor_colors.dart';
 import 'app_text_styles.dart';
 
 class AppTheme {
@@ -16,8 +17,25 @@ class AppTheme {
       onSecondary: AppColors.darkBrown,
       surface: AppColors.antiqueIvory,
       onSurface: AppColors.darkBrown,
+      surfaceContainerLowest: VisitorColors.card,
+      surfaceContainerLow: VisitorColors.secondaryBackground,
+      surfaceContainer: VisitorColors.secondaryBackground,
+      surfaceContainerHigh: VisitorColors.secondaryBackground,
+      surfaceContainerHighest: VisitorColors.secondaryBackground,
+      onSurfaceVariant: VisitorColors.secondaryText,
+      primaryContainer: VisitorColors.brandSoft,
+      onPrimaryContainer: VisitorColors.burgundy,
+      outlineVariant: VisitorColors.border,
       outline: AppColors.border,
       error: AppColors.deepBurgundy,
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: VisitorColors.card,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: VisitorColors.card,
+      surfaceTintColor: Colors.transparent,
     ),
     textTheme: const TextTheme(
       headlineLarge: AppTextStyles.display,
@@ -52,7 +70,7 @@ class AppTheme {
     highlightColor: AppColors.deepBurgundy.withValues(alpha: .055),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.card,
+      fillColor: VisitorColors.secondaryBackground,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -109,7 +127,7 @@ class AppTheme {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.antiqueIvory,
-      selectedColor: AppColors.deepBurgundy,
+      selectedColor: VisitorColors.burgundy,
       side: const BorderSide(color: AppColors.border),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),

@@ -1,19 +1,17 @@
-import '../../widgets/game_tutorial_overlay.dart';
 import 'package:flutter/material.dart';
+import '../../core/theme/visitor_colors.dart';
 
-import '../../widgets/backend_panel.dart';
-import '../../services/backend_api.dart';
-import '../museum/visit_progress_screen.dart';
-import '../../widgets/museum_ui.dart';
-import '../../widgets/collection_cards.dart';
-import '../../widgets/visitor_handbook_sheet.dart';
-import '../../services/app_services.dart';
 import '../../models/experience.dart';
-import '../../data/mock/mock_artifacts.dart';
-import '../../data/visit_store.dart';
-import '../explore/explore_screen.dart';
-import '../artifact/artifact_detail_screen.dart';
-import 'home_sections.dart';
+import '../../models/museum.dart';
+import '../../services/app_services.dart';
+import '../../services/backend_api.dart';
+import '../../services/visitor_experience_api.dart';
+import '../../widgets/game_tutorial_overlay.dart';
+import '../../widgets/museum_ui.dart';
+import '../../widgets/visitor_handbook_sheet.dart';
+import '../museum/museum_detail_screen.dart';
+import '../museum/visit_progress_screen.dart';
+import '../profile/my_museum_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.onExplore, required this.onScan});
@@ -23,442 +21,154 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _scroll = ScrollController();
-  final _search = TextEditingController();
+  late Future<List<Map<String, dynamic>>> _visits = _loadVisits();
+
+  Future<List<Map<String, dynamic>>> _loadVisits() {
+    final future = BackendApi.list('visits/me?status=InProgress');
+    // FutureBuilder subscribes next frame; retain even immediate failures for its error UI.
+    future.ignore();
+    return future;
+  }
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _checkFirstTimeOnboarding(),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOnboarding());
   }
 
-  Future<void> _checkFirstTimeOnboarding() async {
+  Future<void> _checkOnboarding() async {
     final user = AppServices.auth.user;
-    if (user != null && user.role == UserRole.visitor) {
-      final shouldShow = await GameTutorialOverlay.shouldShow(user.email);
-      if (shouldShow && mounted) {
-        // Đợi các phần tử vẽ xong tọa độ màn hình
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          HomeScreenTour.start(context);
-        }
-      }
-    }
+    if (user == null || user.role != UserRole.visitor) return;
+    final show = await GameTutorialOverlay.shouldShow(user.email);
+    if (show && mounted) HomeScreenTour.start(context);
+  }
+
+  void _reloadVisits() {
+    setState(() {
+      _visits = _loadVisits();
+    });
+  }
+
+  Future<void> _openVisit(int id) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => VisitProgressScreen(visitId: id)),
+    );
+    if (mounted) _reloadVisits();
+  }
+
+  Future<void> _openMuseum(Museum museum) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => MuseumDetailScreen(museum: museum)),
+    );
+    if (mounted) _reloadVisits();
   }
 
   @override
-  void dispose() {
-    _scroll.dispose();
-    _search.dispose();
-    super.dispose();
-  }
-
-  String get _date {
-    final now = DateTime.now();
-    final day = [
-      'Thứ Hai',
-      'Thứ Ba',
-      'Thứ Tư',
-      'Thứ Năm',
-      'Thứ Sáu',
-      'Thứ Bảy',
-      'Chủ Nhật',
-    ][now.weekday - 1];
-    return '$day, ${now.day} tháng ${now.month}';
-  }
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    child: CustomScrollView(
-      key: const PageStorageKey('home-stories'),
-      controller: _scroll,
-      slivers: [
-        SliverAppBar(
-          pinned: true,
-          automaticallyImplyLeading: false,
-          toolbarHeight: 72,
-          backgroundColor: AppColors.antiqueIvory,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 0,
-          titleSpacing: 24,
-          title: AnimatedBuilder(
-            animation: _scroll,
-            builder: (context, _) {
-              final offset = _scroll.hasClients ? _scroll.offset : 0.0;
-              return Row(
-                children: [
-                  Text(
-                    'SMGS',
-                    style: AppTextStyles.sectionTitle.copyWith(
-                      fontSize: 23,
-                      color: AppColors.deepBurgundy,
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(width: 1, height: 30, color: AppColors.border),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      offset > 220
-                          ? 'Theo dấu\ndi sản Việt'
-                          : 'Cẩm nang\nbảo tàng Việt',
-                      style: AppTextStyles.caption,
-                    ),
-                  ),
-                  IconButton(
-                    key: HomeScreenTour.handbookBtnKey,
-                    icon: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.mutedGold.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.mutedGold.withValues(alpha: 0.5),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.menu_book_rounded,
-                        color: AppColors.deepBurgundy,
-                        size: 20,
-                      ),
-                    ),
-                    tooltip: 'Sổ tay hướng dẫn & Cẩm nang',
-                    onPressed: () => VisitorHandbookSheet.show(context),
-                  ),
-                  const SizedBox(width: 8),
-                  const HeritageSeal(size: 36),
-                ],
-              );
-            },
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(2),
-            child: AnimatedBuilder(
-              animation: _scroll,
-              builder: (context, _) => LinearProgressIndicator(
-                key: const ValueKey('home-reading-progress'),
-                value:
-                    _scroll.hasClients &&
-                        _scroll.position.hasContentDimensions &&
-                        _scroll.position.maxScrollExtent > 0
-                    ? (_scroll.offset / _scroll.position.maxScrollExtent).clamp(
-                        0.0,
-                        1.0,
-                      )
-                    : 0,
-                minHeight: 2,
-                color: AppColors.deepBurgundy,
-                backgroundColor: AppColors.border,
-                semanticsLabel: 'Tiến độ khám phá trang chủ',
-              ),
+  Widget build(BuildContext context) {
+    final museums = AppServices.catalog.museums;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+          primary: VisitorColors.burgundy,
+          onPrimary: VisitorColors.background,
+          surface: VisitorColors.background,
+          onSurface: VisitorColors.text,
+          outline: VisitorColors.border,
+        ),
+        iconTheme: const IconThemeData(color: VisitorColors.text),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: VisitorColors.burgundy,
+            minimumSize: const Size(48, 48),
+            textStyle: AppTextStyles.buttonText.copyWith(
+              color: VisitorColors.burgundy,
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _date,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.deepBurgundy,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.wb_sunny_outlined,
-                      size: 19,
-                      color: AppColors.mutedGold,
-                    ),
-                  ],
-                ),
-                BackendPanel(
-                  resourceKey: 'home-active-visit',
-                  load: () => BackendApi.list('visits/me?status=InProgress'),
-                  builder: (data, reload) {
-                    final list = (data as List).cast<Map<String, dynamic>>();
-                    if (list.isEmpty) return const SizedBox.shrink();
-                    final v = list.first;
-                    final mName = AppServices.catalog.museumName(
-                      v['museumId'].toString(),
-                    );
-                    return Container(
-                      margin: const EdgeInsets.only(top: 14),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.mutedGold,
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.darkBrown.withValues(alpha: 0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: VisitorColors.burgundy,
+          linearTrackColor: VisitorColors.border,
+        ),
+      ),
+      child: ColoredBox(
+        key: const ValueKey('home-white-surface'),
+        color: VisitorColors.background,
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: CustomScrollView(
+                key: const PageStorageKey('home-discovery'),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.deepBurgundy.withValues(
-                                alpha: 0.1,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.location_on,
-                              color: AppColors.deepBurgundy,
-                              size: 22,
-                            ),
-                          ),
+                          const HeritageSeal(size: 32),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.deepBurgundy,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'ĐANG THAM QUAN',
-                                        style: TextStyle(
-                                          color: AppColors.antiqueIvory,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '#${v['id']}',
-                                      style: AppTextStyles.caption,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 3),
                                 Text(
-                                  mName,
-                                  style: AppTextStyles.cardTitle.copyWith(
-                                    fontSize: 15,
+                                  'SMGS',
+                                  style: AppTextStyles.sectionTitle.copyWith(
+                                    fontSize: 22,
+                                    color: VisitorColors.text,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Khám phá di sản Việt',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: VisitorColors.secondaryText,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.deepBurgundy,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              minimumSize: const Size(0, 36),
+                          IconButton(
+                            key: HomeScreenTour.handbookBtnKey,
+                            tooltip: 'Cẩm nang tham quan',
+                            constraints: const BoxConstraints(
+                              minWidth: 48,
+                              minHeight: 48,
                             ),
-                            onPressed: () {
-                              openPage(
-                                context,
-                                VisitProgressScreen(visitId: v['id'] as int),
-                              );
-                              reload();
-                            },
-                            child: const Text(
-                              'Xem tiến độ',
-                              style: TextStyle(fontSize: 12),
+                            icon: const Icon(
+                              Icons.menu_book_outlined,
+                              size: 24,
                             ),
+                            onPressed: () => VisitorHandbookSheet.show(context),
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.mutedGold.withAlpha(28),
-                      border: Border.all(
-                        color: AppColors.mutedGold.withAlpha(110),
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.mutedGold,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Khám phá bảo tàng · Dữ liệu trực tiếp',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.deepBurgundy,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      right: -8,
-                      top: -20,
-                      child: Opacity(
-                        opacity: 0.07,
-                        child: const HeritageSeal(size: 118),
-                      ),
-                    ),
-                    Text(
-                      'Khám phá\ndi sản Việt',
-                      style: AppTextStyles.display.copyWith(
-                        fontSize: 38,
-                        height: 1.2,
-                        color: AppColors.deepBurgundy,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: -1.4,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Tìm bảo tàng, nghe chuyện hiện vật và chọn lối tham quan',
-                  style: AppTextStyles.bodySmall,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 54,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: AppColors.deepBurgundy,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  key: HomeScreenTour.searchBarKey,
-                  child: TextField(
-                    controller: _search,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (value) => openPage(
-                      context,
-                      ExploreScreen(
-                        standalone: true,
-                        initialQuery: value,
-                        initialArtifacts: value.trim().isNotEmpty,
-                      ),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Tìm kiếm di sản',
-                      hintText: 'Tìm bảo tàng, hiện vật…',
-                      prefixIcon: const Icon(
-                        Icons.search_outlined,
-                        color: AppColors.deepBurgundy,
-                      ),
-                      suffixIcon: IconButton(
-                        tooltip: 'Tìm kiếm',
-                        icon: const Icon(Icons.arrow_forward),
-                        onPressed: () => openPage(
-                          context,
-                          ExploreScreen(
-                            standalone: true,
-                            initialQuery: _search.text,
-                            initialArtifacts: _search.text.trim().isNotEmpty,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  key: HomeScreenTour.scanCardKey,
-                  child: HoverLift(
-                    enabled: false,
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      clipBehavior: Clip.antiAlias,
-                      child: Ink(
-                        decoration: const BoxDecoration(
-                          color: AppColors.deepBurgundy,
-                        ),
-                        child: Stack(
-                          children: [
-                            const Positioned(
-                              right: -28,
-                              top: -32,
-                              child: Opacity(
-                                opacity: 0.1,
-                                child: HeritageSeal(size: 112, light: true),
-                              ),
-                            ),
-                            InkWell(
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _DiscoveryHero(museum: museums.firstOrNull),
+                          const SizedBox(height: 24),
+                          Material(
+                            key: HomeScreenTour.scanCardKey,
+                            color: VisitorColors.burgundy,
+                            borderRadius: BorderRadius.circular(16),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
                               onTap: widget.onScan,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.antiqueIvory.withAlpha(
-                                          12,
-                                        ),
-                                        border: Border.all(
-                                          color: AppColors.mutedGold,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.qr_code_scanner,
-                                        color: AppColors.antiqueIvory,
-                                        size: 25,
-                                      ),
+                                    const Icon(
+                                      Icons.qr_code_scanner,
+                                      color: VisitorColors.background,
+                                      size: 28,
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
@@ -468,381 +178,460 @@ class _HomeScreenState extends State<HomeScreen> {
                                         children: [
                                           Text(
                                             'Giải mã một hiện vật',
-                                            style: AppTextStyles.sectionTitle
+                                            style: AppTextStyles.bodyLarge
                                                 .copyWith(
-                                                  fontSize: 18,
-                                                  color: AppColors.antiqueIvory,
+                                                  color:
+                                                      VisitorColors.background,
+                                                  fontWeight: FontWeight.w600,
+                                                  height: 1.4,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Quét mã QR để khám phá câu chuyện phía sau hiện vật',
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                  color:
+                                                      VisitorColors.background,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  'Quét hiện vật',
+                                                  style: AppTextStyles.bodySmall
+                                                      .copyWith(
+                                                        color: VisitorColors
+                                                            .background,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              Icon(
+                                                Icons.arrow_forward,
+                                                size: 18,
+                                                color: VisitorColors.background,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          Column(
+                            key: HomeScreenTour.museumSectionKey,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (museums.isNotEmpty) ...[
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 12,
+                                  children: [
+                                    Text(
+                                      'Bảo tàng nổi bật',
+                                      style: AppTextStyles.sectionTitle
+                                          .copyWith(
+                                            color: VisitorColors.text,
+                                            fontSize: 22,
+                                          ),
+                                    ),
+                                    TextButton(
+                                      onPressed: widget.onExplore,
+                                      child: Text('Xem tất cả'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final width = museums.length == 1
+                                        ? constraints.maxWidth
+                                        : constraints.maxWidth * .86;
+                                    return SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          for (
+                                            var i = 0;
+                                            i < museums.length;
+                                            i++
+                                          ) ...[
+                                            if (i > 0)
+                                              const SizedBox(width: 16),
+                                            SizedBox(
+                                              width: width,
+                                              child: _MuseumPreview(
+                                                museum: museums[i],
+                                                onTap: () =>
+                                                    _openMuseum(museums[i]),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 28),
+                              ],
+                            ],
+                          ),
+                          FutureBuilder<List<Map<String, dynamic>>>(
+                            future: _visits,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState !=
+                                  ConnectionState.done) {
+                                return Semantics(
+                                  label: 'Đang tải hành trình',
+                                  child: Container(
+                                    key: const ValueKey('home-visit-loading'),
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      color: VisitorColors.secondaryBackground,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    alignment: Alignment.centerLeft,
+                                    padding: const EdgeInsets.all(20),
+                                    child: Text(
+                                      'Đang tải hành trình…',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: VisitorColors.secondaryText,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              if (snapshot.hasError) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Chưa tải được hành trình',
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: VisitorColors.text,
+                                      ),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: _reloadVisits,
+                                      icon: const Icon(Icons.refresh, size: 18),
+                                      label: Text('Thử lại'),
+                                    ),
+                                  ],
+                                );
+                              }
+                              final visit = snapshot.data!.firstOrNull;
+                              return _JourneyCard(
+                                visit: visit,
+                                onPressed: visit == null
+                                    ? widget.onExplore
+                                    : () => _openVisit(visit['id'] as int),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          Material(
+                            key: HomeScreenTour.collectionKey,
+                            color: VisitorColors.secondaryBackground,
+                            borderRadius: BorderRadius.circular(16),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () =>
+                                  openPage(context, const MyMuseumScreen()),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.collections_bookmark_outlined,
+                                      size: 24,
+                                      color: VisitorColors.burgundy,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Bảo tàng cá nhân',
+                                            style: AppTextStyles.bodyMedium
+                                                .copyWith(
+                                                  color: VisitorColors.text,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Quét mã · Mở câu chuyện',
+                                            'Lưu giữ những hiện vật bạn đã khám phá',
                                             style: AppTextStyles.caption
                                                 .copyWith(
-                                                  color: AppColors.antiqueIvory,
+                                                  color: VisitorColors
+                                                      .secondaryText,
                                                 ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 34,
-                                      height: 34,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.antiqueIvory.withAlpha(
-                                          18,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.arrow_forward,
-                                        color: AppColors.antiqueIvory,
-                                        size: 20,
-                                      ),
+                                    const SizedBox(width: 12),
+                                    const Icon(
+                                      Icons.arrow_forward,
+                                      size: 20,
+                                      color: VisitorColors.secondaryText,
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                HoverLift(
-                  enabled: false,
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    clipBehavior: Clip.antiAlias,
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        color: AppColors.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.mutedGold.withValues(alpha: 0.55),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.mutedGold.withValues(alpha: 0.12),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: InkWell(
-                        onTap: () => VisitorHandbookSheet.show(context),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 13,
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.mutedGold.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.mutedGold.withValues(
-                                      alpha: 0.5,
-                                    ),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.menu_book_rounded,
-                                  color: AppColors.deepBurgundy,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'SỔ TAY HƯỚNG DẪN THAM QUAN',
-                                      style: TextStyle(
-                                        fontFamily: AppTextStyles.sansFamily,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.2,
-                                        color: AppColors.mutedGold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      'Cẩm nang công nghệ, quy định & tiện ích',
-                                      style: TextStyle(
-                                        fontFamily: AppTextStyles.sansFamily,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.darkBrown,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 14,
-                                color: AppColors.mutedGold,
-                              ),
-                            ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoveryHero extends StatelessWidget {
+  const _DiscoveryHero({this.museum});
+  final Museum? museum;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: AspectRatio(
+          aspectRatio: 1.8,
+          child: museum != null && museum!.imageUrl.isNotEmpty
+              ? MuseumPhoto(
+                  museumId: museum!.id,
+                  imageUrl: museum!.imageUrl,
+                  placeholderColor: VisitorColors.secondaryBackground,
+                )
+              : Image.asset(
+                  'assets/images/national-museum-web.jpg',
+                  fit: BoxFit.cover,
+                  semanticLabel: 'Kiến trúc Bảo tàng Lịch sử Quốc gia',
+                  errorBuilder: (_, _, _) => const HeritageArt(height: 180),
+                ),
+        ),
+      ),
+      const SizedBox(height: 20),
+      Text(
+        'Mỗi hiện vật,\nmột câu chuyện',
+        style: AppTextStyles.display.copyWith(
+          color: VisitorColors.text,
+          fontSize: 28,
+          height: 1.3,
+          letterSpacing: -.4,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        'Khám phá lịch sử và văn hóa Việt Nam theo cách của bạn',
+        style: AppTextStyles.bodySmall.copyWith(
+          color: VisitorColors.secondaryText,
+        ),
+      ),
+    ],
+  );
+}
+
+class _MuseumPreview extends StatelessWidget {
+  const _MuseumPreview({required this.museum, required this.onTap});
+  final Museum museum;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+    key: ValueKey('home-museum:${museum.id}'),
+    color: VisitorColors.background,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: const BorderSide(color: VisitorColors.border),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MuseumPhoto(
+            museumId: museum.id,
+            imageUrl: museum.imageUrl,
+            placeholderColor: VisitorColors.secondaryBackground,
+            height: 160,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  museum.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sectionTitle.copyWith(
+                    color: VisitorColors.text,
+                    fontSize: 20,
+                  ),
+                ),
+                if (museum.location.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(
+                          Icons.place_outlined,
+                          size: 16,
+                          color: VisitorColors.secondaryText,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          museum.location,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption.copyWith(
+                            color: VisitorColors.secondaryText,
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 24),
-                const Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Cuộn tiếp, mở một miền ký ức',
-                        style: AppTextStyles.caption,
-                      ),
-                    ),
-                    SoftEntrance(
-                      offset: -8,
-                      child: Icon(
-                        Icons.south,
-                        size: 19,
-                        color: AppColors.deepBurgundy,
-                      ),
-                    ),
-                  ],
-                ),
-                ChapterHeading(
-                  number: '01',
-                  title: 'Hẹn bạn ở bảo tàng',
-                  action: 'Tất cả',
-                  onTap: widget.onExplore,
-                ),
-                Container(
-                  key: HomeScreenTour.museumSectionKey,
-                  child: SoftEntrance(
-                    offset: 0,
-                    child: AppServices.catalog.museums.isEmpty
-                        ? const EmptyState(
-                            title: 'Chưa có bảo tàng',
-                            message: 'Chưa có bảo tàng công khai từ máy chủ.',
-                          )
-                        : MuseumCard(
-                            museum: AppServices.catalog.museums.first,
-                            featured: true,
-                          ),
-                  ),
-                ),
-                const ChapterHeading(
-                  number: '02',
-                  title: 'Trải nghiệm AI / 3D mẫu',
-                ),
-                Container(
-                  key: HomeScreenTour.aiExperienceKey,
-                  child: SoftEntrance(
-                    offset: 0,
-                    child: _ArtifactEditorial(
-                      onTap: () => openPage(
-                        context,
-                        ArtifactDetailScreen(
-                          artifact: mockArtifacts.first,
-                          museumName: 'Mẫu trải nghiệm AI / 3D',
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const ChapterHeading(number: '03', title: 'Đi theo sự tò mò'),
-                const Text(
-                  'Chọn một cánh cửa để bước vào lịch sử.',
-                  style: AppTextStyles.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                const HomeThemes(),
-                const ChapterHeading(number: '04', title: 'Một giờ cho di sản'),
-                const SoftEntrance(
-                  offset: 0,
-                  child: HoverLift(enabled: false, child: HomeRouteCard()),
-                ),
-                const ChapterHeading(number: '05', title: 'Một điểm hẹn khác'),
-                const SoftEntrance(offset: 0, child: HomeMuseumStory()),
-                const ChapterHeading(
-                  number: '06',
-                  title: 'Bạn hiểu di sản đến đâu?',
-                ),
-                const SoftEntrance(
-                  offset: 0,
-                  child: HoverLift(enabled: false, child: HomeQuizCard()),
-                ),
-                const ChapterHeading(
-                  number: '07',
-                  title: 'Trước khi lên đường',
-                ),
-                const SoftEntrance(
-                  offset: 0,
-                  child: HoverLift(enabled: false, child: HomeVisitGuide()),
-                ),
-                ListenableBuilder(
-                  listenable: VisitStore.instance,
-                  builder: (context, _) => VisitStore.instance.viewed.isEmpty
-                      ? const SizedBox.shrink()
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const ChapterHeading(
-                              number: '08',
-                              title: 'Trang sách còn mở',
-                            ),
-                            SoftEntrance(
-                              offset: 0,
-                              child: ArtifactCard(
-                                artifact: VisitStore.instance.viewed.first,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-                const SizedBox(height: 28),
-                const Row(
-                  children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: HeritageSeal(size: 34),
-                    ),
-                    Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Đi để hiểu. Chạm để nhớ.',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.sectionTitle,
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Gìn giữ ký ức · Kết nối di sản',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.caption,
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    if (reduceHeritageMotion(context)) {
-                      _scroll.jumpTo(0);
-                    } else {
-                      _scroll.animateTo(
-                        0,
-                        duration: const Duration(milliseconds: 620),
-                        curve: HeritageMotion.curve,
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.north, size: 18),
-                  label: const Text('Về đầu trang'),
-                ),
+                ],
               ],
             ),
           ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _JourneyCard extends StatelessWidget {
+  const _JourneyCard({required this.visit, required this.onPressed});
+  final Map<String, dynamic>? visit;
+  final VoidCallback onPressed;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: VisitorColors.secondaryBackground,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.route_outlined,
+              size: 20,
+              color: VisitorColors.burgundy,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                visit == null ? 'Hành trình của bạn' : 'Đang tham quan',
+                style: AppTextStyles.caption.copyWith(
+                  color: VisitorColors.secondaryText,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          visit == null ? 'Bắt đầu hành trình khám phá' : 'Tiếp tục hành trình',
+          style: AppTextStyles.sectionTitle.copyWith(
+            color: VisitorColors.text,
+            fontSize: 22,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          visit == null
+              ? 'Chọn một bảo tàng và bắt đầu chuyến đi theo cách của bạn'
+              : AppServices.catalog.museumName(visit!['museumId'].toString()),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: VisitorColors.secondaryText,
+          ),
+        ),
+        if (visit != null) ...[
+          const SizedBox(height: 12),
+          _VisitProgress(key: ObjectKey(visit), visitId: visit!['id'] as int),
+        ],
+        const SizedBox(height: 12),
+        TextButton.icon(
+          onPressed: onPressed,
+          iconAlignment: IconAlignment.end,
+          icon: const Icon(Icons.arrow_forward, size: 18),
+          label: Text(visit == null ? 'Khám phá bảo tàng' : 'Xem tiến độ'),
         ),
       ],
     ),
   );
 }
 
-class _ArtifactEditorial extends StatelessWidget {
-  const _ArtifactEditorial({required this.onTap});
-  final VoidCallback onTap;
+class _VisitProgress extends StatefulWidget {
+  const _VisitProgress({super.key, required this.visitId});
+  final int visitId;
   @override
-  Widget build(BuildContext context) => HoverLift(
-    enabled: false,
-    child: Material(
-      color: AppColors.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                SizedBox(
-                  height: 236,
-                  child: Image.asset(
-                    'assets/images/ngoc-lu-web.jpg',
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    semanticLabel: 'Trống đồng Ngọc Lũ, văn hóa Đông Sơn',
-                  ),
-                ),
-                Positioned(
-                  top: 14,
-                  left: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    color: AppColors.antiqueIvory,
-                    child: const Eyebrow('Dấu ấn Đông Sơn'),
-                  ),
-                ),
-              ],
+  State<_VisitProgress> createState() => _VisitProgressState();
+}
+
+class _VisitProgressState extends State<_VisitProgress> {
+  late final _progress = VisitorExperienceApi.progress(widget.visitId);
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
+    future: _progress,
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) return const SizedBox.shrink();
+      final stops = (snapshot.data!['stops'] as List? ?? [])
+          .cast<Map<String, dynamic>>();
+      if (stops.isEmpty) return const SizedBox.shrink();
+      final visited = stops
+          .where((stop) => stop['lastVisitedAt'] != null)
+          .length;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Đã khám phá $visited / ${stops.length} hiện vật',
+            style: AppTextStyles.caption.copyWith(
+              color: VisitorColors.secondaryText,
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Tiếng vọng\ntừ ngàn xưa.',
-                    style: AppTextStyles.cardTitle,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Lần theo những vòng hoa văn, gặp lại một nền văn minh.',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Khám phá trống đồng',
-                          style: AppTextStyles.buttonText.copyWith(
-                            color: AppColors.deepBurgundy,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Icon(
-                        Icons.arrow_forward,
-                        color: AppColors.deepBurgundy,
-                        size: 22,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: visited / stops.length,
+            minHeight: 4,
+            borderRadius: BorderRadius.circular(4),
+            semanticsLabel: 'Tiến độ khám phá hiện vật',
+          ),
+        ],
+      );
+    },
   );
 }

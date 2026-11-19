@@ -124,32 +124,22 @@ void main() {
       await tester.pumpAndSettle();
       for (final tab in ['Trang chủ', 'Khám phá']) {
         await tapText(tester, tab);
-        for (
-          var i = 0;
-          i < 20 && find.text('Bước vào bảo tàng').evaluate().isEmpty;
-          i++
-        ) {
-          await tester.drag(
-            find.byType(Scrollable).first,
-            const Offset(0, -220),
-          );
-          await tester.pumpAndSettle();
-        }
-        await tester.dragUntilVisible(
-          find.text('Bước vào bảo tàng').first,
-          find.byType(Scrollable).first,
-          const Offset(0, -220),
+        final entry = tab == 'Trang chủ'
+            ? find.byKey(const ValueKey('home-museum:museum_national'))
+            : find.text('Bảo tàng Lịch sử Quốc gia');
+        await tester.scrollUntilVisible(
+          entry,
+          200,
+          scrollable: find
+              .byWidgetPredicate(
+                (widget) =>
+                    widget is Scrollable &&
+                    axisDirectionToAxis(widget.axisDirection) == Axis.vertical,
+              )
+              .first,
         );
         await tester.pumpAndSettle();
-        // The home masthead stays pinned above the scrolling content.
-        if (tester.getCenter(find.text('Bước vào bảo tàng').first).dy < 100) {
-          await tester.drag(
-            find.byType(Scrollable).first,
-            const Offset(0, 150),
-          );
-          await tester.pumpAndSettle();
-        }
-        await tester.tap(find.text('Bước vào bảo tàng').first);
+        await tester.tap(entry);
         await tester.pumpAndSettle();
         expect(find.byType(StoryScaffold), findsOneWidget);
         expect(tester.takeException(), isNull);

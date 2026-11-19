@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/museum_ui.dart';
+import '../core/theme/visitor_colors.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/explore/explore_screen.dart';
 import '../screens/scan/scan_screen.dart';
@@ -15,6 +16,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  bool _scanPressed = false;
   final _pages = PageController();
   late final List<Widget> _screens = [
     HomeScreen(onExplore: () => _select(1), onScan: () => _select(2)),
@@ -64,119 +66,147 @@ class _MainNavigationState extends State<MainNavigation> {
             HeroMode(enabled: _selectedIndex == index, child: _screens[index]),
       ),
     ),
-    bottomNavigationBar: Container(
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        border: Border(top: BorderSide(color: AppColors.mutedGold)),
-      ),
+    bottomNavigationBar: ColoredBox(
+      color: _selectedIndex == 0
+          ? VisitorColors.background
+          : Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: List.generate(_items.length, (i) {
-            final item = _items[i];
-            final active = _selectedIndex == i;
-            return Expanded(
-              child: Semantics(
-                selected: active,
-                button: true,
-                label: item.label,
-                child: ExcludeSemantics(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _select(i),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 82),
+        minimum: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Container(
+          key: const ValueKey('visitor-bottom-nav'),
+          decoration: BoxDecoration(
+            color: VisitorColors.background,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x10000000),
+                blurRadius: 20,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: VisitorColors.background,
+            borderRadius: BorderRadius.circular(24),
+            clipBehavior: Clip.antiAlias,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List.generate(_items.length, (i) {
+                final item = _items[i];
+                final active = _selectedIndex == i;
+                final scan = i == 2;
+                return Expanded(
+                  child: Semantics(
+                    key: ValueKey('visitor-tab:$i'),
+                    selected: active,
+                    button: true,
+                    label: item.label,
+                    child: ExcludeSemantics(
+                      child: InkWell(
+                        onTap: () => _select(i),
+                        onHighlightChanged: scan
+                            ? (pressed) =>
+                                  setState(() => _scanPressed = pressed)
+                            : null,
+                        splashColor: VisitorColors.burgundy.withValues(
+                          alpha: .06,
+                        ),
+                        highlightColor: VisitorColors.burgundy.withValues(
+                          alpha: .04,
+                        ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              AnimatedContainer(
-                                duration: reduceHeritageMotion(context)
-                                    ? Duration.zero
-                                    : HeritageMotion.fast,
-                                curve: HeritageMotion.curve,
-                                height: 3,
-                                width: 28,
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? AppColors.deepBurgundy
-                                      : Colors.transparent,
-                                  borderRadius: const BorderRadius.vertical(
-                                    bottom: Radius.circular(3),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              AnimatedContainer(
-                                duration: reduceHeritageMotion(context)
-                                    ? Duration.zero
-                                    : HeritageMotion.fast,
-                                curve: HeritageMotion.curve,
-                                width: active ? 46 : 40,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: i == 2
-                                      ? AppColors.deepBurgundy
-                                      : active
-                                      ? AppColors.deepBurgundy.withAlpha(22)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: active && i != 2
-                                      ? Border.all(
-                                          color: AppColors.deepBurgundy
-                                              .withAlpha(32),
+                              SizedBox(
+                                height: 54,
+                                child: Center(
+                                  child: scan
+                                      ? AnimatedScale(
+                                          key: const ValueKey(
+                                            'visitor-scan-press',
+                                          ),
+                                          scale: _scanPressed ? .96 : 1,
+                                          duration:
+                                              reduceHeritageMotion(context)
+                                              ? Duration.zero
+                                              : HeritageMotion.fast,
+                                          curve: HeritageMotion.curve,
+                                          child: Container(
+                                            width: 54,
+                                            height: 54,
+                                            decoration: BoxDecoration(
+                                              color: VisitorColors.burgundy,
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Color(0x16000000),
+                                                  blurRadius: 6,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.qr_code_scanner,
+                                              size: 24,
+                                              color: VisitorColors.background,
+                                            ),
+                                          ),
                                         )
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: AnimatedScale(
-                                  duration: reduceHeritageMotion(context)
-                                      ? Duration.zero
-                                      : HeritageMotion.fast,
-                                  curve: HeritageMotion.curve,
-                                  scale: active ? 1.08 : 1,
-                                  child: Icon(
-                                    item.icon,
-                                    size: 23,
-                                    color: i == 2
-                                        ? AppColors.antiqueIvory
-                                        : active
-                                        ? AppColors.deepBurgundy
-                                        : AppColors.secondaryText,
-                                  ),
+                                      : AnimatedContainer(
+                                          duration:
+                                              reduceHeritageMotion(context)
+                                              ? Duration.zero
+                                              : HeritageMotion.fast,
+                                          curve: HeritageMotion.curve,
+                                          width: 44,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: active
+                                                ? VisitorColors.brandSoft
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            item.icon,
+                                            size: 22,
+                                            color: active
+                                                ? VisitorColors.burgundy
+                                                : VisitorColors.secondaryText,
+                                          ),
+                                        ),
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              AnimatedDefaultTextStyle(
-                                duration: reduceHeritageMotion(context)
-                                    ? Duration.zero
-                                    : HeritageMotion.fast,
-                                curve: HeritageMotion.curve,
+                              Text(
+                                item.label,
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.caption.copyWith(
+                                  fontSize: 11,
+                                  letterSpacing: 0,
                                   fontWeight: active
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
                                   color: active
-                                      ? AppColors.deepBurgundy
-                                      : AppColors.secondaryText,
+                                      ? VisitorColors.burgundy
+                                      : VisitorColors.secondaryText,
                                 ),
-                                child: Text(item.label),
                               ),
-                              const SizedBox(height: 10),
                             ],
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            );
-          }),
+                );
+              }),
+            ),
+          ),
         ),
       ),
     ),

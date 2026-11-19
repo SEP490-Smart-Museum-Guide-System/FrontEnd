@@ -1,3 +1,4 @@
+import '../../core/theme/visitor_colors.dart';
 import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/artifact_scan_service.dart';
@@ -430,9 +431,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     final labelWidth = map?.imageWidth.clamp(0.0, 156.0).toDouble() ?? 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5F0),
+      backgroundColor: VisitorColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F5F0),
+        backgroundColor: VisitorColors.background,
         elevation: 0,
         leading: const BackButton(color: AppColors.deepBurgundy),
         title: Column(
@@ -753,7 +754,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                     children: [
                       FloatingActionButton.small(
                         heroTag: 'qr_scan_btn',
-                        backgroundColor: const Color(0xFF7B3B31),
+                        backgroundColor: VisitorColors.burgundy,
                         tooltip: 'Quét QR xác định vị trí',
                         onPressed: () => setState(() {
                           _showQrScanner = true;
@@ -929,10 +930,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                             Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFAF7F2),
+                                color: VisitorColors.card,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: const Color(0xFFEADCC8),
+                                  color: VisitorColors.border,
                                 ),
                               ),
                               child: Column(
@@ -948,7 +949,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                           style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF800020),
+                                            color: VisitorColors.burgundy,
                                           ),
                                         ),
                                       ),
@@ -1077,7 +1078,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                 color: Color(0xFF94A3B8),
                               ),
                               filled: true,
-                              fillColor: const Color(0xFFF8F5EE),
+                              fillColor: VisitorColors.secondaryBackground,
                               contentPadding: const EdgeInsets.symmetric(
                                 vertical: 8,
                               ),

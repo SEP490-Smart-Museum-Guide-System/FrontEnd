@@ -41,12 +41,18 @@ class GameTutorialOverlay extends StatefulWidget {
     return 'has_seen_game_tutorial_v1_${tourId}_$e';
   }
 
-  static Future<bool> shouldShow([String? email, String tourId = 'home']) async {
+  static Future<bool> shouldShow([
+    String? email,
+    String tourId = 'home',
+  ]) async {
     final prefs = await SharedPreferences.getInstance();
     return !(prefs.getBool(prefKeyFor(email, tourId)) ?? false);
   }
 
-  static Future<void> markCompleted([String? email, String tourId = 'home']) async {
+  static Future<void> markCompleted([
+    String? email,
+    String tourId = 'home',
+  ]) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(prefKeyFor(email, tourId), true);
   }
@@ -123,7 +129,25 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
       CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _resolveTargetPosition());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _resolveTargetPosition(),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pulseController.stop();
+      _bounceController.stop();
+      _pulseController.value = 0;
+      _bounceController.value = 0;
+    } else {
+      if (!_pulseController.isAnimating) _pulseController.repeat(reverse: true);
+      if (!_bounceController.isAnimating) {
+        _bounceController.repeat(reverse: true);
+      }
+    }
   }
 
   @override
@@ -143,7 +167,9 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
       try {
         await Scrollable.ensureVisible(
           targetContext,
-          duration: const Duration(milliseconds: 280),
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 280),
           curve: Curves.easeInOut,
           alignment: 0.5,
         );
@@ -177,7 +203,9 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
         _currentIndex++;
         _targetRect = null;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _resolveTargetPosition());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _resolveTargetPosition(),
+      );
     } else {
       // Khi nhấn "Hoàn thành" ở bước cuối, đóng ngay lập tức
       widget.onComplete();
@@ -193,7 +221,8 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
     final screenSize = MediaQuery.of(context).size;
     final currentStep = widget.steps[_currentIndex];
 
-    final target = _targetRect ??
+    final target =
+        _targetRect ??
         Rect.fromCenter(
           center: Offset(screenSize.width / 2, screenSize.height / 2),
           width: 80,
@@ -201,6 +230,12 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
         );
 
     final placeCardBelow = target.top < screenSize.height * 0.45;
+    final cardOffset = placeCardBelow
+        ? (target.bottom + 68).clamp(20.0, screenSize.height - 280.0)
+        : (screenSize.height - target.top + 20).clamp(
+            20.0,
+            screenSize.height - 280.0,
+          );
 
     return Material(
       color: Colors.transparent,
@@ -243,7 +278,10 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
           AnimatedBuilder(
             animation: _bounceAnimation,
             builder: (context, _) {
-              final double pointerX = (target.center.dx - 22).clamp(16.0, screenSize.width - 60.0);
+              final double pointerX = (target.center.dx - 22).clamp(
+                16.0,
+                screenSize.width - 60.0,
+              );
               final double pointerY = placeCardBelow
                   ? target.bottom + 12 + _bounceAnimation.value
                   : target.top - 54 - _bounceAnimation.value;
@@ -285,169 +323,156 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                 ? (target.bottom + 68).clamp(20.0, screenSize.height - 280.0)
                 : null,
             bottom: !placeCardBelow
-                ? (screenSize.height - target.top + 20).clamp(20.0, screenSize.height - 280.0)
+                ? (screenSize.height - target.top + 20).clamp(
+                    20.0,
+                    screenSize.height - 280.0,
+                  )
                 : null,
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.antiqueIvory,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: AppColors.mutedGold.withValues(alpha: 0.7),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: screenSize.height - cardOffset - 20,
+                ),
+                child: SingleChildScrollView(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.antiqueIvory,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.mutedGold.withValues(alpha: 0.7),
+                        width: 1.5,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header: Huy hiệu Nhiệm vụ & Nút Bỏ qua
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.deepBurgundy,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.flag_rounded,
-                                  color: AppColors.mutedGold,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  currentStep.questBadge,
-                                  style: const TextStyle(
-                                    fontFamily: AppTextStyles.sansFamily,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.2,
-                                    color: AppColors.lightText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextButton(
-                                onPressed: _skip,
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.secondaryText,
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                child: const Text('Bỏ qua', style: TextStyle(fontSize: 13)),
-                              ),
-                              IconButton(
-                                onPressed: _skip,
-                                icon: const Icon(Icons.close_rounded, size: 20),
-                                color: AppColors.secondaryText,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                tooltip: 'Đóng hướng dẫn',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Tiêu đề
-                      Row(
-                        children: [
-                          Icon(currentStep.icon, color: AppColors.deepBurgundy, size: 24),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              currentStep.title,
-                              style: AppTextStyles.titleMedium.copyWith(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.darkBrown,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Mô tả chi tiết
-                      Text(
-                        currentStep.description,
-                        style: const TextStyle(
-                          fontFamily: AppTextStyles.sansFamily,
-                          fontSize: 14,
-                          height: 1.45,
-                          color: AppColors.secondaryText,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
                         ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Footer: Chấm tiến trình & Nút hành động
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Step Indicators
-                          Row(
-                            children: List.generate(widget.steps.length, (idx) {
-                              final active = idx == _currentIndex;
-                              return Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                width: active ? 22 : 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: active ? AppColors.deepBurgundy : AppColors.border,
-                                  borderRadius: BorderRadius.circular(4),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                currentStep.questBadge,
+                                style: const TextStyle(
+                                  fontFamily: AppTextStyles.sansFamily,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.deepBurgundy,
                                 ),
-                              );
-                            }),
-                          ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _skip,
+                              child: const Text('Bỏ qua'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
-                          // Nút hành động Tiếp tục
-                          ElevatedButton.icon(
-                            onPressed: _nextStep,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.deepBurgundy,
-                              foregroundColor: AppColors.lightText,
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                        // Tiêu đề
+                        Row(
+                          children: [
+                            Icon(
+                              currentStep.icon,
+                              color: AppColors.deepBurgundy,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                currentStep.title,
+                                style: AppTextStyles.titleMedium.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.darkBrown,
+                                ),
                               ),
                             ),
-                            icon: Icon(
-                              _currentIndex == widget.steps.length - 1
-                                  ? Icons.check_circle_outline_rounded
-                                  : Icons.arrow_forward_rounded,
-                              size: 16,
-                            ),
-                            label: Text(
-                              _currentIndex == widget.steps.length - 1
-                                  ? 'Hoàn thành'
-                                  : 'Đã hiểu, bước tiếp',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Mô tả chi tiết
+                        Text(
+                          currentStep.description,
+                          style: const TextStyle(
+                            fontFamily: AppTextStyles.sansFamily,
+                            fontSize: 14,
+                            height: 1.45,
+                            color: AppColors.secondaryText,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Footer wraps when visitors enlarge their text.
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            // Step Indicators
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(widget.steps.length, (
+                                idx,
+                              ) {
+                                final active = idx == _currentIndex;
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 6),
+                                  width: active ? 22 : 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: active
+                                        ? AppColors.deepBurgundy
+                                        : AppColors.border,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                );
+                              }),
+                            ),
+
+                            // Nút hành động Tiếp tục
+                            ElevatedButton.icon(
+                              onPressed: _nextStep,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.deepBurgundy,
+                                foregroundColor: AppColors.lightText,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              icon: Icon(
+                                _currentIndex == widget.steps.length - 1
+                                    ? Icons.check_circle_outline_rounded
+                                    : Icons.arrow_forward_rounded,
+                                size: 16,
+                              ),
+                              label: Text(
+                                _currentIndex == widget.steps.length - 1
+                                    ? 'Hoàn thành'
+                                    : 'Tiếp tục',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -482,12 +507,18 @@ class _SpotlightPainter extends CustomPainter {
         RRect.fromRectAndRadius(cutoutRect, Radius.circular(borderRadius)),
       );
 
-    final overlayPath = Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
+    final overlayPath = Path.combine(
+      PathOperation.difference,
+      backgroundPath,
+      cutoutPath,
+    );
     final overlayPaint = Paint()..color = const Color(0xD418120E);
     canvas.drawPath(overlayPath, overlayPaint);
 
     final glowPaint = Paint()
-      ..color = const Color(0xFFC5A059).withValues(alpha: 0.5 + 0.45 * pulseValue)
+      ..color = const Color(
+        0xFFC5A059,
+      ).withValues(alpha: 0.5 + 0.45 * pulseValue)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5 + 1.5 * pulseValue;
 
@@ -509,56 +540,44 @@ class HomeScreenTour {
   HomeScreenTour._();
 
   static final GlobalKey scanCardKey = GlobalKey();
-  static final GlobalKey searchBarKey = GlobalKey();
   static final GlobalKey museumSectionKey = GlobalKey();
-  static final GlobalKey aiExperienceKey = GlobalKey();
+  static final GlobalKey collectionKey = GlobalKey();
   static final GlobalKey handbookBtnKey = GlobalKey();
 
   static List<TutorialQuestStep> getSteps() => [
     TutorialQuestStep(
       targetKey: scanCardKey,
-      questBadge: 'NHIỆM VỤ 1/5 · GIẢI MÃ HIỆN VẬT',
-      title: 'Mở khóa câu chuyện di sản',
-      description:
-          'Khi đứng trước tủ kính trưng bày, chạm vào đây để quét mã QR hoặc dùng AI Vision nhận diện hiện vật và nghe thuyết minh tự động.',
-      icon: Icons.qr_code_scanner_rounded,
-      borderRadius: 14,
+      questBadge: 'Quét hiện vật',
+      title: 'Khám phá một hiện vật',
+      description: 'Chạm vào đây để mở chức năng quét QR hiện vật.',
+      icon: Icons.qr_code_scanner,
+      borderRadius: 16,
     ),
+    if (AppServices.catalog.museums.isNotEmpty)
+      TutorialQuestStep(
+        targetKey: museumSectionKey,
+        questBadge: 'Khám phá bảo tàng',
+        title: 'Tìm bảo tàng muốn đến',
+        description:
+            'Xem các bảo tàng đang công khai. Mục Khám phá có tìm kiếm và thông tin chi tiết.',
+        icon: Icons.museum_outlined,
+        borderRadius: 16,
+      ),
     TutorialQuestStep(
-      targetKey: searchBarKey,
-      questBadge: 'NHIỆM VỤ 2/5 · TÌM KIẾM DI SẢN',
-      title: 'Tìm kiếm hiện vật & bảo tàng',
-      description:
-          'Gõ tên hiện vật, thời kỳ khảo cổ hoặc bảo tàng bạn muốn đến. Hệ thống sẽ mở nhanh hồ sơ chi tiết và lộ trình tham quan.',
-      icon: Icons.search_rounded,
-      borderRadius: 14,
-    ),
-    TutorialQuestStep(
-      targetKey: museumSectionKey,
-      questBadge: 'NHIỆM VỤ 3/5 · HẸN BẠN Ở BẢO TÀNG',
-      title: 'Hẹn bạn ở bảo tàng',
-      description:
-          'Xem danh sách các bảo tàng liên kết trên toàn quốc, giờ mở cửa, giá vé và kho lưu trữ hiện vật nổi bật.',
-      icon: Icons.museum_rounded,
-      borderRadius: 14,
-    ),
-    TutorialQuestStep(
-      targetKey: aiExperienceKey,
-      questBadge: 'NHIỆM VỤ 4/5 · TRẢI NGHIỆM AI & 3D',
-      title: 'Tương tác 3D Trống đồng',
-      description:
-          'Xoay ngắm hiện vật 3D 360 độ siêu nét, phóng to hoa văn Đông Sơn và trải nghiệm giọng thuyết minh sống động.',
-      icon: Icons.view_in_ar_rounded,
-      borderRadius: 14,
+      targetKey: collectionKey,
+      questBadge: 'Bộ sưu tập',
+      title: 'Bảo tàng cá nhân',
+      description: 'Mở bộ sưu tập những hiện vật bạn đã khám phá.',
+      icon: Icons.collections_bookmark_outlined,
+      borderRadius: 16,
     ),
     TutorialQuestStep(
       targetKey: handbookBtnKey,
-      questBadge: 'NHIỆM VỤ 5/5 · SỔ TAY CẨM NANG',
-      title: 'Cẩm nang & Trợ giúp tham quan',
-      description:
-          'Chạm biểu tượng quyển sách bất cứ lúc nào để tra cứu nội quy bảo tàng, vị trí thang máy/tủ gửi đồ và hotline hỗ trợ khẩn cấp.',
-      icon: Icons.menu_book_rounded,
-      borderRadius: 10,
+      questBadge: 'Cẩm nang',
+      title: 'Cẩm nang tham quan',
+      description: 'Tra cứu cách dùng ứng dụng và hướng dẫn tham quan tại đây.',
+      icon: Icons.menu_book_outlined,
+      borderRadius: 12,
     ),
   ];
 

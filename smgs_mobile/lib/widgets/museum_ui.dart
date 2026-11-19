@@ -75,11 +75,7 @@ class MuseumPage extends StatelessWidget {
                 child: Text(
                   title,
                   key: ValueKey(title),
-                  style: AppTextStyles.display.copyWith(
-                    color: AppColors.deepBurgundy,
-                    fontSize: 32,
-                    height: 1.3,
-                  ),
+                  style: AppTextStyles.pageTitle,
                 ),
               ),
               if (subtitle != null) ...[
