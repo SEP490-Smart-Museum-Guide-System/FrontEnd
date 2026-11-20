@@ -226,11 +226,7 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
                                       onPressed: () async {
                                         await Navigator.of(context).push(
                                           MaterialPageRoute<void>(
-                                            builder: (_) => const Scaffold(
-                                              body: SafeArea(
-                                                child: ScanScreen(),
-                                              ),
-                                            ),
+                                            builder: (_) => const ScanScreen(standalone: true),
                                           ),
                                         );
                                         if (mounted) _filter(_museumId);

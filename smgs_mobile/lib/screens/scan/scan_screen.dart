@@ -9,7 +9,8 @@ import '../../services/app_services.dart';
 import '../../models/experience.dart';
 
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  const ScanScreen({super.key, this.standalone = false});
+  final bool standalone;
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -39,47 +40,55 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
-    title: 'Mở câu chuyện\ntrước mắt bạn.',
-    eyebrow: 'Nhận diện hiện vật',
-    subtitle: 'Chọn cách bạn muốn khám phá.',
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: const HeritageArt(kind: 'artifact_1', height: 215),
-      ),
-      const SizedBox(height: 24),
-      Container(
-        key: ScanScreenTour.qrTileKey,
-        child: ActionTile(
-          title: 'Quét mã hiện vật',
-          subtitle: 'Dùng mã đặt cạnh hiện vật trưng bày.',
-          icon: Icons.qr_code_scanner,
-          onTap: () => openPage(context, const ArtifactQrScanner(direct: true)),
+  Widget build(BuildContext context) {
+    final canPop =
+        widget.standalone || (ModalRoute.of(context)?.canPop ?? false);
+    return MuseumPage(
+      back: canPop,
+      title: 'Mở câu chuyện\ntrước mắt bạn.',
+      eyebrow: 'Nhận diện hiện vật',
+      subtitle: 'Chọn cách bạn muốn khám phá.',
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: const HeritageArt(kind: 'artifact_1', height: 215),
         ),
-      ),
-      Container(
-        key: ScanScreenTour.aiVisionTileKey,
-        child: ActionTile(
-          title: 'Nhận diện qua hình ảnh',
-          subtitle: 'Tìm hiểu hiện vật qua góc nhìn của bạn.',
-          icon: Icons.camera_alt_outlined,
-          onTap: () => openPage(context, const QRScanScreen(recognition: true)),
+        const SizedBox(height: 24),
+        Container(
+          key: ScanScreenTour.qrTileKey,
+          child: ActionTile(
+            title: 'Quét mã hiện vật',
+            subtitle: 'Dùng mã đặt cạnh hiện vật trưng bày.',
+            icon: Icons.qr_code_scanner,
+            onTap: () =>
+                openPage(context, const ArtifactQrScanner(direct: true)),
+          ),
         ),
-      ),
-      Container(
-        key: ScanScreenTour.collectionTileKey,
-        child: ActionTile(
-          title: 'Tra cứu bộ sưu tập',
-          subtitle: 'Tìm hiện vật theo tên và chủ đề.',
-          icon: Icons.view_list_outlined,
-          onTap: () => openPage(context, const ExploreScreen(standalone: true)),
+        Container(
+          key: ScanScreenTour.aiVisionTileKey,
+          child: ActionTile(
+            title: 'Nhận diện qua hình ảnh',
+            subtitle: 'Tìm hiểu hiện vật qua góc nhìn của bạn.',
+            icon: Icons.camera_alt_outlined,
+            onTap: () =>
+                openPage(context, const QRScanScreen(recognition: true)),
+          ),
         ),
-      ),
-      const SizedBox(height: 10),
-      const Notice(
-        'Bạn có thể tra cứu bộ sưu tập mà không cần cấp quyền máy ảnh.',
-      ),
-    ],
-  );
+        Container(
+          key: ScanScreenTour.collectionTileKey,
+          child: ActionTile(
+            title: 'Tra cứu bộ sưu tập',
+            subtitle: 'Tìm hiện vật theo tên và chủ đề.',
+            icon: Icons.view_list_outlined,
+            onTap: () =>
+                openPage(context, const ExploreScreen(standalone: true)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Notice(
+          'Bạn có thể tra cứu bộ sưu tập mà không cần cấp quyền máy ảnh.',
+        ),
+      ],
+    );
+  }
 }
