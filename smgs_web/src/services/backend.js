@@ -17,7 +17,11 @@ export async function backend(path, { method = 'GET', body, signal, timeoutMs = 
       (result?.errors ? Object.values(result.errors).flat().join(', ') : null) ||
       result?.title ||
       `Không thể tải hoặc lưu dữ liệu (${response.status}).`;
-    throw new Error(errorMsg);
+    const error = new Error(errorMsg);
+    error.status = response.status;
+    const retryAfter = Number(response.headers.get('Retry-After'));
+    if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+    throw error;
   }
   if (!result || !Object.hasOwn(result, 'data')) throw new Error('Phản hồi máy chủ không hợp lệ.');
   return result.data;

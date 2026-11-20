@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Sparkles, Volume2, HelpCircle, RefreshCw, Send, Copy, CheckCircle2, Loader2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { parseQuestionDrafts } from '../../services/questionDrafts';
-import { generateStaffDraft } from '../../services/staffAiApi';
+import { generateStaffDraft, staffDraftRetry } from '../../services/staffAiApi';
 import NarrationPreview from './NarrationPreview';
 
 export default function AIContentStudio(props) {
@@ -57,7 +57,9 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
           }, controller.signal);
           if (controller.signal.aborted) return;
           if (mode === 'quiz' && drafts.some(d => d.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' ') === response.draft.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' '))) {
-            throw new Error('AI trả lại câu hỏi đã có. Hãy tạo lại hoặc bổ sung tư liệu.');
+            const duplicate = new Error('AI trả lại câu hỏi đã có. Hãy tạo lại hoặc bổ sung tư liệu.');
+            duplicate.retryable = true;
+            throw duplicate;
           }
           busyRetries = 0; // reset on success
           drafts.push(response.draft);
@@ -68,15 +70,22 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
         } catch (itemErr) {
           if (controller.signal.aborted) return;
           lastItemError = itemErr;
-          // If model is busy (503), retry with backoff instead of counting as a failed attempt
-          const isBusy = itemErr.message?.includes('đang bận') || itemErr.message?.includes('503');
-          if (isBusy && busyRetries < maxBusyRetries) {
+          const retry = staffDraftRetry(itemErr);
+          if (retry === 'stop') {
+            if (drafts.length) break;
+            throw itemErr;
+          }
+          if (retry === 'busy' && busyRetries < maxBusyRetries) {
             busyRetries++;
             attempts--; // don't count busy-retry as a real attempt
             setProgress(mode === 'quiz' ? `Model đang bận, thử lại sau ${busyRetries * 5}s… (câu ${drafts.length + 1}/${targetCount})` : 'Model đang bận, thử lại…');
             await new Promise(r => setTimeout(r, busyRetries * 5000));
             if (controller.signal.aborted) return;
             continue;
+          }
+          if (retry === 'busy') {
+            if (drafts.length) break;
+            throw itemErr;
           }
           busyRetries = 0;
           console.warn(`Lần thử ${attempts} cho câu ${drafts.length + 1} chưa đạt căn cứ:`, itemErr.message);

@@ -1,5 +1,14 @@
 import { backend } from './backend.js';
 
+export function staffDraftRetry(error) {
+  // A missing server setting cannot recover by spending nine more requests.
+  // Rate limits require a new user attempt after the server's cooldown.
+  if ([401, 403, 404, 422, 429, 504].includes(error.status)) return 'stop';
+  if (/chưa.*(?:kết nối|cấu hình)|khóa.*chưa đúng/i.test(error.message || '')) return 'stop';
+  if (error.status === 503 && /đang bận/i.test(error.message || '')) return 'busy';
+  return error.status === 502 || error.retryable === true ? 'retry' : 'stop';
+}
+
 export async function generateStaffDraft(artifactId, options, signal) {
   const id = Number(artifactId);
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Hãy chọn hiện vật đã lưu trên máy chủ.');
