@@ -214,7 +214,7 @@ class VisitorHandbookSheet extends StatelessWidget {
                       },
                       icon: const Icon(Icons.touch_app_rounded, size: 18),
                       label: const Text(
-                        'Bật hướng dẫn chỉ tay tương tác (Game Quest)',
+                        'Bật hướng dẫn chỉ tay tương tác',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(

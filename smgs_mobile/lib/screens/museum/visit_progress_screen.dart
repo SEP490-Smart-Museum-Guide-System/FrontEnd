@@ -76,21 +76,17 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
               // Hero Live Tracker Card
               Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF2C1914), Color(0xFF1B0E0A)],
-                  ),
+                  color: AppColors.card,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppColors.mutedGold.withValues(alpha: 0.5),
+                    color: AppColors.border,
                     width: 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: AppColors.darkBrown.withValues(alpha: 0.05),
                       blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
@@ -109,13 +105,13 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: active
-                                  ? Colors.green.shade900.withValues(alpha: 0.5)
-                                  : AppColors.mutedGold.withValues(alpha: 0.2),
+                                  ? const Color(0xFFE8F5E9)
+                                  : AppColors.softSand,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: active
-                                    ? Colors.greenAccent.shade400
-                                    : AppColors.mutedGold,
+                                    ? const Color(0xFF81C784)
+                                    : AppColors.border,
                                 width: 0.8,
                               ),
                             ),
@@ -128,7 +124,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: active
-                                        ? Colors.greenAccent
+                                        ? const Color(0xFF2E7D32)
                                         : AppColors.mutedGold,
                                   ),
                                 ),
@@ -141,11 +137,13 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                                             visit['status'],
                                           ).toUpperCase(),
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 0.6,
-                                      color: AppColors.antiqueIvory,
+                                      color: active
+                                          ? const Color(0xFF1B5E20)
+                                          : AppColors.primaryText,
                                     ),
                                   ),
                                 ),
@@ -156,10 +154,10 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                         const SizedBox(width: 8),
                         Text(
                           '#${widget.visitId}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.mutedGold.withValues(alpha: 0.9),
+                            color: AppColors.mutedGold,
                           ),
                         ),
                       ],
@@ -169,7 +167,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                       museumName,
                       style: AppTextStyles.cardTitle.copyWith(
                         fontSize: 18,
-                        color: AppColors.antiqueIvory,
+                        color: AppColors.deepBurgundy,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -187,11 +185,9 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             Expanded(
                               child: Text(
                                 'Hành trình cá nhân · Thứ tự điểm dừng đã được lưu',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.antiqueIvory.withValues(
-                                    alpha: 0.9,
-                                  ),
+                                  color: AppColors.secondaryText,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -201,9 +197,9 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                       ),
                     Text(
                       'Bắt đầu: ${_formatDate(visit['startedAt'])}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.antiqueIvory.withValues(alpha: 0.7),
+                        color: AppColors.secondaryText,
                       ),
                     ),
                     if (totalCount > 0) ...[
@@ -217,7 +213,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                               style: const TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.antiqueIvory,
+                                color: AppColors.primaryText,
                               ),
                             ),
                           ),
@@ -227,7 +223,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             style: const TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.mutedGold,
+                              color: AppColors.deepBurgundy,
                             ),
                           ),
                         ],
@@ -238,9 +234,9 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                         child: LinearProgressIndicator(
                           value: progressRatio,
                           minHeight: 6,
-                          backgroundColor: Colors.white.withValues(alpha: 0.15),
+                          backgroundColor: AppColors.softSand,
                           valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.mutedGold,
+                            AppColors.deepBurgundy,
                           ),
                         ),
                       ),
@@ -250,7 +246,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
                         style: TextButton.styleFrom(
-                          foregroundColor: AppColors.mutedGold,
+                          foregroundColor: AppColors.deepBurgundy,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           visualDensity: VisualDensity.compact,
                         ),

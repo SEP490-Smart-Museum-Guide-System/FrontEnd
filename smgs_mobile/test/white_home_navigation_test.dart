@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/core/theme/app_theme.dart';
+import 'package:smgs_mobile/core/theme/visitor_colors.dart';
 import 'package:smgs_mobile/models/experience.dart';
 import 'package:smgs_mobile/models/museum.dart';
 import 'package:smgs_mobile/navigation/main_navigation.dart';
@@ -49,18 +50,18 @@ void main() {
         );
         await tester.pumpAndSettle();
         final surface = find.byKey(const ValueKey('home-white-surface'));
-        expect(tester.widget<ColoredBox>(surface).color, Colors.white);
+        expect(tester.widget<ColoredBox>(surface).color, VisitorColors.background);
         expect(
           tester
               .widget<Text>(find.text('Mỗi hiện vật,\nmột câu chuyện'))
               .style!
               .color,
-          const Color(0xFF292929),
+          VisitorColors.text,
         );
         for (final photo in tester.widgetList<MuseumPhoto>(
           find.descendant(of: surface, matching: find.byType(MuseumPhoto)),
         )) {
-          expect(photo.placeholderColor, const Color(0xFFF7F7F5));
+          expect(photo.placeholderColor, VisitorColors.secondaryBackground);
         }
         final rail = find.byKey(const ValueKey('visitor-bottom-nav'));
         expect(tester.getTopLeft(rail).dx, greaterThan(0));
@@ -104,7 +105,7 @@ void main() {
           Theme.of(
             tester.element(find.byType(MainNavigation)),
           ).scaffoldBackgroundColor,
-          Colors.white,
+          VisitorColors.background,
         );
         await tapText(tester, 'Trang chủ');
         final scroll = find

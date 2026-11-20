@@ -4,6 +4,8 @@ import 'my_museum_screen.dart';
 import '../../services/backend_api.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_config.dart';
+import '../../services/token_manager.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/collection_cards.dart';
 import '../../data/visit_store.dart';
@@ -14,236 +16,810 @@ import '../artifact/daily_quiz_screen.dart';
 import '../../services/app_services.dart';
 import '../../services/app_preferences.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([VisitStore.instance, AppServices.auth]),
-    builder: (context, _) {
-      final store = VisitStore.instance;
-      return MuseumPage(
-        title: 'Góc của bạn',
-        eyebrow: 'Người bạn của di sản',
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.softSand,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.mutedGold),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const HeritageSeal(size: 48),
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  int _points = 0;
+  int _artifactsCount = 0;
+  int _museumsCount = 0;
+  int _deferredQuizCount = 0;
+  List<String> _thumbnailUrls = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final user = AppServices.auth.user;
+    final store = VisitStore.instance;
+
+    var points = store.points;
+    var artifacts = store.viewed.length;
+    var museums = 1;
+    var deferred = 0;
+    var thumbs = <String>[];
+
+    if (user != null) {
+      try {
+        final results = await Future.wait([
+          BackendApi.request('gamification/me/points').catchError((_) => {'points': points}),
+          BackendApi.request('recognitions/collection?page=1&pageSize=4').catchError((_) => <String, dynamic>{}),
+          BackendApi.list('visits/me').catchError((_) => <Map<String, dynamic>>[]),
+          BackendApi.list('daily-quizzes/today').catchError((_) => <Map<String, dynamic>>[]),
+        ]);
+
+        final ptsData = results[0] as Map<String, dynamic>?;
+        if (ptsData != null && ptsData['points'] != null) {
+          points = (ptsData['points'] as num).toInt();
+        }
+
+        final collData = results[1] as Map<String, dynamic>?;
+        if (collData != null) {
+          if (collData['totalCollected'] != null) {
+            artifacts = (collData['totalCollected'] as num).toInt();
+          } else if (collData['totalCount'] != null) {
+            artifacts = (collData['totalCount'] as num).toInt();
+          }
+          final items = (collData['items'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+          for (final it in items) {
+            final url = it['imageUrl']?.toString();
+            if (url != null && url.isNotEmpty) {
+              thumbs.add(url);
+            }
+          }
+        }
+
+        final visits = results[2] as List<dynamic>?;
+        if (visits != null && visits.isNotEmpty) {
+          final museumIds = visits.map((v) => v['museumId']).toSet();
+          museums = museumIds.length;
+        }
+
+        final quizzes = results[3] as List<dynamic>?;
+        if (quizzes != null) {
+          deferred = quizzes.where((q) => q['status'] == 'deferred' || q['status'] == 'pending').length;
+        }
+      } catch (_) {}
+    }
+
+    if (thumbs.isEmpty) {
+      thumbs = AppServices.catalog.artifacts
+          .where((a) => a.imageUrl.isNotEmpty)
+          .take(3)
+          .map((a) => a.imageUrl)
+          .toList();
+    }
+
+    if (mounted) {
+      setState(() {
+        _points = points;
+        _artifactsCount = artifacts;
+        _museumsCount = museums;
+        _deferredQuizCount = deferred;
+        _thumbnailUrls = thumbs;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([VisitStore.instance, AppServices.auth]),
+      builder: (context, _) {
+        final store = VisitStore.instance;
+        final userName = AppServices.auth.user?.name ?? 'Người dùng SMGS';
+
+        return MuseumPage(
+          title: 'Góc của bạn',
+          eyebrow: 'Người bạn của di sản',
+          action: IconButton(
+            icon: const Icon(Icons.settings_outlined, color: AppColors.darkBrown, size: 23),
+            tooltip: 'Cài đặt & hỗ trợ',
+            onPressed: () => openPage(context, const SettingsAndSupportScreen()),
+          ),
+          children: [
+            // 1. Hero Passport Card
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.deepBurgundy,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.mutedGold.withValues(alpha: 0.35),
+                  width: 1.2,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SỔ TAY DI SẢN',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.primaryText,
-                          letterSpacing: .2,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.deepBurgundy.withValues(alpha: 0.22),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: [
+                  const Positioned(
+                    right: -25,
+                    top: -25,
+                    child: Opacity(
+                      opacity: 0.12,
+                      child: HeritageSeal(size: 160, light: true),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.mutedGold.withValues(alpha: 0.7),
+                                  width: 1.5,
+                                ),
+                                color: Colors.white.withValues(alpha: 0.08),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.stars_rounded, color: AppColors.mutedGold, size: 24),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'SỔ TAY DI SẢN',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.sansFamily,
+                                      fontSize: 10.5,
+                                      letterSpacing: 1.1,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.mutedGold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    userName,
+                                    style: const TextStyle(
+                                      fontFamily: AppTextStyles.sansFamily,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.antiqueIvory,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        AppServices.auth.user?.name ?? 'Người dùng SMGS',
-                        style: AppTextStyles.sectionTitle,
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildMetricItem('$_points', 'Điểm'),
+                              Container(width: 1, height: 26, color: Colors.white.withValues(alpha: 0.15)),
+                              _buildMetricItem('$_artifactsCount', 'Hiện vật'),
+                              Container(width: 1, height: 26, color: Colors.white.withValues(alpha: 0.15)),
+                              _buildMetricItem('$_museumsCount', 'Bảo tàng'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 2. Horizontal Card: "Bảo tàng của tôi"
+            Container(
+              margin: const EdgeInsets.only(top: 14),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => openPage(context, const MyMuseumScreen()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        _buildThumbnailStack(_thumbnailUrls),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bảo tàng của tôi',
+                                style: AppTextStyles.cardTitle.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$_artifactsCount hiện vật · ${store.saved.length} yêu thích',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 22,
+                          color: AppColors.secondaryText,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Stat(
-                value: '${store.viewed.length}',
-                label: 'Đã mở trong phiên',
               ),
-              _Stat(value: '${store.saved.length}', label: 'Lưu trong phiên'),
-              _Stat(
-                value: '${store.completedTours}',
-                label: 'Tour trong phiên',
-              ),
-            ],
-          ),
-          const SectionHeading('Sổ tay tham quan'),
-          ActionTile(
-            title: 'Cẩm nang hướng dẫn & Quy định',
-            subtitle: 'Xem lại 3 bước công nghệ, nội quy & hotline khẩn cấp.',
-            icon: Icons.menu_book_rounded,
-            onTap: () => VisitorHandbookSheet.show(context),
-          ),
-          ActionTile(
-            title: 'Lịch sử khám phá',
-            subtitle: 'Gặp lại những câu chuyện đã xem.',
-            icon: Icons.history_outlined,
-            onTap: () => openPage(context, const HistoryScreen()),
-          ),
-          ActionTile(
-            title: 'Hiện vật đã lưu',
-            subtitle: 'Khám phá bộ sưu tập hiện vật của bạn.',
-            icon: Icons.museum_outlined,
-            onTap: () => openPage(context, const MyMuseumScreen()),
-          ),
-          ActionTile(
-            title: 'Hiện vật yêu thích',
-            subtitle: 'Những điều bạn muốn tìm hiểu thêm.',
-            icon: Icons.bookmark_border,
-            onTap: () => openPage(
-              context,
-              const PersonalCollectionScreen(kind: 'saved'),
             ),
-          ),
-          ActionTile(
-            title: 'Quiz tích lũy trong ngày',
-            subtitle: 'Xem câu đố được hệ thống cấp trong ngày.',
-            icon: Icons.quiz_outlined,
-            onTap: () => openPage(context, const DailyQuizScreen()),
-          ),
-          ActionTile(
-            title: 'Trả lời sau',
-            subtitle: 'Các bộ câu hỏi bạn đã lưu trong ngày.',
-            icon: Icons.alarm,
-            onTap: () =>
-                openPage(context, const DailyQuizScreen(deferredOnly: true)),
-          ),
-          ActionTile(
-            title: 'Kết quả thử tài',
-            subtitle: 'Các lượt làm và kết quả được hệ thống lưu.',
-            icon: Icons.workspace_premium_outlined,
-            onTap: () =>
-                openPage(context, const ExperienceHistoryScreen(kind: 'quiz')),
-          ),
-          ActionTile(
-            title: 'Vé & Hướng dẫn số',
-            subtitle: 'Vé vào cửa, quyền truy cập và gói kết hợp.',
-            icon: Icons.confirmation_number_outlined,
-            onTap: () => openPage(context, const ServicesScreen()),
-          ),
-          ActionTile(
-            title: 'Sổ điểm',
-            subtitle: 'Theo dõi từng lần cộng điểm.',
-            icon: Icons.stars_outlined,
-            onTap: () => openPage(
-              context,
-              const ExperienceHistoryScreen(kind: 'points'),
-            ),
-          ),
-          ActionTile(
-            title: 'Lịch sử quét hiện vật',
-            subtitle: 'Các lượt quét đã được hệ thống ghi nhận.',
-            icon: Icons.qr_code,
-            onTap: () => openPage(
-              context,
-              const ExperienceHistoryScreen(kind: 'recognitions'),
-            ),
-          ),
-          ActionTile(
-            title: 'Huy hiệu của bạn',
-            subtitle: 'Điểm và huy hiệu được hệ thống ghi nhận.',
-            icon: Icons.military_tech_outlined,
-            onTap: () => openPage(context, const BadgesScreen()),
-          ),
-          ActionTile(
-            title: 'Đơn mua của bạn',
-            subtitle: 'Xem vé, quyền sử dụng và lịch sử thanh toán.',
-            icon: Icons.receipt_long_outlined,
-            onTap: () => openPage(context, const PurchasedServicesScreen()),
-          ),
-          ActionTile(
-            title: 'Hỗ trợ & Yêu cầu hoàn tiền',
-            subtitle: 'Tiếp nhận khiếu nại và hoàn trả theo quy định.',
-            icon: Icons.support_agent_outlined,
-            onTap: () => openPage(context, const SupportRefundScreen()),
-          ),
-          const SectionHeading('Đồng hành cùng bạn'),
-          const Panel(
-            child: Row(
-              children: [
-                Icon(Icons.language_outlined, color: AppColors.deepBurgundy),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ngôn ngữ', style: AppTextStyles.bodyMedium),
-                      SizedBox(height: 4),
-                      Text('Tiếng Việt', style: AppTextStyles.bodySmall),
-                    ],
+
+            // 3. Row of 3 Square Quick Action Tiles
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                children: [
+                  _buildQuickActionTile(
+                    icon: Icons.history_rounded,
+                    label: 'Lịch sử',
+                    onTap: () => openPage(context, const HistoryScreen()),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  _buildQuickActionTile(
+                    icon: Icons.military_tech_outlined,
+                    label: 'Huy hiệu',
+                    onTap: () => openPage(context, const BadgesScreen()),
+                  ),
+                  const SizedBox(width: 10),
+                  _buildQuickActionTile(
+                    icon: Icons.confirmation_number_outlined,
+                    label: 'Vé của tôi',
+                    onTap: () => openPage(context, const PurchasedServicesScreen()),
+                  ),
+                ],
+              ),
+            ),
+
+            // 4. Section: THỬ THÁCH
+            const SizedBox(height: 22),
+            _buildSectionLabel('THỬ THÁCH'),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.help_outline_rounded,
+              title: 'Quiz trong ngày',
+              subtitle: 'Thử thách kiến thức bảo tàng nhận điểm',
+              badgeText: _deferredQuizCount > 0 ? '$_deferredQuizCount chờ trả lời' : null,
+              onTap: () => openPage(context, const DailyQuizScreen()),
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.emoji_events_outlined,
+              title: 'Kết quả thử tài',
+              subtitle: 'Điểm số và câu trả lời các bộ câu hỏi',
+              onTap: () => openPage(context, const ExperienceHistoryScreen(kind: 'quiz')),
+            ),
+
+            // 5. Section: ĐƠN HÀNG & ĐIỂM
+            const SizedBox(height: 22),
+            _buildSectionLabel('ĐƠN HÀNG & ĐIỂM'),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.receipt_long_outlined,
+              title: 'Đơn mua của bạn',
+              subtitle: 'Vé điện tử và các gói dịch vụ đã mua',
+              onTap: () => openPage(context, const PurchasedServicesScreen()),
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.card_giftcard_rounded,
+              title: 'Đổi điểm',
+              subtitle: 'Tích lũy điểm trải nghiệm nhận quà',
+              badgeText: '$_points điểm',
+              onTap: () => openPage(context, const ExperienceHistoryScreen(kind: 'points')),
+            ),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricItem(String value, String label) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontFamily: AppTextStyles.sansFamily,
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: AppColors.antiqueIvory,
             ),
           ),
-          const SizedBox(height: 12),
-          ActionTile(
-            title: 'Góp ý trải nghiệm',
-            subtitle: 'Giúp cẩm nang ngày một tốt hơn.',
-            icon: Icons.rate_review_outlined,
-            onTap: () => openPage(context, const FeedbackScreen()),
-          ),
-          const SizedBox(height: 16),
-          ActionTile(
-            title: 'Cài đặt trải nghiệm',
-            subtitle: 'Cỡ chữ và chuyển động theo ý bạn.',
-            icon: Icons.tune_outlined,
-            onTap: () => openPage(context, const SettingsScreen()),
-          ),
-          SecondaryButton(
-            label: 'Đăng xuất',
-            icon: Icons.logout,
-            onPressed: () {
-              VisitStore.instance.reset();
-              AppServices.auth.logout();
-            },
-          ),
-          const SizedBox(height: 16),
-          const Notice(
-            'Mục đã lưu, hiện vật vừa mở và kết quả thử tài mẫu chỉ giữ trong phiên. Lượt tham quan, đơn hàng, điểm và huy hiệu được tải từ hệ thống.',
-          ),
-          const Divider(),
-          const Center(
-            child: Text(
-              'SMGS · Cẩm nang bảo tàng Việt',
-              style: AppTextStyles.caption,
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: AppTextStyles.sansFamily,
+              fontSize: 11,
+              color: AppColors.antiqueIvory.withValues(alpha: 0.75),
             ),
           ),
         ],
-      );
-    },
+      ),
+    );
+  }
+
+  Widget _buildThumbnailStack(List<String> urls) {
+    return SizedBox(
+      width: 78,
+      height: 34,
+      child: Stack(
+        children: [
+          for (var i = 0; i < 3; i++)
+            Positioned(
+              left: i * 20.0,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  color: AppColors.secondaryBackground,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: i < urls.length && urls[i].isNotEmpty
+                      ? Image.network(
+                          urls[i].startsWith('http')
+                              ? urls[i]
+                              : ApiConfig.mediaUrl(urls[i]),
+                          headers: TokenManager.authHeaders,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.museum_outlined,
+                            size: 16,
+                            color: AppColors.deepBurgundy,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.museum_outlined,
+                          size: 16,
+                          color: AppColors.mutedGold,
+                        ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 22, color: AppColors.darkBrown),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkBrown,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildSectionLabel(String text) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 2, bottom: 2),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontFamily: AppTextStyles.sansFamily,
+        fontSize: 11.5,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.8,
+        color: AppColors.secondaryText,
+      ),
+    ),
   );
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
-  final String value, label;
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Column(
-      children: [
-        Text(
-          value,
-          style: AppTextStyles.display.copyWith(color: AppColors.deepBurgundy),
+Widget _buildMenuTile({
+  required IconData icon,
+  required String title,
+  String? subtitle,
+  String? badgeText,
+  required VoidCallback onTap,
+}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.border),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.02),
+          blurRadius: 4,
+          offset: const Offset(0, 1),
         ),
-        const SizedBox(height: 6),
-        Text(label, style: AppTextStyles.caption, textAlign: TextAlign.center),
       ],
     ),
+    child: Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.antiqueIvory,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.8),
+                  ),
+                ),
+                child: Center(
+                  child: Icon(icon, size: 20, color: AppColors.deepBurgundy),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.darkBrown,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontFamily: AppTextStyles.sansFamily,
+                          fontSize: 12,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (badgeText != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.secondaryText,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
   );
+}
+
+class SettingsAndSupportScreen extends StatelessWidget {
+  const SettingsAndSupportScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppPreferences.instance,
+      builder: (context, _) {
+        final prefs = AppPreferences.instance;
+        return MuseumPage(
+          back: true,
+          title: 'Cài đặt & hỗ trợ',
+          children: [
+            _buildSectionLabel('TÙY CHỈNH'),
+            const SizedBox(height: 8),
+            // Ngôn ngữ
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.antiqueIvory,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.language_rounded, size: 20, color: AppColors.deepBurgundy),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ngôn ngữ',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.sansFamily,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.darkBrown,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Giao diện & nội dung hiển thị',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.sansFamily,
+                            fontSize: 12,
+                            color: AppColors.secondaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildLanguageToggle(prefs),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Cài đặt trải nghiệm
+            _buildMenuTile(
+              icon: Icons.tune_rounded,
+              title: 'Cài đặt trải nghiệm',
+              subtitle: 'Cỡ chữ, chuyển động & hiển thị',
+              onTap: () => openPage(context, const SettingsScreen()),
+            ),
+
+            const SizedBox(height: 22),
+            _buildSectionLabel('HỖ TRỢ'),
+            const SizedBox(height: 8),
+            // Cẩm nang & quy định
+            _buildMenuTile(
+              icon: Icons.menu_book_rounded,
+              title: 'Cẩm nang & quy định',
+              subtitle: 'Sổ tay hướng dẫn & nội quy tham quan',
+              onTap: () => VisitorHandbookSheet.show(context),
+            ),
+            const SizedBox(height: 8),
+            // Hỗ trợ & hoàn tiền
+            _buildMenuTile(
+              icon: Icons.support_agent_rounded,
+              title: 'Hỗ trợ & hoàn tiền',
+              subtitle: 'Gửi yêu cầu trợ giúp & xử lý sự cố',
+              onTap: () => openPage(context, const SupportRefundScreen()),
+            ),
+            const SizedBox(height: 8),
+            // Góp ý trải nghiệm
+            _buildMenuTile(
+              icon: Icons.rate_review_outlined,
+              title: 'Góp ý trải nghiệm',
+              subtitle: 'Đóng góp ý kiến cải thiện dịch vụ',
+              onTap: () => openPage(context, const FeedbackScreen()),
+            ),
+
+            const SizedBox(height: 24),
+            // Nút Đăng xuất
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: AppColors.card,
+                side: const BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                VisitStore.instance.reset();
+                AppServices.auth.logout();
+                Navigator.of(context).pop();
+              },
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout_rounded, size: 18, color: AppColors.deepBurgundy),
+                  SizedBox(width: 8),
+                  Text(
+                    'Đăng xuất',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkBrown,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const Text(
+              'Mục đã lưu, hiện vật vừa mở và kết quả thử tài mẫu chỉ giữ trong phiên. Lượt tham quan, đơn hàng, điểm và huy hiệu được tải từ hệ thống.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: AppTextStyles.sansFamily,
+                fontSize: 12,
+                height: 1.45,
+                color: AppColors.secondaryText,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Center(
+              child: Text(
+                'SMGS · Cẩm nang bảo tàng Việt',
+                style: AppTextStyles.caption,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageToggle(AppPreferences prefs) {
+    final isVi = prefs.language == 'vi';
+    return Container(
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildLangButton('Việt', isVi, () => prefs.setLanguage('vi')),
+          _buildLangButton('EN', !isVi, () => prefs.setLanguage('en')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLangButton(String text, bool active, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+        decoration: BoxDecoration(
+          color: active ? AppColors.deepBurgundy : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontFamily: AppTextStyles.sansFamily,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: active ? AppColors.antiqueIvory : AppColors.secondaryText,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class PersonalCollectionScreen extends StatelessWidget {
@@ -545,46 +1121,267 @@ class _BadgesScreenState extends State<BadgesScreen> {
   Widget build(BuildContext context) => MuseumPage(
     back: true,
     title: 'Dấu ấn của bạn',
+    eyebrow: 'Huy hiệu di sản',
+    subtitle: 'Thành tựu và danh hiệu đạt được qua các chuyến khám phá.',
     children: [
-      TextButton(
-        onPressed: () => setState(() => _data = _load()),
-        child: const Text('Tải lại'),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Expanded(
+            child: Text(
+              'BẢNG THÀNH TÍCH',
+              style: TextStyle(
+                fontFamily: AppTextStyles.sansFamily,
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.8,
+                color: AppColors.secondaryText,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () => setState(() => _data = _load()),
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: const Text('Tải lại', style: TextStyle(fontSize: 12.5)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.deepBurgundy),
+          ),
+        ],
       ),
+      const SizedBox(height: 6),
       FutureBuilder<List<dynamic>>(
         future: _data,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const CircularProgressIndicator();
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator()),
+            );
           }
           if (snapshot.hasError) return Notice(snapshot.error.toString());
+          final pointsData = snapshot.data![0];
+          final points = pointsData is Map ? (pointsData['points'] ?? 0) : 0;
           final badges = snapshot.data![1] as List;
           final definitions = snapshot.data![2] as List;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${snapshot.data![0]['points']} điểm',
-                style: AppTextStyles.pageTitle,
-              ),
-              const SectionHeading('Huy hiệu được cấp'),
-              if (badges.isEmpty) const Notice('Bạn chưa có huy hiệu.'),
-              for (final badge in badges)
-                Panel(
-                  child: Text(
-                    definitions
-                            .where((d) => d['id'] == badge['badgeId'])
-                            .firstOrNull?['name']
-                            ?.toString() ??
-                        badge['name']?.toString() ??
-                        'Huy hiệu #${badge['badgeId']}',
+              // Hero Points Card
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.deepBurgundy,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.mutedGold.withValues(alpha: 0.4),
+                    width: 1.2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.deepBurgundy.withValues(alpha: 0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.1),
+                        border: Border.all(
+                          color: AppColors.mutedGold.withValues(alpha: 0.8),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.military_tech_rounded,
+                          color: AppColors.mutedGold,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'TỔNG ĐIỂM TÍCH LŨY',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.sansFamily,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.0,
+                              color: AppColors.mutedGold,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$points điểm',
+                            style: const TextStyle(
+                              fontFamily: AppTextStyles.serifFamily,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.antiqueIvory,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${badges.length} huy hiệu đã mở khóa',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.sansFamily,
+                              fontSize: 12,
+                              color: AppColors.antiqueIvory.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Text(
+                'HUY HIỆU ĐƯỢC CẤP',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.sansFamily,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (badges.isEmpty)
+                const EmptyState(
+                  title: 'Chưa có huy hiệu nào',
+                  message:
+                      'Hoàn thành các câu đố quiz và quét hiện vật tại bảo tàng để nhận các danh hiệu di sản danh dự.',
+                  icon: Icons.workspace_premium_outlined,
+                )
+              else
+                for (final badge in badges) ...[
+                  _buildBadgeCard(badge, definitions),
+                  const SizedBox(height: 10),
+                ],
             ],
           );
         },
       ),
     ],
   );
+
+  Widget _buildBadgeCard(dynamic badge, List definitions) {
+    final def = definitions
+        .where((d) => d['id'] == badge['badgeId'])
+        .firstOrNull;
+    final name = def?['name']?.toString() ??
+        badge['name']?.toString() ??
+        'Huy hiệu #${badge['badgeId']}';
+    final desc = def?['description']?.toString() ??
+        badge['description']?.toString() ??
+        'Đạt được từ hoạt động tương tác bảo tàng';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.mutedGold.withValues(alpha: 0.25),
+                    AppColors.deepBurgundy.withValues(alpha: 0.15),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: AppColors.mutedGold.withValues(alpha: 0.6),
+                  width: 1.2,
+                ),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.stars_rounded,
+                  color: AppColors.deepBurgundy,
+                  size: 24,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkBrown,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    desc,
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.antiqueIvory,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Text(
+                'Đã đạt',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.sansFamily,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.deepBurgundy,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class SettingsScreen extends StatelessWidget {
@@ -596,33 +1393,137 @@ class SettingsScreen extends StatelessWidget {
       back: true,
       title: 'Vừa vặn với bạn',
       eyebrow: 'Cài đặt trải nghiệm',
+      subtitle:
+          'Tùy chỉnh cỡ chữ, chuyển động và cách hiển thị nội dung theo nhu cầu cá nhân.',
       children: [
-        const Panel(
-          child: Text('Ngôn ngữ: Tiếng Việt', style: AppTextStyles.bodyMedium),
-        ),
-        const SizedBox(height: 18),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Chữ lớn hơn', style: AppTextStyles.bodyMedium),
-          value: AppPreferences.instance.largeText,
-          onChanged: AppPreferences.instance.setLargeText,
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text(
-            'Giảm chuyển động',
-            style: AppTextStyles.bodyMedium,
+        _buildSectionLabel('HIỂN THỊ & VĂN BẢN'),
+        const SizedBox(height: 8),
+        Material(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  activeColor: AppColors.deepBurgundy,
+                  activeTrackColor: AppColors.mutedGold.withValues(alpha: 0.4),
+                  title: const Text(
+                    'Chữ lớn hơn',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkBrown,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Tăng kích thước phông chữ để đọc thuyết minh dễ dàng hơn.',
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                  value: AppPreferences.instance.largeText,
+                  onChanged: AppPreferences.instance.setLargeText,
+                ),
+                const Divider(height: 1, color: AppColors.border),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.antiqueIvory,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'VĂN BẢN XEM TRƯỚC',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.sansFamily,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: AppColors.mutedGold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Trống đồng Đông Sơn là hiện vật tiêu biểu của nền văn hóa Đông Sơn thời kỳ đồ đồng, mang hoa văn tinh xảo miêu tả đời sống cư dân cổ.',
+                          style: TextStyle(
+                            fontFamily: AppTextStyles.serifFamily,
+                            fontSize: AppPreferences.instance.largeText
+                                ? 15.5
+                                : 13.0,
+                            height: 1.45,
+                            color: AppColors.darkBrown,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          subtitle: const Text(
-            'Tắt hiệu ứng chuyển trang, hiện dần và dịch chuyển ảnh.',
-            style: AppTextStyles.caption,
-          ),
-          value: AppPreferences.instance.reducedMotion,
-          onChanged: AppPreferences.instance.setReducedMotion,
         ),
+
+        const SizedBox(height: 22),
+        _buildSectionLabel('HIỆU ỨNG & CHUYỂN ĐỘNG'),
+        const SizedBox(height: 8),
+        Material(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
+              activeColor: AppColors.deepBurgundy,
+              activeTrackColor: AppColors.mutedGold.withValues(alpha: 0.4),
+              title: const Text(
+                'Giảm chuyển động',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.sansFamily,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkBrown,
+                ),
+              ),
+              subtitle: const Text(
+                'Tắt hiệu ứng chuyển trang, hiện dần và dịch chuyển ảnh để xem mượt mà hơn.',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.sansFamily,
+                  fontSize: 12,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+              value: AppPreferences.instance.reducedMotion,
+              onChanged: AppPreferences.instance.setReducedMotion,
+            ),
+          ),
+        ),
+
         const SizedBox(height: 20),
         const Notice(
-          'Cài đặt và dữ liệu chỉ được giữ trong phiên trải nghiệm hiện tại.',
+          'Cài đặt trải nghiệm này áp dụng tức thì và được lưu lại trên thiết bị.',
         ),
       ],
     ),

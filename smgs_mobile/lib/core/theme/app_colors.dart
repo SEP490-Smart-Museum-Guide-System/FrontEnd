@@ -15,6 +15,7 @@ class AppColors {
   static const Color charcoalBrown = darkBrown;
   static const Color parchmentBorder = border;
   static const Color softSand = VisitorColors.secondaryBackground;
+  static const Color secondaryBackground = VisitorColors.secondaryBackground;
 
   static const Color surface = antiqueIvory;
   static const Color onSurface = darkBrown;
@@ -23,5 +24,5 @@ class AppColors {
   static const Color scaffoldBackground = antiqueIvory;
   static const Color primaryText = darkBrown;
   static const Color secondaryText = VisitorColors.secondaryText;
-  static const Color lightText = VisitorColors.background;
+  static const Color lightText = VisitorColors.card;
 }

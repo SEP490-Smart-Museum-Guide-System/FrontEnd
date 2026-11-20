@@ -49,6 +49,8 @@ void main() {
       expect(AppServices.auth.user!.name, 'Minh An');
       await tapText(tester, 'Cá nhân');
       expect(find.byType(ProfileScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('Cài đặt & hỗ trợ'));
+      await tester.pumpAndSettle();
       await tapText(tester, 'Đăng xuất');
       expect(AppServices.auth.user, isNull);
       expect(find.byType(AuthScreen), findsOneWidget);

@@ -1285,78 +1285,226 @@ class _PurchasedServicesScreenState extends State<PurchasedServicesScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SectionHeading('Thẻ tham quan & Quyền truy cập số'),
+              const SizedBox(height: 8),
               if (passes.isEmpty)
                 const Notice('Bạn chưa có thẻ tham quan nào đang kích hoạt.')
               else
                 for (final p in passes)
-                  Panel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: p['isValid'] == true ? Colors.green.shade100 : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                p['isValid'] == true ? 'Đang có hiệu lực' : 'Đã hết hạn/Thu hồi',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: p['isValid'] == true ? Colors.green.shade800 : Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ],
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: p['isValid'] == true
+                            ? AppColors.mutedGold.withValues(alpha: 0.6)
+                            : AppColors.border,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(height: 8),
-                        Text(p['productName'] ?? 'Thẻ bảo tàng', style: AppTextStyles.cardTitle),
-                        const SizedBox(height: 4),
-                        Text('Hết hạn lúc: ${p['expiresAt'] ?? 'Không giới hạn'}', style: AppTextStyles.caption),
-                        SelectableText('Mã thẻ: ${p['id']}', style: AppTextStyles.caption),
                       ],
                     ),
-                  ),
-
-              const SizedBox(height: 20),
-              const SectionHeading('Lịch sử đơn hàng'),
-              if (orders.isEmpty)
-                const Notice('Bạn chưa thực hiện đơn đặt mua nào.')
-              else
-                for (final o in orders)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Panel(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(o['productName'] ?? 'Đơn hàng', style: AppTextStyles.cardTitle),
-                              Text(
-                                '${o['amount']} ${o['currency']}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.deepBurgundy),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.confirmation_number_outlined,
+                                    size: 18,
+                                    color: p['isValid'] == true
+                                        ? AppColors.deepBurgundy
+                                        : AppColors.secondaryText,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'VÉ THAM QUAN ĐIỆN TỬ',
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.sansFamily,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                      color: AppColors.secondaryText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: p['isValid'] == true ? const Color(0xFFE8F5E9) : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: p['isValid'] == true ? const Color(0xFF2E7D32).withValues(alpha: 0.3) : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: Text(
+                                  p['isValid'] == true ? 'Đang có hiệu lực' : 'Đã hết hạn/Thu hồi',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: p['isValid'] == true ? const Color(0xFF2E7D32) : Colors.grey.shade700,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
+                          const Divider(height: 18, color: AppColors.border),
+                          Text(
+                            p['productName'] ?? 'Thẻ bảo tàng',
+                            style: const TextStyle(
+                              fontFamily: AppTextStyles.sansFamily,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBrown,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text('Trạng thái: ${backendStatus(o['status'])}', style: AppTextStyles.caption),
-                          Text('Mã đơn: ${o['id']}', style: AppTextStyles.caption),
+                          Text(
+                            'Hết hạn: ${p['expiresAt'] ?? 'Không giới hạn'}',
+                            style: const TextStyle(
+                              fontFamily: AppTextStyles.sansFamily,
+                              fontSize: 12,
+                              color: AppColors.secondaryText,
+                            ),
+                          ),
                           const SizedBox(height: 6),
-                          TextButton(
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => OrderDetailScreen(orderId: o['id'].toString()),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.antiqueIvory,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: SelectableText(
+                              'Mã thẻ: #${p['id']}',
+                              style: const TextStyle(
+                                fontFamily: AppTextStyles.sansFamily,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.darkBrown,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+              const SizedBox(height: 20),
+              const SectionHeading('Lịch sử đơn hàng'),
+              const SizedBox(height: 8),
+              if (orders.isEmpty)
+                const Notice('Bạn chưa thực hiện đơn đặt mua nào.')
+              else
+                for (final o in orders)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: AppColors.antiqueIvory,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.border),
                                 ),
-                              );
-                              if (mounted) setState(() => _data = _fetch());
-                            },
-                            child: const Text('Xem chi tiết & Hóa đơn'),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.receipt_long_outlined,
+                                    size: 20,
+                                    color: AppColors.deepBurgundy,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      o['productName'] ?? 'Đơn hàng',
+                                      style: const TextStyle(
+                                        fontFamily: AppTextStyles.sansFamily,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.darkBrown,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      'Mã đơn: #${o['id']} · ${backendStatus(o['status'])}',
+                                      style: const TextStyle(
+                                        fontFamily: AppTextStyles.sansFamily,
+                                        fontSize: 12,
+                                        color: AppColors.secondaryText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${o['amount']} ${o['currency']}',
+                                style: const TextStyle(
+                                  fontFamily: AppTextStyles.sansFamily,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.deepBurgundy,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 18, color: AppColors.border),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => OrderDetailScreen(orderId: o['id'].toString()),
+                                  ),
+                                );
+                                if (mounted) setState(() => _data = _fetch());
+                              },
+                              icon: const Icon(Icons.description_outlined, size: 16),
+                              label: const Text('Xem chi tiết & Hóa đơn', style: TextStyle(fontSize: 12.5)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.deepBurgundy,
+                                side: const BorderSide(color: AppColors.border),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

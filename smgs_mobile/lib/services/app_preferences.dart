@@ -4,6 +4,12 @@ class AppPreferences extends ChangeNotifier {
   AppPreferences._();
   static final instance = AppPreferences._();
   bool reducedMotion = false, largeText = false;
+  String language = 'vi';
+
+  void setLanguage(String value) {
+    language = value;
+    notifyListeners();
+  }
   void setReducedMotion(bool value) {
     reducedMotion = value;
     notifyListeners();

@@ -44,25 +44,30 @@ class MuseumPage extends StatelessWidget {
     this.eyebrow,
     this.subtitle,
     this.back = false,
+    this.action,
   });
   final String title;
   final String? eyebrow, subtitle;
   final bool back;
+  final Widget? action;
   final List<Widget> children;
   @override
   Widget build(BuildContext context) {
     final body = HeritagePaper(
       child: SoftEntrance(
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            children: [
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                children: [
               if (eyebrow != null) ...[
                 Row(
                   children: [
                     Expanded(child: Eyebrow(eyebrow!)),
                     const SizedBox(width: 12),
-                    const HeritageSeal(size: 34),
+                    action ?? const HeritageSeal(size: 34),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -108,7 +113,9 @@ class MuseumPage extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
     return back
         ? Scaffold(
             backgroundColor: AppColors.antiqueIvory,

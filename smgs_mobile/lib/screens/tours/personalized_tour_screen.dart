@@ -707,21 +707,17 @@ class _PersonalizedTourDetailScreenState
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2C1914), Color(0xFF1B0E0A)],
-        ),
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.mutedGold.withValues(alpha: 0.5),
-          width: 1.2,
+          color: AppColors.border,
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -735,7 +731,7 @@ class _PersonalizedTourDetailScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.mutedGold.withValues(alpha: 0.2),
+                  color: AppColors.softSand,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: AppColors.mutedGold.withValues(alpha: 0.5),
@@ -744,7 +740,7 @@ class _PersonalizedTourDetailScreenState
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome, size: 13, color: AppColors.mutedGold),
+                    Icon(Icons.auto_awesome, size: 13, color: AppColors.deepBurgundy),
                     SizedBox(width: 5),
                     Text(
                       'AI TỐI ƯU LỘ TRÌNH',
@@ -752,7 +748,7 @@ class _PersonalizedTourDetailScreenState
                         fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.6,
-                        color: AppColors.antiqueIvory,
+                        color: AppColors.deepBurgundy,
                       ),
                     ),
                   ],
@@ -763,7 +759,7 @@ class _PersonalizedTourDetailScreenState
                   museumName,
                   style: const TextStyle(
                     fontSize: 12,
-                    color: AppColors.antiqueIvory,
+                    color: AppColors.secondaryText,
                     fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -777,10 +773,10 @@ class _PersonalizedTourDetailScreenState
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: AppColors.secondaryBackground,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.mutedGold.withValues(alpha: 0.2),
+                color: AppColors.border,
               ),
             ),
             child: Row(
@@ -793,7 +789,7 @@ class _PersonalizedTourDetailScreenState
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.antiqueIvory,
+                          color: AppColors.deepBurgundy,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -801,7 +797,7 @@ class _PersonalizedTourDetailScreenState
                         'Điểm dừng',
                         style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.mutedGold,
+                          color: AppColors.secondaryText,
                         ),
                       ),
                     ],
@@ -810,7 +806,7 @@ class _PersonalizedTourDetailScreenState
                 Container(
                   width: 1,
                   height: 32,
-                  color: AppColors.mutedGold.withValues(alpha: 0.25),
+                  color: AppColors.border,
                 ),
                 Expanded(
                   child: Column(
@@ -820,7 +816,7 @@ class _PersonalizedTourDetailScreenState
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.antiqueIvory,
+                          color: AppColors.deepBurgundy,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -828,7 +824,7 @@ class _PersonalizedTourDetailScreenState
                         'Dự kiến / Dành ra',
                         style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.mutedGold,
+                          color: AppColors.secondaryText,
                         ),
                       ),
                     ],
@@ -837,7 +833,7 @@ class _PersonalizedTourDetailScreenState
                 Container(
                   width: 1,
                   height: 32,
-                  color: AppColors.mutedGold.withValues(alpha: 0.25),
+                  color: AppColors.border,
                 ),
                 Expanded(
                   child: Column(
@@ -847,7 +843,7 @@ class _PersonalizedTourDetailScreenState
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.antiqueIvory,
+                          color: AppColors.deepBurgundy,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -855,7 +851,7 @@ class _PersonalizedTourDetailScreenState
                         'Chủ đề khớp',
                         style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.mutedGold,
+                          color: AppColors.secondaryText,
                         ),
                       ),
                     ],
@@ -871,15 +867,13 @@ class _PersonalizedTourDetailScreenState
             borderRadius: BorderRadius.circular(3),
             child: Container(
               height: 5,
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.softSand,
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
                 widthFactor: ratio,
                 child: Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.mutedGold, Colors.amberAccent],
-                    ),
+                    color: AppColors.deepBurgundy,
                   ),
                 ),
               ),
@@ -899,10 +893,10 @@ class _PersonalizedTourDetailScreenState
                       vertical: 3.5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.deepBurgundy.withValues(alpha: 0.45),
+                      color: AppColors.secondaryBackground,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: AppColors.mutedGold.withValues(alpha: 0.35),
+                        color: AppColors.border,
                       ),
                     ),
                     child: Row(
@@ -911,14 +905,14 @@ class _PersonalizedTourDetailScreenState
                         const Icon(
                           Icons.check,
                           size: 11,
-                          color: AppColors.mutedGold,
+                          color: AppColors.deepBurgundy,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           item,
                           style: const TextStyle(
                             fontSize: 11.5,
-                            color: AppColors.antiqueIvory,
+                            color: AppColors.primaryText,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -934,8 +928,9 @@ class _PersonalizedTourDetailScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.25),
+                color: AppColors.secondaryBackground,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -943,15 +938,15 @@ class _PersonalizedTourDetailScreenState
                   const Icon(
                     Icons.info_outline,
                     size: 14,
-                    color: AppColors.mutedGold,
+                    color: AppColors.deepBurgundy,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       notice,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11.5,
-                        color: AppColors.antiqueIvory.withValues(alpha: 0.85),
+                        color: AppColors.secondaryText,
                       ),
                     ),
                   ),
