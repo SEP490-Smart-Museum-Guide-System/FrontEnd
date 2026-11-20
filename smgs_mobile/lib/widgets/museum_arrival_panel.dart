@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../services/location_service.dart';
+import '../services/automatic_location_service.dart';
 import '../services/museum_presence_api.dart';
 import '../services/visitor_experience_api.dart';
 import '../screens/museum/visitor_indoor_map_screen.dart';
@@ -12,9 +11,11 @@ class MuseumArrivalPanel extends StatefulWidget {
     super.key,
     required this.museumId,
     required this.museumName,
+    this.locationService,
   });
   final int museumId;
   final String museumName;
+  final AutomaticLocationService? locationService;
   @override
   State<MuseumArrivalPanel> createState() => _MuseumArrivalPanelState();
 }
@@ -27,6 +28,9 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
   int _generation = 0;
   Map<String, dynamic>? _position, _gps;
   String? _error;
+  late final _location =
+      widget.locationService ?? AutomaticLocationService.instance;
+  DateTime? _assessedAt;
   int? get _visitId {
     final active = VisitorSession.activeVisit;
     if (active == null ||
@@ -41,6 +45,7 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _location.addListener(_locationChanged);
     _refresh();
     _timer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted &&
@@ -49,6 +54,22 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
         _refresh();
       }
     });
+  }
+
+  void _locationChanged() {
+    if (!mounted) return;
+    if (!_location.hasFreshLocation) {
+      setState(() => _gps = null);
+      return;
+    }
+    setState(
+      () {},
+    ); // Arrival may change when museum metadata finishes loading.
+    final time = _location.latest!.capturedAt!;
+    if (_assessedAt == null ||
+        time.difference(_assessedAt!) >= const Duration(seconds: 10)) {
+      _refresh();
+    }
   }
 
   @override
@@ -63,11 +84,12 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
   @override
   void dispose() {
     _timer?.cancel();
+    _location.removeListener(_locationChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  Future<void> _refresh({bool requestPermission = false}) async {
+  Future<void> _refresh() async {
     if (_busy || _scanning) return;
     final generation = ++_generation;
     var readingPresence = true;
@@ -83,17 +105,15 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
       if (!mounted || generation != _generation) return;
       setState(() => _position = position);
       readingPresence = false;
-      final permission = await Geolocator.checkPermission();
-      if (requestPermission ||
-          permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse) {
+      if (_location.hasFreshLocation) {
         if (!mounted ||
             generation != _generation ||
             WidgetsBinding.instance.lifecycleState !=
                 AppLifecycleState.resumed) {
           return;
         }
-        final location = await LocationService.getCurrentUserLocation();
+        final location = _location.latest!;
+        _assessedAt = location.capturedAt;
         if (!mounted ||
             generation != _generation ||
             WidgetsBinding.instance.lifecycleState !=
@@ -101,7 +121,14 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
           return;
         }
         final gps = await MuseumPresenceApi.assess(widget.museumId, location);
-        if (mounted && generation == _generation) setState(() => _gps = gps);
+        if (mounted &&
+            generation == _generation &&
+            _location.hasFreshLocation &&
+            _location.latest?.capturedAt == location.capturedAt) {
+          setState(() => _gps = gps);
+        }
+      } else {
+        setState(() => _gps = null);
       }
     } catch (e) {
       if (mounted && generation == _generation) {
@@ -175,9 +202,11 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
         ? 'Đã xác nhận qua QR'
         : time != null
         ? 'Vị trí xác nhận đã cũ'
+        : _location.arrivedMuseum?.id == '${widget.museumId}'
+        ? 'Đã đến khu vực bảo tàng (GPS)'
         : _gps?['status'] == 'nearby'
         ? 'Bạn đang ở gần bảo tàng'
-        : 'Xác nhận đã đến bảo tàng';
+        : 'Vị trí đang được cập nhật tự động';
     final details = [
       position?['label'],
       position?['galleryName'],
@@ -198,8 +227,10 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
             Text(
               time != null
                   ? 'Vị trí theo lần quét gần nhất; hãy quét lại khi đổi phòng/tầng.'
+                  : _location.arrivedMuseum?.id == '${widget.museumId}'
+                  ? 'GPS ước tính bạn đã đến. Quét QR khi cần xác định phòng/tầng.'
                   : _gps?['message']?.toString() ??
-                        'GPS chỉ xác định ở gần. Quét QR tại cổng hoặc phòng để xác nhận.',
+                        'App tự theo dõi GPS khi đang sử dụng. QR giúp xác định chính xác phòng/tầng.',
             ),
             if (_error != null)
               Text(
@@ -214,12 +245,6 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
                   onPressed: _scanning ? null : _scan,
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Quét QR xác nhận'),
-                ),
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => _refresh(requestPermission: true),
-                  child: const Text('Kiểm tra GPS'),
                 ),
                 if (position?['mapId'] != null)
                   TextButton(

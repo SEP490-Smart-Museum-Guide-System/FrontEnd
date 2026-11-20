@@ -7,6 +7,7 @@ import '../models/map_place.dart';
 import '../models/outdoor_route.dart';
 import '../services/discovery_api_service.dart';
 import '../services/location_service.dart';
+import '../services/automatic_location_service.dart';
 import 'interactive_heritage_map.dart';
 import 'museum_arrival_panel.dart';
 
@@ -42,6 +43,7 @@ class RoutePreviewSheet extends StatefulWidget {
 }
 
 class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
+  final _location = AutomaticLocationService.instance;
   bool _loading = true, _opening = false;
   String? _error;
   OutdoorRoutePreview? _route;
@@ -50,7 +52,22 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
   @override
   void initState() {
     super.initState();
+    _location.addListener(_locationChanged);
     _load();
+  }
+
+  void _locationChanged() {
+    if (mounted) {
+      setState(
+        () => _origin = _location.hasFreshLocation ? _location.latest : null,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _location.removeListener(_locationChanged);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -64,7 +81,9 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
       if ((widget.place == null && widget.museum?.hasCoordinates != true)) {
         throw Exception('Bảo tàng chưa có tọa độ hợp lệ.');
       }
-      final origin = await LocationService.getCurrentUserLocation();
+      final origin = _location.hasFreshLocation
+          ? _location.latest!
+          : await LocationService.getCurrentUserLocation();
       if (!mounted) return;
       setState(() => _origin = origin);
       final route = await DiscoveryApiService.fetchOutdoorRoute(
@@ -188,7 +207,7 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
                     ),
                   ),
                   const Text(
-                    'Ước tính từ OSRM tại thời điểm yêu cầu, không theo dõi vị trí liên tục.',
+                    'Tuyến OSRM được tính khi mở. Vị trí của bạn tự cập nhật khi đang dùng app.',
                   ),
                 ],
                 if (_error != null) ...[

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -43,10 +44,9 @@ class _InteractiveHeritageMapState extends State<InteractiveHeritageMap> {
   void didUpdateWidget(covariant InteractiveHeritageMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placeLocation != widget.placeLocation ||
-        oldWidget.museums != widget.museums ||
+        !listEquals(oldWidget.museums, widget.museums) ||
         oldWidget.polylinePoints != widget.polylinePoints ||
-        oldWidget.selectedMuseumId != widget.selectedMuseumId ||
-        oldWidget.userLocation != widget.userLocation) {
+        oldWidget.selectedMuseumId != widget.selectedMuseumId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _fit();
       });

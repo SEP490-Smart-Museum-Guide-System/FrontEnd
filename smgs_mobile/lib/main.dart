@@ -9,6 +9,9 @@ import 'services/app_preferences.dart';
 import 'services/token_manager.dart';
 import 'services/backend_auth_service.dart';
 import 'widgets/heritage_decoration.dart';
+import 'widgets/automatic_location_host.dart';
+
+final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +33,7 @@ class SMGSApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'SMGS • Cẩm nang bảo tàng',
     debugShowCheckedModeBanner: false,
+    scaffoldMessengerKey: _messengerKey,
     locale: const Locale('vi'),
     supportedLocales: const [Locale('vi')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -48,7 +52,10 @@ class SMGSApp extends StatelessWidget {
                   (AppPreferences.instance.largeText ? 1.15 : 1),
             ),
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: AutomaticLocationHost(
+            messengerKey: _messengerKey,
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     ),

@@ -9,6 +9,7 @@ import '../../services/visitor_experience_api.dart';
 import '../../widgets/game_tutorial_overlay.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/visitor_handbook_sheet.dart';
+import '../../widgets/automatic_arrival_card.dart';
 import '../museum/museum_detail_screen.dart';
 import '../museum/visit_progress_screen.dart';
 import '../profile/my_museum_screen.dart';
@@ -151,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          const AutomaticArrivalCard(),
                           _DiscoveryHero(museum: museums.firstOrNull),
                           const SizedBox(height: 24),
                           Material(

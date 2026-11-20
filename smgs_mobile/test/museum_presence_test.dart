@@ -9,11 +9,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:smgs_mobile/services/location_service.dart';
+import 'package:smgs_mobile/services/automatic_location_service.dart';
+import 'package:smgs_mobile/widgets/automatic_location_host.dart';
 import 'package:smgs_mobile/services/museum_presence_api.dart';
 import 'package:smgs_mobile/services/visitor_experience_api.dart';
 import 'package:smgs_mobile/widgets/museum_arrival_panel.dart';
 import 'package:smgs_mobile/screens/museum/visitor_indoor_map_screen.dart';
-import 'discovery_test.dart' show FakeLocation;
+import 'support/fake_location_stream.dart';
 import 'visitor_directory_test.dart' show mapJson, nodeA, nodeB;
 import 'widget_test.dart' show host, screenSize;
 
@@ -55,14 +57,26 @@ void main() {
     }
   });
   late GeolocatorPlatform previous;
-  late FakeLocation gps;
+  late StreamingLocation gps;
+  late AutomaticLocationService tracking;
+  Widget arrival() => AutomaticLocationHost(
+    service: tracking,
+    child: MuseumArrivalPanel(
+      museumId: 7,
+      museumName: 'Bảo tàng thử',
+      locationService: tracking,
+    ),
+  );
   setUp(() {
     previous = GeolocatorPlatform.instance;
-    gps = FakeLocation();
+    gps = StreamingLocation();
+    tracking = AutomaticLocationService(fetchMuseums: (_) async => []);
     GeolocatorPlatform.instance = gps;
     VisitorSession.clear();
   });
-  tearDown(() {
+  tearDown(() async {
+    tracking.dispose();
+    await gps.close();
     GeolocatorPlatform.instance = previous;
     VisitorSession.clear();
   });
@@ -150,12 +164,9 @@ void main() {
       () async {
         await tester.pumpWidget(
           host(
-            const RepaintBoundary(
-              key: ValueKey('presence-preview'),
-              child: MuseumArrivalPanel(
-                museumId: 7,
-                museumName: 'Bảo tàng thử',
-              ),
+            RepaintBoundary(
+              key: const ValueKey('presence-preview'),
+              child: arrival(),
             ),
           ),
         );
@@ -163,6 +174,7 @@ void main() {
         expect(find.text('Bạn đang ở gần bảo tàng'), findsOneWidget);
         expect(find.text('Đã xác nhận qua QR'), findsNothing);
         expect(find.text('Quét QR xác nhận'), findsOneWidget);
+        expect(find.text('Kiểm tra GPS'), findsNothing);
         expect(tester.takeException(), isNull);
         final output = Platform.environment['SMGS_PRESENCE_SCREENSHOT'];
         if (output != null) {
@@ -196,11 +208,7 @@ void main() {
       gps.permission = LocationPermission.deniedForever;
       await screenSize(tester, const Size(320, 800));
       await http.runWithClient(() async {
-        await tester.pumpWidget(
-          host(
-            const MuseumArrivalPanel(museumId: 7, museumName: 'Bảo tàng thử'),
-          ),
-        );
+        await tester.pumpWidget(host(arrival()));
         await tester.pumpAndSettle();
         expect(find.text('Đã xác nhận qua QR'), findsOneWidget);
         expect(find.textContaining('Phòng gốm'), findsOneWidget);
@@ -216,9 +224,7 @@ void main() {
   ) async {
     gps.permission = LocationPermission.deniedForever;
     await http.runWithClient(() async {
-      await tester.pumpWidget(
-        host(const MuseumArrivalPanel(museumId: 7, museumName: 'Bảo tàng thử')),
-      );
+      await tester.pumpWidget(host(arrival()));
       await tester.pumpAndSettle();
       expect(find.text('Vị trí xác nhận đã cũ'), findsOneWidget);
       expect(find.text('Đã xác nhận qua QR'), findsNothing);
@@ -232,11 +238,7 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       await http.runWithClient(
         () async {
-          await tester.pumpWidget(
-            host(
-              const MuseumArrivalPanel(museumId: 7, museumName: 'Bảo tàng thử'),
-            ),
-          );
+          await tester.pumpWidget(host(arrival()));
           await tester.pumpAndSettle();
           expect(gps.positionRequests, 0);
           tester.binding.handleAppLifecycleStateChanged(

@@ -14,6 +14,14 @@ flutter run -d chrome
 
 Kiểm tra bằng `flutter analyze` và `flutter test test/main_flows_test.dart`.
 
+## Định vị tự động khi mở app
+
+App tự xin quyền vị trí ở lần mở đầu tiên và theo dõi trong lúc đang sử dụng, xuyên suốt các tab/màn hình. Chấp nhận quyền **Chỉ khi dùng ứng dụng** là đủ. Khi ra nền app tạm dừng; quay về app tự kiểm tra quyền/GPS và tiếp tục. Không tự mở lại hộp thoại quyền sau khi khách từ chối; thẻ vị trí trên Trang chủ dẫn tới Cài đặt để cấp lại. Đây không phải dịch vụ theo dõi nền với quyền **Luôn cho phép**.
+
+Trang chủ tự nhận biết bảo tàng từ tọa độ trong dữ liệu backend và thông báo **Đã đến khu vực … (GPS)** sau ít nhất hai mẫu hợp lệ cách nhau 10 giây. Mẫu phải mới trong 30 giây, sai số tối đa 50 m, không phải vị trí giả lập/cache; khoảng cách cộng sai số phải nằm trong bán kính 150 m của đúng một bảo tàng. Nếu nhiều bảo tàng cùng vùng, app không tự chọn nhầm. Đây là ước tính khu vực, không tự tạo lượt tham quan hoặc ghi nhận phòng/tầng. QR tại cổng/phòng vẫn cung cấp điểm neo chính xác cho sơ đồ trong nhà. Bản đồ đường đi cập nhật chấm GPS; tuyến OSRM vẫn là tuyến được tính khi mở.
+
+Kiểm thử: `flutter test test/automatic_location_test.dart test/museum_presence_test.dart`. Kiểm tra thực địa trên điện thoại thật để đánh giá sai số tại từng bảo tàng; test mô phỏng không chứng minh độ chính xác GPS trong nhà.
+
 ## Build APK trên GitHub Actions (main)
 
 Mở **Actions → Android APK → Run workflow → main**. APK cũng tự build khi code mobile hoặc workflow được push lên main. Sau khi job thành công, tải **Artifacts → smgs-android-apk-<run number>**, giải nén rồi cài file `.apk`. Artifact có thêm SHA-256 và được giữ 14 ngày.

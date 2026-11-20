@@ -8,6 +8,7 @@ import '../../models/city.dart';
 import '../../models/museum.dart';
 import '../../services/discovery_api_service.dart';
 import '../../services/location_service.dart';
+import '../../services/automatic_location_service.dart';
 import '../../widgets/interactive_heritage_map.dart';
 import '../../widgets/museum_discovery_card.dart';
 import '../../widgets/route_preview_sheet.dart';
@@ -21,6 +22,7 @@ class MuseumDiscoveryMapScreen extends StatefulWidget {
 }
 
 class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
+  final _automaticLocation = AutomaticLocationService.instance;
   final _search = TextEditingController();
   final _cards = ScrollController();
   Timer? _debounce;
@@ -37,12 +39,26 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
   @override
   void initState() {
     super.initState();
+    _automaticLocation.addListener(_locationChanged);
+    if (_automaticLocation.hasFreshLocation) {
+      _location = _automaticLocation.latest;
+    }
     _loadCities();
     _load();
   }
 
+  void _locationChanged() {
+    if (!mounted) return;
+    setState(
+      () => _location = _automaticLocation.hasFreshLocation
+          ? _automaticLocation.latest
+          : null,
+    );
+  }
+
   @override
   void dispose() {
+    _automaticLocation.removeListener(_locationChanged);
     _debounce?.cancel();
     _search.dispose();
     _cards.dispose();
