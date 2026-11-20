@@ -3,6 +3,8 @@ import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/artifact_scan_service.dart';
 import 'dart:typed_data';
+import 'dart:async';
+import '../../services/museum_presence_api.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -42,6 +44,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   int _routeRequest = 0;
   int _mapRequest = 0;
   ScanRequest? _scanRequest;
+  DateTime? _confirmedAt;
+  bool _manualStart = false;
+  Timer? _positionTimer;
 
   // Navigation state
   String? _fromNodeId;
@@ -62,10 +67,25 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     super.initState();
     _currentMapId = widget.mapId;
     _loadPublishedMap();
+    _positionTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (!_manualStart &&
+            _confirmedAt != null &&
+            DateTime.now().toUtc().difference(_confirmedAt!.toUtc()) >
+                const Duration(minutes: 5)) {
+          _routeNodeIds = [];
+          _fromNodeId = null;
+          _routeError =
+              'Vị trí đã cũ. Hãy quét QR tại vị trí đang đứng để tiếp tục chỉ đường.';
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _positionTimer?.cancel();
     _transformController.dispose();
     _searchController.dispose();
     _scannerController?.dispose();
@@ -106,6 +126,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _fromNodeId = null;
         _startMarker = null;
         _startArtifactName = null;
+        _manualStart = false;
+        _confirmedAt = null;
         final targets = widget.targetArtifactId == null
             ? <IndoorMarker>[]
             : mapData.markers
@@ -123,15 +145,29 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && loadRequest == _mapRequest) _fitMap();
       });
-      if (widget.visitId != null) {
+      {
         try {
-          final location = await VisitorExperienceApi.location(widget.visitId!);
+          final location = await MuseumPresenceApi.current(
+            mapData.museumId,
+            visitId: widget.visitId,
+            mapId: int.parse(_currentMapId.toString()),
+          );
           if (!mounted || loadRequest != _mapRequest) return;
+          if (location['isFresh'] != true) {
+            throw const FormatException(
+              'Chưa có vị trí mới. Hãy quét QR cổng, phòng hoặc hiện vật tại chỗ.',
+            );
+          }
+          if (location['mapId'] != mapData.id) {
+            throw const FormatException(
+              'Vị trí vừa xác nhận thuộc sơ đồ khác. Hãy quét QR phòng để mở đúng tầng.',
+            );
+          }
           final markers = mapData.markers
               .where(
                 (m) =>
                     m.isActive &&
-                    m.artifactId == location['artifactId'] &&
+                    m.id == location['markerId']?.toString() &&
                     m.nodeId != null,
               )
               .toList();
@@ -144,6 +180,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             _startMarker = markers.single;
             _fromNodeId = markers.single.nodeId;
             _startArtifactName = markers.single.label;
+            _confirmedAt = DateTime.tryParse(
+              location['confirmedAt']?.toString() ?? '',
+            );
+            _manualStart = false;
           });
         } catch (e) {
           if (mounted && loadRequest == _mapRequest) {
@@ -235,26 +275,20 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
   Future<void> _recalculateRoute() async {
     final request = ++_routeRequest;
-    if (widget.visitId != null) {
+    if (!_manualStart) {
       if (_map == null || _selectedDestination == null) return;
       final target = _selectedDestination!.artifactId;
-      if (target == null) {
-        setState(() {
-          _routeNodeIds = [];
-          _routeError =
-              'Chọn hiện vật để nhận chỉ đường theo chuyến tham quan.';
-        });
-        return;
-      }
       setState(() {
         _routeNodeIds = [];
         _routeError = null;
       });
       try {
-        final data = await VisitorExperienceApi.route(
-          widget.visitId!,
+        final data = await MuseumPresenceApi.route(
+          _map!.museumId,
           int.parse(_currentMapId.toString()),
+          visitId: widget.visitId,
           artifactId: target,
+          targetNodeId: _selectedDestination!.nodeId,
           accessible: _accessibleOnly,
         );
         if (!mounted || request != _routeRequest) return;
@@ -358,6 +392,24 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     });
 
     try {
+      if (MuseumPresenceApi.isCheckpoint(rawCode)) {
+        final result = await MuseumPresenceApi.scan(
+          rawCode,
+          museumId: _map!.museumId,
+          visitId: widget.visitId,
+        );
+        if (!mounted) return;
+        _currentMapId = result['mapId'];
+        setState(() => _showQrScanner = false);
+        await _scannerController?.stop();
+        await _loadPublishedMap();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Đã xác nhận tại ${result['label']}.')),
+          );
+        }
+        return;
+      }
       final result = await IndoorMapApiService.resolveQrToLocation(
         rawQr: rawCode,
         map: _map!,
@@ -376,6 +428,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _fromNodeId = result.startNodeId;
         _startMarker = result.marker;
         _startArtifactName = result.artifactName;
+        _confirmedAt = DateTime.tryParse(
+          recognition['recognizedAt']?.toString() ?? '',
+        );
+        _manualStart = false;
         _showQrScanner = false;
         _isProcessingScan = false;
       });
@@ -426,7 +482,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             .toList() ??
         [];
 
-    final position = _startMarker;
+    final age = _confirmedAt == null
+        ? null
+        : DateTime.now().toUtc().difference(_confirmedAt!.toUtc());
+    final position =
+        _manualStart ||
+            (age != null &&
+                !age.isNegative &&
+                age <= const Duration(minutes: 5))
+        ? _startMarker
+        : null;
     final map = _map;
     final labelWidth = map?.imageWidth.clamp(0.0, 156.0).toDouble() ?? 0.0;
 
@@ -725,10 +790,12 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
-                                            child: const Text(
-                                              'Vị trí hiện tại',
+                                            child: Text(
+                                              _manualStart
+                                                  ? 'Điểm xuất phát chọn tay'
+                                                  : 'Vị trí vừa xác nhận',
                                               textAlign: TextAlign.center,
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                 color: Color(0xFF1749A8),
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w700,
@@ -834,8 +901,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                         Expanded(
                           child: Text(
                             _startArtifactName != null
-                                ? 'Đang ở: $_startArtifactName'
-                                : 'Chưa có vị trí. Hãy quét QR cạnh hiện vật.',
+                                ? (_manualStart
+                                      ? 'Điểm xuất phát chọn tay: $_startArtifactName'
+                                      : _confirmedAt != null &&
+                                            DateTime.now().toUtc().difference(
+                                                  _confirmedAt!.toUtc(),
+                                                ) <=
+                                                const Duration(minutes: 5)
+                                      ? 'Vừa xác nhận: $_startArtifactName'
+                                      : 'Vị trí cũ: $_startArtifactName — hãy quét lại')
+                                : 'Quét QR cổng, phòng hoặc hiện vật để xác định vị trí.',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -914,6 +989,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                   _startMarker = marker;
                                   _fromNodeId = marker.nodeId;
                                   _startArtifactName = marker.label;
+                                  _manualStart = true;
+                                  _confirmedAt = null;
                                 });
                                 _recalculateRoute();
                               },

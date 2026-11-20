@@ -1,5 +1,7 @@
 import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
+import '../../services/museum_presence_api.dart';
+import '../museum/visitor_indoor_map_screen.dart';
 import '../../services/backend_api.dart';
 import '../../services/app_services.dart';
 import '../../widgets/backend_panel.dart';
@@ -72,6 +74,23 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       _error = null;
     });
     try {
+      if (MuseumPresenceApi.isCheckpoint(value)) {
+        final result = await MuseumPresenceApi.scan(value);
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => VisitorIndoorMapScreen(
+              mapId: result['mapId'],
+              museumName: 'Vị trí vừa xác nhận',
+              visitId:
+                  VisitorSession.activeVisit?['museumId'] == result['museumId']
+                  ? _visitId
+                  : null,
+            ),
+          ),
+        );
+        return;
+      }
       final code = ArtifactScanService.extractCode(value);
       if (_scanRequest?.code != code || _scanRequest?.visitId != _visitId) {
         _scanRequest = ScanRequest(code, visitId: _visitId);

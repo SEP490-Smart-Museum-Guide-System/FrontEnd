@@ -6,9 +6,15 @@ class UserLocationResult {
     required this.latitude,
     required this.longitude,
     this.isLastKnown = false,
+    this.accuracyMeters = double.infinity,
+    this.capturedAt,
+    this.isMocked = false,
   });
   final double latitude, longitude;
   final bool isLastKnown;
+  final double accuracyMeters;
+  final DateTime? capturedAt;
+  final bool isMocked;
 }
 
 class LocationService {
@@ -76,6 +82,9 @@ class LocationService {
       latitude: position.latitude,
       longitude: position.longitude,
       isLastKnown: isLastKnown,
+      accuracyMeters: position.accuracy,
+      capturedAt: position.timestamp,
+      isMocked: position.isMocked,
     );
   }
 }

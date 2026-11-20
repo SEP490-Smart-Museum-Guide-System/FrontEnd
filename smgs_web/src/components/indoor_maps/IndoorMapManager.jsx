@@ -142,8 +142,10 @@ export default function IndoorMapManager() {
     setImageUrl(''); setMap(uploaded); setRoute(null); setMessage('Đã lưu ảnh sơ đồ.');
   }
   async function downloadQr() {
-    const blob = await indoorApi(`indoor-maps/${map.id}/qr/${selected.id}`, { blob: true });
-    const url = URL.createObjectURL(blob); const a = window.document.createElement('a'); a.href = url; a.download = `qr-hien-vat-${item.artifactId}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const checkpoint = item.type === 'entrance' || item.type === 'gallery';
+    const blob = await indoorApi(checkpoint ? `museums/${map.museumId}/presence/checkpoints/${map.id}/${selected.id}/qr` : `indoor-maps/${map.id}/qr/${selected.id}`, { blob: true });
+    const url = URL.createObjectURL(blob); const a = window.document.createElement('a'); a.href = url; a.download = checkpoint ? `qr-vi-tri-${selected.id}.png` : `qr-hien-vat-${item.artifactId}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMessage(checkpoint ? 'Đã tải QR vị trí. Đặt mã tại đúng cổng/phòng tương ứng.' : 'Đã tải QR hiện vật.');
   }
   const item = selected && map?.[selected.kind].find(object => object.id === selected.id);
   const options = items => items.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>);
@@ -228,6 +230,10 @@ export default function IndoorMapManager() {
                 {item.type === 'artifact' && <>
                   <p className="indoor-hint">Dùng mã QR có sẵn của hiện vật để xem thông tin và xác định vị trí trên sơ đồ. Chọn điểm dẫn đường liên kết để xác định vị trí xuất phát sau khi quét. Các loại điểm khác không có QR.</p>
                   <button type="button" disabled={dirty || !item.isActive || !item.artifactId} onClick={() => run(downloadQr)}>Tải QR hiện vật</button>
+                </>}
+                {['entrance', 'gallery'].includes(item.type) && <>
+                  <p className="indoor-hint">QR xác nhận đã đến hoặc đang ở phòng này. Liên kết điểm dẫn đường, xuất bản sơ đồ rồi tải QR để đặt tại cổng/phòng. Cần in lại sau khi xuất bản phiên bản mới.</p>
+                  <button type="button" disabled={dirty || !item.isActive || !item.nodeId || !map.publishedAt} onClick={() => run(downloadQr)}>Tải QR vị trí</button>
                 </>}
               </>}
               {item && selected.kind === 'edges' && <>

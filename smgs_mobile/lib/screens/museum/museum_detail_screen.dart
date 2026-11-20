@@ -9,6 +9,7 @@ import '../../models/museum.dart';
 import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
 import '../../widgets/route_preview_sheet.dart';
+import '../../widgets/museum_arrival_panel.dart';
 
 import '../artifact/artifact_discovery_screen.dart';
 import '../explore/explore_screen.dart';
@@ -146,6 +147,8 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
           ),
         ],
         if (_error != null) Notice(_error!),
+        if (int.tryParse(museum.id) case final int museumId)
+          MuseumArrivalPanel(museumId: museumId, museumName: museum.name),
         PrimaryButton(
           label: _startingVisit ? 'Đang bắt đầu…' : 'Bắt đầu lượt tham quan',
           onPressed: _startingVisit ? null : _startVisit,

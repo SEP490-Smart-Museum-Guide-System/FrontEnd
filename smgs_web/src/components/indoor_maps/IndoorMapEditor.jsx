@@ -16,7 +16,8 @@ import {
   previewRouteApi,
   publishIndoorMapApi,
   unpublishIndoorMapApi,
-  fetchArtifactQrBlob
+  fetchArtifactQrBlob,
+  indoorApi
 } from '../../services/indoorMapApi';
 import {
   Map as MapIcon,
@@ -787,11 +788,16 @@ export default function IndoorMapEditor() {
   const handleDownloadQr = async (marker) => {
     if (!marker.artifactId) return;
     try {
-      const qrUrl = await fetchArtifactQrBlob(draft.id, marker.id);
+      const checkpoint = ['entrance', 'gallery'].includes(marker.type);
+      const qrUrl = checkpoint
+        ? URL.createObjectURL(await indoorApi(`museums/${draft.museumId}/presence/checkpoints/${draft.id}/${marker.id}/qr`, { blob: true }))
+        : await fetchArtifactQrBlob(draft.id, marker.id);
       const a = document.createElement('a');
       a.href = qrUrl;
       a.download = `QR-${marker.label}.png`;
       a.click();
+      setTimeout(() => URL.revokeObjectURL(qrUrl), 1000);
+      setAlertMsg({ type: 'success', text: checkpoint ? 'Đã tải QR vị trí. Đặt mã tại đúng cổng/phòng tương ứng.' : 'Đã tải QR hiện vật.' });
     } catch (err) {
       alert(err.message);
     }
@@ -1613,14 +1619,14 @@ export default function IndoorMapEditor() {
               </div>
 
               {/* Download QR button if artifact linked */}
-              {selectedMarker.artifactId && selectedMarker.isActive && (
+              {(selectedMarker.artifactId || ['entrance', 'gallery'].includes(selectedMarker.type)) && selectedMarker.isActive && (
                 <button
                   type="button"
                   onClick={() => handleDownloadQr(selectedMarker)}
                   className="btn btn-secondary btn-sm"
                   style={{ marginTop: '6px', fontSize: '0.75rem' }}
                 >
-                  <QrCode size={13} /> Tải mã QR hiện vật
+                  <QrCode size={13} /> {selectedMarker.artifactId ? 'Tải mã QR hiện vật' : 'Tải QR vị trí (sơ đồ đã xuất bản)'}
                 </button>
               )}
             </div>

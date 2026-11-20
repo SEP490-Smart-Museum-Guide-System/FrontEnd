@@ -8,6 +8,7 @@ import '../models/outdoor_route.dart';
 import '../services/discovery_api_service.dart';
 import '../services/location_service.dart';
 import 'interactive_heritage_map.dart';
+import 'museum_arrival_panel.dart';
 
 class RoutePreviewSheet extends StatefulWidget {
   const RoutePreviewSheet({
@@ -201,6 +202,12 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
                   ),
                 ],
                 const SizedBox(height: 8),
+                if (int.tryParse(widget.museum?.id ?? '')
+                    case final int museumId)
+                  MuseumArrivalPanel(
+                    museumId: museumId,
+                    museumName: widget.museum!.name,
+                  ),
                 FilledButton.icon(
                   onPressed:
                       (widget.place == null &&
