@@ -1,0 +1,106 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'smgs_mobile/**'
+      - '.github/workflows/android-apk.yml'
+      - '.github/scripts/prepare_apk_config.py'
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'Backend URL override (blank uses the deployed production API)'
+        required: false
+        type: string
+      tts_base_url:
+        description: 'Optional deployed TTS service URL'
+        required: false
+        type: string
+      vision_base_url:
+        description: 'Optional deployed Vision service URL'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Build installable demo APK
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: smgs_mobile
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url || vars.MOBILE_API_BASE_URL || 'https://smgs-web.vercel.app' }}
+      TTS_BASE_URL: ${{ inputs.tts_base_url || vars.MOBILE_TTS_BASE_URL }}
+      VISION_BASE_URL: ${{ inputs.vision_base_url || vars.MOBILE_VISION_BASE_URL }}
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Java 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            smgs_mobile/android/**/*.gradle*
+            smgs_mobile/android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Set up Flutter 3.47.4
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+
+      - name: Prepare public API configuration
+        run: python3 ../.github/scripts/prepare_apk_config.py --output "$RUNNER_TEMP/smgs-apk-config.json"
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter tests
+        run: flutter test
+
+      - name: Build universal release-mode demo APK
+        run: >-
+          flutter build apk --release
+          --build-number="$GITHUB_RUN_NUMBER"
+          --dart-define-from-file="$RUNNER_TEMP/smgs-apk-config.json"
+
+      - name: Name APK and calculate checksum
+        run: |
+          cd build/app/outputs/flutter-apk
+          cp app-release.apk "smgs-main-${GITHUB_RUN_NUMBER}.apk"
+          sha256sum "smgs-main-${GITHUB_RUN_NUMBER}.apk" > "smgs-main-${GITHUB_RUN_NUMBER}.apk.sha256"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: smgs-android-apk-${{ github.run_number }}
+          path: |
+            smgs_mobile/build/app/outputs/flutter-apk/smgs-main-${{ github.run_number }}.apk
+            smgs_mobile/build/app/outputs/flutter-apk/smgs-main-${{ github.run_number }}.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Write download instructions
+        run: |
+          {
+            echo '## Android APK ready'
+            echo "Download **smgs-android-apk-${GITHUB_RUN_NUMBER}** from this run's **Artifacts**, unzip it and install the APK."
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo 'This release-mode demo uses the existing Gradle debug signing configuration. It is not a Play Store release.'
+          } >> "$GITHUB_STEP_SUMMARY"
