@@ -1,9 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareScanDataset, validateGlbPreview, startScanSafely } from '../src/services/artifactScanApi.js';
+import { prepareScanDataset, validateGlbPreview, startScanSafely, cancelScanJob } from '../src/services/artifactScanApi.js';
 import { scanProgress } from '../src/components/artifacts/scanProgress.js';
 const file = (name, path = name, size = 100) => ({ name, webkitRelativePath: path, size });
 const photos = Array.from({ length: 5 }, (_, i) => file(`${i}.png`, `dataset/images/${i}.png`));
+
+test('cancel reaches the artifact-scoped backend with JWT and preserves a rejected request', async t => {
+  const storage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => 'staff-token' };
+  t.after(() => { globalThis.localStorage = storage; });
+  let rejected = false;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/artifacts/7/scans/job-id/cancel');
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers.Authorization, 'Bearer staff-token');
+    return new Response(JSON.stringify(rejected ? { message: 'Job đã hoàn tất' } : { data: { status: 'CANCELLED', progress: 45 } }), { status: rejected ? 409 : 200 });
+  });
+  assert.deepEqual(await cancelScanJob(7, 'job-id'), { status: 'CANCELLED', progress: 45 });
+  rejected = true;
+  await assert.rejects(cancelScanJob(7, 'job-id'), /Job đã hoàn tất/);
+  for (const status of ['FAILED', 'CANCELLED', 'DISCARDED']) {
+    assert.equal(scanProgress({ job: { status, progress: 45 } }).running, false);
+  }
+});
 
 test('folder excludes atlas, keeps image filenames and chooses calibrated benchmark only with both references', () => {
   const data = prepareScanDataset([...photos, file('atlas.jpg', 'dataset/atlas.jpg'), file('metadata.json'), file('source.obj')]);

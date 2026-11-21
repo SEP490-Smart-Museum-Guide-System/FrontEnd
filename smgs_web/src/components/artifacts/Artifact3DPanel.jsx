@@ -10,6 +10,7 @@ import {
   getScanModel,
   saveScanModel,
   discardScanModel,
+  cancelScanJob,
   validateGlbPreview
 } from '../../services/artifactScanApi';
 import { scanProgress } from './scanProgress';
@@ -42,6 +43,7 @@ const labels = {
   FINALIZING: 'Đang kiểm định & đóng gói GLB',
   REVIEW_REQUIRED: 'Đã dựng xong — Sẵn sàng xem thử',
   FAILED: 'Quá trình dựng 3D thất bại',
+  CANCELLED: 'Đã hủy tác vụ dựng 3D',
   COMPLETED: 'Đã lưu vào hiện vật',
   DISCARDED: 'Đã hủy kết quả scan'
 };
@@ -243,6 +245,17 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     setMessage(found ? 'Đã tải lại tác vụ trên máy chủ. Kiểm tra trạng thái trước khi gửi bộ ảnh mới.' : 'Máy chủ chưa có tác vụ cho hiện vật này. Bạn có thể gửi lại bộ ảnh.');
   });
 
+  const cancel = () => {
+    if (!job?.scanJobId || !window.confirm('Hủy tác vụ dựng 3D này? Bộ ảnh và log vẫn được giữ lại.')) return;
+    perform(async () => {
+      const next = await cancelScanJob(artifactId, job.scanJobId);
+      setJob(next);
+      setJobError('');
+      setNeedsJobCheck(false);
+      setMessage('Đã hủy tác vụ dựng 3D. Bạn có thể chọn bộ ảnh để tạo tác vụ mới.');
+    });
+  };
+
   const save = () => {
     if (model && !window.confirm('Thay mô hình hiện đang lưu bằng bản xem thử này?')) return;
     perform(async signal => {
@@ -324,11 +337,13 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   const activeModelUrl = draft?.url || savedUrl;
   const { running: isScanning, review: isReview, step: currentStep, percent: currentPercent } = scanProgress({ uploading, uploadProgress: progress, job, hasPreview: !!draft });
   const showProcessingScreen = uploading || isScanning || isReview || manualShowProcessing;
+  const isStopped = ['FAILED', 'CANCELLED', 'DISCARDED'].includes(job?.status);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Alert Messages */}
       {error && <p role="alert" className="business-error">{error}</p>}
+      {job?.error && !uploading && <p role={job.status === 'FAILED' ? 'alert' : 'status'} className="business-error">{job.error}</p>}
       {canManage && needsJobCheck && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={checkReceived}><RefreshCw size={14} /> Kiểm tra job đã nhận</button>}
       {message && (
         <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -640,13 +655,12 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
 
               {/* 3D Scanning Holographic Radar Viewport */}
               <div className="ai-scan-radar-viewport">
-                <div className="ai-scan-radar-sweep" />
-                <div className="ai-scan-laser-line" />
+                {(isScanning || uploading) && <><div className="ai-scan-radar-sweep" /><div className="ai-scan-laser-line" /></>}
                 
                 <div className="ai-scan-3d-hologram">
                   <Box size={52} color="var(--color-gold-400)" style={{ filter: 'drop-shadow(0 0 16px rgba(245, 158, 11, 0.6))' }} />
                   <span style={{ marginTop: '8px', fontSize: '0.72rem', letterSpacing: '0.08em', fontWeight: '700', color: '#F1F5F9', textTransform: 'uppercase' }}>
-                    {uploading ? 'ĐANG TẢI BỘ ẢNH' : isReview ? '3D MESH READY' : job ? 'PHOTOGRAMMETRY SCAN' : 'CHƯA BẮT ĐẦU'}
+                    {uploading ? 'ĐANG TẢI BỘ ẢNH' : isStopped ? 'TÁC VỤ ĐÃ DỪNG' : isReview ? '3D MESH READY' : job ? 'PHOTOGRAMMETRY SCAN' : 'CHƯA BẮT ĐẦU'}
                   </span>
                 </div>
 
@@ -664,19 +678,19 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     fontWeight: '700'
                   }}
                 >
-                  {uploading ? `Tải bộ ảnh: ${currentPercent}%` : isReview ? '✓ Đã tạo xong mô hình 3D (100%)' : `Tiến độ dựng: ${currentPercent}%`}
+                  {uploading ? `Tải bộ ảnh: ${currentPercent}%` : isStopped ? `Đã dừng ở ${currentPercent}%` : isReview ? '✓ Đã tạo xong mô hình 3D (100%)' : `Tiến độ dựng: ${currentPercent}%`}
                 </div>
               </div>
 
               {/* Information & Instructions */}
               <div style={{ marginTop: '16px', textAlign: 'center' }}>
                 <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: '0 0 6px' }}>
-                  {uploading ? (progress >= 100 ? 'Đang chờ máy chủ xác nhận tác vụ...' : `Đang tải bộ ảnh: ${progress}%`) : !job ? 'Chưa có tác vụ dựng 3D.' : isReview
+                  {uploading ? (progress >= 100 ? 'Đang chờ máy chủ xác nhận tác vụ...' : `Đang tải bộ ảnh: ${progress}%`) : !job ? 'Chưa có tác vụ dựng 3D.' : isStopped ? labels[job.status] : isReview
                     ? 'AI đã tái tạo mô hình 3D thành công!'
                     : `AI đang phân tích và dựng mô hình 3D từ ${processedPhotoCount || files.length || 'bộ'} ảnh chụp...`}
                 </h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-600)', margin: '0 auto', maxWidth: '520px', lineHeight: 1.55 }}>
-                  {uploading ? 'Giữ trang mở trong khi tải ảnh. Tiến độ này là tải dữ liệu, chưa phải dựng 3D.' : !job ? 'Chọn bộ ảnh rồi bấm Bắt đầu dựng 3D.' : isReview
+                  {uploading ? 'Giữ trang mở trong khi tải ảnh. Tiến độ này là tải dữ liệu, chưa phải dựng 3D.' : !job ? 'Chọn bộ ảnh rồi bấm Bắt đầu dựng 3D.' : isStopped ? 'Tác vụ này không còn chạy. Bộ ảnh và log vẫn được giữ trên máy chủ; bạn có thể đóng bảng tiến trình và tạo tác vụ mới.' : isReview
                     ? 'Quá trình trích xuất mây điểm và xây dựng lưới đa giác đã hoàn tất. Bạn có thể bấm "Xem kết quả" để nạp mô hình vào khung xoay 360° bên trái trước khi lưu vào hiện vật.'
                     : 'Đang trích xuất đặc trưng điểm ảnh (SfM) và tái tạo mạng lưới đa giác bề mặt (Dense Mesh). Quá trình xử lý diễn ra hoàn toàn trên máy chủ AI; bạn có thể đóng cửa sổ này rồi quay lại kiểm tra bất cứ lúc nào.'}
                 </p>
@@ -698,7 +712,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
               </div>
 
               {/* Sub-phase Checklist */}
-              {!uploading && job && <div className="ai-scan-phase-list">
+              {!uploading && job && !isStopped && <div className="ai-scan-phase-list">
                 <div className={`ai-scan-phase-item ${currentPercent >= 25 ? 'done' : 'current'}`}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {currentPercent >= 25 ? <Check size={14} color="#166534" /> : <RefreshCw size={14} className="spin" color="var(--color-gold-600)" />}
@@ -792,15 +806,14 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     </button>
                   )}
 
+                  {canManage && running(job?.status) && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={cancel} style={{ color: '#B91C1C' }}><Trash2 size={14} /> Hủy dựng 3D</button>}
+                  {canManage && uploading && <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setNeedsJobCheck(true); action.current?.abort(); }}>Ngừng tải ảnh</button>}
                   {running(job?.status) && (
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
                       disabled={busy}
-                      onClick={() => {
-                        const controller = new AbortController();
-                        getScanJob(artifactId, job.scanJobId, controller.signal).then(res => setJob(res));
-                      }}
+                      onClick={checkReceived}
                       title="Làm mới trạng thái"
                     >
                       <RefreshCw size={13} className={busy ? 'spin' : ''} /> Kiểm tra ngay
