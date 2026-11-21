@@ -717,7 +717,10 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
               </div>
 
               {/* Sub-phase Checklist */}
-              {isScanning && Number.isInteger(activity.completed) && activity.completed >= 0 && <p role="status" aria-live="polite" style={{ margin: '12px 0 0', padding: '10px 12px', borderRadius: 8, background: '#FBF4E6', color: 'var(--color-burgundy-900)', fontWeight: 700 }}>
+              {(isScanning || isReview) && Number.isInteger(activity.depthImages) && <p role="status" aria-live="polite" style={{ margin: '12px 0 0', padding: '10px 12px', borderRadius: 8, background: '#FBF4E6', color: 'var(--color-burgundy-900)', fontWeight: 700 }}>
+                {activity.depthImages} ảnh đã xử lý · {activity.depthOperations} lượt tính độ sâu
+              </p>}
+              {isScanning && !Number.isInteger(activity.depthImages) && Number.isInteger(activity.completed) && activity.completed >= 0 && <p role="status" aria-live="polite" style={{ margin: '12px 0 0', padding: '10px 12px', borderRadius: 8, background: '#FBF4E6', color: 'var(--color-burgundy-900)', fontWeight: 700 }}>
                 {activity.completed}{Number.isInteger(activity.total) ? `/${activity.total}` : ''} {activity.stage === 'matching' ? 'nhóm ảnh đã khớp' : activity.stage === 'dense' ? 'ảnh đã tính độ sâu' : 'ảnh đã xử lý'}
                 {activity.stage === 'dense' && activity.operations > activity.completed && ` · ${activity.operations} lượt tính`}
               </p>}
