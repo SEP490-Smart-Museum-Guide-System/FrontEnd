@@ -39,8 +39,11 @@ void main() {
         await tester.tap(find.text('Xem thông tin hiện vật'));
         await tester.pumpAndSettle();
         expect(find.text('Hiện vật từ API'), findsWidgets);
-        expect(find.text('Bảo tàng từ API'), findsOneWidget);
+        expect(find.textContaining('Bảo tàng từ API'), findsOneWidget);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -360));
+        await tester.pumpAndSettle();
         expect(find.text('Mô tả xuất bản'), findsOneWidget);
+        expect(find.text('Hỏi'), findsOneWidget);
         expect(find.text('Trống đồng Ngọc Lũ'), findsNothing);
       },
       () => MockClient(

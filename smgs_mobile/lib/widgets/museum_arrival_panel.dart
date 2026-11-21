@@ -4,7 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/automatic_location_service.dart';
 import '../services/museum_presence_api.dart';
 import '../services/visitor_experience_api.dart';
-import '../screens/museum/visitor_indoor_map_screen.dart';
+import '../screens/museum/visitor_directory_screen.dart';
 
 class MuseumArrivalPanel extends StatefulWidget {
   const MuseumArrivalPanel({
@@ -250,8 +250,9 @@ class _MuseumArrivalPanelState extends State<MuseumArrivalPanel>
                   TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => VisitorIndoorMapScreen(
-                          mapId: position!['mapId'],
+                        builder: (_) => VisitorDirectoryScreen(
+                          museumId: widget.museumId,
+                          initialMapId: position!['mapId'],
                           museumName: widget.museumName,
                           visitId: _visitId,
                         ),

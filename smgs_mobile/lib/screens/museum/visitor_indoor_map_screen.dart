@@ -1,4 +1,3 @@
-import '../../core/theme/visitor_colors.dart';
 import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/artifact_scan_service.dart';
@@ -9,6 +8,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../models/indoor_map.dart';
+import '../../models/artifact.dart';
+import '../../services/discovery_api_service.dart';
+import '../../widgets/artifact_photo.dart';
 import '../../services/indoor_map_api_service.dart';
 import '../../widgets/museum_ui.dart';
 
@@ -18,9 +20,11 @@ class VisitorIndoorMapScreen extends StatefulWidget {
     required this.mapId,
     this.museumName = 'Bảo tàng',
     this.visitId,
+    this.directory,
     this.targetArtifactId,
   });
 
+  final Map<String, dynamic>? directory;
   final dynamic mapId;
   final String museumName;
   final int? visitId;
@@ -33,7 +37,6 @@ class VisitorIndoorMapScreen extends StatefulWidget {
 class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   final TransformationController _transformController =
       TransformationController();
-  final TextEditingController _searchController = TextEditingController();
 
   late dynamic _currentMapId;
   PublishedIndoorMap? _map;
@@ -51,11 +54,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   // Navigation state
   String? _fromNodeId;
   IndoorMarker? _startMarker;
-  String? _startArtifactName;
+
   IndoorMarker? _selectedDestination;
   List<String> _routeNodeIds = [];
   bool _accessibleOnly = false;
-  String _searchQuery = '';
 
   // QR Camera modal
   bool _showQrScanner = false;
@@ -87,7 +89,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   void dispose() {
     _positionTimer?.cancel();
     _transformController.dispose();
-    _searchController.dispose();
+
     _scannerController?.dispose();
     super.dispose();
   }
@@ -120,12 +122,13 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
       if (!mounted || loadRequest != _mapRequest) return;
       setState(() {
+        _selectedArtifact = null;
         _map = mapData;
         _imageBytes = imgBytes;
         _isLoading = false;
         _fromNodeId = null;
         _startMarker = null;
-        _startArtifactName = null;
+
         _manualStart = false;
         _confirmedAt = null;
         final targets = widget.targetArtifactId == null
@@ -179,7 +182,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           setState(() {
             _startMarker = markers.single;
             _fromNodeId = markers.single.nodeId;
-            _startArtifactName = markers.single.label;
+
             _confirmedAt = DateTime.tryParse(
               location['confirmedAt']?.toString() ?? '',
             );
@@ -191,8 +194,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           }
         }
       }
-      if (_selectedDestination != null &&
-          (widget.visitId == null || _fromNodeId != null)) {
+      if (mounted &&
+          loadRequest == _mapRequest &&
+          _selectedDestination != null &&
+          _fromNodeId != null) {
         _recalculateRoute();
       }
     } catch (e) {
@@ -202,75 +207,6 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     }
-  }
-
-  void _showChangeMapDialog() {
-    final controller = TextEditingController(text: _currentMapId.toString());
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Chọn sơ đồ bảo tàng',
-          style: TextStyle(
-            color: AppColors.deepBurgundy,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nhập mã sơ đồ tại bảo tàng:',
-              style: AppTextStyles.bodySmall,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Ví dụ: 1',
-                prefixIcon: Icon(
-                  Icons.layers_outlined,
-                  color: AppColors.deepBurgundy,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Hủy',
-              style: TextStyle(color: AppColors.darkBrown),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newId = int.tryParse(controller.text.trim());
-              if (newId != null && newId > 0) {
-                Navigator.pop(ctx);
-                setState(() {
-                  _currentMapId = newId;
-                });
-                _loadPublishedMap();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.deepBurgundy,
-            ),
-            child: const Text(
-              'Tải sơ đồ',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _recalculateRoute() async {
@@ -299,6 +235,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             .map((id) => id.toString())
             .toList();
         setState(() {
+          if (nodes.isEmpty ||
+              nodes.any((id) => !_map!.nodes.any((n) => n.id == id))) {
+            _routeError = 'Chưa tìm được đường đi trên sơ đồ này.';
+            return;
+          }
           _routeNodeIds = nodes;
           _fromNodeId = nodes.firstOrNull;
         });
@@ -344,9 +285,450 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
   void _selectDestination(IndoorMarker marker) {
     setState(() {
+      _selectedArtifact = null;
       _selectedDestination = marker;
     });
-    _recalculateRoute();
+    _routeRequest++;
+    _routeNodeIds = [];
+    _routeError = null;
+  }
+
+  List<Map> _rows(String key) =>
+      (widget.directory?[key] as List? ?? []).cast<Map>();
+  Map get _floor =>
+      _rows('maps').where((m) => m['id'] == _currentMapId).firstOrNull ?? {};
+  String _location(Map item) => [
+    item['floorName'],
+    item['buildingName'],
+    item['galleryName'],
+  ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+  Future<void> _switch(dynamic id) async {
+    if (id == _currentMapId) return;
+    _currentMapId = id;
+    await _loadPublishedMap();
+  }
+
+  void _scan() {
+    _scannerController ??= MobileScannerController();
+    setState(() => _showQrScanner = true);
+  }
+
+  Future<void> _search() async {
+    final results = <Map>[
+      for (final a in _rows('artifacts')) {...a, 'artifact': true},
+      for (final g in _rows('galleries')) {...g, 'artifact': false},
+      if (widget.directory == null)
+        for (final m in _map!.markers.where((m) => m.isActive))
+          {'id': m.id, 'name': m.label, 'marker': m},
+    ];
+    var query = '';
+    final chosen = await showModalBottomSheet<Map>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheet) => FractionallySizedBox(
+        heightFactor: .78,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            MediaQuery.viewInsetsOf(sheet).bottom,
+          ),
+          child: StatefulBuilder(
+            builder: (ctx, refresh) {
+              final matches = results
+                  .where(
+                    (r) => '${r['name']} ${_location(r)}'
+                        .toLowerCase()
+                        .contains(query),
+                  )
+                  .toList();
+              return Column(
+                children: [
+                  TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Tìm hiện vật hoặc phòng',
+                    ),
+                    onChanged: (v) =>
+                        refresh(() => query = v.trim().toLowerCase()),
+                  ),
+                  Expanded(
+                    child: matches.isEmpty
+                        ? const Center(child: Text('Không tìm thấy kết quả.'))
+                        : ListView.builder(
+                            itemCount: matches.length,
+                            itemBuilder: (_, i) => ListTile(
+                              title: Text(matches[i]['name']),
+                              subtitle: Text(_location(matches[i])),
+                              onTap: () => Navigator.pop(sheet, matches[i]),
+                            ),
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    final artifact = chosen['artifact'] == true;
+    final linked = artifact
+        ? (chosen['maps'] as List? ?? []).cast<Map>()
+        : _rows(
+            'maps',
+          ).where((m) => m['floorId'] == chosen['floorId']).toList();
+    final targetMap =
+        linked.where((m) => m['id'] == _currentMapId).firstOrNull ??
+        linked.firstOrNull;
+    if (targetMap != null) await _switch(targetMap['id']);
+    if (!mounted) return;
+    final active = _map?.markers.where((m) => m.isActive) ?? <IndoorMarker>[];
+    final marker =
+        chosen['marker'] as IndoorMarker? ??
+        (targetMap == null
+            ? null
+            : (artifact
+                      ? active
+                            .where((m) => m.artifactId == chosen['id'])
+                            .firstOrNull
+                      : null) ??
+                  active
+                      .where(
+                        (m) =>
+                            m.galleryId ==
+                                (artifact
+                                    ? chosen['galleryId']
+                                    : chosen['id']) &&
+                            m.galleryId != null &&
+                            m.artifactId == null,
+                      )
+                      .firstOrNull);
+    if (marker == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chưa có điểm liên kết trên sơ đồ đã xuất bản.'),
+        ),
+      );
+      return;
+    }
+    _selectDestination(marker);
+    if (artifact) setState(() => _selectedArtifact = chosen);
+    _centerOnCoordinates(marker.x, marker.y);
+  }
+
+  final _thumbnails = <int, Future<Map<String, dynamic>>>{};
+  Widget _thumbnail(int? id) {
+    const fallback = Icon(Icons.place_outlined);
+    if (id == null) return fallback;
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: _thumbnails.putIfAbsent(
+            id,
+            () => DiscoveryApiService.fetchArtifactDetail(id),
+          ),
+          builder: (_, snapshot) => snapshot.hasData
+              ? ArtifactPhoto(
+                  artifact: Artifact.fromBackendJson(snapshot.data!),
+                  height: 48,
+                )
+              : fallback,
+        ),
+      ),
+    );
+  }
+
+  Map? _selectedArtifact;
+  Widget _controls(IndoorMarker? position) {
+    final floor = _floor;
+    final maps = _rows('maps');
+    final buildings = maps
+        .map((m) => m['buildingName'])
+        .whereType<String>()
+        .toSet();
+    final floors = maps
+        .where((m) => m['buildingName'] == floor['buildingName'])
+        .toList()
+        .reversed;
+    final selected = _selectedDestination;
+    final artifact =
+        _selectedArtifact ??
+        _rows(
+          'artifacts',
+        ).where((a) => a['id'] == selected?.artifactId).firstOrNull;
+    final room = _rows(
+      'galleries',
+    ).where((r) => r['id'] == selected?.galleryId).firstOrNull;
+    final location = _location({
+      ...floor,
+      'galleryName': room?['name'],
+      ...?artifact,
+    });
+    final floorLabel = _location(floor);
+    final controls = <Widget>[
+      Align(
+        alignment: Alignment.topCenter,
+        child: Material(
+          color: Colors.white,
+          elevation: 1,
+          borderRadius: BorderRadius.circular(24),
+          child: buildings.length > 1
+              ? PopupMenuButton<String>(
+                  tooltip: 'Chọn tòa nhà',
+                  onSelected: (b) => _switch(
+                    maps.firstWhere((m) => m['buildingName'] == b)['id'],
+                  ),
+                  itemBuilder: (_) => [
+                    for (final b in buildings)
+                      PopupMenuItem(value: b, child: Text(b)),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Text('$floorLabel ▾'),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  child: Text(floorLabel.isEmpty ? _map!.name : floorLabel),
+                ),
+        ),
+      ),
+      const Spacer(),
+      if (floors.isNotEmpty)
+        Align(
+          alignment: Alignment.centerRight,
+          child: Material(
+            color: Colors.white,
+            elevation: 2,
+            borderRadius: BorderRadius.circular(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('TẦNG', style: TextStyle(fontSize: 10)),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * .16,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        for (final f in floors)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: f['id'] == _currentMapId
+                                  ? AppColors.deepBurgundy
+                                  : null,
+                              foregroundColor: f['id'] == _currentMapId
+                                  ? Colors.white
+                                  : AppColors.darkBrown,
+                              minimumSize: const Size(44, 44),
+                            ),
+                            onPressed: () => _switch(f['id']),
+                            child: Text(
+                              f['levelNo']?.toString() ??
+                                  f['floorName'] ??
+                                  f['name'],
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Expanded(
+            child: position == null && selected == null
+                ? Card(
+                    margin: EdgeInsets.zero,
+                    color: Colors.white,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 2,
+                    shadowColor: Colors.black26,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: AppColors.deepBurgundy,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Quét QR để biết bạn đang đứng ở đâu trên sơ đồ.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.3,
+                                  color: AppColors.darkBrown,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox(),
+          ),
+          const SizedBox(width: 12),
+          SizedBox.square(
+            dimension: 48,
+            child: FloatingActionButton(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              heroTag: null,
+              tooltip: 'Quét QR xác định vị trí',
+              backgroundColor: AppColors.deepBurgundy,
+              foregroundColor: Colors.white,
+              onPressed: _scan,
+              child: const Icon(Icons.qr_code_scanner, size: 23),
+            ),
+          ),
+        ],
+      ),
+      if (selected != null)
+        Card(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    _thumbnail(artifact?['id'] ?? selected.artifactId),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            artifact?['name'] ?? selected.label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.titleMedium,
+                          ),
+                          if (location.isNotEmpty)
+                            Text(
+                              location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption,
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Đóng',
+                      onPressed: () => setState(() {
+                        _selectedDestination = null;
+                        _selectedArtifact = null;
+                        _routeRequest++;
+                        _routeNodeIds = [];
+                        _routeError = null;
+                      }),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                if (selected.isDestination && selected.nodeId != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: position == null ? _scan : _recalculateRoute,
+                        icon: const Icon(Icons.directions_walk),
+                        label: const Text('Chỉ đường'),
+                      ),
+                      IconButton(
+                        tooltip: 'Ưu tiên lối đi dễ tiếp cận',
+                        isSelected: _accessibleOnly,
+                        icon: const Icon(Icons.accessible),
+                        onPressed: () {
+                          setState(() => _accessibleOnly = !_accessibleOnly);
+                          if (position != null) _recalculateRoute();
+                        },
+                      ),
+                    ],
+                  ),
+                if (_routeError != null && position != null)
+                  Text(
+                    _routeError!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+        ),
+    ];
+    final horizontal =
+        MediaQuery.orientationOf(context) == Orientation.landscape &&
+        selected != null;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: horizontal
+            ? Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: SingleChildScrollView(child: controls.last),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: controls.sublist(0, controls.length - 1),
+                    ),
+                  ),
+                ],
+              )
+            : Column(children: controls),
+      ),
+    );
+  }
+
+  Size? _viewport;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final size = MediaQuery.sizeOf(context);
+    if (_viewport != size) {
+      _viewport = size;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _fitMap();
+      });
+    }
   }
 
   void _fitMap() {
@@ -399,10 +781,25 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           visitId: widget.visitId,
         );
         if (!mounted) return;
+        final previous = _selectedDestination;
+        final sameFloor = _currentMapId == result['mapId'];
         _currentMapId = result['mapId'];
-        setState(() => _showQrScanner = false);
-        await _scannerController?.stop();
+        setState(() {
+          _showQrScanner = false;
+          _isProcessingScan = false;
+        });
+        await _scannerController?.dispose();
+        _scannerController = null;
         await _loadPublishedMap();
+        if (mounted && sameFloor && previous != null) {
+          final destination = _map?.markers
+              .where((m) => m.isActive && m.id == previous.id)
+              .firstOrNull;
+          if (destination != null && _fromNodeId != null) {
+            _selectDestination(destination);
+            await _recalculateRoute();
+          }
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Đã xác nhận tại ${result['label']}.')),
@@ -427,7 +824,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _routeError = null;
         _fromNodeId = result.startNodeId;
         _startMarker = result.marker;
-        _startArtifactName = result.artifactName;
+
         _confirmedAt = DateTime.tryParse(
           recognition['recognizedAt']?.toString() ?? '',
         );
@@ -436,6 +833,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _isProcessingScan = false;
       });
 
+      await _scannerController?.dispose();
+      _scannerController = null;
+      if (!mounted) return;
       _centerOnCoordinates(result.marker.x, result.marker.y);
       _recalculateRoute();
 
@@ -468,20 +868,6 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final destinations =
-        _map?.markers
-            .where(
-              (m) =>
-                  m.isActive &&
-                  m.isDestination &&
-                  (_searchQuery.isEmpty ||
-                      m.label.toLowerCase().contains(
-                        _searchQuery.toLowerCase(),
-                      )),
-            )
-            .toList() ??
-        [];
-
     final age = _confirmedAt == null
         ? null
         : DateTime.now().toUtc().difference(_confirmedAt!.toUtc());
@@ -496,16 +882,26 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     final labelWidth = map?.imageWidth.clamp(0.0, 156.0).toDouble() ?? 0.0;
 
     return Scaffold(
-      backgroundColor: VisitorColors.background,
+      backgroundColor: const Color(0xfff7f7f5),
       appBar: AppBar(
-        backgroundColor: VisitorColors.background,
+        backgroundColor: const Color(0xfff7f7f5),
         elevation: 0,
-        leading: const BackButton(color: AppColors.deepBurgundy),
+        leading: Center(
+          child: IconButton.filledTonal(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white,
+              shape: const CircleBorder(),
+            ),
+            onPressed: () => Navigator.maybePop(context),
+            icon: const BackButtonIcon(),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _map?.name ?? 'Sơ đồ bảo tàng',
+              'Sơ đồ bảo tàng',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -523,51 +919,17 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Vừa khung sơ đồ',
-            onPressed: _fitMap,
-            icon: const Icon(Icons.fit_screen, color: AppColors.deepBurgundy),
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.layers_outlined,
-              color: AppColors.deepBurgundy,
+          IconButton.filledTonal(
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white,
+              shape: const CircleBorder(),
             ),
-            tooltip: 'Đổi sơ đồ tầng',
-            onPressed: _showChangeMapDialog,
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.qr_code_scanner,
-              color: AppColors.deepBurgundy,
-            ),
-            tooltip: 'Quét QR xác định vị trí',
-            onPressed: () => setState(() {
-              _showQrScanner = true;
-              _scannerController = MobileScannerController();
-            }),
+            tooltip: 'Tìm hiện vật hoặc phòng',
+            icon: const Icon(Icons.search),
+            onPressed: _map == null ? null : _search,
           ),
         ],
       ),
-      bottomSheet: _routeError == null
-          ? null
-          : SafeArea(
-              child: Container(
-                color: AppColors.card,
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(_routeError!, style: AppTextStyles.bodySmall),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _routeError = null),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-            ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.deepBurgundy),
@@ -615,7 +977,23 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                     minScale: 0.02,
                     maxScale: 4.0,
                     boundaryMargin: const EdgeInsets.all(300),
-                    child: Center(
+                    child: GestureDetector(
+                      onDoubleTapDown: (tap) {
+                        final plan = _map;
+                        if (plan == null ||
+                            plan.imageWidth <= 0 ||
+                            plan.imageHeight <= 0) {
+                          return;
+                        }
+                        if (_transformController.value.entry(0, 0) >= 1.5) {
+                          _fitMap();
+                        } else {
+                          _centerOnCoordinates(
+                            tap.localPosition.dx / plan.imageWidth,
+                            tap.localPosition.dy / plan.imageHeight,
+                          );
+                        }
+                      },
                       child: _map != null
                           ? SizedBox(
                               width: _map!.imageWidth,
@@ -654,8 +1032,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                       final py = marker.y * _map!.imageHeight;
                                       final isSelected =
                                           _selectedDestination?.id == marker.id;
-                                      final isStart =
-                                          _startMarker?.id == marker.id;
+                                      final isStart = position?.id == marker.id;
 
                                       return Positioned(
                                         left: px - 18,
@@ -793,7 +1170,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                             child: Text(
                                               _manualStart
                                                   ? 'Điểm xuất phát chọn tay'
-                                                  : 'Vị trí vừa xác nhận',
+                                                  : 'Vừa xác nhận: ${position.label}',
                                               textAlign: TextAlign.center,
                                               style: const TextStyle(
                                                 color: Color(0xFF1749A8),
@@ -814,438 +1191,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                 ),
 
                 // 2. Floating Action Controls (Fit view, My Location, QR Scan)
-                Positioned(
-                  right: 16,
-                  top: 16,
-                  child: Column(
-                    children: [
-                      FloatingActionButton.small(
-                        heroTag: 'qr_scan_btn',
-                        backgroundColor: VisitorColors.burgundy,
-                        tooltip: 'Quét QR xác định vị trí',
-                        onPressed: () => setState(() {
-                          _showQrScanner = true;
-                          _scannerController = MobileScannerController();
-                        }),
-                        child: const Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_fromNodeId != null && _startMarker != null)
-                        FloatingActionButton.small(
-                          heroTag: 'my_loc_btn',
-                          backgroundColor: const Color(0xFF2563EB),
-                          tooltip: 'Điểm xuất phát đã xác nhận',
-                          onPressed: () => _centerOnCoordinates(
-                            _startMarker!.x,
-                            _startMarker!.y,
-                          ),
-                          child: const Icon(
-                            Icons.my_location,
-                            color: Colors.white,
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      FloatingActionButton.small(
-                        heroTag: 'fit_view_btn',
-                        backgroundColor: Colors.white,
-                        tooltip: 'Vừa khung nhìn',
-                        onPressed: () {
-                          _transformController.value = Matrix4.identity();
-                        },
-                        child: const Icon(
-                          Icons.crop_free,
-                          color: AppColors.darkBrown,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 3. Location Status Banner
-                Positioned(
-                  left: 16,
-                  right: 80,
-                  top: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _fromNodeId != null
-                              ? Icons.check_circle
-                              : Icons.info_outline,
-                          size: 18,
-                          color: _fromNodeId != null
-                              ? const Color(0xFF227C64)
-                              : const Color(0xFF873C32),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _startArtifactName != null
-                                ? (_manualStart
-                                      ? 'Điểm xuất phát chọn tay: $_startArtifactName'
-                                      : _confirmedAt != null &&
-                                            DateTime.now().toUtc().difference(
-                                                  _confirmedAt!.toUtc(),
-                                                ) <=
-                                                const Duration(minutes: 5)
-                                      ? 'Vừa xác nhận: $_startArtifactName'
-                                      : 'Vị trí cũ: $_startArtifactName — hãy quét lại')
-                                : 'Quét QR cổng, phòng hoặc hiện vật để xác định vị trí.',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1E232B),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // 4. Draggable Bottom Sheet for Destinations & Navigation Info
-                DraggableScrollableSheet(
-                  initialChildSize: widget.targetArtifactId == null
-                      ? 0.34
-                      : 0.46,
-                  minChildSize: 0.12,
-                  maxChildSize: 0.65,
-                  builder: (context, scrollController) {
-                    return Material(
-                      color: Colors.white,
-                      elevation: 8,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          // Sheet grab handle
-                          Center(
-                            child: Container(
-                              width: 36,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFCBD5E1),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          if (widget.visitId == null && _map != null) ...[
-                            DropdownButtonFormField<String>(
-                              key: ValueKey(
-                                'start:$_currentMapId:${_startMarker?.id}',
-                              ),
-                              initialValue: _startMarker?.id,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Điểm bạn đang đứng',
-                              ),
-                              items: _map!.markers
-                                  .where((m) => m.isActive && m.nodeId != null)
-                                  .map(
-                                    (m) => DropdownMenuItem(
-                                      value: m.id,
-                                      child: Text(
-                                        m.label,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                final marker = _map!.markers
-                                    .where((m) => m.id == value)
-                                    .firstOrNull;
-                                if (marker == null) return;
-                                setState(() {
-                                  _startMarker = marker;
-                                  _fromNodeId = marker.nodeId;
-                                  _startArtifactName = marker.label;
-                                  _manualStart = true;
-                                  _confirmedAt = null;
-                                });
-                                _recalculateRoute();
-                              },
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Chọn đúng vị trí thực tế hoặc quét QR. Vị trí không được theo dõi tự động.',
-                              style: AppTextStyles.caption,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          // Selected Destination Card if active
-                          if (_selectedDestination != null) ...[
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: VisitorColors.card,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: VisitorColors.border,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          _selectedDestination!.label,
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: VisitorColors.burgundy,
-                                          ),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        icon: const Icon(
-                                          Icons.close,
-                                          size: 18,
-                                          color: Colors.grey,
-                                        ),
-                                        onPressed: () => setState(() {
-                                          _selectedDestination = null;
-                                          _routeNodeIds = [];
-                                        }),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // Status message on route
-                                  if (_fromNodeId == null)
-                                    const Text(
-                                      '👉 Nhấn nút Quét QR góc trên để chọn điểm xuất phát gần bạn.',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF873C32),
-                                      ),
-                                    )
-                                  else if (_fromNodeId ==
-                                      _selectedDestination!.nodeId)
-                                    const Text(
-                                      '📍 Bạn đang ở điểm tiếp cận địa điểm này.',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF227C64),
-                                      ),
-                                    )
-                                  else if (_routeNodeIds.isEmpty)
-                                    const Text(
-                                      'Không tìm thấy đường đi (có thể do đường một chiều hoặc lối đi xe lăn bị ngắt).',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.red,
-                                      ),
-                                    )
-                                  else
-                                    Text(
-                                      'Đã tìm thấy lộ trình qua ${_routeNodeIds.length} điểm rẽ hành lang.',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF227C64),
-                                      ),
-                                    ),
-
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      // Wheelchair filter toggle
-                                      FilterChip(
-                                        label: const Text(
-                                          'Xe lăn',
-                                          style: TextStyle(fontSize: 11),
-                                        ),
-                                        avatar: const Icon(
-                                          Icons.accessible,
-                                          size: 14,
-                                        ),
-                                        selected: _accessibleOnly,
-                                        onSelected: (val) {
-                                          setState(() => _accessibleOnly = val);
-                                          _recalculateRoute();
-                                        },
-                                      ),
-                                      const Spacer(),
-                                      ElevatedButton.icon(
-                                        onPressed: _fromNodeId != null
-                                            ? _recalculateRoute
-                                            : null,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(
-                                            0xFF7B3B31,
-                                          ),
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                            vertical: 8,
-                                          ),
-                                        ),
-                                        icon: const Icon(
-                                          Icons.navigation,
-                                          size: 16,
-                                        ),
-                                        label: const Text(
-                                          'Chỉ đường',
-                                          style: TextStyle(fontSize: 13),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-
-                          // Search Bar
-                          TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Tìm hiện vật, phòng trưng bày...',
-                              hintStyle: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF94A3B8),
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.search,
-                                size: 20,
-                                color: Color(0xFF94A3B8),
-                              ),
-                              filled: true,
-                              fillColor: VisitorColors.secondaryBackground,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                            onChanged: (val) =>
-                                setState(() => _searchQuery = val),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Destinations List
-                          const Text(
-                            'Điểm đến trên sơ đồ:',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E232B),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (destinations.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Text(
-                                'Không có địa điểm phù hợp.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-                          for (final marker in destinations)
-                            ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              leading: CircleAvatar(
-                                radius: 14,
-                                backgroundColor: marker.type == 'artifact'
-                                    ? const Color(
-                                        0xFF873C32,
-                                      ).withValues(alpha: 0.15)
-                                    : const Color(
-                                        0xFF2563EB,
-                                      ).withValues(alpha: 0.15),
-                                child: Icon(
-                                  marker.type == 'artifact'
-                                      ? Icons.museum
-                                      : Icons.place,
-                                  size: 14,
-                                  color: marker.type == 'artifact'
-                                      ? const Color(0xFF873C32)
-                                      : const Color(0xFF2563EB),
-                                ),
-                              ),
-                              title: Text(
-                                marker.label,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                marker.type == 'artifact'
-                                    ? 'Hiện vật'
-                                    : 'Tiện ích / Phòng',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 12,
-                                color: Colors.grey,
-                              ),
-                              onTap: () {
-                                _selectDestination(marker);
-                                _centerOnCoordinates(marker.x, marker.y);
-                              },
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
+                _controls(position),
                 // 5. Fullscreen QR Scanner Camera Overlay
                 if (_showQrScanner)
                   Positioned.fill(
@@ -1292,6 +1238,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               onPressed: () => setState(() {
                                 _showQrScanner = false;
                                 _scannerController?.dispose();
+                                _scannerController = null;
                               }),
                             ),
                           ),
@@ -1324,7 +1271,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
-                                'Quét tem mã QR gắn cạnh hiện vật tại tủ trưng bày để xác định điểm xuất phát.',
+                                'Quét mã QR tại vị trí bạn đang đứng để xác định điểm xuất phát.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.white,

@@ -10,12 +10,88 @@ class ArtifactGallery extends StatefulWidget {
     this.height = 300,
     this.fullscreen = false,
     this.initialIndex = 0,
+    this.cover = false,
+    this.onModel,
   });
   final List<String> photos;
   final String name;
   final double height;
   final bool fullscreen;
   final int initialIndex;
+  final bool cover;
+  final VoidCallback? onModel;
+
+  static void open(
+    BuildContext context, {
+    required List<String> photos,
+    required String name,
+    int initialIndex = 0,
+    VoidCallback? onModel,
+  }) => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog.fullscreen(
+      backgroundColor: const Color(0xff151210),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  IconButton.filledTonal(
+                    tooltip: 'Đóng ảnh',
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                  Expanded(
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (onModel != null)
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        onModel();
+                      },
+                      child: const Text('3D'),
+                    )
+                  else
+                    const SizedBox(width: 48),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ArtifactGallery(
+                photos: photos,
+                name: name,
+                fullscreen: true,
+                initialIndex: initialIndex,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+              child: Text(
+                name == 'Trống đồng Ngọc Lũ'
+                    ? 'Ảnh: VuThiAnh, Wikimedia Commons\nChụm hai ngón để phóng to'
+                    : 'Chụm hai ngón để phóng to',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
   @override
   State<ArtifactGallery> createState() => _ArtifactGalleryState();
 }
@@ -58,52 +134,12 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
     );
   }
 
-  void _open() => showDialog<void>(
-    context: context,
-    useSafeArea: true,
-    builder: (context) => Dialog.fullscreen(
-      backgroundColor: const Color(0xff211d1b),
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.name,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Đóng ảnh',
-                    color: Colors.white,
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ArtifactGallery(
-                photos: widget.photos,
-                name: widget.name,
-                fullscreen: true,
-                initialIndex: _index,
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Chụm hai ngón để phóng to · Vuốt để đổi ảnh',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
+  void _open() => ArtifactGallery.open(
+    context,
+    photos: widget.photos,
+    name: widget.name,
+    initialIndex: _index,
+    onModel: widget.onModel,
   );
   Widget _image(String url, int index) {
     final label =
@@ -122,7 +158,7 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
     final image = Uri.tryParse(url)?.hasScheme == true
         ? Image.network(
             url,
-            fit: BoxFit.contain,
+            fit: widget.cover ? BoxFit.cover : BoxFit.contain,
             width: double.infinity,
             semanticLabel: label,
             errorBuilder: error,
@@ -132,7 +168,7 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
           )
         : Image.asset(
             url,
-            fit: BoxFit.contain,
+            fit: widget.cover ? BoxFit.cover : BoxFit.contain,
             width: double.infinity,
             semanticLabel: label,
             errorBuilder: error,
@@ -155,7 +191,20 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
     if (widget.photos.isEmpty) {
       return SizedBox(
         height: widget.height,
-        child: const Center(child: Text('Chưa có ảnh hiện vật')),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Chưa có ảnh hiện vật'),
+              if (widget.onModel != null)
+                TextButton.icon(
+                  onPressed: widget.onModel,
+                  icon: const Icon(Icons.view_in_ar_outlined),
+                  label: const Text('Xem 3D'),
+                ),
+            ],
+          ),
+        ),
       );
     }
     final body = Stack(
@@ -168,73 +217,96 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
             itemBuilder: (_, index) => _image(widget.photos[index], index),
           ),
         ),
-        Positioned(
-          right: 12,
-          top: 12,
-          child: Semantics(
-            liveRegion: true,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: .65),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Text(
-                '${_index + 1} / ${widget.photos.length}',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ),
-        if (widget.photos.length > 1) ...[
+        if (widget.fullscreen && widget.photos.length > 1)
           Positioned(
-            left: 8,
-            bottom: 12,
-            child: IconButton.filled(
-              tooltip: 'Ảnh trước',
-              onPressed: _index > 0 ? () => _move(-1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-          ),
-          Positioned(
-            right: 8,
-            bottom: 12,
-            child: IconButton.filled(
-              tooltip: 'Ảnh tiếp theo',
-              onPressed: _index < widget.photos.length - 1
-                  ? () => _move(1)
-                  : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ),
-        ],
-        if (!widget.fullscreen)
-          Positioned(
+            bottom: 8,
             left: 0,
             right: 0,
-            bottom: 16,
-            child: IgnorePointer(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: .65),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Chạm để phóng to',
-                    style: TextStyle(color: Colors.white, fontSize: 11),
-                  ),
+            child: Center(
+              child: Material(
+                color: AppColors.antiqueIvory,
+                borderRadius: BorderRadius.circular(24),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Ảnh trước',
+                      onPressed: _index > 0 ? () => _move(-1) : null,
+                      icon: const Icon(Icons.chevron_left),
+                    ),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        'ẢNH ${_index + 1} / ${widget.photos.length}',
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Ảnh tiếp theo',
+                      onPressed: _index < widget.photos.length - 1
+                          ? () => _move(1)
+                          : null,
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                  ],
                 ),
               ),
+            ),
+          )
+        else if (!widget.fullscreen)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 20,
+            child: Row(
+              children: [
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    backgroundColor: const Color(0xff6d3032),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 34),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                  ),
+                  onPressed: _open,
+                  icon: const Icon(Icons.image_outlined, size: 15),
+                  label: Text(
+                    widget.photos.length > 1
+                        ? 'Ảnh ${_index + 1}/${widget.photos.length}'
+                        : 'Ảnh',
+                  ),
+                ),
+                if (widget.onModel != null) ...[
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: FilledButton.tonalIcon(
+                      style: FilledButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xff292929),
+                      ),
+                      onPressed: widget.onModel,
+                      icon: const Icon(Icons.view_in_ar_outlined, size: 17),
+                      label: const Text('Xem 3D'),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                IconButton.filledTonal(
+                  tooltip: 'Mở ảnh toàn màn hình',
+                  style: IconButton.styleFrom(
+                    shape: const CircleBorder(),
+                    backgroundColor: Colors.white,
+                  ),
+                  onPressed: _open,
+                  icon: const Icon(Icons.fullscreen),
+                ),
+              ],
             ),
           ),
       ],
     );
-    return widget.fullscreen
+    return widget.fullscreen || widget.cover
         ? body
         : ClipRRect(
             borderRadius: BorderRadius.circular(16),

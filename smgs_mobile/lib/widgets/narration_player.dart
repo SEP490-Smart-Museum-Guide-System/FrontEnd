@@ -196,11 +196,15 @@ class NarrationPlayer extends StatefulWidget {
     this.audioUrl,
     this.variant,
     this.isDemo = false,
+    this.compact = false,
+    this.onStart,
   });
   final String text;
   final String? audioUrl;
   final String? variant;
   final bool isDemo;
+  final bool compact;
+  final VoidCallback? onStart;
 
   @override
   State<NarrationPlayer> createState() => _NarrationPlayerState();
@@ -240,7 +244,14 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
 
     _subscriptions.addAll([
       player.onPlayerStateChanged.listen((state) {
-        if (active()) setState(() => _state = state);
+        if (active()) {
+          if (state == PlayerState.playing &&
+              _state != PlayerState.paused &&
+              !_playing) {
+            widget.onStart?.call();
+          }
+          setState(() => _state = state);
+        }
       }, onError: onError),
       player.onDurationChanged.listen((duration) {
         if (active()) setState(() => _duration = duration);
@@ -401,6 +412,67 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
     final total = _duration.inMilliseconds.toDouble();
     final progress = (_dragPosition ?? _position.inMilliseconds.toDouble())
         .clamp(0.0, total > 0 ? total : 1.0);
+    if (widget.compact) {
+      final label = _busy
+          ? 'Đang tải âm thanh…'
+          : _playing
+          ? 'Đang nghe thuyết minh'
+          : 'Nghe thuyết minh';
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_error != null) Notice(_error!),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+              ),
+              backgroundColor: AppColors.deepBurgundy,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+            onPressed: _hasContent && !_busy ? _toggle : null,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.antiqueIvory,
+                  foregroundColor: AppColors.deepBurgundy,
+                  child: Icon(
+                    _playing ? Icons.pause : Icons.play_arrow,
+                    size: 17,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label),
+                      if (total > 0) ...[
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: progress / total,
+                          color: Colors.white,
+                          backgroundColor: Colors.white30,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (total > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '${_time(_position)} / ${_time(_duration)}',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+    }
     return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

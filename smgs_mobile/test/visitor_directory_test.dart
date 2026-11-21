@@ -124,6 +124,70 @@ Finder get pageScroll => find
 
 void main() {
   testWidgets(
+    'QR floor opens first; buildings scope floors and switching clears selection',
+    (tester) async {
+      await screenSize(tester, const Size(390, 844));
+      final catalog = directory();
+      final maps = catalog['maps'] as List;
+      catalog['maps'] = [
+        ...maps,
+        {
+          'id': 6,
+          'floorId': 6,
+          'name': 'Sơ đồ tầng 2',
+          'floorName': 'Tầng 2',
+          'buildingName': 'Nhà A',
+        },
+        {
+          'id': 7,
+          'floorId': 9,
+          'name': 'Sơ đồ sảnh',
+          'floorName': 'Sảnh',
+          'buildingName': 'Nhà B',
+        },
+      ];
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            host(const VisitorDirectoryScreen(museumId: 7)),
+          );
+          await frames(tester);
+          expect(find.text('Tầng 2 · Nhà A ▾'), findsOneWidget);
+          await tester.tap(find.text('1'));
+          await frames(tester);
+          expect(find.text('Tầng 1 · Nhà A ▾'), findsOneWidget);
+          await tester.tap(find.byTooltip('Trống đồng'));
+          await frames(tester);
+          expect(find.text('Chỉ đường'), findsOneWidget);
+          await screenSize(tester, const Size(844, 390));
+          await frames(tester);
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.byTooltip('Chọn tòa nhà'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Nhà B').last);
+          await tester.pumpAndSettle();
+          expect(find.text('Sảnh · Nhà B ▾'), findsOneWidget);
+          expect(find.text('Chỉ đường'), findsNothing);
+          expect(find.text('2'), findsNothing);
+        },
+        () => MockClient((req) async {
+          if (req.url.path.endsWith('visitor-directory')) return data(catalog);
+          if (req.url.path.endsWith('/presence')) {
+            return data({'isFresh': true, 'mapId': 6});
+          }
+          if (req.url.path.endsWith('/published')) {
+            return data({
+              ...mapJson(),
+              'id': int.parse(req.url.pathSegments.reversed.elementAt(1)),
+              'imageKey': null,
+            });
+          }
+          return data({});
+        }),
+      );
+    },
+  );
+  testWidgets(
     'Directory shows the actual room and opens the actual published map with the chosen destination',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
@@ -140,27 +204,19 @@ void main() {
             ),
           );
           await frames(tester);
-          final button = find.text('Chỉ đường · Sơ đồ tầng 1');
-          await tester.scrollUntilVisible(button, 250, scrollable: pageScroll);
-          await tester.pumpAndSettle();
-          expect(find.text('Phòng Đông Sơn · Tầng 1 · Nhà A'), findsOneWidget);
-          await tester.tap(button);
-          await frames(tester);
-          final screen = tester.widget<VisitorIndoorMapScreen>(
-            find.byType(VisitorIndoorMapScreen),
-          );
-          expect(screen.mapId, 5);
-          expect(screen.targetArtifactId, 11);
-          expect(requests, contains('/api/indoor-maps/5/published'));
+          expect(find.byType(VisitorIndoorMapScreen), findsOneWidget);
+          expect(find.text('Tìm hiện vật & chỉ đường'), findsNothing);
           expect(find.text('Trống đồng'), findsWidgets);
-          await tester.tap(find.byType(DropdownButtonFormField<String>));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('Hiện vật đầu').last);
-          await frames(tester);
-          expect(
-            find.text('Đã tìm thấy lộ trình qua 2 điểm rẽ hành lang.'),
-            findsOneWidget,
-          );
+          expect(requests, contains('/api/indoor-maps/5/published'));
+          for (final width in [360.0, 375.0, 390.0, 430.0]) {
+            await screenSize(tester, Size(width, 800));
+            await frames(tester);
+            expect(
+              find.byTooltip('Quét QR xác định vị trí').hitTestable(),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+          }
           final viewer = tester.widget<InteractiveViewer>(
             find.byType(InteractiveViewer),
           );
@@ -193,27 +249,34 @@ void main() {
     'Directory filters rooms and artifacts at 320px with enlarged text; missing map stays explicit',
     (tester) async {
       await screenSize(tester, const Size(320, 700));
-      await http.runWithClient(() async {
-        await tester.pumpWidget(
-          host(const VisitorDirectoryScreen(museumId: 7), scale: 1.3),
-        );
-        await frames(tester);
-        await tester.enterText(find.byType(TextField), 'Bình gốm');
-        await frames(tester);
-        final item = find.text('Bình gốm', findRichText: false).last;
-        await tester.scrollUntilVisible(item, 250, scrollable: pageScroll);
-        await tester.pumpAndSettle();
-        expect(item, findsOneWidget);
-        expect(find.text('Trống đồng'), findsNothing);
-        expect(find.text('Phòng Gốm · Tầng 2 · Nhà A'), findsOneWidget);
-        expect(
-          find.text(
-            'Hiện vật chưa được liên kết với điểm đến trên sơ đồ đã xuất bản.',
-          ),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-      }, () => MockClient((_) async => data(directory())));
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            host(const VisitorDirectoryScreen(museumId: 7), scale: 1.3),
+          );
+          await frames(tester);
+          await tester.tap(find.byTooltip('Tìm hiện vật hoặc phòng'));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField), 'Bình gốm');
+          await frames(tester);
+          await tester.tap(find.widgetWithText(ListTile, 'Bình gốm'));
+          await tester.pumpAndSettle();
+          expect(
+            find.text('Chưa có điểm liên kết trên sơ đồ đã xuất bản.'),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        },
+        () => MockClient((req) async {
+          if (req.url.path.endsWith('/published')) {
+            return data({...mapJson(), 'imageKey': null});
+          }
+          if (req.url.path.endsWith('visitor-directory')) {
+            return data(directory());
+          }
+          return data({});
+        }),
+      );
     },
   );
   testWidgets(
@@ -227,14 +290,9 @@ void main() {
           );
           await frames(tester);
           final retry = find.text('Thử lại');
-          await tester.scrollUntilVisible(retry, 250, scrollable: pageScroll);
-          await tester.pumpAndSettle();
           await tester.tap(retry);
           await frames(tester);
-          final item = find.text('Trống đồng');
-          await tester.scrollUntilVisible(item, 250, scrollable: pageScroll);
-          await tester.pumpAndSettle();
-          expect(item, findsOneWidget);
+          expect(find.text('Bảo tàng chưa xuất bản sơ đồ.'), findsOneWidget);
           expect(calls, 2);
           expect(tester.takeException(), isNull);
         },
@@ -242,7 +300,7 @@ void main() {
           calls++;
           return calls == 1
               ? http.Response('{"message":"Chưa tải được danh mục"}', 503)
-              : data(directory());
+              : data({...directory(), 'maps': []});
         }),
       );
     },

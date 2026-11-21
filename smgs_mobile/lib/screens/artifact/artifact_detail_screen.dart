@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../core/network/api_config.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/artifact_gallery.dart';
 import '../../models/artifact.dart';
@@ -9,8 +11,6 @@ import '../ai_guide/ai_guide_screen.dart';
 import '../../widgets/narration_player.dart';
 import '../profile/profile_screen.dart';
 import 'artifact_3d_screen.dart';
-import '../museum/indoor_guidance_screen.dart';
-import '../museum/visitor_directory_screen.dart';
 import 'daily_quiz_screen.dart';
 
 class ArtifactDetailScreen extends StatefulWidget {
@@ -26,10 +26,12 @@ class ArtifactDetailScreen extends StatefulWidget {
 }
 
 class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
+  final _quizKey = GlobalKey();
+  bool _skipQuiz = false;
   Map<String, dynamic>? _publishedContent;
   String? _contentError;
   bool _isPremiumLocked = false;
-  List<String>? _photos;
+  Artifact? _detail;
   bool _photoError = false;
   bool _loadingPhotos = false;
 
@@ -55,7 +57,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
     try {
       final json = await DiscoveryApiService.fetchArtifactDetail(id);
       if (mounted) {
-        setState(() => _photos = Artifact.fromBackendJson(json).photos);
+        setState(() => _detail = Artifact.fromBackendJson(json));
       }
     } catch (_) {
       if (mounted) setState(() => _photoError = true);
@@ -78,7 +80,8 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
       } catch (e) {
         if (mounted) {
           final errStr = e.toString().toLowerCase();
-          final isPremium = errStr.contains('403') ||
+          final isPremium =
+              errStr.contains('403') ||
               errStr.contains('premium') ||
               errStr.contains('pass');
           setState(() {
@@ -97,314 +100,375 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
     final a = widget.artifact;
     final summary = _publishedContent?['title'] as String? ?? a.summary;
     final story = _publishedContent?['description'] as String? ?? a.story;
-    return StoryScaffold(
-      title: a.name,
-      photo: ArtifactGallery(photos: _photos ?? a.photos, name: a.name),
-      actions: [
-        ListenableBuilder(
-          listenable: VisitStore.instance,
-          builder: (context, _) => Tooltip(
-            message: VisitStore.instance.saved.contains(a.id)
-                ? 'Bỏ lưu hiện vật'
-                : 'Lưu hiện vật',
-            child: TextButton.icon(
-              onPressed: () {
-                VisitStore.instance.toggleSave(a.id);
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        VisitStore.instance.saved.contains(a.id)
-                            ? 'Đã lưu hiện vật vào bộ sưu tập.'
-                            : 'Đã bỏ lưu hiện vật.',
-                      ),
-                    ),
-                  );
-              },
-              icon: Icon(
-                VisitStore.instance.saved.contains(a.id)
-                    ? Icons.bookmark
-                    : Icons.bookmark_border,
-                color: AppColors.deepBurgundy,
-              ),
-              label: Text(
-                VisitStore.instance.saved.contains(a.id) ? 'Đã lưu' : 'Lưu',
-              ),
+    final detail = _detail;
+    final photos = detail != null && detail.photos.isNotEmpty
+        ? detail.photos
+        : a.photos;
+    final modelArtifact = detail?.modelUrl?.trim().isNotEmpty == true
+        ? detail!
+        : a;
+    final modelUrl = modelArtifact.modelUrl?.trim() ?? '';
+    final uri = Uri.tryParse(modelUrl);
+    final hasModel =
+        modelUrl.startsWith('assets/models/') ||
+        (uri != null &&
+            {'https', 'http'}.contains(uri.scheme) &&
+            uri.host.isNotEmpty);
+    void model() =>
+        openPage(context, Artifact3DScreen(artifact: modelArtifact));
+    void ask() => openPage(context, AiGuideScreen(artifact: a));
+    final audio = ApiConfig.mediaUrl(_publishedContent?['audioUrl'] as String?);
+    final narration = (_publishedContent?['narrationText'] as String?)?.trim();
+    final script = narration?.isNotEmpty == true
+        ? narration!
+        : (_publishedContent?['description'] as String? ?? '');
+    final metadata = <String, String>{};
+    final paragraphs = <String>[];
+    for (final line in (story.trim().isEmpty ? summary : story).split('\n')) {
+      final match = RegExp(
+        r'^\s*[-*]?\s*(Tên hiện vật|Tên tiếng Anh|Chất liệu|Niên đại|Đặc điểm)\s*:\s*(.+)$',
+        caseSensitive: false,
+      ).firstMatch(line);
+      if (match == null) {
+        paragraphs.add(line);
+      } else {
+        final key = match[1]!.toLowerCase();
+        final value = match[2]!.trim();
+        metadata[key] = value;
+        if (key == 'chất liệu' || key == 'niên đại') paragraphs.add(line);
+        if (key == 'đặc điểm') paragraphs.add(value);
+      }
+    }
+    if (!metadata.containsKey('niên đại') && a.period.trim().isNotEmpty) {
+      paragraphs.add('Niên đại: ${a.period.trim()}');
+    }
+    final storyText = paragraphs.join('\n').trim();
+    final hasNarration = audio.isNotEmpty || script.trim().isNotEmpty;
+    final children = <Widget>[
+      if (_loadingPhotos) const LinearProgressIndicator(),
+      if (_photoError)
+        Row(
+          children: [
+            const Expanded(child: Text('Chưa tải đủ ảnh hiện vật.')),
+            TextButton(onPressed: _loadPhotos, child: const Text('Thử lại')),
+          ],
+        ),
+      const Eyebrow('HIỆN VẬT BẢO TÀNG'),
+      const SizedBox(height: 8),
+      Text(a.name, style: AppTextStyles.pageTitle.copyWith(height: 1.2)),
+      if (metadata['tên tiếng anh'] case final String name)
+        Text(
+          name,
+          style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic),
+        ),
+      const SizedBox(height: 8),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.location_on_outlined, size: 17),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              [
+                widget.museumName,
+                a.location,
+              ].where((value) => value.isNotEmpty).join(' · '),
+              style: AppTextStyles.caption,
             ),
           ),
-        ),
-      ],
-      children: [
-        if (_loadingPhotos) const LinearProgressIndicator(),
-        if (_photoError)
-          Row(
+        ],
+      ),
+      const SizedBox(height: 20),
+      if (_isPremiumLocked) ...[
+        Container(
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: AppColors.mutedGold.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.mutedGold),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(child: Text('Chưa tải đủ ảnh hiện vật.')),
-              TextButton(onPressed: _loadPhotos, child: const Text('Thử lại')),
-            ],
-          ),
-        Text(
-          a.id == 'artifact_1'
-              ? 'Trống đồng Ngọc Lũ · Ảnh: VuThiAnh, Wikimedia Commons'
-              : (a.imageUrl.isEmpty
-                    ? 'Chưa có ảnh hiện vật'
-                    : 'Ảnh hiện vật từ bảo tàng'),
-          style: AppTextStyles.caption,
-        ),
-        const SizedBox(height: 24),
-        Eyebrow(a.category),
-        const SizedBox(height: 8),
-        Text(
-          a.name,
-          style: AppTextStyles.display.copyWith(color: AppColors.deepBurgundy),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          a.period,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.deepBurgundy,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(widget.museumName, style: AppTextStyles.bodySmall),
-        if (a.location.isNotEmpty)
-          Text(a.location, style: AppTextStyles.bodySmall),
-        const Divider(),
-        if (_publishedContent != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.mutedGold.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppColors.mutedGold),
-            ),
-            child: const Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                Icon(Icons.verified, size: 14, color: AppColors.deepBurgundy),
-                SizedBox(width: 6),
-                Text(
-                  'Thuyết minh chính thức đã qua Giám tuyển duyệt',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.deepBurgundy,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        if (_isPremiumLocked) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: AppColors.mutedGold.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.mutedGold),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.workspace_premium,
-                      color: AppColors.deepBurgundy,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Bảo vật danh mục Premium',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.deepBurgundy,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _contentError ?? '',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.darkBrown,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ] else if (_contentError != null) ...[
-          Notice(_contentError!),
-          TextButton(
-            onPressed: () {
-              setState(() => _contentError = null);
-              _loadPublishedContent();
-            },
-            child: const Text('Thử lại'),
-          ),
-        ],
-        Text(summary, style: AppTextStyles.bodyLarge),
-        if (story.isNotEmpty && story != summary) ...[
-          const SizedBox(height: 12),
-          Text(story, style: AppTextStyles.bodyMedium),
-        ],
-        const SizedBox(height: 24),
-        PrimaryButton(
-          label: 'Hỏi hướng dẫn viên',
-          icon: Icons.chat_bubble_outline,
-          onPressed: () => openPage(context, AiGuideScreen(artifact: a)),
-        ),
-        if (a.id == 'artifact_1' || a.modelUrl?.isNotEmpty == true) ...[
-          const SizedBox(height: 12),
-          SecondaryButton(
-            label: 'Xem mô hình 3D',
-            icon: Icons.view_in_ar_outlined,
-            onPressed: () => openPage(context, Artifact3DScreen(artifact: a)),
-          ),
-        ],
-        const SizedBox(height: 8),
-        TextButton.icon(
-          icon: const Icon(Icons.more_horiz),
-          label: const Text('Thuyết minh, chỉ đường & 3D'),
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            showDragHandle: true,
-            builder: (sheetContext) {
-              void go(Widget screen) {
-                Navigator.pop(sheetContext);
-                openPage(context, screen);
-              }
-
-              return SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.menu_book_outlined),
-                        title: const Text('Đọc & nghe thuyết minh'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => go(NarrationScreen(artifact: a)),
-                      ),
-                      if (int.tryParse(a.museumId) != null &&
-                          int.tryParse(a.id) != null)
-                        ListTile(
-                          leading: const Icon(Icons.directions_walk),
-                          title: const Text('Chỉ đường tới hiện vật'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => go(
-                            VisitorDirectoryScreen(
-                              museumId: int.parse(a.museumId),
-                              initialArtifactId: int.parse(a.id),
-                              museumName: widget.museumName,
-                            ),
-                          ),
-                        ),
-                      if (a.modelUrl?.isNotEmpty == true)
-                        ListTile(
-                          leading: const Icon(Icons.view_in_ar_outlined),
-                          title: const Text('Xem mô hình 3D'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => go(Artifact3DScreen(artifact: a)),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SectionHeading('Những điều còn lưu lại'),
-        ScrollReveal(child: Text(story, style: AppTextStyles.bodyLarge)),
-        const SizedBox(height: 24),
-        // Khối quyết định sau khi đọc xong theo bối cảnh U2
-        ListenableBuilder(
-          listenable: VisitStore.instance,
-          builder: (context, _) {
-            final store = VisitStore.instance;
-            final nextArtifact = store.getNextArtifact(a);
-
-            return Panel(
-              gold: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.school_outlined,
-                        color: AppColors.deepBurgundy,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'BẠN ĐÃ TÌM HIỂU XONG HIỆN VẬT',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.deepBurgundy,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
-                      ),
-                    ],
+                  const Icon(
+                    Icons.workspace_premium,
+                    color: AppColors.deepBurgundy,
+                    size: 20,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Làm câu hỏi đã được mở từ lượt quét hiện vật của bạn.',
-                  ),
-                  PrimaryButton(
-                    label: 'Làm Quiz ngay',
-                    onPressed: () =>
-                        openPage(context, DailyQuizScreen(artifactId: a.id)),
-                  ),
-                  SecondaryButton(
-                    label: 'Chọn câu hỏi để trả lời sau',
-                    onPressed: () =>
-                        openPage(context, DailyQuizScreen(artifactId: a.id)),
-                  ),
-                  if (nextArtifact != null) ...[
-                    const SizedBox(height: 12),
-                    const Divider(height: 1),
-                    const SizedBox(height: 12),
-                    SecondaryButton(
-                      label: 'Chỉ đường tới: ${nextArtifact.name}',
-                      icon: Icons.directions_walk,
-                      onPressed: () => openPage(
-                        context,
-                        IndoorGuidanceScreen(
-                          currentArtifact: a,
-                          nextArtifact: nextArtifact,
-                        ),
-                      ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Bảo vật danh mục Premium',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.deepBurgundy,
                     ),
-                  ],
+                  ),
                 ],
               ),
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-        ActionTile(
-          title: 'Góp ý về hiện vật',
-          subtitle: 'Chia sẻ cảm nhận về câu chuyện này.',
-          icon: Icons.rate_review_outlined,
-          onTap: () => openPage(
-            context,
-            FeedbackScreen(
-              targetType: 'artifact',
-              targetId: a.id,
-              targetName: a.name,
-            ),
+              const SizedBox(height: 8),
+              Text(
+                _contentError ?? '',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.darkBrown,
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
         ),
+      ] else if (_contentError != null) ...[
+        Notice(_contentError!),
+        TextButton(
+          onPressed: () {
+            setState(() => _contentError = null);
+            _loadPublishedContent();
+          },
+          child: const Text('Thử lại'),
+        ),
       ],
+      if (storyText.isNotEmpty) ...[
+        const Eyebrow('Câu chuyện'),
+        const Text(
+          '“',
+          style: TextStyle(fontSize: 42, height: 1, color: AppColors.mutedGold),
+        ),
+        Text(
+          storyText,
+          style: AppTextStyles.titleMedium.copyWith(
+            fontWeight: FontWeight.w400,
+            height: 1.55,
+          ),
+        ),
+        const SizedBox(height: 18),
+      ],
+      SizedBox(key: _quizKey),
+      if (!_skipQuiz)
+        Panel(
+          gold: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Bạn đã tìm hiểu xong?',
+                style: AppTextStyles.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Thử vài câu hỏi ngắn về hiện vật này.',
+                style: AppTextStyles.caption,
+              ),
+              const SizedBox(height: 12),
+              PrimaryButton(
+                label: 'Làm Quiz ngay',
+                onPressed: () =>
+                    openPage(context, DailyQuizScreen(artifactId: a.id)),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _skipQuiz = true),
+                child: const Text('Để sau'),
+              ),
+            ],
+          ),
+        ),
+      const SizedBox(height: 16),
+      TextButton.icon(
+        label: const Text('Góp ý về hiện vật này'),
+        icon: const Icon(Icons.chat_bubble_outline, size: 16),
+        onPressed: () => openPage(
+          context,
+          FeedbackScreen(
+            targetType: 'artifact',
+            targetId: a.id,
+            targetName: a.name,
+          ),
+        ),
+      ),
+    ];
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            centerTitle: true,
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            expandedHeight: (MediaQuery.sizeOf(context).height * .46).clamp(
+              240.0,
+              420.0,
+            ),
+            title: LayoutBuilder(
+              builder: (context, _) {
+                final bar = context
+                    .dependOnInheritedWidgetOfExactType<
+                      FlexibleSpaceBarSettings
+                    >();
+                return bar == null || bar.currentExtent <= bar.minExtent + 1
+                    ? Text(
+                        a.name,
+                        style: AppTextStyles.titleMedium,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : const SizedBox.shrink();
+              },
+            ),
+            leadingWidth: 60,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Center(
+                child: IconButton.filledTonal(
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  style: IconButton.styleFrom(
+                    shape: const CircleBorder(),
+                    backgroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.maybePop(context),
+                  icon: const BackButtonIcon(),
+                ),
+              ),
+            ),
+            actions: [
+              IconButton.filledTonal(
+                tooltip: 'Chia sẻ hiện vật',
+                style: IconButton.styleFrom(
+                  shape: const CircleBorder(),
+                  backgroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  try {
+                    await SystemChannels.platform.invokeMethod<void>(
+                      'Share.invoke',
+                      '${a.name} · ${widget.museumName}',
+                    );
+                    return;
+                  } on MissingPluginException {
+                    // Copy the details on platforms without a share sheet.
+                  }
+                  await Clipboard.setData(
+                    ClipboardData(text: '${a.name} · ${widget.museumName}'),
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã sao chép thông tin hiện vật.'),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.ios_share_outlined),
+              ),
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: ListenableBuilder(
+                  listenable: VisitStore.instance,
+                  builder: (context, _) {
+                    final saved = VisitStore.instance.saved.contains(a.id);
+                    return IconButton.filledTonal(
+                      tooltip: saved ? 'Bỏ lưu hiện vật' : 'Lưu hiện vật',
+                      style: IconButton.styleFrom(
+                        shape: const CircleBorder(),
+                        backgroundColor: Colors.white,
+                      ),
+                      isSelected: saved,
+                      selectedIcon: const Icon(Icons.bookmark),
+                      icon: const Icon(Icons.bookmark_border),
+                      onPressed: () => VisitStore.instance.toggleSave(a.id),
+                    );
+                  },
+                ),
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.pin,
+              background: ArtifactGallery(
+                photos: photos,
+                name: a.name,
+                cover: true,
+                onModel: hasModel ? model : null,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Transform.translate(
+              offset: const Offset(0, -14),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 9, 18, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 34,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.mutedGold.withValues(alpha: .35),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      ...children,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Row(
+            children: [
+              if (hasNarration) ...[
+                Expanded(
+                  child: NarrationPlayer(
+                    compact: true,
+                    text: script,
+                    audioUrl: audio.isEmpty ? null : audio,
+                    onStart: () {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        final target = _quizKey.currentContext;
+                        if (target != null) {
+                          Scrollable.ensureVisible(
+                            target,
+                            alignment: .2,
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeOutCubic,
+                          );
+                        }
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+                onPressed: ask,
+                icon: const Icon(Icons.chat_bubble_outline, size: 17),
+                label: const Text('Hỏi'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -52,14 +52,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('1 / 2'), findsOneWidget);
-    await tester.tap(find.byTooltip('Ảnh tiếp theo'));
+    expect(find.text('Ảnh 1/2'), findsOneWidget);
+    await tester.drag(find.byType(PageView), const Offset(-650, 0));
     await tester.pumpAndSettle();
-    expect(find.text('2 / 2'), findsOneWidget);
-    await tester.tap(find.byType(InkWell).first);
+    expect(find.text('Ảnh 2/2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mở ảnh toàn màn hình'));
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsWidgets);
-    expect(find.text('2 / 2'), findsNWidgets(2));
+    expect(find.text('ẢNH 2 / 2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Ảnh trước'));
+    await tester.pumpAndSettle();
+    expect(find.text('ẢNH 1 / 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Đóng ảnh'));
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsNothing);

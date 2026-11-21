@@ -166,7 +166,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tapText(tester, 'Xem mô hình 3D');
+    for (final width in [360.0, 375.0, 390.0, 430.0]) {
+      await screenSize(tester, Size(width, 820));
+      await tester.pumpAndSettle();
+      expect(find.text('Xem 3D').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+    await tester.tap(find.text('Xem 3D').hitTestable());
+    await tester.pumpAndSettle();
     expect(find.byType(Artifact3DScreen), findsOneWidget);
     expect(find.text('Kéo ngang để xoay'), findsOneWidget);
     expect(find.text('Đặt lại góc nhìn'), findsOneWidget);
