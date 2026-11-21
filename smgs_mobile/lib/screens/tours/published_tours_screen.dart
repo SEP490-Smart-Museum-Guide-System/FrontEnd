@@ -6,7 +6,7 @@ import '../../services/app_services.dart';
 import '../../services/visitor_experience_api.dart';
 import '../museum/visit_progress_screen.dart';
 
-class PublishedToursScreen extends StatelessWidget {
+class PublishedToursScreen extends StatefulWidget {
   const PublishedToursScreen({
     super.key,
     required this.museumId,
@@ -16,8 +16,15 @@ class PublishedToursScreen extends StatelessWidget {
   final int? maxMinutes;
 
   @override
+  State<PublishedToursScreen> createState() => _PublishedToursScreenState();
+}
+
+class _PublishedToursScreenState extends State<PublishedToursScreen> {
+  int _selectedTab = 0;
+
+  @override
   Widget build(BuildContext context) {
-    final museumName = AppServices.catalog.museumName(museumId.toString());
+    final museumName = AppServices.catalog.museumName(widget.museumId.toString());
 
     return MuseumPage(
       back: true,
@@ -27,27 +34,98 @@ class PublishedToursScreen extends StatelessWidget {
         const Eyebrow('TUYẾN KHÁM PHÁ CHỦ ĐỀ'),
         const SizedBox(height: 6),
         Text('Tuyến tham quan có sẵn', style: AppTextStyles.pageTitle),
-        if (maxMinutes != null) ...[
+        if (widget.maxMinutes != null) ...[
           const SizedBox(height: 6),
           Text(
-            'Lọc theo thời lượng tối đa $maxMinutes phút',
+            'Lọc theo thời lượng tối đa ${widget.maxMinutes} phút',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.deepBurgundy,
               fontWeight: FontWeight.w600,
             ),
           ),
         ],
+        const SizedBox(height: 14),
+
+        // Tabs: Tất cả tuyến vs Lộ trình đã lưu (WF-02 F05)
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedTab = 0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: _selectedTab == 0 ? AppColors.deepBurgundy : AppColors.card,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _selectedTab == 0 ? AppColors.deepBurgundy : AppColors.border,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Tất cả tuyến',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _selectedTab == 0 ? AppColors.antiqueIvory : AppColors.darkBrown,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedTab = 1),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: _selectedTab == 1 ? AppColors.deepBurgundy : AppColors.card,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _selectedTab == 1 ? AppColors.deepBurgundy : AppColors.border,
+                    ),
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.bookmark_outline,
+                          size: 15,
+                          color: _selectedTab == 1 ? AppColors.antiqueIvory : AppColors.darkBrown,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Lộ trình đã lưu',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: _selectedTab == 1 ? AppColors.antiqueIvory : AppColors.darkBrown,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
+
+        if (_selectedTab == 0)
         BackendPanel(
-          resourceKey: 'published-tours:$museumId:$maxMinutes',
-          load: () => BackendApi.list('tours?museumId=$museumId'),
+          resourceKey: 'published-tours:${widget.museumId}:${widget.maxMinutes}',
+          load: () => BackendApi.list('tours?museumId=${widget.museumId}'),
           builder: (data, reload) {
             final rows = (data as List)
                 .cast<Map<String, dynamic>>()
                 .where(
                   (t) =>
-                      maxMinutes == null ||
-                      (t['estimatedMinutes'] as num) <= maxMinutes!,
+                      widget.maxMinutes == null ||
+                      (t['estimatedMinutes'] as num) <= widget.maxMinutes!,
                 )
                 .toList();
             return Column(
@@ -170,13 +248,122 @@ class PublishedToursScreen extends StatelessWidget {
               ],
             );
           },
-        ),
-        if (maxMinutes != null)
+        )
+        else
+          // Tab 1: Saved Routes (GET /api/tours/saved-routes)
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: VisitorExperienceApi.getSavedRoutes(museumId: widget.museumId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                ));
+              }
+              final saved = snapshot.data ?? [];
+              if (saved.isEmpty) {
+                return const Column(
+                  children: [
+                    Notice('Bạn chưa lưu lộ trình nào cho bảo tàng này. Khi xem chi tiết tuyến tham quan, bấm "Lưu lộ trình" để ghi nhớ.'),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  for (final item in saved)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () {
+                          final tourId = item['tourId'] as int?;
+                          if (tourId != null) {
+                            openPage(context, PublishedTourDetailScreen(tourId: tourId));
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.mutedGold.withOpacity(0.6)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.mutedGold,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.bookmark,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['title'] ?? 'Lộ trình đã lưu',
+                                      style: AppTextStyles.cardTitle.copyWith(
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '${item['estimatedMinutes'] ?? item['availableMinutes']} phút',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.deepBurgundy,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Text(
+                                          '${(item['artifactIds'] as List?)?.length ?? 0} trạm dừng',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: AppColors.darkBrown.withOpacity(0.7),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 14,
+                                color: AppColors.mutedGold,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        if (widget.maxMinutes != null)
           Align(
             alignment: Alignment.center,
             child: TextButton(
               onPressed: () =>
-                  openPage(context, PublishedToursScreen(museumId: museumId)),
+                  openPage(context, PublishedToursScreen(museumId: widget.museumId)),
               child: const Text('Xem tất cả tuyến tham quan'),
             ),
           ),
@@ -196,6 +383,35 @@ class PublishedTourDetailScreen extends StatefulWidget {
 class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
   bool _busy = false;
   String? _error;
+  bool _isSaved = false;
+  bool _savingRoute = false;
+
+  Future<void> _saveRoute(Map<String, dynamic> tour) async {
+    setState(() => _savingRoute = true);
+    try {
+      final versionRes = await BackendApi.request('tours/${widget.tourId}/public-version');
+      final versionId = versionRes['id'] as int;
+      final minutes = tour['estimatedMinutes'] is num ? (tour['estimatedMinutes'] as num).toInt() : 60;
+      await VisitorExperienceApi.saveRoute(tourVersionId: versionId, availableMinutes: minutes);
+      if (mounted) {
+        setState(() => _isSaved = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã lưu lộ trình này vào mục cá nhân của bạn!'),
+            backgroundColor: AppColors.deepBurgundy,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu lộ trình: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingRoute = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => MuseumPage(
@@ -528,6 +744,12 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                           if (mounted) setState(() => _busy = false);
                         }
                       },
+              ),
+              const SizedBox(height: 12),
+              SecondaryButton(
+                label: _isSaved ? 'Đã lưu vào danh sách của bạn' : (_savingRoute ? 'Đang lưu…' : 'Lưu lộ trình này'),
+                icon: _isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                onPressed: _isSaved || _savingRoute ? null : () => _saveRoute(tour),
               ),
             ],
           );

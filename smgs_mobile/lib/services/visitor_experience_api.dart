@@ -73,4 +73,171 @@ class VisitorExperienceApi {
       'visitor-navigation/route?visitId=$visitId&mapId=$mapId&accessibleOnly=$accessible${artifactId == null ? '' : '&artifactId=$artifactId'}',
     ),
   );
+
+  static Future<Map<String, dynamic>> completeVisit(int visitId) async {
+    final result = await BackendApi.request(
+      'visits/$visitId/complete',
+      method: 'POST',
+    );
+    if (VisitorSession.activeVisit?['id'] == visitId) {
+      VisitorSession.clear();
+    }
+    return Map<String, dynamic>.from(result);
+  }
+
+  static Future<List<Map<String, dynamic>>> getMyVisits({
+    String? status,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final query = <String, String>{
+      'page': '$page',
+      'pageSize': '$pageSize',
+      if (status != null && status.isNotEmpty) 'status': status,
+    };
+    final uri = Uri(queryParameters: query);
+    final result = await BackendApi.request('visits/me?${uri.query}');
+    if (result is List) return result.cast<Map<String, dynamic>>();
+    if (result is Map && result['items'] is List) {
+      return (result['items'] as List).cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> submitFeedback({
+    required int visitId,
+    required int overallRating,
+    int? contentRating,
+    int? tourRating,
+    int? chatbotRating,
+    String? comment,
+  }) async {
+    final body = <String, dynamic>{
+      'visitId': visitId,
+      'overallRating': overallRating,
+      if (contentRating != null) 'contentRating': contentRating,
+      if (tourRating != null) 'tourRating': tourRating,
+      if (chatbotRating != null) 'chatbotRating': chatbotRating,
+      if (comment != null && comment.trim().isNotEmpty)
+        'comment': comment.trim(),
+    };
+    final result = await BackendApi.request(
+      'feedbacks',
+      method: 'POST',
+      body: body,
+    );
+    return Map<String, dynamic>.from(result);
+  }
+
+  static Future<List<Map<String, dynamic>>> getMuseumFeedbacks(
+    int museumId, {
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    try {
+      final result = await BackendApi.request(
+        'feedbacks/museum/$museumId?page=$page&pageSize=$pageSize',
+      );
+      if (result is List) return result.cast<Map<String, dynamic>>();
+      if (result is Map && result['items'] is List) {
+        return (result['items'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getVisitFeedback(int visitId) async {
+    try {
+      final result = await BackendApi.request('feedbacks/visit/$visitId');
+      return Map<String, dynamic>.from(result);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sửa đánh giá chuyến đi (PUT /api/feedbacks/{id})
+  static Future<Map<String, dynamic>> updateFeedback({
+    required int feedbackId,
+    required int overallRating,
+    int? contentRating,
+    int? tourRating,
+    int? chatbotRating,
+    String? comment,
+  }) async {
+    final body = <String, dynamic>{
+      'overallRating': overallRating,
+      if (contentRating != null) 'contentRating': contentRating,
+      if (tourRating != null) 'tourRating': tourRating,
+      if (chatbotRating != null) 'chatbotRating': chatbotRating,
+      if (comment != null && comment.trim().isNotEmpty)
+        'comment': comment.trim(),
+    };
+    final result = await BackendApi.request(
+      'feedbacks/$feedbackId',
+      method: 'PUT',
+      body: body,
+    );
+    return Map<String, dynamic>.from(result);
+  }
+
+  /// Lấy chi tiết một lượt tham quan (GET /api/visits/{id})
+  static Future<Map<String, dynamic>?> getVisit(int visitId) async {
+    try {
+      final result = await BackendApi.request('visits/$visitId');
+      return Map<String, dynamic>.from(result);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Làm lại bài thi trắc nghiệm (POST /api/quiz-attempts/{id}/reset)
+  static Future<Map<String, dynamic>> resetQuizAttempt(int attemptId) async {
+    final result = await BackendApi.request(
+      'quiz-attempts/$attemptId/reset',
+      method: 'POST',
+      body: {},
+    );
+    return Map<String, dynamic>.from(result);
+  }
+
+  /// WF-02 (F05): Lưu lộ trình tham quan vào danh sách cá nhân (POST /api/tours/saved-routes)
+  static Future<Map<String, dynamic>> saveRoute({
+    required int tourVersionId,
+    required int availableMinutes,
+    List<int>? topicIds,
+  }) async {
+    final result = await BackendApi.request(
+      'tours/saved-routes',
+      method: 'POST',
+      body: {
+        'tourVersionId': tourVersionId,
+        'availableMinutes': availableMinutes,
+        'topicIds': topicIds ?? [],
+      },
+    );
+    return Map<String, dynamic>.from(result);
+  }
+
+  /// WF-02 (F05): Lấy danh sách lộ trình đã lưu của khách (GET /api/tours/saved-routes)
+  static Future<List<Map<String, dynamic>>> getSavedRoutes({int? museumId}) async {
+    try {
+      final query = museumId != null ? '?museumId=$museumId' : '';
+      final result = await BackendApi.request('tours/saved-routes$query');
+      if (result is List) return result.cast<Map<String, dynamic>>();
+      if (result is Map && result['items'] is List) {
+        return (result['items'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// WF-02 (F05): Lấy chi tiết một lộ trình đã lưu (GET /api/tours/saved-routes/{id})
+  static Future<Map<String, dynamic>> getSavedRoute(int id) async {
+    final result = await BackendApi.request('tours/saved-routes/$id');
+    return Map<String, dynamic>.from(result);
+  }
 }

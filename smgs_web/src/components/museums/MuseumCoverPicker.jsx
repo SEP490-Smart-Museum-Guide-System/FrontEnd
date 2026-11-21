@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { validateMediaFile } from '../../services/mediaApi';
 
-export default function MuseumCoverPicker({ file, currentUrl, onChange, disabled }) {
+export default function MuseumCoverPicker({ file, currentUrl, onChange, onRemoveCurrent, disabled }) {
   const input = useRef(null);
   const [preview, setPreview] = useState('');
   const [error, setError] = useState('');
@@ -31,6 +31,11 @@ export default function MuseumCoverPicker({ file, currentUrl, onChange, disabled
       {file && <button type="button" className="btn btn-secondary btn-sm" disabled={disabled} onClick={() => { onChange(null); setError(''); }}>
         <X size={14} /> Bỏ ảnh đã chọn
       </button>}
+      {currentUrl && !file && onRemoveCurrent && (
+        <button type="button" className="btn btn-secondary btn-sm" disabled={disabled} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={onRemoveCurrent}>
+          <X size={14} /> Gỡ ảnh hiện tại
+        </button>
+      )}
     </div>
     <p style={{ fontSize: 12, color: 'var(--color-charcoal-500)', marginTop: 8, overflowWrap: 'anywhere' }}>
       {file ? `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MB. ` : ''}

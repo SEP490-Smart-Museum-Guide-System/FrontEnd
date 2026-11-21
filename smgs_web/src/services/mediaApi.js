@@ -33,8 +33,14 @@ export function uploadMedia(path, form, onProgress = () => {}, signal) {
   });
 }
 
-export async function mediaApi(path, { method = 'GET', blob = false, signal } = {}) {
-  const response = await fetch(`${base}/${path}`, { method, signal, headers: { Authorization: `Bearer ${getAuthToken()}` } });
+export async function mediaApi(path, { method = 'GET', body, blob = false, signal } = {}) {
+  const headers = { Authorization: `Bearer ${getAuthToken()}` };
+  let payload = undefined;
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    payload = typeof body === 'string' ? body : JSON.stringify(body);
+  }
+  const response = await fetch(`${base}/${path}`, { method, signal, headers, body: payload });
   if (response.ok && blob) return response.blob();
   const result = await response.json().catch(() => null);
   if (!response.ok) { const error = new Error(result?.message || `Không thể xử lý media (${response.status}).`); error.status = response.status; throw error; }

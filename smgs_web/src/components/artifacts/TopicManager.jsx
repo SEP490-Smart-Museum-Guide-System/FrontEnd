@@ -19,8 +19,51 @@ export default function TopicManager() {
   </div>;
 }
 function TopicForm({ topic, museumId, onClose, onSaved }) {
-  const [name, setName] = useState(topic.name || ''), [description, setDescription] = useState(topic.description || ''), [isActive, setActive] = useState(topic.isActive ?? true), action = useAction('Đã cập nhật chủ đề hiện vật.');
-  return <Modal title={topic.id ? 'Sửa chủ đề' : 'Thêm chủ đề'} busy={action.busy} onClose={onClose}><form onSubmit={e => { e.preventDefault(); action.run(() => backend(topic.id ? `topics/${topic.id}` : `museums/${museumId}/topics`, { method: topic.id ? 'PUT' : 'POST', body: { museumId, name: name.trim(), description: description.trim() || null, isActive } }), onSaved); }}><ErrorNotice>{action.error}</ErrorNotice><Field label="Tên chủ đề"><input className="form-input" required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Mô tả"><textarea className="form-input" maxLength={2000} value={description} onChange={e => setDescription(e.target.value)} /></Field>{topic.id && <label className="business-check"><input type="checkbox" checked={isActive} onChange={e => setActive(e.target.checked)} />Đang hoạt động</label>}<button className="btn btn-primary" disabled={action.busy}>Lưu chủ đề</button></form></Modal>;
+  const [name, setName] = useState(topic.name || '');
+  const [description, setDescription] = useState(topic.description || '');
+  const [isActive, setActive] = useState(topic.isActive ?? true);
+  const [loadingDetail, setLoadingDetail] = useState(!!topic.id);
+  const action = useAction('Đã cập nhật chủ đề hiện vật.');
+
+  React.useEffect(() => {
+    if (!topic.id) return;
+    const controller = new AbortController();
+    backend(`topics/${topic.id}`, { signal: controller.signal })
+      .then(detail => {
+        if (!controller.signal.aborted && detail) {
+          setName(detail.name || '');
+          setDescription(detail.description || '');
+          setActive(detail.isActive ?? true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingDetail(false);
+      });
+    return () => controller.abort();
+  }, [topic.id]);
+
+  return (
+    <Modal title={topic.id ? 'Sửa & Xem chi tiết chủ đề' : 'Thêm chủ đề'} busy={action.busy} onClose={onClose}>
+      <form onSubmit={e => {
+        e.preventDefault();
+        action.run(
+          () => backend(topic.id ? `topics/${topic.id}` : `museums/${museumId}/topics`, {
+            method: topic.id ? 'PUT' : 'POST',
+            body: { museumId, name: name.trim(), description: description.trim() || null, isActive }
+          }),
+          onSaved
+        );
+      }}>
+        <ErrorNotice>{action.error}</ErrorNotice>
+        {loadingDetail && <div style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-500)', marginBottom: '8px' }}>Đang nạp chi tiết chủ đề từ máy chủ...</div>}
+        <Field label="Tên chủ đề"><input className="form-input" required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></Field>
+        <Field label="Mô tả"><textarea className="form-input" maxLength={2000} value={description} onChange={e => setDescription(e.target.value)} /></Field>
+        {topic.id && <label className="business-check"><input type="checkbox" checked={isActive} onChange={e => setActive(e.target.checked)} />Đang hoạt động</label>}
+        <button className="btn btn-primary" disabled={action.busy || loadingDetail}>Lưu chủ đề</button>
+      </form>
+    </Modal>
+  );
 }
 function TagForm({ artifactId, assigned, topics, onSaved }) {
   const [ids, setIds] = useState(assigned.map(t => t.id)), action = useAction('Đã cập nhật chủ đề hiện vật.');

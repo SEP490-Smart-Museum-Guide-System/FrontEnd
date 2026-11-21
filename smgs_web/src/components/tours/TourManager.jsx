@@ -13,11 +13,13 @@ import {
   Award,
   CheckCircle,
   Eye,
-  Tag
+  Tag,
+  Send,
+  Copy
 } from 'lucide-react';
 
 export default function TourManager() {
-  const { tours, addTour, updateTour, publishTour, exhibitions, artifacts, currentMuseum } = useApp();
+  const { tours, addTour, updateTour, publishTour, submitTourVersion, createTourVersionDraft, updateTourVersionDraft, exhibitions, artifacts, currentMuseum } = useApp();
   const museumTours = tours.filter(item => item.museumId === currentMuseum?.id);
   const museumExhibitions = exhibitions.filter(item => item.museumId === currentMuseum?.id);
   const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum?.id);
@@ -53,7 +55,15 @@ export default function TourManager() {
       stopsCount: tourForm.selectedArtifacts.length,
       artifacts: tourForm.selectedArtifacts
     };
-    const result = editingTour ? await updateTour({ ...data, id: editingTour.id, revision: editingTour.revision }) : await addTour(data);
+    const draftVer = editingTour ? ((editingTour.versions || []).find(v => v.status === 'draft') || (editingTour.status === 'draft' && editingTour.versions?.[0] ? editingTour.versions[0] : null)) : null;
+    let result;
+    if (draftVer?.id) {
+      result = await updateTourVersionDraft(draftVer.id, data);
+    } else if (editingTour) {
+      result = await updateTour({ ...data, id: editingTour.id, revision: editingTour.revision });
+    } else {
+      result = await addTour(data);
+    }
     if (!result?.success) return;
     setIsCreatingTour(false);
     setEditingTour(null);
@@ -156,62 +166,89 @@ export default function TourManager() {
       {activeSection === 'tours' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
           {!museumTours.length && <p>Chưa có hành trình trong bảo tàng này.</p>}
-          {museumTours.map(tour => (
-            <div key={tour.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div className="card-header" style={{ background: '#FAF7F2' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Compass size={18} color="var(--color-burgundy-700)" />
-                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-charcoal-500)', fontFamily: 'monospace' }}>
-                    {tour.code}
-                  </span>
-                </div>
-                <span className={`badge-status ${tour.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
-                  {tour.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
-                </span>
-              </div>
-
-              <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '8px', color: 'var(--color-charcoal-900)' }}>
-                  {tour.title}
-                </h3>
-
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-600)', lineHeight: '1.6', marginBottom: '16px', flex: 1 }}>
-                  {tour.description}
-                </p>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', background: '#F8F5EE', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Clock size={14} color="var(--color-burgundy-700)" />
-                    <span>{tour.duration}</span>
+          {museumTours.map(tour => {
+            const draftVersion = (tour.versions || []).find(v => v.status === 'draft') || (tour.status === 'draft' && tour.versions?.[0] ? tour.versions[0] : null);
+            const hasSubmittedVersion = (tour.versions || []).some(v => v.status === 'submitted');
+            return (
+              <div key={tour.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="card-header" style={{ background: '#FAF7F2' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Compass size={18} color="var(--color-burgundy-700)" />
+                    <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-charcoal-500)', fontFamily: 'monospace' }}>
+                      {tour.code}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Layers size={14} color="var(--color-burgundy-700)" />
-                    <span>{tour.stopsCount} Trạm dừng</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Star size={14} color="#EAB308" fill="#EAB308" />
-                    <span>Chưa có thống kê đánh giá</span>
-                  </div>
+                  {hasSubmittedVersion ? (
+                    <span className="badge-status badge-gold">Chờ Giám tuyển duyệt</span>
+                  ) : (
+                    <span className={`badge-status ${tour.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
+                      {tour.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+                    </span>
+                  )}
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
-                    Bảo tàng: {tour.museumName}
-                  </span>
-                  <ActionGroup visible={1}>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>
-                      Chỉnh sửa
-                    </button>
-                    {tour.status !== "published" && (
-                      <button type="button" className="btn btn-gold btn-sm" onClick={() => publishTour(tour)}>
-                        Xuất bản hành trình
+                <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '8px', color: 'var(--color-charcoal-900)' }}>
+                    {tour.title}
+                  </h3>
+
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-600)', lineHeight: '1.6', marginBottom: '16px', flex: 1 }}>
+                    {tour.description}
+                  </p>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', background: '#F8F5EE', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={14} color="var(--color-burgundy-700)" />
+                      <span>{tour.duration}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Layers size={14} color="var(--color-burgundy-700)" />
+                      <span>{tour.stopsCount} Trạm dừng</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Star size={14} color="#EAB308" fill="#EAB308" />
+                      <span>Chưa có thống kê đánh giá</span>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--color-paper-border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
+                      Bảo tàng: {tour.museumName}
+                    </span>
+                    <ActionGroup visible={1}>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>
+                        Chỉnh sửa
                       </button>
-                    )}
-                  </ActionGroup>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Tạo bản sao phiên bản mới (Draft) để chỉnh sửa"
+                        onClick={() => createTourVersionDraft(tour.id, draftVersion?.id || tour.activeVersionId)}
+                      >
+                        <Copy size={12} /> Tạo bản nháp mới
+                      </button>
+                      {draftVersion && (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => submitTourVersion(draftVersion.id)}
+                        >
+                          <Send size={12} /> Gửi duyệt
+                        </button>
+                      )}
+                      {tour.status !== "published" && !hasSubmittedVersion && (
+                        <button type="button" className="btn btn-gold btn-sm" onClick={() => publishTour(tour)}>
+                          Xuất bản hành trình
+                        </button>
+                      )}
+                    </ActionGroup>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

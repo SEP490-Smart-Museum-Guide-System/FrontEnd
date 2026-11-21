@@ -31,6 +31,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   String? _museumError;
   bool _startingVisit = false;
   List<Artifact>? _backendArtifacts;
+  List<Map<String, dynamic>>? _feedbacks;
   bool _isLoading = true;
   String? _error;
 
@@ -39,6 +40,107 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
     super.initState();
     _loadArtifacts();
     _loadMuseum();
+    _loadFeedbacks();
+  }
+
+  Future<void> _loadFeedbacks() async {
+    final mId = int.tryParse(widget.museum.id);
+    if (mId == null) return;
+    try {
+      final items = await VisitorExperienceApi.getMuseumFeedbacks(mId);
+      if (mounted) {
+        setState(() => _feedbacks = items);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showEditFeedbackDialog(Map<String, dynamic> fb) async {
+    final feedbackId = fb['id'] as int?;
+    if (feedbackId == null) return;
+    int rating = (fb['overallRating'] as num?)?.toInt() ?? 5;
+    final controller = TextEditingController(text: fb['comment']?.toString() ?? '');
+    bool saving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Chỉnh sửa đánh giá', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Số sao đánh giá:', style: TextStyle(fontSize: 13, color: AppColors.secondaryText)),
+              const SizedBox(height: 6),
+              Row(
+                children: List.generate(5, (i) {
+                  return IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: AppColors.mutedGold,
+                      size: 28,
+                    ),
+                    onPressed: () => setDialogState(() => rating = i + 1),
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              const Text('Nội dung nhận xét:', style: TextStyle(fontSize: 13, color: AppColors.secondaryText)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Nhận xét của bạn về trải nghiệm...',
+                  filled: true,
+                  fillColor: AppColors.antiqueIvory,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
+              onPressed: saving
+                  ? null
+                  : () async {
+                      setDialogState(() => saving = true);
+                      try {
+                        await VisitorExperienceApi.updateFeedback(
+                          feedbackId: feedbackId,
+                          overallRating: rating,
+                          comment: controller.text.trim(),
+                        );
+                        if (context.mounted) Navigator.pop(ctx);
+                        _loadFeedbacks();
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(content: Text('Đã cập nhật đánh giá thành công!')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => saving = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      }
+                    },
+              child: const Text('Lưu thay đổi', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadMuseum() async {
@@ -288,6 +390,190 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
             ),
           ),
         ),
+
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text(
+                'ĐÁNH GIÁ TỪ KHÁCH THAM QUAN',
+                style: TextStyle(
+                  fontFamily: AppTextStyles.sansFamily,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: AppColors.secondaryText,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (_feedbacks != null && _feedbacks!.isNotEmpty) ...[
+              const Icon(Icons.star_rounded, color: AppColors.mutedGold, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                '${(_feedbacks!.map((f) => (f['overallRating'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / _feedbacks!.length).toStringAsFixed(1)} / 5 (${_feedbacks!.length})',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkBrown,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (_feedbacks == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_feedbacks!.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Text(
+              'Chưa có đánh giá công khai nào cho bảo tàng này. Hãy hoàn tất chuyến đi để trở thành người đầu tiên để lại nhận xét!',
+              style: TextStyle(
+                fontFamily: AppTextStyles.sansFamily,
+                fontSize: 12.5,
+                color: AppColors.secondaryText,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          )
+        else
+          ..._feedbacks!.map((fb) {
+            final rating = (fb['overallRating'] as num?)?.toInt() ?? 5;
+            final comment = fb['comment'] as String? ?? '';
+            final staffResp = fb['staffResponse'] as Map<String, dynamic>?;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Row(
+                        children: List.generate(5, (idx) {
+                          return Icon(
+                            idx < rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 16,
+                            color: idx < rating
+                                ? AppColors.mutedGold
+                                : Colors.grey.shade400,
+                          );
+                        }),
+                      ),
+                      const Spacer(),
+                      InkWell(
+                        onTap: () => _showEditFeedbackDialog(fb),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.antiqueIvory,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit_outlined, size: 11, color: AppColors.deepBurgundy),
+                              SizedBox(width: 3),
+                              Text(
+                                'Sửa',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.deepBurgundy,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Khách tham quan',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (comment.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      comment,
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontSize: 13,
+                        color: AppColors.primaryText,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                  if (staffResp != null &&
+                      (staffResp['content'] as String? ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.antiqueIvory,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'PHẢN HỒI TỪ BẢO TÀNG',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                              color: AppColors.deepBurgundy,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            staffResp['content'] as String,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.darkBrown,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
       ],
     );
   }

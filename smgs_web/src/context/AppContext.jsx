@@ -142,11 +142,43 @@ function DataProvider({ children, session, login, endSession }) {
         const contents = currentRole === 'curator'
           ? (await Promise.all(['pending_review', 'published', 'rejected', 'archived'].map(status => allPages(`artifact-contents?museumId=${currentMuseum.id}&status=${status}`, options)))).flat()
           : (await Promise.all(artifacts.filter(a => currentRole === 'administrator' || museumIds.includes(a.museumId)).map(a => backend(`artifacts/${a.id}/contents/versions`, options)))).flat();
-        return contents.map(c => ({ ...c, backendId: c.id, targetArtifactId: c.artifactId,
+        
+        const mappedContents = contents.map(c => ({ ...c, backendId: c.id, targetArtifactId: c.artifactId,
           museumId: artifacts.find(a => a.id === c.artifactId)?.museumId,
           targetArtifactName: artifacts.find(a => a.id === c.artifactId)?.name || `Hiện vật #${c.artifactId}`,
           proposedContent: c.description || '', changesSummary: c.description || '', submittedDate: c.createdAt,
           feedback: c.reviewNote || '', submittedBy: resolveSubmitterName(c.createdBy, c.isAiGenerated, users, currentUser), type: c.isAiGenerated ? 'audio_narration' : 'artifact_update', priority: 'normal' }));
+
+        // Curation items for Tour Versions (WF-02)
+        const tourData = (await Promise.all(museumIds.map(id => allPages(`tours/manage?museumId=${id}`, options)))).flat();
+        const tourItems = [];
+        tourData.forEach(t => {
+          (t.versions || []).forEach(v => {
+            tourItems.push({
+              id: `tour_version_${v.id}`,
+              backendId: v.id,
+              tourId: t.id,
+              museumId: t.museumId,
+              type: 'new_tour',
+              title: v.title || t.title || `Hành trình #${t.id}`,
+              status: v.status === 'submitted' ? 'pending_review' : (v.status === 'approved' ? 'published' : (v.status === 'rejected' ? 'rejected' : 'draft')),
+              rawStatus: v.status,
+              targetArtifactId: null,
+              targetArtifactName: `${(v.items || []).length} trạm dừng (${v.estimatedMinutes || t.estimatedMinutes || 60} phút)`,
+              proposedContent: v.description || t.description || '',
+              changesSummary: `Hành trình tham quan: ${v.title || t.title} (v${v.versionNo || 1}) - Thời lượng: ${v.estimatedMinutes || t.estimatedMinutes || 60} phút.`,
+              submittedDate: v.submittedAt || v.createdAt,
+              feedback: v.reviewNote || '',
+              submittedBy: resolveSubmitterName(v.submittedBy || v.createdBy, false, users, currentUser),
+              priority: 'high',
+              items: v.items || [],
+              estimatedMinutes: v.estimatedMinutes || t.estimatedMinutes || 60,
+              versionNo: v.versionNo || 1,
+            });
+          });
+        });
+
+        return [...mappedContents, ...tourItems];
       }, setCurationQueue);
     }
     if (['administrator', 'systemStaff'].includes(currentRole)) load('reviews', async () => (await allPages('feedbacks', options)).map(r => reviewView(r, museums)), setReviews);
@@ -180,8 +212,37 @@ function DataProvider({ children, session, login, endSession }) {
   const downloadArtifactQr = (id, name) => mutate(() => downloadArtifactQrImageApi(requireId(id), name), 'Đã tải mã QR.');
   const regenerateArtifactQr = id => mutate(() => regenerateArtifactQrApi(requireId(id)), 'Đã tạo lại mã QR.');
   const submitToCuration = item => mutate(() => submitArtifactContentApi(requireId(item.targetArtifactId), { languageCode: item.languageCode || 'vi', title: item.title, description: item.proposedContent || item.content || '', ...(item.narrationText ? { narrationText: item.narrationText } : {}), isAiGenerated: item.isAiGenerated ?? true }), 'Đã gửi bản thảo lên máy chủ.');
-  const approveCurationItem = (id, note) => mutate(() => approveCurationContentApi(requireId(id), note), 'Đã xuất bản nội dung.');
-  const rejectCurationItem = (id, note) => mutate(() => rejectCurationContentApi(requireId(id), note), 'Đã từ chối nội dung.');
+  const approveCurationItem = (id, note) => {
+    const item = curationQueue.find(x => x.id === id || x.backendId === id);
+    if (item && item.type === 'new_tour') {
+      return mutate(() => backend(`tours/versions/${item.backendId}/approve`, {
+        method: 'POST',
+        body: { note: note || 'Đã thẩm định phê duyệt hành trình tham quan.', publicAt: new Date().toISOString() }
+      }), 'Đã phê duyệt và xuất bản hành trình tham quan.');
+    }
+    return mutate(() => approveCurationContentApi(requireId(id), note), 'Đã xuất bản nội dung.');
+  };
+  const rejectCurationItem = (id, note) => {
+    const item = curationQueue.find(x => x.id === id || x.backendId === id);
+    if (item && item.type === 'new_tour') {
+      return mutate(() => backend(`tours/versions/${item.backendId}/reject`, {
+        method: 'POST',
+        body: { note: note || 'Không đạt tiêu chuẩn giám tuyển.' }
+      }), 'Đã từ chối hành trình tham quan.');
+    }
+    return mutate(() => rejectCurationContentApi(requireId(id), note), 'Đã từ chối nội dung.');
+  };
+  const submitTourVersion = versionId => mutate(() => backend(`tours/versions/${requireId(versionId)}/submit`, { method: 'POST' }), 'Đã gửi phiên bản hành trình lên Giám tuyển.');
+  const createTourVersionDraft = (tourId, copyFromVersionId = null, content = null) =>
+    mutate(() => backend(`tours/${requireId(tourId)}/versions`, {
+      method: 'POST',
+      body: { copyFromVersionId, content: content ? tourPayload(content) : null }
+    }), 'Đã tạo bản nháp phiên bản mới.');
+  const updateTourVersionDraft = (versionId, tourData) =>
+    mutate(() => backend(`tours/versions/${requireId(versionId)}`, {
+      method: 'PUT',
+      body: tourPayload(tourData)
+    }), 'Đã lưu bản nháp phiên bản hành trình.');
   const tourPayload = t => ({ title: t.title, description: t.description || '', estimatedMinutes: parseInt(t.duration, 10), artifactIds: t.artifacts.map(requireId) });
   const addTour = t => mutate(() => backend(`tours?museumId=${requireId(t.museumId)}`, { method: 'POST', body: tourPayload(t) }), 'Đã tạo bản nháp hành trình.');
   const updateTour = t => mutate(() => backend(`tours/${requireId(t.id)}`, { method: 'PUT', body: { revision: t.revision, tour: tourPayload(t) } }), 'Đã lưu bản nháp hành trình.');
@@ -206,6 +267,6 @@ function DataProvider({ children, session, login, endSession }) {
     isLoadingMuseums: !!loading.museums, isLoadingArtifacts: !!loading.artifacts, isLoadingCuration: !!loading.curationQueue,
     loadCities: reload, loadMuseums: reload, loadArtifacts: reload, loadCurationQueue: reload,
     createMuseum, updateMuseum, deleteMuseum, addArtifact, updateArtifact, deleteArtifact, downloadArtifactQr, regenerateArtifactQr, submitToCuration, approveCurationItem, rejectCurationItem,
-    addTour, updateTour, publishTour, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast, dismissToast }}>{children}</AppContext.Provider>;
+    submitTourVersion, createTourVersionDraft, updateTourVersionDraft, addTour, updateTour, publishTour, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast, dismissToast }}>{children}</AppContext.Provider>;
 }
 export function useApp() { const context = useContext(AppContext); if (!context) throw new Error('useApp must be used within AppProvider'); return context; }

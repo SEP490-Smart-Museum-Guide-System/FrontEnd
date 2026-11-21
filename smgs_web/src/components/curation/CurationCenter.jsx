@@ -112,7 +112,7 @@ export default function CurationCenter() {
     });
 
     const backendId = typeof item.id === 'number' ? item.id : item.backendId;
-    if (backendId) {
+    if (backendId && item.type !== 'new_tour') {
       try {
         const res = await getCurationContentByIdApi(backendId);
         if (res?.data) {
@@ -457,163 +457,238 @@ export default function CurationCenter() {
                 </div>
               )}
 
-              {/* VIEW 1: SIDE-BY-SIDE DIFF VIEW */}
-              <div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                  gap: '16px'
-                }}>
-                  {/* Left Column: Current Published Version */}
-                  <article style={{
-                    border: '1px solid var(--color-paper-border)',
-                    borderRadius: '10px',
-                    padding: '16px',
-                    background: 'var(--color-paper-card)'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingBottom: '10px',
-                      marginBottom: '12px',
-                      borderBottom: '1px solid var(--color-paper-border)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: 'var(--color-charcoal-400)'
-                        }} />
-                        <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-800)' }}>
-                          BẢN HIỆN TẠI (Đang xuất bản)
-                        </strong>
-                      </div>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-charcoal-500)' }}>v1.0 Live</span>
-                    </div>
-
-                    <div style={{
-                      fontSize: '0.85rem',
-                      lineHeight: 1.6,
-                      color: 'var(--color-charcoal-700)',
-                      whiteSpace: 'pre-line',
-                      background: '#FFF',
-                      padding: '12px 14px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--color-paper-border)',
-                      minHeight: '130px',
-                      maxHeight: '240px',
-                      overflowY: 'auto'
-                    }}>
-                      {selected.currentVersion || 'Hiện chưa có nội dung được phê duyệt trước đây cho phân mục này.'}
-                    </div>
-                  </article>
-
-                  {/* Right Column: Proposed Revision */}
-                  <article style={{
-                    border: '1.5px solid var(--color-gold-400)',
-                    borderRadius: '10px',
-                    padding: '16px',
-                    background: '#FFFDF8',
-                    boxShadow: 'var(--shadow-gold)'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingBottom: '10px',
-                      marginBottom: '12px',
-                      borderBottom: '1px solid var(--color-gold-200)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: 'var(--color-success)'
-                        }} />
-                        <strong style={{ fontSize: '0.875rem', color: 'var(--color-burgundy-900)' }}>
-                          NỘI DUNG ĐỆ TRÌNH (Bản đề xuất sửa đổi)
-                        </strong>
-                      </div>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                        background: 'var(--color-gold-100)',
-                        color: 'var(--color-gold-700)',
-                        fontWeight: '700'
-                      }}>
-                        MỚI ĐỆ TRÌNH
+              {/* VIEW: SIDE-BY-SIDE DIFF VIEW OR TOUR STOP INSPECTION */}
+              {selected.type === 'new_tour' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ background: '#FAF7F2', padding: '14px 18px', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <strong style={{ color: 'var(--color-burgundy-900)', fontSize: '0.95rem' }}>
+                        Thông tin Lộ trình Tham quan (Phiên bản v{selected.versionNo})
+                      </strong>
+                      <span className="badge-status badge-active" style={{ fontSize: '0.72rem' }}>
+                        {selected.estimatedMinutes} phút
                       </span>
                     </div>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-charcoal-700)', lineHeight: '1.5' }}>
+                      {selected.proposedContent || 'Hành trình chưa có mô tả chi tiết.'}
+                    </p>
+                  </div>
 
-                    {/* Display as Quiz cards if JSON */}
-                    {isQuiz && parsedProposedQuiz ? (
-                      <div style={{ display: 'grid', gap: '10px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
-                        {parsedProposedQuiz.map((q, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              background: '#FFF',
-                              padding: '10px 12px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--color-gold-300)'
-                            }}
-                          >
-                            <strong style={{ fontSize: '0.825rem', color: 'var(--color-charcoal-900)' }}>
-                              Câu {idx + 1}: {q.question}
-                            </strong>
-                            <div style={{ marginTop: '6px', display: 'grid', gap: '4px' }}>
-                              {q.options.map((opt, oIdx) => (
-                                <div
-                                  key={oIdx}
-                                  style={{
-                                    fontSize: '0.78rem',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    background: oIdx === q.correctIndex ? 'var(--color-success-bg)' : '#F9F9F9',
-                                    color: oIdx === q.correctIndex ? 'var(--color-success)' : 'var(--color-charcoal-700)',
-                                    fontWeight: oIdx === q.correctIndex ? '600' : 'normal',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                  }}
-                                >
-                                  <span>{String.fromCharCode(65 + oIdx)}. {opt}</span>
-                                  {oIdx === q.correctIndex && <Check size={13} />}
+                  <div>
+                    <strong style={{ display: 'block', marginBottom: '8px', fontSize: '0.825rem', color: 'var(--color-charcoal-900)' }}>
+                      Danh sách trạm dừng hiện vật theo thứ tự ({ (selected.items || []).length } trạm):
+                    </strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
+                      {(selected.items || []).length === 0 ? (
+                        <div style={{ padding: '12px', background: '#FFF', borderRadius: '6px', border: '1px dashed var(--color-paper-border)', fontSize: '0.825rem', color: 'var(--color-charcoal-500)', textAlign: 'center' }}>
+                          Lộ trình này chưa gắn trạm dừng hiện vật nào.
+                        </div>
+                      ) : (
+                        (selected.items || []).map((stop, idx) => {
+                          const art = museumArtifacts.find(a => a.id === stop.artifactId);
+                          return (
+                            <div
+                              key={stop.artifactId || idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '10px 14px',
+                                background: '#FFFFFF',
+                                border: '1px solid var(--color-paper-border)',
+                                borderRadius: '6px'
+                              }}
+                            >
+                              <div style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '50%',
+                                background: 'var(--color-burgundy-700)',
+                                color: '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                flexShrink: 0
+                              }}>
+                                {stop.orderNo || idx + 1}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--color-charcoal-900)' }}>
+                                  {art ? art.name : `Hiện vật #${stop.artifactId}`}
                                 </div>
-                              ))}
+                                {art && (
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
+                                    Mã: {art.code || `#${art.id}`} {art.galleryName ? `• Phòng: ${art.galleryName}` : ''}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            {q.explanation && (
-                              <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: 'var(--color-charcoal-600)', fontStyle: 'italic' }}>
-                                Giải thích: {q.explanation}
-                              </p>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    {/* Left Column: Current Published Version */}
+                    <article style={{
+                      border: '1px solid var(--color-paper-border)',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      background: 'var(--color-paper-card)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingBottom: '10px',
+                        marginBottom: '12px',
+                        borderBottom: '1px solid var(--color-paper-border)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: 'var(--color-charcoal-400)'
+                          }} />
+                          <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-800)' }}>
+                            BẢN HIỆN TẠI (Đang xuất bản)
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--color-charcoal-500)' }}>v1.0 Live</span>
                       </div>
-                    ) : (
+
                       <div style={{
                         fontSize: '0.85rem',
                         lineHeight: 1.6,
-                        color: 'var(--color-charcoal-900)',
+                        color: 'var(--color-charcoal-700)',
                         whiteSpace: 'pre-line',
                         background: '#FFF',
                         padding: '12px 14px',
                         borderRadius: '6px',
-                        border: '1px solid var(--color-gold-200)',
+                        border: '1px solid var(--color-paper-border)',
                         minHeight: '130px',
                         maxHeight: '240px',
                         overflowY: 'auto'
                       }}>
-                        {selected.proposedContent}
+                        {selected.currentVersion || 'Hiện chưa có nội dung được phê duyệt trước đây cho phân mục này.'}
                       </div>
-                    )}
-                  </article>
+                    </article>
+
+                    {/* Right Column: Proposed Revision */}
+                    <article style={{
+                      border: '1.5px solid var(--color-gold-400)',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      background: '#FFFDF8',
+                      boxShadow: 'var(--shadow-gold)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingBottom: '10px',
+                        marginBottom: '12px',
+                        borderBottom: '1px solid var(--color-gold-200)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: 'var(--color-success)'
+                          }} />
+                          <strong style={{ fontSize: '0.875rem', color: 'var(--color-burgundy-900)' }}>
+                            NỘI DUNG ĐỆ TRÌNH (Bản đề xuất sửa đổi)
+                          </strong>
+                        </div>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          background: 'var(--color-gold-100)',
+                          color: 'var(--color-gold-700)',
+                          fontWeight: '700'
+                        }}>
+                          MỚI ĐỆ TRÌNH
+                        </span>
+                      </div>
+
+                      {/* Display as Quiz cards if JSON */}
+                      {isQuiz && parsedProposedQuiz ? (
+                        <div style={{ display: 'grid', gap: '10px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                          {parsedProposedQuiz.map((q, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                background: '#FFF',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-gold-300)'
+                              }}
+                            >
+                              <strong style={{ fontSize: '0.825rem', color: 'var(--color-charcoal-900)' }}>
+                                Câu {idx + 1}: {q.question}
+                              </strong>
+                              <div style={{ marginTop: '6px', display: 'grid', gap: '4px' }}>
+                                {q.options.map((opt, oIdx) => (
+                                  <div
+                                    key={oIdx}
+                                    style={{
+                                      fontSize: '0.78rem',
+                                      padding: '4px 8px',
+                                      borderRadius: '4px',
+                                      background: oIdx === q.correctIndex ? 'var(--color-success-bg)' : '#F9F9F9',
+                                      color: oIdx === q.correctIndex ? 'var(--color-success)' : 'var(--color-charcoal-700)',
+                                      fontWeight: oIdx === q.correctIndex ? '600' : 'normal',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px'
+                                    }}
+                                  >
+                                    <span>{String.fromCharCode(65 + oIdx)}. {opt}</span>
+                                    {oIdx === q.correctIndex && <Check size={13} />}
+                                  </div>
+                                ))}
+                              </div>
+                              {q.explanation && (
+                                <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: 'var(--color-charcoal-600)', fontStyle: 'italic' }}>
+                                  Giải thích: {q.explanation}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{
+                          fontSize: '0.85rem',
+                          lineHeight: 1.6,
+                          color: 'var(--color-charcoal-900)',
+                          whiteSpace: 'pre-line',
+                          background: '#FFF',
+                          padding: '12px 14px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--color-gold-200)',
+                          minHeight: '130px',
+                          maxHeight: '240px',
+                          overflowY: 'auto'
+                        }}>
+                          {selected.proposedContent}
+                        </div>
+                      )}
+                    </article>
+                  </div>
                 </div>
-              </div>
+              )}
 
 
               {/* Feedback Note Input */}

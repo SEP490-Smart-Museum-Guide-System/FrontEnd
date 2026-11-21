@@ -56,7 +56,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
       BackendPanel(
         resourceKey: 'visit-progress:${widget.visitId}',
         load: () => Future.wait([
-          BackendApi.request('visits/${widget.visitId}'),
+          VisitorExperienceApi.getVisit(widget.visitId).then((v) => v ?? {}),
           VisitorExperienceApi.progress(widget.visitId),
         ]),
         builder: (data, reload) {

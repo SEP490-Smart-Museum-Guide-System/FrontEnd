@@ -119,6 +119,19 @@ export default function MuseumManager() {
     setIsEditingMuseum(true);
   };
 
+  const handleRemoveCoverImage = async () => {
+    if (!activeMuseum?.id) return;
+    try {
+      await backend(`museums/${activeMuseum.id}/image`, { method: 'DELETE' });
+      setMuseumForm(prev => ({ ...prev, image: '' }));
+      setEditCoverFile(null);
+      showToast('Đã gỡ ảnh đại diện bảo tàng.');
+      reload();
+    } catch (e) {
+      showToast(e.message || 'Không thể gỡ ảnh bảo tàng.', 'warning');
+    }
+  };
+
   const saveMuseumInfo = async (event) => {
     event.preventDefault();
     if (submitLock.current) return;
@@ -525,7 +538,7 @@ export default function MuseumManager() {
                 </div>
 
                 <MuseumCoverPicker file={editCoverFile} currentUrl={museumForm.image || ''}
-                  onChange={setEditCoverFile} disabled={isSubmitting} />
+                  onChange={setEditCoverFile} onRemoveCurrent={handleRemoveCoverImage} disabled={isSubmitting} />
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
                   <span className="form-label">Giới thiệu bảo tàng</span>
