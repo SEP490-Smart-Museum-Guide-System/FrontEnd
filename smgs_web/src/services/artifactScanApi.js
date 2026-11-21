@@ -7,6 +7,7 @@ export const getScanJob = (id, job, signal) => backend(scanPath(id, job), { sign
 export const getScanModel = (id, job, signal) => mediaApi(scanPath(id, job) + '/model', { blob: true, signal });
 export const saveScanModel = (id, job) => backend(scanPath(id, job) + '/save', { method: 'POST', timeoutMs: 180000 });
 export const discardScanModel = (id, job) => backend(scanPath(id, job) + '/discard', { method: 'POST' });
+export const cancelScanJob = (id, job) => backend(scanPath(id, job) + '/cancel', { method: 'POST', timeoutMs: 30000 });
 export const SCAN_UPLOAD_TIMEOUT_MS = 15 * 60 * 1000;
 const activeScan = job => ['QUEUED', 'PROCESSING', 'FINALIZING', 'REVIEW_REQUIRED'].includes(job?.status);
 

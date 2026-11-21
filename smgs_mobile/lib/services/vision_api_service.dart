@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../core/network/api_config.dart';
+import 'discovery_api_service.dart';
+import 'token_manager.dart';
 
 class VisionCandidate {
   final int artifactId;
@@ -63,10 +64,14 @@ class VisionApiService {
   static Future<Map<String, dynamic>> checkHealth() async {
     try {
       final res = await http
-          .get(Uri.parse(ApiConfig.visionHealthUrl))
-          .timeout(const Duration(seconds: 4));
+          .get(
+            Uri.parse(ApiConfig.visionHealthUrl),
+            headers: TokenManager.authHeaders,
+          )
+          .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
+        return DiscoveryApiService.decodeResponse(res)['data']
+            as Map<String, dynamic>;
       }
       return {'status': 'unreachable', 'statusCode': res.statusCode};
     } catch (e) {
@@ -77,44 +82,30 @@ class VisionApiService {
   static Future<VisionMatchResult> recognizeArtifact(
     Uint8List imageBytes, {
     String filename = 'camera_capture.jpg',
-    String? serviceKey,
+    int? museumId,
   }) async {
-    final key = (serviceKey != null && serviceKey.isNotEmpty)
-        ? serviceKey
-        : ApiConfig.defaultVisionServiceKey;
-    final uri = Uri.parse('${ApiConfig.visionRecognitionsUrl}?top_k=3');
+    final uri = Uri.parse(ApiConfig.visionRecognitionsUrl).replace(
+      queryParameters: {
+        'top_k': '3',
+        if (museumId != null) 'museum_id': '$museumId',
+      },
+    );
     final request = http.MultipartRequest('POST', uri);
-
-    // Attach internal AI service key to pass FastAPI authentication on Port 8001
-    if (key.isNotEmpty) {
-      request.headers['X-Service-Key'] = key;
-    }
+    request.headers.addAll(
+      {...TokenManager.authHeaders}..remove('Content-Type'),
+    );
 
     request.files.add(
       http.MultipartFile.fromBytes('image', imageBytes, filename: filename),
     );
 
-    final streamedResponse = await request.send().timeout(
-      const Duration(seconds: 20),
-    );
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode != 200) {
-      String detail = 'Lỗi nhận diện thị giác (${response.statusCode})';
-      try {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map && decoded.containsKey('detail')) {
-          detail = decoded['detail'].toString();
-        }
-      } catch (_) {}
-      if (response.statusCode == 503 && detail.contains('(503)')) {
-        detail =
-            'Dịch vụ AI Vision (Port 8001) chưa khởi động. Hãy chạy start-local-vision.ps1 hoặc sử dụng chế độ Quét mã QR.';
-      }
-      throw Exception(detail);
-    }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final response = await request
+        .send()
+        .then(http.Response.fromStream)
+        .timeout(const Duration(seconds: 60));
+    final data =
+        DiscoveryApiService.decodeResponse(response)['data']
+            as Map<String, dynamic>;
     return VisionMatchResult.fromJson(data);
   }
 }

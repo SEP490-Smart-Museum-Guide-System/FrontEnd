@@ -87,31 +87,12 @@ class ApiConfig {
   static String get ttsSpeechUrl => '$ttsBaseUrl/api/v1/speech';
   static String get ttsHealthUrl => '$ttsBaseUrl/health';
 
-  static String get defaultVisionHost {
-    const configured = String.fromEnvironment('VISION_BASE_URL');
-    if (configured.isNotEmpty) {
-      return configured.replaceFirst(RegExp(r'/+$'), '');
-    }
-    if (kIsWeb) {
-      return '${Uri.base.origin}/ai-vision';
-    }
-    if (Platform.isAndroid) return 'http://10.0.2.2:8001';
-    return 'http://localhost:8001';
-  }
-
-  static String customVisionHost = '';
-  static String get visionBaseUrl => customVisionHost.trim().isNotEmpty
-      ? customVisionHost.trim()
-      : defaultVisionHost;
+  // Vision runs behind the authenticated BE gateway; no service key in the app.
+  static String get visionBaseUrl => '$baseUrl/vision';
   static String get visionHealthUrl => '$visionBaseUrl/health';
-  static String get visionRecognitionsUrl =>
-      '$visionBaseUrl/api/v1/recognitions';
+  static String get visionRecognitionsUrl => '$visionBaseUrl/recognitions';
   static String visionReferencesUrl(dynamic artifactId) =>
-      '$visionBaseUrl/api/v1/references?artifact_id=$artifactId';
-  static const String defaultVisionServiceKey = String.fromEnvironment(
-    'VISION_SERVICE_KEY',
-    defaultValue: 'smgs-secret-key-local-2026',
-  );
+      '$baseUrl/artifacts/$artifactId/vision/references';
 
   static String get defaultScanHost {
     const configured = String.fromEnvironment('SCAN_BASE_URL');

@@ -3,8 +3,16 @@ import assert from 'node:assert/strict';
 import { checkVisionHealthApi } from '../src/services/visionApi.js';
 import { getScanJobStatusApi, submitScanJobApi } from '../src/services/scan3dApi.js';
 
-test('Vision health reads the actual model readiness and reference_images contract', async t => {
-  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ status: 'ok', model_ready: true, reference_images: 17 })));
+test('Vision health reads the backend envelope using user authentication', async t => {
+  const previousStorage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => 'visitor-token' };
+  t.after(() => { globalThis.localStorage = previousStorage; });
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, '/api/vision/health');
+    assert.equal(options.headers.Authorization, 'Bearer visitor-token');
+    assert.equal(options.headers['X-Service-Key'], undefined);
+    return new Response(JSON.stringify({ data: { status: 'ok', model_ready: true, reference_images: 17 } }));
+  });
   const health = await checkVisionHealthApi();
   assert.equal(health.modelReady, true);
   assert.equal(health.referenceCount, 17);
