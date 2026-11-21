@@ -60,7 +60,7 @@ class MuseumPage extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                padding: EdgeInsets.fromLTRB(24, 24, 24, back ? 32 : 100),
                 children: [
               if (eyebrow != null) ...[
                 Row(

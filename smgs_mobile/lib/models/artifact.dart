@@ -1,4 +1,5 @@
 import '../core/network/api_config.dart';
+import '../services/app_services.dart';
 
 class Artifact {
   const Artifact({
@@ -29,6 +30,10 @@ class Artifact {
     ...imageUrls,
     if (imageUrl.isNotEmpty) imageUrl,
   }.where((url) => url.trim().isNotEmpty).toList();
+
+  String get qrCode => 'artifact_$id';
+  String get museumName => AppServices.catalog.museumName(museumId);
+
   final String period;
   final String location;
   final String summary;

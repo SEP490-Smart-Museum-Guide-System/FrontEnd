@@ -12,6 +12,7 @@ class AppColors {
 
   // Convenient Aliases for Heritage Design System
   static const Color imperialGold = mutedGold;
+  static const Color charcoal = darkBrown;
   static const Color charcoalBrown = darkBrown;
   static const Color parchmentBorder = border;
   static const Color softSand = VisitorColors.secondaryBackground;

@@ -80,7 +80,8 @@ class _MyMuseumScreenState extends State<MyMuseumScreen> {
     backgroundColor: VisitorColors.background,
     appBar: AppBar(
       centerTitle: true,
-      toolbarHeight: 48,
+      toolbarHeight: 52,
+      leading: ModalRoute.of(context)?.canPop == true ? IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20), tooltip: 'Quay lại', onPressed: () => Navigator.of(context).maybePop()) : null,
       title: const Text(
         'Bảo tàng của tôi',
         style: TextStyle(

@@ -41,20 +41,54 @@ class SMGSApp extends StatelessWidget {
     builder: (context, child) => ListenableBuilder(
       listenable: Listenable.merge([AppPreferences.instance, AppServices.auth]),
       builder: (context, _) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            disableAnimations:
-                MediaQuery.disableAnimationsOf(context) ||
-                AppPreferences.instance.reducedMotion,
-            textScaler: TextScaler.linear(
-              MediaQuery.textScalerOf(context).scale(16) /
-                  16 *
-                  (AppPreferences.instance.largeText ? 1.15 : 1),
-            ),
+        final rawMediaQuery = MediaQuery.of(context);
+        final isDesktopWide = rawMediaQuery.size.width > 600;
+        final effectiveWidth = isDesktopWide ? 600.0 : rawMediaQuery.size.width;
+        final tunedMediaQuery = rawMediaQuery.copyWith(
+          size: Size(effectiveWidth, rawMediaQuery.size.height),
+          disableAnimations:
+              rawMediaQuery.disableAnimations ||
+              AppPreferences.instance.reducedMotion,
+          textScaler: TextScaler.linear(
+            rawMediaQuery.textScaler.scale(16) /
+                16 *
+                (AppPreferences.instance.largeText ? 1.15 : 1),
           ),
+        );
+
+        Widget mobileShell = child ?? const SizedBox.shrink();
+
+        if (isDesktopWide) {
+          mobileShell = ColoredBox(
+            color: const Color(0xFFEDE7DC), // heritage paper desk tone outside mobile frame
+            child: Center(
+              child: SizedBox(
+                width: 600,
+                height: double.infinity,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFAF7F2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x18000000),
+                        blurRadius: 28,
+                        spreadRadius: 2,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: mobileShell,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return MediaQuery(
+          data: tunedMediaQuery,
           child: AutomaticLocationHost(
             messengerKey: _messengerKey,
-            child: child ?? const SizedBox.shrink(),
+            child: mobileShell,
           ),
         );
       },
