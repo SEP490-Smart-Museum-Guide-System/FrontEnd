@@ -1,9 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { prepareScanDataset, validateGlbPreview, startScanSafely, cancelScanJob } from '../src/services/artifactScanApi.js';
-import { scanProgress } from '../src/components/artifacts/scanProgress.js';
+import { scanProgress, scanActivity } from '../src/components/artifacts/scanProgress.js';
 const file = (name, path = name, size = 100) => ({ name, webkitRelativePath: path, size });
 const photos = Array.from({ length: 5 }, (_, i) => file(`${i}.png`, `dataset/images/${i}.png`));
+
+test('coarse server 10 percent becomes an indeterminate stage; only measured native counters produce a percentage', () => {
+  assert.equal(scanActivity({ status: 'PROCESSING', progress: 10 }).percent, null);
+  const matching = scanActivity({ status: 'PROCESSING', progress: 10, activity: { title: 'Khớp ảnh', phase: 2, completed: 9, total: 16, percent: 56.2 } });
+  assert.equal(matching.percent, 56.2);
+  assert.equal(matching.completed, 9);
+  assert.equal(matching.phase, 2);
+  assert.equal(scanActivity({ status: 'PROCESSING', progress: 10, activity: { stage: 'cameras', percent: null } }).percent, null);
+  assert.equal(scanActivity({ status: 'PROCESSING', progress: 10, activity: { percent: 1000 } }).percent, null);
+});
 
 test('cancel reaches the artifact-scoped backend with JWT and preserves a rejected request', async t => {
   const storage = globalThis.localStorage;

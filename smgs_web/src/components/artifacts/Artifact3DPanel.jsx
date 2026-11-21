@@ -13,7 +13,7 @@ import {
   cancelScanJob,
   validateGlbPreview
 } from '../../services/artifactScanApi';
-import { scanProgress } from './scanProgress';
+import { scanProgress, scanActivity } from './scanProgress';
 import {
   Box,
   Upload,
@@ -338,6 +338,10 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   const { running: isScanning, review: isReview, step: currentStep, percent: currentPercent } = scanProgress({ uploading, uploadProgress: progress, job, hasPreview: !!draft });
   const showProcessingScreen = uploading || isScanning || isReview || manualShowProcessing;
   const isStopped = ['FAILED', 'CANCELLED', 'DISCARDED'].includes(job?.status);
+  const activity = scanActivity(job);
+  const stagePercent = uploading ? currentPercent : isReview ? 100 : isScanning ? activity.percent : currentPercent;
+  const indeterminate = isScanning && stagePercent == null;
+  const stageLabel = uploading ? `Tải bộ ảnh: ${currentPercent}%` : isStopped ? 'Tác vụ đã dừng' : isReview ? 'Đã tạo xong mô hình 3D' : isScanning ? `${activity.title}${stagePercent == null ? '' : `: ${stagePercent}%`}` : 'Chưa có tác vụ';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -678,7 +682,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     fontWeight: '700'
                   }}
                 >
-                  {uploading ? `Tải bộ ảnh: ${currentPercent}%` : isStopped ? `Đã dừng ở ${currentPercent}%` : isReview ? '✓ Đã tạo xong mô hình 3D (100%)' : `Tiến độ dựng: ${currentPercent}%`}
+                  {stageLabel}
                 </div>
               </div>
 
@@ -687,71 +691,47 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                 <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: '0 0 6px' }}>
                   {uploading ? (progress >= 100 ? 'Đang chờ máy chủ xác nhận tác vụ...' : `Đang tải bộ ảnh: ${progress}%`) : !job ? 'Chưa có tác vụ dựng 3D.' : isStopped ? labels[job.status] : isReview
                     ? 'AI đã tái tạo mô hình 3D thành công!'
-                    : `AI đang phân tích và dựng mô hình 3D từ ${processedPhotoCount || files.length || 'bộ'} ảnh chụp...`}
+                    : activity.title}
                 </h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-600)', margin: '0 auto', maxWidth: '520px', lineHeight: 1.55 }}>
                   {uploading ? 'Giữ trang mở trong khi tải ảnh. Tiến độ này là tải dữ liệu, chưa phải dựng 3D.' : !job ? 'Chọn bộ ảnh rồi bấm Bắt đầu dựng 3D.' : isStopped ? 'Tác vụ này không còn chạy. Bộ ảnh và log vẫn được giữ trên máy chủ; bạn có thể đóng bảng tiến trình và tạo tác vụ mới.' : isReview
                     ? 'Quá trình trích xuất mây điểm và xây dựng lưới đa giác đã hoàn tất. Bạn có thể bấm "Xem kết quả" để nạp mô hình vào khung xoay 360° bên trái trước khi lưu vào hiện vật.'
-                    : 'Đang trích xuất đặc trưng điểm ảnh (SfM) và tái tạo mạng lưới đa giác bề mặt (Dense Mesh). Quá trình xử lý diễn ra hoàn toàn trên máy chủ AI; bạn có thể đóng cửa sổ này rồi quay lại kiểm tra bất cứ lúc nào.'}
+                    : activity.detail + ' Bạn có thể đóng cửa sổ này rồi quay lại kiểm tra.'}
                 </p>
+                {isScanning && activity.lastActivityAt && Number.isFinite(Date.parse(activity.lastActivityAt)) && <p style={{ fontSize: '0.74rem', color: 'var(--color-charcoal-500)', margin: '8px 0 0' }}>Log cập nhật lúc {new Date(activity.lastActivityAt).toLocaleTimeString('vi-VN')}</p>}
               </div>
 
               {/* Live Shimmer Progress Bar */}
               <div style={{ marginTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
                   <span style={{ fontWeight: '600', color: 'var(--color-charcoal-700)' }}>
-                    {uploading ? 'Tiến độ tải ảnh:' : isReview ? 'Hoàn thành dựng 3D' : 'Tiến độ dựng 3D:'}
+                    {uploading ? 'Tiến độ tải ảnh:' : isReview ? 'Hoàn thành dựng 3D' : 'Giai đoạn hiện tại:'}
                   </span>
                   <span style={{ fontWeight: '700', color: 'var(--color-burgundy-700)' }}>
-                    {currentPercent}%
+                    {isStopped ? 'Đã dừng' : indeterminate ? 'Đang xử lý' : `${stagePercent}%`}
                   </span>
                 </div>
-                <div className="ai-scan-progress-shimmer">
-                  <div className="ai-scan-progress-shimmer-fill" style={{ width: `${currentPercent}%` }} />
+                <div className={`ai-scan-progress-shimmer ${indeterminate ? 'is-indeterminate' : ''}`} role="progressbar" aria-label={uploading ? 'Tải ảnh' : activity.title} aria-valuemin={0} aria-valuemax={100} aria-valuenow={indeterminate ? undefined : stagePercent} aria-valuetext={indeterminate ? 'Đang xử lý, chưa có bộ đếm tiến độ' : undefined}>
+                  <div className="ai-scan-progress-shimmer-fill" style={{ width: indeterminate ? '35%' : `${stagePercent}%` }} />
                 </div>
               </div>
 
               {/* Sub-phase Checklist */}
-              {!uploading && job && !isStopped && <div className="ai-scan-phase-list">
-                <div className={`ai-scan-phase-item ${currentPercent >= 25 ? 'done' : 'current'}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {currentPercent >= 25 ? <Check size={14} color="#166534" /> : <RefreshCw size={14} className="spin" color="var(--color-gold-600)" />}
-                    <span>1. Phân tích ảnh chụp & định hướng tiêu cự (Feature Extraction)</span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 25 ? '#166534' : 'var(--color-gold-700)', fontWeight: '600' }}>
-                    {currentPercent >= 25 ? 'Hoàn tất' : 'Đang chạy'}
-                  </span>
-                </div>
-
-                <div className={`ai-scan-phase-item ${currentPercent >= 55 ? 'done' : currentPercent >= 25 ? 'current' : ''}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {currentPercent >= 55 ? <Check size={14} color="#166534" /> : currentPercent >= 25 ? <RefreshCw size={14} className="spin" color="var(--color-gold-600)" /> : <Clock size={14} color="#94A3B8" />}
-                    <span>2. Khớp đám mây điểm thưa không gian (Sparse Point Cloud - SfM)</span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 55 ? '#166534' : currentPercent >= 25 ? 'var(--color-gold-700)' : '#94A3B8', fontWeight: '600' }}>
-                    {currentPercent >= 55 ? 'Hoàn tất' : currentPercent >= 25 ? 'Đang chạy' : 'Đang chờ'}
-                  </span>
-                </div>
-
-                <div className={`ai-scan-phase-item ${currentPercent >= 85 ? 'done' : currentPercent >= 55 ? 'current' : ''}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {currentPercent >= 85 ? <Check size={14} color="#166534" /> : currentPercent >= 55 ? <RefreshCw size={14} className="spin" color="var(--color-gold-600)" /> : <Clock size={14} color="#94A3B8" />}
-                    <span>3. Dựng mạng lưới bề mặt đa giác dày đặc (Dense Mesh Modeling)</span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 85 ? '#166534' : currentPercent >= 55 ? 'var(--color-gold-700)' : '#94A3B8', fontWeight: '600' }}>
-                    {currentPercent >= 85 ? 'Hoàn tất' : currentPercent >= 55 ? 'Đang chạy' : 'Đang chờ'}
-                  </span>
-                </div>
-
-                <div className={`ai-scan-phase-item ${currentPercent >= 100 ? 'done' : currentPercent >= 85 ? 'current' : ''}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {currentPercent >= 100 ? <Check size={14} color="#166534" /> : currentPercent >= 85 ? <RefreshCw size={14} className="spin" color="var(--color-gold-600)" /> : <Clock size={14} color="#94A3B8" />}
-                    <span>4. Tạo bản đồ màu & Xuất file GLB chuẩn Web/AR (Texture & Export)</span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', color: currentPercent >= 100 ? '#166534' : currentPercent >= 85 ? 'var(--color-gold-700)' : '#94A3B8', fontWeight: '600' }}>
-                    {currentPercent >= 100 ? 'Hoàn tất' : currentPercent >= 85 ? 'Đang đóng gói' : 'Đang chờ'}
-                  </span>
-                </div>
+              {isScanning && Number.isInteger(activity.completed) && activity.completed >= 0 && <p role="status" aria-live="polite" style={{ margin: '12px 0 0', padding: '10px 12px', borderRadius: 8, background: '#FBF4E6', color: 'var(--color-burgundy-900)', fontWeight: 700 }}>
+                {activity.completed}{Number.isInteger(activity.total) ? `/${activity.total}` : ''} {activity.stage === 'matching' ? 'nhóm ảnh đã khớp' : activity.stage === 'dense' ? 'ảnh đã tính độ sâu' : 'ảnh đã xử lý'}
+              </p>}
+              {!uploading && job && !isStopped && (!isScanning || job.activity) && <div className="ai-scan-phase-list">
+                {['Trích xuất đặc trưng ảnh', 'Khớp ảnh và tính camera', 'Tạo độ sâu và dựng lưới bề mặt', 'Tạo texture và đóng gói GLB'].map((title, index) => {
+                  const phase = isReview ? 5 : activity.phase;
+                  const done = phase > index + 1, current = phase === index + 1;
+                  return <div key={title} className={`ai-scan-phase-item ${done ? 'done' : current ? 'current' : ''}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {done ? <Check size={14} color="#166534" /> : current ? <RefreshCw size={14} className="spin" /> : <Clock size={14} color="#94A3B8" />}
+                      <span>{index + 1}. {title}</span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>{done ? 'Hoàn tất' : current ? 'Đang chạy' : 'Đang chờ'}</span>
+                  </div>;
+                })}
               </div>}
 
               {/* Side Specification Grid (Matching user's reference image cards) */}

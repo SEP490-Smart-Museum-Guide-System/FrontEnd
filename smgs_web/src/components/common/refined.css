@@ -1015,6 +1015,17 @@ td .action-trigger .action-trigger-label {
   margin-top: 14px;
 }
 
+.ai-scan-progress-shimmer.is-indeterminate .ai-scan-progress-shimmer-fill {
+  animation: scan-stage-sweep 1.8s ease-in-out infinite;
+}
+@keyframes scan-stage-sweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(390%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-scan-progress-shimmer.is-indeterminate .ai-scan-progress-shimmer-fill { animation: none; }
+}
+
 .ai-scan-phase-item {
   display: flex;
   align-items: center;
