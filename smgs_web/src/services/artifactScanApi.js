@@ -7,6 +7,38 @@ export const getScanJob = (id, job, signal) => backend(scanPath(id, job), { sign
 export const getScanModel = (id, job, signal) => mediaApi(scanPath(id, job) + '/model', { blob: true, signal });
 export const saveScanModel = (id, job) => backend(scanPath(id, job) + '/save', { method: 'POST', timeoutMs: 180000 });
 export const discardScanModel = (id, job) => backend(scanPath(id, job) + '/discard', { method: 'POST' });
+export const SCAN_UPLOAD_TIMEOUT_MS = 15 * 60 * 1000;
+const activeScan = job => ['QUEUED', 'PROCESSING', 'FINALIZING', 'REVIEW_REQUIRED'].includes(job?.status);
+
+// Never automatically resend an ambiguous upload: the server may already have
+// persisted a job even when the 202 response is lost.
+export async function startScanSafely(id, dataset, { onProgress, signal, getJobs = getScanJobs, upload = startArtifactScan } = {}) {
+  const before = await getJobs(id, signal);
+  const existing = before.find(activeScan);
+  if (existing) return { job: existing, recovered: true };
+  try {
+    const job = await upload(id, dataset, onProgress, signal);
+    if (!job?.scanJobId || Number(job.artifactId) !== Number(id)) {
+      const error = new Error('Máy chủ chưa xác nhận mã tác vụ.');
+      error.code = 'UPLOAD_RESPONSE_INVALID';
+      throw error;
+    }
+    return { job, recovered: false };
+  } catch (error) {
+    if (signal?.aborted || error.name === 'AbortError') throw error;
+    const ambiguous = ['UPLOAD_NETWORK', 'UPLOAD_TIMEOUT', 'UPLOAD_RESPONSE_INVALID'].includes(error.code) || error.status >= 500;
+    if (!ambiguous) throw error;
+    try {
+      const known = new Set(before.map(job => job.scanJobId));
+      const after = await getJobs(id, signal);
+      const received = after.filter(job => Number(job.artifactId) === Number(id) && !known.has(job.scanJobId));
+      if (received.length === 1) return { job: received[0], recovered: true };
+    } catch { /* Keep the original upload error and require an explicit job check. */ }
+    error.requiresJobCheck = true;
+    error.message = 'Chưa xác nhận được máy chủ đã nhận bộ ảnh. Kiểm tra job đã nhận trước khi gửi lại để tránh tạo trùng.';
+    throw error;
+  }
+}
 
 export function prepareScanDataset(files, mode = 'auto') {
   const entries = Array.from(files || []);
@@ -36,7 +68,7 @@ export function startArtifactScan(id, dataset, progress, signal) {
   for (const image of dataset.images) form.append('images', image, image.name);
   if (dataset.metadata) form.append('metadata', dataset.metadata, 'metadata.json');
   if (dataset.referenceObj) form.append('referenceObj', dataset.referenceObj, dataset.referenceObj.name);
-  return uploadMedia(scanPath(id), form, progress, signal);
+  return uploadMedia(scanPath(id), form, progress, signal, { timeoutMs: SCAN_UPLOAD_TIMEOUT_MS });
 }
 
 export async function validateGlbPreview(file) {

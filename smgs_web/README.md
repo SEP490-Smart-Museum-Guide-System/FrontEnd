@@ -20,3 +20,9 @@ npm run dev -- --host 127.0.0.1 --port 8090
 ```
 
 Mở `http://127.0.0.1:8090/`. Kiểm tra bản đóng gói bằng `npm run build` và mã nguồn bằng `npm run lint`.
+
+## Upload bộ ảnh 3D trên production
+
+Đặt `VITE_UPLOAD_API_BASE_URL` thành HTTPS BE có `/api` để multipart upload không đi qua proxy CDN. Các API JSON/polling vẫn dùng `VITE_API_BASE_URL`; upload giữ JWT của người đăng nhập, không đưa khóa AI vào trình duyệt. BE phải thêm đúng origin FE vào `Cors:AllowedOrigins`. Mẫu hai cấu hình nằm trong `deploy/scan-upload.env.example`; áp dụng BE trước, sau đó redeploy FE với biến build mới.
+
+Scan upload có thời hạn riêng 15 phút, rồi nhận mã job và polling độc lập đến khi dựng xong; không giữ request tải ảnh trong suốt quá trình dựng 3D. Khi mất phản hồi upload, FE kiểm tra job đã được nhận và không tự gửi lại ảnh. Nếu chưa xác định được, người dùng kiểm tra lại danh sách job trước khi gửi tiếp.

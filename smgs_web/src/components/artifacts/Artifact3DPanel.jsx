@@ -4,7 +4,7 @@ import ArtifactModelViewer, { isSketchfabUrl } from '../common/ArtifactModelView
 import { mediaApi, uploadMedia } from '../../services/mediaApi';
 import {
   prepareScanDataset,
-  startArtifactScan,
+  startScanSafely,
   getScanJobs,
   getScanJob,
   getScanModel,
@@ -12,6 +12,7 @@ import {
   discardScanModel,
   validateGlbPreview
 } from '../../services/artifactScanApi';
+import { scanProgress } from './scanProgress';
 import {
   Box,
   Upload,
@@ -52,6 +53,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   const [revision, setRevision] = useState(0), [loading, setLoading] = useState(true);
   const [processedPhotoCount, setProcessedPhotoCount] = useState(0);
   const [manualShowProcessing, setManualShowProcessing] = useState(false);
+  const [uploading, setUploading] = useState(false), [needsJobCheck, setNeedsJobCheck] = useState(false);
   const action = useRef(null), selection = useRef(0), viewer = useRef(null);
   const [viewerError, setViewerError] = useState('');
 
@@ -113,7 +115,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
         if (!controller.signal.aborted) {
           const first = rows[0] || null;
           setJob(first);
-          if (first?.imagesCount) setProcessedPhotoCount(first.imagesCount);
+          if (first?.imageCount) setProcessedPhotoCount(first.imageCount);
         }
       })
       .catch(e => {
@@ -132,7 +134,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
         if (!controller.signal.aborted) {
           setJob(next);
           setJobError('');
-          if (next?.imagesCount) setProcessedPhotoCount(next.imagesCount);
+          if (next?.imageCount) setProcessedPhotoCount(next.imageCount);
         }
       } catch (e) {
         if (!controller.signal.aborted) setJobError(e.message);
@@ -169,6 +171,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     try {
       await task(action.current.signal);
     } catch (e) {
+      if (e.requiresJobCheck) setNeedsJobCheck(true);
       setError(e.name === 'AbortError' ? 'Đã ngắt yêu cầu; kiểm tra danh sách job trước khi gửi lại.' : e.message);
     } finally {
       setBusy(false);
@@ -189,13 +192,29 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
       const photoCount = dataset.images.length;
       setProcessedPhotoCount(photoCount);
       setProgress(0);
-      const created = await startArtifactScan(artifactId, dataset, setProgress, signal);
-      setJob(created);
-      setJobError('');
-      setFiles([]);
-      setDraft(null);
-      setMessage('Đã nhận bộ ảnh. Bạn có thể đóng trang rồi quay lại xem tiến độ.');
+      setUploading(true);
+      try {
+        const { job: created, recovered } = await startScanSafely(artifactId, dataset, { onProgress: setProgress, signal });
+        setJob(created);
+        setProcessedPhotoCount(created.imageCount || photoCount);
+        setMode(created.mode || dataset.mode);
+        setNeedsJobCheck(false);
+        setJobError('');
+        setFiles([]);
+        setDraft(null);
+        setMessage(recovered ? 'Đã tìm thấy tác vụ trên máy chủ; tiếp tục theo dõi, không gửi lại bộ ảnh.' : 'Đã nhận bộ ảnh. Dựng 3D có thể mất 15–20 phút hoặc lâu hơn tùy bộ ảnh; bạn có thể đóng trang rồi quay lại xem tiến độ.');
+      } finally { setUploading(false); }
     });
+
+  const checkReceived = () => perform(async signal => {
+    const rows = await getScanJobs(artifactId, signal);
+    const found = rows.find(row => running(row.status) || row.status === 'REVIEW_REQUIRED') || rows[0] || null;
+    setJob(found);
+    setNeedsJobCheck(false);
+    setJobError('');
+    if (found?.imageCount) setProcessedPhotoCount(found.imageCount);
+    setMessage(found ? 'Đã tải lại tác vụ trên máy chủ. Kiểm tra trạng thái trước khi gửi bộ ảnh mới.' : 'Máy chủ chưa có tác vụ cho hiện vật này. Bạn có thể gửi lại bộ ảnh.');
+  });
 
   const save = () => {
     if (model && !window.confirm('Thay mô hình hiện đang lưu bằng bản xem thử này?')) return;
@@ -238,22 +257,14 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   if (!validId) return <p>Lưu hiện vật trước khi thêm mô hình 3D.</p>;
 
   const activeModelUrl = draft?.url || savedUrl;
-  const isScanning = running(job?.status) || (busy && progress > 0);
-  const isReview = job?.status === 'REVIEW_REQUIRED';
-  const showProcessingScreen = isScanning || isReview || manualShowProcessing;
-
-  // Determine current pipeline step (1: Upload images, 2: Server upload, 3: AI Reconstruction, 4: Review/Save)
-  let currentStep = 1;
-  if (busy && progress > 0 && progress < 100) currentStep = 2;
-  else if (isScanning || manualShowProcessing) currentStep = 3;
-  else if (isReview || draft) currentStep = 4;
-
-  const currentPercent = job?.progress || (busy ? progress : 0) || (manualShowProcessing ? 48 : 0);
+  const { running: isScanning, review: isReview, step: currentStep, percent: currentPercent } = scanProgress({ uploading, uploadProgress: progress, job, hasPreview: !!draft });
+  const showProcessingScreen = uploading || isScanning || isReview || manualShowProcessing;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Alert Messages */}
       {error && <p role="alert" className="business-error">{error}</p>}
+      {canManage && needsJobCheck && <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={checkReceived}><RefreshCw size={14} /> Kiểm tra job đã nhận</button>}
       {message && (
         <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <CheckCircle2 size={16} /> {message}
@@ -426,7 +437,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Sparkles size={18} color="var(--color-gold-600)" />
                   <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-burgundy-900)' }}>
-                    BƯỚC 3/4 · TIẾN TRÌNH TÁI TẠO HÌNH HỌC 3D (PHOTOGRAMMETRY)
+                    {uploading ? 'BƯỚC 2/4 · TẢI BỘ ẢNH LÊN MÁY CHỦ' : !job ? 'CHƯA CÓ TÁC VỤ DỰNG 3D' : isReview ? 'BƯỚC 4/4 · XEM KẾT QUẢ' : 'TÁC VỤ DỰNG 3D'}
                   </span>
                 </div>
                 <span
@@ -440,7 +451,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     border: `1px solid ${isReview ? '#86EFAC' : '#FDE68A'}`
                   }}
                 >
-                  {labels[job?.status] || (busy ? 'Đang tải bộ ảnh...' : 'AI đang xử lý...')}
+                  {uploading ? 'Đang tải bộ ảnh...' : labels[job?.status] || 'Chưa có tác vụ'}
                 </span>
               </div>
 
@@ -452,7 +463,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                 <div className="ai-scan-3d-hologram">
                   <Box size={52} color="var(--color-gold-400)" style={{ filter: 'drop-shadow(0 0 16px rgba(245, 158, 11, 0.6))' }} />
                   <span style={{ marginTop: '8px', fontSize: '0.72rem', letterSpacing: '0.08em', fontWeight: '700', color: '#F1F5F9', textTransform: 'uppercase' }}>
-                    {isReview ? '3D MESH READY' : 'PHOTOGRAMMETRY SCAN'}
+                    {uploading ? 'ĐANG TẢI BỘ ẢNH' : isReview ? '3D MESH READY' : job ? 'PHOTOGRAMMETRY SCAN' : 'CHƯA BẮT ĐẦU'}
                   </span>
                 </div>
 
@@ -470,19 +481,19 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     fontWeight: '700'
                   }}
                 >
-                  {isReview ? '✓ Đã tạo xong mô hình 3D (100%)' : `Tiến độ tái tạo: ${currentPercent}%`}
+                  {uploading ? `Tải bộ ảnh: ${currentPercent}%` : isReview ? '✓ Đã tạo xong mô hình 3D (100%)' : `Tiến độ dựng: ${currentPercent}%`}
                 </div>
               </div>
 
               {/* Information & Instructions */}
               <div style={{ marginTop: '16px', textAlign: 'center' }}>
                 <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--color-burgundy-900)', margin: '0 0 6px' }}>
-                  {isReview
+                  {uploading ? (progress >= 100 ? 'Đang chờ máy chủ xác nhận tác vụ...' : `Đang tải bộ ảnh: ${progress}%`) : !job ? 'Chưa có tác vụ dựng 3D.' : isReview
                     ? 'AI đã tái tạo mô hình 3D thành công!'
                     : `AI đang phân tích và dựng mô hình 3D từ ${processedPhotoCount || files.length || 'bộ'} ảnh chụp...`}
                 </h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-600)', margin: '0 auto', maxWidth: '520px', lineHeight: 1.55 }}>
-                  {isReview
+                  {uploading ? 'Giữ trang mở trong khi tải ảnh. Tiến độ này là tải dữ liệu, chưa phải dựng 3D.' : !job ? 'Chọn bộ ảnh rồi bấm Bắt đầu dựng 3D.' : isReview
                     ? 'Quá trình trích xuất mây điểm và xây dựng lưới đa giác đã hoàn tất. Bạn có thể bấm "Xem kết quả" để nạp mô hình vào khung xoay 360° bên trái trước khi lưu vào hiện vật.'
                     : 'Đang trích xuất đặc trưng điểm ảnh (SfM) và tái tạo mạng lưới đa giác bề mặt (Dense Mesh). Quá trình xử lý diễn ra hoàn toàn trên máy chủ AI; bạn có thể đóng cửa sổ này rồi quay lại kiểm tra bất cứ lúc nào.'}
                 </p>
@@ -492,7 +503,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
               <div style={{ marginTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', marginBottom: '6px' }}>
                   <span style={{ fontWeight: '600', color: 'var(--color-charcoal-700)' }}>
-                    {isReview ? 'Hoàn thành dựng 3D' : 'Tiến trình tính toán:'}
+                    {uploading ? 'Tiến độ tải ảnh:' : isReview ? 'Hoàn thành dựng 3D' : 'Tiến độ dựng 3D:'}
                   </span>
                   <span style={{ fontWeight: '700', color: 'var(--color-burgundy-700)' }}>
                     {currentPercent}%
@@ -504,7 +515,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
               </div>
 
               {/* Sub-phase Checklist */}
-              <div className="ai-scan-phase-list">
+              {!uploading && job && <div className="ai-scan-phase-list">
                 <div className={`ai-scan-phase-item ${currentPercent >= 25 ? 'done' : 'current'}`}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {currentPercent >= 25 ? <Check size={14} color="#166534" /> : <RefreshCw size={14} className="spin" color="var(--color-gold-600)" />}
@@ -544,17 +555,17 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     {currentPercent >= 100 ? 'Hoàn tất' : currentPercent >= 85 ? 'Đang đóng gói' : 'Đang chờ'}
                   </span>
                 </div>
-              </div>
+              </div>}
 
               {/* Side Specification Grid (Matching user's reference image cards) */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '16px' }}>
                 <div className="ai-scan-spec-card">
                   <small>Ảnh đầu vào</small>
-                  <strong>{processedPhotoCount || files.length || '24'} ảnh JPG/PNG</strong>
+                  <strong>{processedPhotoCount || job?.imageCount || 0} ảnh JPG/PNG</strong>
                 </div>
                 <div className="ai-scan-spec-card">
                   <small>Chất lượng lưới</small>
-                  <strong>Chi tiết cao (High-Poly)</strong>
+                  <strong>Kiểm tra khi xem kết quả</strong>
                 </div>
                 <div className="ai-scan-spec-card">
                   <small>Chế độ dựng</small>
@@ -570,7 +581,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--color-paper-border)', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--color-charcoal-500)' }}>
                   <Cpu size={14} />
-                  <span>Mã tác vụ: <b>#{job?.scanJobId ? String(job.scanJobId).substring(0, 8) : '2026-AI-SCAN'}</b></span>
+                  <span>Mã tác vụ: <b>{job?.scanJobId ? '#' + String(job.scanJobId).substring(0, 8) : 'Chưa được xác nhận'}</b></span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -726,7 +737,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     <button
                       type="button"
                       className="btn btn-gold btn-sm"
-                      disabled={busy || running(job?.status) || !files.length}
+                      disabled={busy || needsJobCheck || running(job?.status) || !files.length}
                       onClick={start}
                     >
                       <Sparkles size={14} /> Bắt đầu dựng 3D
