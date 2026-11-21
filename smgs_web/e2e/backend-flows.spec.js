@@ -21,6 +21,7 @@ async function fixture(page, role = 'Admin') {
     if (path === 'museums' && method === 'GET') return ok({ items: [museum], totalPages: 1, totalCount: 1 });
     if (path === 'me/museums') return ok([museum]);
     if (path === 'museums/cities') return ok([]);
+    if (path === 'artifacts' && method === 'POST') return ok({ ...body, id: 12, code: 'HV001', qrCode: 'SMGS-TEST' });
     if (path === 'artifacts') return ok({ items: [artifact], totalPages: 1, totalCount: 1 });
     if (path === 'artifacts/11/ai/drafts') {
       if (state.holdAi) { await new Promise(r => setTimeout(r, 2000)); return route.fulfill({ status: 503, json: { message: 'Đã dừng fixture.' } }); }
@@ -72,6 +73,25 @@ async function fixture(page, role = 'Admin') {
   await page.goto('/');
   return { state, writes, reads, errors };
 }
+
+test('artifact creation requests an automatic code and submits selected museum topics', async ({ page }) => {
+  const f = await fixture(page);
+  f.state.topics = [{ id: 13, name: 'Gốm sứ' }, { id: 14, name: 'Lịch sử' }];
+  await page.getByRole('button', { name: 'Nội dung & trải nghiệm', exact: true }).click();
+  await page.getByRole('button', { name: 'Kho hiện vật', exact: true }).click();
+  await page.getByRole('button', { name: 'Thêm hiện vật mới' }).click();
+  await page.getByLabel('Tên hiện vật', { exact: true }).fill('Bình gốm');
+  await page.getByRole('combobox', { name: 'Bảo tàng', exact: true }).selectOption('7');
+  await expect(page.getByLabel('Mã hiện vật', { exact: true })).toHaveCount(0);
+  await page.getByRole('checkbox', { name: 'Gốm sứ' }).check();
+  await page.getByRole('checkbox', { name: 'Lịch sử' }).check();
+  await page.getByRole('button', { name: 'Lưu hiện vật', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Thêm hiện vật', exact: true })).toBeHidden();
+  expect(f.writes).toContainEqual({ method: 'POST', path: 'artifacts', body: expect.objectContaining({
+    museumId: 7, name: 'Bình gốm', code: null, topicIds: [13, 14],
+  }) });
+});
+
 test('account edits reject failures, change role, assign and revoke exact scope', async ({ page }) => {
   const f = await fixture(page);
   await page.getByRole('button', { name: 'Người dùng & Phân quyền', exact: true }).click();
