@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import '@google/model-viewer';
 import ArtifactModelViewer, { isSketchfabUrl } from '../common/ArtifactModelViewer';
 import { mediaApi, uploadMedia } from '../../services/mediaApi';
+import { Modal, Field } from '../common/BusinessUI';
 import {
   prepareScanDataset,
   startScanSafely,
@@ -517,94 +518,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
             </div>
           )}
 
-          {showSketchfab && canManage && (
-            <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <strong style={{ fontSize: '0.8rem', color: '#1E293B' }}>Liên kết mô hình từ Sketchfab</strong>
-              <input
-                type="url"
-                className="form-input"
-                style={{ fontSize: '0.8rem', padding: '6px 10px' }}
-                placeholder="https://sketchfab.com/3d-models/... hoặc Model UID"
-                value={sketchfabUrl}
-                onChange={e => setSketchfabUrl(e.target.value)}
-                disabled={busy}
-              />
-              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSketchfab(false)}>Đóng</button>
-                <button type="button" className="btn btn-primary btn-sm" disabled={busy || !sketchfabUrl.trim()} onClick={linkSketchfab}>Liên kết</button>
-              </div>
-            </div>
-          )}
-
-          {showSettings && canManage && (
-            <div style={{ padding: '14px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #CBD5E1', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.82rem', color: '#1E293B' }}>Cấu hình hiển thị 3D & Camera</strong>
-                <button type="button" className="btn btn-secondary btn-sm" style={{ padding: '2px 6px', height: 'auto' }} onClick={() => setShowSettings(false)}>✕</button>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={settingsForm.autoRotate}
-                  onChange={e => setSettingsForm(prev => ({ ...prev, autoRotate: e.target.checked }))}
-                />
-                Tự động xoay quanh tâm (Auto Rotate)
-              </label>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '3px' }}>Góc quỹ đạo camera (Camera Orbit)</span>
-                <input
-                  type="text"
-                  className="form-input"
-                  style={{ fontSize: '0.8rem', padding: '5px 8px' }}
-                  placeholder="vd: 45deg 55deg 2.5m hoặc 0deg 75deg 105%"
-                  value={settingsForm.cameraOrbit}
-                  onChange={e => setSettingsForm(prev => ({ ...prev, cameraOrbit: e.target.value }))}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '3px' }}>Góc nhìn (FOV)</span>
-                  <input
-                    type="text"
-                    className="form-input"
-                    style={{ fontSize: '0.8rem', padding: '5px 8px' }}
-                    placeholder="vd: 30deg"
-                    value={settingsForm.fieldOfView}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, fieldOfView: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '3px' }}>Tỷ lệ phóng to (Scale)</span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    max="50"
-                    className="form-input"
-                    style={{ fontSize: '0.8rem', padding: '5px 8px' }}
-                    value={settingsForm.scale}
-                    onChange={e => setSettingsForm(prev => ({ ...prev, scale: parseFloat(e.target.value) || 1.0 }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '3px' }}>Tên nhãn / Tiêu đề model</span>
-                <input
-                  type="text"
-                  className="form-input"
-                  style={{ fontSize: '0.8rem', padding: '5px 8px' }}
-                  placeholder="Tên hiển thị khi xoay..."
-                  value={settingsForm.name}
-                  onChange={e => setSettingsForm(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowSettings(false)}>Hủy</button>
-                <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={saveSettings}>Lưu cấu hình</button>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
 
         {/* Right Column: AI 3D Processing Console or Input Form */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -934,6 +848,116 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
           )}
         </div>
       </div>
+    
+      {/* Heritage Modals for 3D Settings and Sketchfab */}
+      {showSketchfab && canManage && (
+        <Modal
+          title="Liên kết mô hình 3D từ Sketchfab"
+          busy={busy}
+          onClose={() => setShowSketchfab(false)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-charcoal-600)', margin: 0, lineHeight: 1.5 }}>
+              Dán đường dẫn trang mô hình Sketchfab hoặc mã định danh (Model UID). Mô hình sẽ được đồng bộ và hiển thị trực tiếp trong khung xoay 360°.
+            </p>
+            <Field label="Đường dẫn hoặc UID Sketchfab">
+              <input
+                type="url"
+                className="form-input"
+                placeholder="vd: https://sketchfab.com/3d-models/... hoặc 4a12b3c..."
+                value={sketchfabUrl}
+                onChange={e => setSketchfabUrl(e.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowSketchfab(false)}>
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={busy || !sketchfabUrl.trim()}
+                onClick={linkSketchfab}
+              >
+                Liên kết mô hình
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showSettings && canManage && (
+        <Modal
+          title="Cấu hình hiển thị mô hình 3D và góc Camera"
+          busy={busy}
+          onClose={() => setShowSettings(false)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <label className="business-check" style={{ cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={settingsForm.autoRotate}
+                onChange={e => setSettingsForm(prev => ({ ...prev, autoRotate: e.target.checked }))}
+              />
+              Tự động xoay quanh tâm (Auto Rotate 360°)
+            </label>
+
+            <Field label="Góc quỹ đạo camera ban đầu (Camera Orbit)">
+              <input
+                type="text"
+                className="form-input"
+                placeholder="vd: 0deg 75deg 105% (nhìn thẳng) hoặc 45deg 55deg 2.5m"
+                value={settingsForm.cameraOrbit}
+                onChange={e => setSettingsForm(prev => ({ ...prev, cameraOrbit: e.target.value }))}
+              />
+            </Field>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Field label="Góc nhìn thị giác (FOV)">
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="vd: 30deg"
+                  value={settingsForm.fieldOfView}
+                  onChange={e => setSettingsForm(prev => ({ ...prev, fieldOfView: e.target.value }))}
+                />
+              </Field>
+              <Field label="Tỷ lệ phóng to (Scale)">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  max="50"
+                  className="form-input"
+                  value={settingsForm.scale}
+                  onChange={e => setSettingsForm(prev => ({ ...prev, scale: parseFloat(e.target.value) || 1.0 }))}
+                />
+              </Field>
+            </div>
+
+            <Field label="Tiêu đề hiển thị của mô hình">
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Nhập tên gọi hiển thị khi tương tác 3D..."
+                value={settingsForm.name}
+                onChange={e => setSettingsForm(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </Field>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowSettings(false)}>
+                Hủy bỏ
+              </button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={saveSettings}>
+                Lưu cấu hình 3D
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 }

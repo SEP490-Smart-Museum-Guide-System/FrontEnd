@@ -138,12 +138,12 @@ export default function AiClusterHealthPanel() {
   return (
     <section
       style={{
-        background: '#FAF7F2',
-        border: '1px solid var(--color-gold-200)',
-        borderRadius: '12px',
+        background: 'var(--color-paper-card)',
+        border: '1px solid var(--color-paper-border)',
+        borderRadius: '14px',
         padding: '24px',
-        marginBottom: '28px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
+        marginBottom: '24px',
+        boxShadow: 'var(--shadow-sm)'
       }}
     >
       {/* Header Bar */}
@@ -191,19 +191,20 @@ export default function AiClusterHealthPanel() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', borderBottom: '1px solid var(--color-gold-200)', paddingBottom: '10px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', borderBottom: '1px solid var(--color-paper-border)', paddingBottom: '12px' }}>
         <button
           type="button"
           onClick={() => setActiveTab('overview')}
           style={{
-            background: activeTab === 'overview' ? 'var(--color-burgundy-900)' : 'transparent',
-            color: activeTab === 'overview' ? '#FFF' : 'var(--color-charcoal-700)',
-            border: 'none',
-            padding: '6px 14px',
-            borderRadius: '6px',
-            fontSize: '0.8rem',
+            background: activeTab === 'overview' ? 'var(--color-burgundy-700)' : '#FFFFFF',
+            color: activeTab === 'overview' ? '#FFFFFF' : 'var(--color-charcoal-700)',
+            border: activeTab === 'overview' ? '1px solid var(--color-burgundy-800)' : '1px solid var(--color-paper-border)',
+            padding: '7px 16px',
+            borderRadius: '8px',
+            fontSize: '0.8125rem',
             fontWeight: '600',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all var(--transition-fast)'
           }}
         >
           Trạng thái 4 Cụm dịch vụ ({onlineCount}/4 Online)
@@ -212,14 +213,15 @@ export default function AiClusterHealthPanel() {
           type="button"
           onClick={() => setActiveTab('interactive_test')}
           style={{
-            background: activeTab === 'interactive_test' ? 'var(--color-burgundy-900)' : 'transparent',
-            color: activeTab === 'interactive_test' ? '#FFF' : 'var(--color-charcoal-700)',
-            border: 'none',
-            padding: '6px 14px',
-            borderRadius: '6px',
-            fontSize: '0.8rem',
+            background: activeTab === 'interactive_test' ? 'var(--color-burgundy-700)' : '#FFFFFF',
+            color: activeTab === 'interactive_test' ? '#FFFFFF' : 'var(--color-charcoal-700)',
+            border: activeTab === 'interactive_test' ? '1px solid var(--color-burgundy-800)' : '1px solid var(--color-paper-border)',
+            padding: '7px 16px',
+            borderRadius: '8px',
+            fontSize: '0.8125rem',
             fontWeight: '600',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all var(--transition-fast)'
           }}
         >
           Thử nghiệm Microservice Trực tiếp (Quick Diagnostic)
@@ -231,8 +233,10 @@ export default function AiClusterHealthPanel() {
           {/* 1. TTS Card */}
           <div
             style={{
-              background: '#FFF',
-              border: `1px solid ${statuses.tts.status === 'online' ? '#BBF7D0' : '#FECACA'}`,
+              background: '#FFFFFF',
+              border: '1px solid var(--color-paper-border)',
+              borderTop: `3px solid ${statuses.tts.status === 'online' ? 'var(--color-success)' : 'var(--color-danger)'}`,
+              boxShadow: 'var(--shadow-sm)',
               borderRadius: '8px',
               padding: '16px',
               position: 'relative'
@@ -259,7 +263,7 @@ export default function AiClusterHealthPanel() {
             <p style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)', margin: '0 0 10px', minHeight: '36px' }}>
               {statuses.tts.details}
             </p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid var(--color-paper-border)', paddingTop: '8px' }}>
               <span>Độ trễ phản hồi:</span>
               <strong style={{ fontVariantNumeric: 'tabular-nums', color: statuses.tts.status === 'online' ? '#16A34A' : '#64748B' }}>
                 {statuses.tts.latency} ms
@@ -270,8 +274,10 @@ export default function AiClusterHealthPanel() {
           {/* 2. AI Vision Card */}
           <div
             style={{
-              background: '#FFF',
-              border: `1px solid ${statuses.vision.status === 'online' ? '#BBF7D0' : '#FECACA'}`,
+              background: '#FFFFFF',
+              border: '1px solid var(--color-paper-border)',
+              borderTop: `3px solid ${statuses.vision.status === 'online' ? 'var(--color-success)' : 'var(--color-danger)'}`,
+              boxShadow: 'var(--shadow-sm)',
               borderRadius: '8px',
               padding: '16px'
             }}
@@ -297,7 +303,7 @@ export default function AiClusterHealthPanel() {
             <p style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)', margin: '0 0 10px', minHeight: '36px' }}>
               {statuses.vision.details}
             </p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid var(--color-paper-border)', paddingTop: '8px' }}>
               <span>Độ trễ phản hồi:</span>
               <strong style={{ fontVariantNumeric: 'tabular-nums', color: statuses.vision.status === 'online' ? '#16A34A' : '#64748B' }}>
                 {statuses.vision.latency} ms
@@ -308,8 +314,10 @@ export default function AiClusterHealthPanel() {
           {/* 3. 3D Scan Card */}
           <div
             style={{
-              background: '#FFF',
-              border: `1px solid ${statuses.scan.status === 'online' ? '#BBF7D0' : '#FECACA'}`,
+              background: '#FFFFFF',
+              border: '1px solid var(--color-paper-border)',
+              borderTop: `3px solid ${statuses.scan.status === 'online' ? 'var(--color-success)' : 'var(--color-danger)'}`,
+              boxShadow: 'var(--shadow-sm)',
               borderRadius: '8px',
               padding: '16px'
             }}
@@ -335,7 +343,7 @@ export default function AiClusterHealthPanel() {
             <p style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)', margin: '0 0 10px', minHeight: '36px' }}>
               {statuses.scan.details}
             </p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid var(--color-paper-border)', paddingTop: '8px' }}>
               <span>Độ trễ phản hồi:</span>
               <strong style={{ fontVariantNumeric: 'tabular-nums', color: statuses.scan.status === 'online' ? '#16A34A' : '#64748B' }}>
                 {statuses.scan.latency} ms
@@ -346,8 +354,10 @@ export default function AiClusterHealthPanel() {
           {/* 4. Backend Core Card */}
           <div
             style={{
-              background: '#FFF',
-              border: `1px solid ${statuses.backend.status === 'online' ? '#BBF7D0' : '#FECACA'}`,
+              background: '#FFFFFF',
+              border: '1px solid var(--color-paper-border)',
+              borderTop: `3px solid ${statuses.backend.status === 'online' ? 'var(--color-success)' : 'var(--color-danger)'}`,
+              boxShadow: 'var(--shadow-sm)',
               borderRadius: '8px',
               padding: '16px'
             }}
@@ -373,7 +383,7 @@ export default function AiClusterHealthPanel() {
             <p style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)', margin: '0 0 10px', minHeight: '36px' }}>
               {statuses.backend.details}
             </p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid #F1F5F9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-charcoal-500)', borderTop: '1px solid var(--color-paper-border)', paddingTop: '8px' }}>
               <span>Độ trễ phản hồi:</span>
               <strong style={{ fontVariantNumeric: 'tabular-nums', color: statuses.backend.status === 'online' ? '#16A34A' : '#64748B' }}>
                 {statuses.backend.latency} ms
@@ -383,7 +393,7 @@ export default function AiClusterHealthPanel() {
         </div>
       ) : (
         /* Interactive Diagnostic Test Area */
-        <div style={{ background: '#FFF', borderRadius: '8px', padding: '16px', border: '1px solid var(--color-gold-200)' }}>
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '20px', border: '1px solid var(--color-paper-border)', boxShadow: 'var(--shadow-sm)' }}>
           <strong style={{ fontSize: '0.9rem', color: 'var(--color-burgundy-900)', display: 'block', marginBottom: '10px' }}>
             Thử nghiệm Trực tiếp Giọng đọc Tiếng Việt (Piper TTS :8000)
           </strong>

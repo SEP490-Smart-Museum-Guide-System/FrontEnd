@@ -54,90 +54,185 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
     } catch (_) {}
   }
 
-  Future<void> _showEditFeedbackDialog(Map<String, dynamic> fb) async {
+  Future<void> _showEditFeedbackSheet(Map<String, dynamic> fb) async {
     final feedbackId = fb['id'] as int?;
     if (feedbackId == null) return;
     int rating = (fb['overallRating'] as num?)?.toInt() ?? 5;
     final controller = TextEditingController(text: fb['comment']?.toString() ?? '');
     bool saving = false;
 
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Chỉnh sửa đánh giá', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Số sao đánh giá:', style: TextStyle(fontSize: 13, color: AppColors.secondaryText)),
-              const SizedBox(height: 6),
-              Row(
-                children: List.generate(5, (i) {
-                  return IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                      color: AppColors.mutedGold,
-                      size: 28,
-                    ),
-                    onPressed: () => setDialogState(() => rating = i + 1),
-                  );
-                }),
-              ),
-              const SizedBox(height: 12),
-              const Text('Nội dung nhận xét:', style: TextStyle(fontSize: 13, color: AppColors.secondaryText)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: controller,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Nhận xét của bạn về trải nghiệm...',
-                  filled: true,
-                  fillColor: AppColors.antiqueIvory,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ],
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          actions: [
-            TextButton(
-              onPressed: saving ? null : () => Navigator.pop(ctx),
-              child: const Text('Hủy'),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppColors.antiqueIvory,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
-              onPressed: saving
-                  ? null
-                  : () async {
-                      setDialogState(() => saving = true);
-                      try {
-                        await VisitorExperienceApi.updateFeedback(
-                          feedbackId: feedbackId,
-                          overallRating: rating,
-                          comment: controller.text.trim(),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.darkBrown.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.mutedGold.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit_note_rounded,
+                        color: AppColors.deepBurgundy,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Chỉnh sửa đánh giá',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: AppColors.darkBrown,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Cập nhật trải nghiệm tham quan của bạn',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.secondaryText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppColors.secondaryText),
+                      onPressed: saving ? null : () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (i) {
+                        final filled = i < rating;
+                        return InkWell(
+                          onTap: saving ? null : () => setSheetState(() => rating = i + 1),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                              color: filled ? AppColors.mutedGold : Colors.grey.shade400,
+                              size: 34,
+                            ),
+                          ),
                         );
-                        if (context.mounted) Navigator.pop(ctx);
-                        _loadFeedbacks();
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(content: Text('Đã cập nhật đánh giá thành công!')),
-                          );
-                        }
-                      } catch (e) {
-                        setDialogState(() => saving = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
-                          );
-                        }
-                      }
-                    },
-              child: const Text('Lưu thay đổi', style: TextStyle(color: Colors.white)),
+                      }),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'CẢM NHẬN CHI TIẾT',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                    color: AppColors.deepBurgundy,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  maxLines: 4,
+                  enabled: !saving,
+                  style: const TextStyle(fontSize: 14, color: AppColors.darkBrown),
+                  decoration: InputDecoration(
+                    hintText: 'Chia sẻ những điểm bạn tâm đắc hoặc góp ý giúp bảo tàng cải thiện...',
+                    hintStyle: TextStyle(fontSize: 13, color: AppColors.secondaryText.withValues(alpha: 0.7)),
+                    filled: true,
+                    fillColor: AppColors.card,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.deepBurgundy, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                PrimaryButton(
+                  label: saving ? 'Đang cập nhật...' : 'Lưu thay đổi đánh giá',
+                  icon: Icons.check_circle_outline_rounded,
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          setSheetState(() => saving = true);
+                          try {
+                            await VisitorExperienceApi.updateFeedback(
+                              feedbackId: feedbackId,
+                              overallRating: rating,
+                              comment: controller.text.trim(),
+                            );
+                            if (context.mounted) Navigator.pop(ctx);
+                            _loadFeedbacks();
+                            if (mounted) {
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(content: Text('Đã cập nhật đánh giá thành công!')),
+                              );
+                            }
+                          } catch (e) {
+                            setSheetState(() => saving = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(e.toString())),
+                              );
+                            }
+                          }
+                        },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -488,7 +583,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                       ),
                       const Spacer(),
                       InkWell(
-                        onTap: () => _showEditFeedbackDialog(fb),
+                        onTap: () => _showEditFeedbackSheet(fb),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
