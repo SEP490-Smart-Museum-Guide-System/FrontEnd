@@ -1,6 +1,7 @@
 import { getAuthToken } from './auth.js';
 
 const base = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
+const uploadBase = (import.meta.env?.VITE_UPLOAD_API_BASE_URL || base).replace(/\/+$/, '');
 
 export function validateMediaFile(file, model = false, maxMb = model ? 100 : 15) {
   if (!file || file.size === 0) throw new Error('Vui lòng chọn file không rỗng.');
@@ -9,22 +10,22 @@ export function validateMediaFile(file, model = false, maxMb = model ? 100 : 15)
   if (file.size > maxMb * 1024 * 1024) throw new Error(`File tối đa ${maxMb} MB.`);
 }
 
-export function uploadMedia(path, form, onProgress = () => {}, signal) {
+export function uploadMedia(path, form, onProgress = () => {}, signal, { timeoutMs = 180000 } = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const abort = () => xhr.abort();
-    xhr.open('POST', `${base}/${path}`);
+    xhr.open('POST', `${uploadBase}/${path}`);
     xhr.setRequestHeader('Authorization', `Bearer ${getAuthToken()}`);
-    xhr.timeout = 180000;
+    xhr.timeout = timeoutMs;
     xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round(e.loaded * 100 / e.total)); };
     xhr.onload = () => {
       let result;
       try { result = JSON.parse(xhr.responseText); } catch { /* Non-JSON gateway error. */ }
       if (xhr.status >= 200 && xhr.status < 300) resolve(result?.data);
-      else reject(new Error(result?.message || `Không thể tải file (${xhr.status}).`));
+      else { const error = new Error(result?.message || `Không thể tải file (${xhr.status}).`); error.status = xhr.status; reject(error); }
     };
-    xhr.onerror = () => reject(new Error('Mất kết nối khi tải file. Vui lòng thử lại.'));
-    xhr.ontimeout = () => reject(new Error('Tải file quá thời gian. Vui lòng thử lại.'));
+    xhr.onerror = () => { const error = new Error('Mất kết nối khi tải file.'); error.code = 'UPLOAD_NETWORK'; reject(error); };
+    xhr.ontimeout = () => { const error = new Error('Tải file quá thời gian.'); error.code = 'UPLOAD_TIMEOUT'; reject(error); };
     xhr.onabort = () => reject(new DOMException('Đã hủy tải file.', 'AbortError'));
     xhr.onloadend = () => signal?.removeEventListener('abort', abort);
     if (signal?.aborted) { reject(new DOMException('Đã hủy tải file.', 'AbortError')); return; }

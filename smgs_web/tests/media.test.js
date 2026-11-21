@@ -26,6 +26,7 @@ test('authenticated multipart upload reports progress, API errors and cancellati
     let progress;
     const form = new FormData(); form.append('file', new Blob(['content']), 'a.png');
     const promise = uploadMedia('artifacts/1/media', form, value => progress = value);
+    assert.equal(request.timeout, 180000);
     assert.equal(request.headers.Authorization, 'Bearer test-token');
     assert.equal(request.headers['Content-Type'], undefined);
     assert.equal(request.body, form);
@@ -38,6 +39,9 @@ test('authenticated multipart upload reports progress, API errors and cancellati
     const controller = new AbortController(); const canceled = uploadMedia('artifacts/1/model-3d', form, undefined, controller.signal);
     controller.abort(); await assert.rejects(canceled, { name: 'AbortError' });
     const timeout = uploadMedia('artifacts/1/model-3d', form); request.ontimeout(); await assert.rejects(timeout, /quá thời gian/);
+    const scan = uploadMedia('artifacts/1/scans', form, undefined, undefined, { timeoutMs: 900000 });
+    assert.equal(request.timeout, 900000);
+    request.ontimeout(); await assert.rejects(scan, { code: 'UPLOAD_TIMEOUT' });
   } finally { globalThis.XMLHttpRequest = oldXHR; globalThis.localStorage = oldStorage; }
 });
 
