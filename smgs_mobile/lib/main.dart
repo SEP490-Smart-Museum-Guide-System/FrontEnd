@@ -10,6 +10,8 @@ import 'services/token_manager.dart';
 import 'services/backend_auth_service.dart';
 import 'widgets/heritage_decoration.dart';
 import 'widgets/automatic_location_host.dart';
+import 'widgets/exploration_map_button.dart';
+import 'models/experience.dart';
 
 final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -27,10 +29,19 @@ void main() async {
   runApp(const SMGSApp());
 }
 
-class SMGSApp extends StatelessWidget {
+class SMGSApp extends StatefulWidget {
   const SMGSApp({super.key});
   @override
+  State<SMGSApp> createState() => _SMGSAppState();
+}
+
+class _SMGSAppState extends State<SMGSApp> {
+  final _explorationNavigation = ExplorationNavigator();
+  String? _owner;
+
+  @override
   Widget build(BuildContext context) => MaterialApp(
+    navigatorObservers: [_explorationNavigation],
     title: 'SMGS • Cẩm nang bảo tàng',
     debugShowCheckedModeBanner: false,
     scaffoldMessengerKey: _messengerKey,
@@ -41,6 +52,15 @@ class SMGSApp extends StatelessWidget {
     builder: (context, child) => ListenableBuilder(
       listenable: Listenable.merge([AppPreferences.instance, AppServices.auth]),
       builder: (context, _) {
+        final user = AppServices.auth.user;
+        final owner = user?.role == UserRole.visitor ? user?.email : null;
+        if (owner != _owner) {
+          _owner = owner;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _owner == owner)
+              MuseumExploration.instance.restore(owner);
+          });
+        }
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             disableAnimations:
@@ -54,7 +74,18 @@ class SMGSApp extends StatelessWidget {
           ),
           child: AutomaticLocationHost(
             messengerKey: _messengerKey,
-            child: child ?? const SizedBox.shrink(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child ?? const SizedBox.shrink(),
+                if (owner != null)
+                  Positioned.fill(
+                    child: ExplorationMapButton(
+                      navigation: _explorationNavigation,
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

@@ -60,6 +60,7 @@ void main() {
         'qrCode': 'REAL-QR',
         'visitId': 23,
         'requestId': scan.requestId,
+        'method': 'qr',
       });
       expect(
         ScanRequest('OTHER-QR', visitId: 24).requestId,
@@ -296,6 +297,7 @@ void main() {
     'Scanner UI records the chosen live visit before showing scan success',
     (tester) async {
       Map<String, dynamic>? recorded;
+      final viewIds = <String>[];
       await http.runWithClient(
         () async {
           await screenSize(tester, const Size(390, 844));
@@ -320,6 +322,14 @@ void main() {
                 .id,
             '11',
           );
+          expect(viewIds, hasLength(1));
+          final firstScanId = recorded!['requestId'];
+          Navigator.of(tester.element(find.byType(ArtifactDetailScreen))).pop();
+          await tester.pumpAndSettle();
+          await tapText(tester, 'Xem thông tin hiện vật');
+          expect(recorded!['requestId'], isNot(firstScanId));
+          expect(viewIds, hasLength(2));
+          expect(viewIds.toSet(), hasLength(2));
         },
         () => MockClient((request) async {
           if (request.url.path == '/api/visits/me') {
@@ -338,6 +348,11 @@ void main() {
               'artifactId': 11,
               'visitId': 23,
             });
+          }
+          if (request.url.path == '/api/artifacts/11/detail-views') {
+            expect(request.method, 'POST');
+            viewIds.add(jsonDecode(request.body)['requestId'] as String);
+            return reply(true);
           }
           if (request.url.path == '/api/artifacts/scan/REAL-QR') {
             return reply({

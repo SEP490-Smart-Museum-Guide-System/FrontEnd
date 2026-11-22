@@ -6,6 +6,7 @@ import '../../widgets/museum_ui.dart';
 import '../../widgets/artifact_gallery.dart';
 import '../../models/artifact.dart';
 import '../../services/discovery_api_service.dart';
+import '../../services/visitor_experience_api.dart';
 import '../../data/visit_store.dart';
 import '../ai_guide/ai_guide_screen.dart';
 import '../../widgets/narration_player.dart';
@@ -38,9 +39,15 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        VisitStore.instance.view(widget.artifact);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+      VisitStore.instance.view(widget.artifact);
+      final id = int.tryParse(widget.artifact.id);
+      if (id == null || id <= 0) return;
+      try {
+        await VisitorExperienceApi.recordDetailView(id, ScanRequest.uuid());
+      } on Exception {
+        // A failed analytics request must leave the artifact readable.
       }
     });
     _loadPublishedContent();

@@ -24,6 +24,7 @@ class BackendApi {
       'GET' => http.get(uri, headers: headers),
       _ => throw ArgumentError('Phương thức HTTP không hợp lệ.'),
     }).timeout(timeout);
+    if (response.statusCode == 204) return null;
     return DiscoveryApiService.decodeResponse(response)['data'];
   }
 

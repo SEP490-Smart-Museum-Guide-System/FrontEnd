@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/image_picker_helper.dart';
 import '../../models/artifact.dart';
+import '../../services/app_services.dart';
 import '../../services/backend_api.dart';
 import '../../services/vision_api_service.dart';
 import '../../services/visitor_experience_api.dart';
@@ -28,6 +29,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
   Artifact? _matchedArtifact;
+  String _matchedMuseum = '';
   VisionMatchResult? _visionResult;
   String? _error;
 
@@ -59,9 +61,14 @@ class _QRScanScreenState extends State<QRScanScreen> {
 
         // 3. Ghi nhận nhận diện thành công vào lịch sử để tích điểm & mở quiz
         try {
-          final visitId = VisitorSession.activeVisit?['id'] as int?;
-          final code = artifact.qrCode.isNotEmpty ? artifact.qrCode : 'artifact_${artifact.id}';
-          await ScanRequest(code, visitId: visitId).record();
+          final visit = VisitorSession.activeVisit;
+          final visitId = visit?['museumId']?.toString() == artifact.museumId
+              ? (visit?['id'] as int?)
+              : null;
+          final code = data['qrCode'] as String?;
+          if (code != null && code.trim().isNotEmpty) {
+            await ScanRequest(code, visitId: visitId, imageMatch: true).record();
+          }
         } catch (_) {
           // Ghi nhận lịch sử không chặn hiển thị chi tiết hiện vật
         }
@@ -69,6 +76,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
         if (mounted) {
           setState(() {
             _matchedArtifact = artifact;
+            _matchedMuseum = AppServices.catalog.museumName(artifact.museumId);
             _busy = false;
           });
         }
@@ -121,7 +129,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
       context,
       ArtifactDetailScreen(
         artifact: a,
-        museumName: a.museumName.isNotEmpty ? a.museumName : 'Bảo tàng Lịch sử',
+        museumName: _matchedMuseum.isNotEmpty ? _matchedMuseum : 'Bảo tàng',
       ),
     );
   }
@@ -369,10 +377,10 @@ class _QRScanScreenState extends State<QRScanScreen> {
                     fontSize: 20,
                   ),
                 ),
-                if (_matchedArtifact!.museumName.isNotEmpty) ...[
+                if (_matchedMuseum.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    _matchedArtifact!.museumName,
+                    _matchedMuseum,
                     style: AppTextStyles.caption.copyWith(color: AppColors.secondaryText),
                   ),
                 ],
@@ -380,7 +388,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
                   const SizedBox(height: 10),
                   Text(
                     _matchedArtifact!.summary,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoal),
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoalBrown),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),

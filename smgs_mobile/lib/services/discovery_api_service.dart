@@ -18,6 +18,32 @@ class MuseumDiscoveryPage {
   final int page, totalPages, totalCount;
 }
 
+class MuseumHighlightArtifact {
+  const MuseumHighlightArtifact(this.name, this.imageUrl);
+
+  final String name;
+  final String imageUrl;
+}
+
+class MuseumHighlights {
+  const MuseumHighlights(this.qrArtifactCount, this.topArtifacts);
+
+  final int qrArtifactCount;
+  final List<MuseumHighlightArtifact> topArtifacts;
+
+  factory MuseumHighlights.fromJson(Map<String, dynamic> json) {
+    return MuseumHighlights(
+      json['qrArtifactCount'] as int,
+      (json['topArtifacts'] as List).cast<Map<String, dynamic>>().map((item) {
+        return MuseumHighlightArtifact(
+          item['name'] as String,
+          ApiConfig.mediaUrl(item['imageUrl'] as String?),
+        );
+      }).toList(),
+    );
+  }
+}
+
 class DiscoveryApiService {
   static Map<String, dynamic> decodeResponse(http.Response response) {
     if (response.statusCode == 401) {
@@ -118,6 +144,18 @@ class DiscoveryApiService {
         )
         .timeout(const Duration(seconds: 10));
     return Museum.fromBackendJson(
+      decodeResponse(response)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  static Future<MuseumHighlights> fetchMuseumHighlights(String museumId) async {
+    final response = await http
+        .get(
+          Uri.parse('${ApiConfig.museumDetailUrl(museumId)}/discovery'),
+          headers: TokenManager.authHeaders,
+        )
+        .timeout(const Duration(seconds: 10));
+    return MuseumHighlights.fromJson(
       decodeResponse(response)['data'] as Map<String, dynamic>,
     );
   }
