@@ -18,7 +18,7 @@ window.fetch = async (url, options = {}) => {
     job = { ...job, status: 'CANCELLED', error: 'Đã hủy tác vụ dựng 3D. Bộ ảnh và log được giữ lại.' };
     return new Response(JSON.stringify({ data: job }));
   }
-  return new Response(JSON.stringify({ data: String(url).endsWith('/scans') ? [job] : job }));
+  return new Response(JSON.stringify({ data: String(url).endsWith('/scans') ? (mode === 'upload' ? [] : [job]) : job }));
 };
 createRoot(document.getElementById('root')).render(<main style={{ maxWidth: 1200, margin: '24px auto', padding: 20 }}>
   <p>Kiểm tra giao diện với dữ liệu tạm · Không gọi API thật</p>

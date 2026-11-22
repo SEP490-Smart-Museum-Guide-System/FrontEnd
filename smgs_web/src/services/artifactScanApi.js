@@ -41,12 +41,15 @@ export async function startScanSafely(id, dataset, { onProgress, signal, getJobs
   }
 }
 
-export function prepareScanDataset(files, mode = 'auto') {
+export function prepareScanDataset(files, mode = 'auto', { quality = 'balanced', captureOrder = 'unordered' } = {}) {
+  if (!['balanced', 'detailed', 'preview'].includes(quality) || !['unordered', 'ordered'].includes(captureOrder)) throw new Error('Chất lượng hoặc thứ tự ảnh không hợp lệ.');
   const entries = Array.from(files || []);
   const path = f => (f.webkitRelativePath || f.name).replaceAll('\\', '/');
   const imageFolders = new Set(entries.filter(f => /(^|\/)images\/[^/]+\.(png|jpe?g)$/i.test(path(f))).map(f => path(f).slice(0, path(f).lastIndexOf('/'))));
   if (imageFolders.size > 1) throw new Error('Chọn folder của một hiện vật, không chọn nhiều dataset cùng lúc.');
   const images = entries.filter(f => /\.(png|jpe?g)$/i.test(f.name) && (!imageFolders.size || path(f).startsWith([...imageFolders][0] + '/')));
+  // Explicit ordered capture uses natural filename order, consistently across browsers.
+  if (captureOrder === 'ordered') images.sort((a, b) => path(a).localeCompare(path(b), 'en', { numeric: true }));
   if (images.length < 5 || images.length > 200) throw new Error('Chọn từ 5 đến 200 ảnh JPG/PNG của cùng một hiện vật.');
   const metadataFiles = entries.filter(f => f.name.toLowerCase() === 'metadata.json');
   const objects = entries.filter(f => /\.obj$/i.test(f.name));
@@ -60,12 +63,14 @@ export function prepareScanDataset(files, mode = 'auto') {
   if (metadata?.size > 2 * 1024 * 1024 || referenceObj?.size > 64 * 1024 * 1024) throw new Error('Metadata tối đa 2 MiB; OBJ tối đa 64 MiB.');
   const bytes = images.reduce((sum, f) => sum + f.size, 0) + (metadata?.size || 0) + (referenceObj?.size || 0);
   if (bytes > 500 * 1024 * 1024) throw new Error('Bộ dữ liệu tối đa 500 MiB.');
-  return { images, metadata, referenceObj, mode: selected, bytes };
+  return { images, metadata, referenceObj, mode: selected, bytes, quality, captureOrder };
 }
 
 export function startArtifactScan(id, dataset, progress, signal) {
   const form = new FormData();
   form.append('mode', dataset.mode);
+  form.append('quality', dataset.quality || 'balanced');
+  form.append('captureOrder', dataset.captureOrder || 'unordered');
   for (const image of dataset.images) form.append('images', image, image.name);
   if (dataset.metadata) form.append('metadata', dataset.metadata, 'metadata.json');
   if (dataset.referenceObj) form.append('referenceObj', dataset.referenceObj, dataset.referenceObj.name);

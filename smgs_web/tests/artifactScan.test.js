@@ -1,9 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareScanDataset, validateGlbPreview, startScanSafely, cancelScanJob } from '../src/services/artifactScanApi.js';
+import { prepareScanDataset, validateGlbPreview, startScanSafely, cancelScanJob, startArtifactScan } from '../src/services/artifactScanApi.js';
 import { scanProgress, scanActivity } from '../src/components/artifacts/scanProgress.js';
 const file = (name, path = name, size = 100) => ({ name, webkitRelativePath: path, size });
 const photos = Array.from({ length: 5 }, (_, i) => file(`${i}.png`, `dataset/images/${i}.png`));
+
+test('quality options and explicit natural capture order reach multipart upload with JWT only', async t => {
+  const input = ['10.png', '2.png', '1.png', '3.png', '11.png'].map(name => new File(['photo'], name));
+  const dataset = prepareScanDataset(input, 'photos', { quality: 'balanced', captureOrder: 'ordered' });
+  assert.deepEqual(dataset.images.map(f => f.name), ['1.png', '2.png', '3.png', '10.png', '11.png']);
+  assert.deepEqual(prepareScanDataset(input).images.map(f => f.name), input.map(f => f.name));
+  assert.equal(prepareScanDataset(input).quality, 'balanced');
+  assert.throws(() => prepareScanDataset(input, 'photos', { quality: 'invalid' }), /không hợp lệ/);
+  const before = { xhr: globalThis.XMLHttpRequest, storage: globalThis.localStorage };
+  t.after(() => { globalThis.XMLHttpRequest = before.xhr; globalThis.localStorage = before.storage; });
+  globalThis.localStorage = { getItem: () => 'staff-jwt' };
+  let request;
+  globalThis.XMLHttpRequest = class {
+    upload = {}; headers = {};
+    constructor() { request = this; }
+    open(method, url) { this.url = url; }
+    setRequestHeader(key, value) { this.headers[key] = value; }
+    send(body) { this.body = body; }
+  };
+  const pending = startArtifactScan(7, dataset);
+  assert.equal(request.body.get('quality'), 'balanced');
+  assert.equal(request.body.get('captureOrder'), 'ordered');
+  assert.equal(request.body.getAll('images').length, 5);
+  assert.equal(request.headers.Authorization, 'Bearer staff-jwt');
+  assert.equal(request.headers['X-Service-Key'], undefined);
+  request.status = 202; request.responseText = '{"data":{"status":"QUEUED"}}'; request.onload(); request.onloadend();
+  assert.equal((await pending).status, 'QUEUED');
+});
 
 test('coarse server 10 percent becomes an indeterminate stage; only measured native counters produce a percentage', () => {
   assert.equal(scanActivity({ status: 'PROCESSING', progress: 10 }).percent, null);

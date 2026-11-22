@@ -54,6 +54,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
   const [model, setModel] = useState(null), [savedUrl, setSavedUrl] = useState('');
   const [draft, setDraft] = useState(null), [job, setJob] = useState(null), [files, setFiles] = useState([]);
   const [mode, setMode] = useState('auto'), [busy, setBusy] = useState(false), [progress, setProgress] = useState(0);
+  const [quality, setQuality] = useState('balanced'), [captureOrder, setCaptureOrder] = useState('unordered');
   const [error, setError] = useState(''), [message, setMessage] = useState(''), [jobError, setJobError] = useState('');
   const [revision, setRevision] = useState(0), [loading, setLoading] = useState(true);
   const [processedPhotoCount, setProcessedPhotoCount] = useState(0);
@@ -217,7 +218,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
 
   const start = () =>
     perform(async signal => {
-      const dataset = prepareScanDataset(files, mode);
+      const dataset = prepareScanDataset(files, mode, { quality, captureOrder });
       const photoCount = dataset.images.length;
       setProcessedPhotoCount(photoCount);
       setProgress(0);
@@ -903,6 +904,22 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                       <option value="benchmark">Dataset có OBJ</option>
                     </select>
                   </div>
+
+                  <label style={{ fontSize: '0.8rem', display: 'grid', gap: 6 }}>
+                    Chất lượng dựng 3D
+                    <select className="form-select form-select-sm" value={quality} onChange={e => setQuality(e.target.value)} disabled={busy || running(job?.status)}>
+                      <option value="balanced">Cân bằng — ưu tiên thời gian</option>
+                      <option value="detailed">Chi tiết cao — xử lý lâu hơn</option>
+                      <option value="preview">Bản nháp nhanh — ít chi tiết</option>
+                    </select>
+                    <span style={{ color: 'var(--color-charcoal-500)', lineHeight: 1.5 }}>
+                      {quality === 'balanced' ? 'Giảm độ phân giải tính độ sâu, giữ bước tinh chỉnh bề mặt và texture 4K.' : quality === 'preview' ? 'Giảm thêm độ phân giải, bỏ bước tinh chỉnh bề mặt, texture tối đa 2K. Dùng để kiểm tra góc chụp trước.' : 'Tính độ sâu ở độ phân giải gốc của pipeline, giữ đầy đủ bước tinh chỉnh và texture 4K.'}
+                    </span>
+                  </label>
+                  <label style={{ fontSize: '0.8rem', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
+                    <input type="checkbox" checked={captureOrder === 'ordered'} onChange={e => setCaptureOrder(e.target.checked ? 'ordered' : 'unordered')} disabled={busy || running(job?.status)} />
+                    <span>Ảnh đã xếp theo vòng chụp. Chỉ bật khi thứ tự tên file đúng thứ tự chụp quanh hiện vật; giúp giảm số cặp ảnh cần khớp.</span>
+                  </label>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
                     <button
