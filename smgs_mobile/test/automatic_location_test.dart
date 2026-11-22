@@ -180,6 +180,59 @@ void main() {
     slow.dispose();
   });
 
+  test('partial overlap with a second museum blocks arrival', () async {
+    museums.add(
+      Museum.fromBackendJson({
+        ...museumJson(8), 'latitude': 10.7783, // About 156 m from the fix.
+      }),
+    );
+    gps.initial = gpsPosition(time, accuracy: 20);
+    await service.start();
+    await flush();
+    time = time.add(const Duration(seconds: 11));
+    gps.positions.add(gpsPosition(time, accuracy: 20));
+    expect(service.nearbyMuseum, isNull);
+    expect(service.arrivedMuseum, isNull);
+  });
+
+  test(
+    'approach does not trigger arrival until two precise fixes within 60 m',
+    () async {
+      gps.initial = gpsPosition(time, latitude: 10.7778); // About 100 m away.
+      await service.start();
+      await flush();
+      time = time.add(const Duration(seconds: 12));
+      gps.positions.add(gpsPosition(time, latitude: 10.7778));
+      expect(service.nearbyMuseum?.id, '7');
+      expect(service.arrivedMuseum, isNull);
+      time = time.add(const Duration(seconds: 3));
+      gps.positions.add(gpsPosition(time, accuracy: 35));
+      expect(service.arrivedMuseum, isNull);
+      time = time.add(const Duration(seconds: 3));
+      gps.positions.add(gpsPosition(time));
+      time = time.add(const Duration(seconds: 3));
+      gps.positions.add(gpsPosition(time));
+      expect(service.arrivedMuseum, isNull);
+      time = time.add(const Duration(seconds: 3));
+      gps.positions.add(gpsPosition(time));
+      expect(service.arrivedMuseum?.id, '7');
+    },
+  );
+
+  testWidgets('poor first fix and quiet stream recover without tapping', (
+    tester,
+  ) async {
+    gps.initial = gpsPosition(time, accuracy: 180);
+    await service.start();
+    await tester.pump();
+    expect(service.hasFreshLocation, false);
+    gps.initial = gpsPosition(time);
+    await tester.pump(const Duration(seconds: 10));
+    expect(service.hasFreshLocation, true);
+    expect(gps.positionRequests, 2);
+    service.pause();
+  });
+
   testWidgets(
     'app startup tracks without tapping; navigation keeps stream, background stops, resume restarts',
     (tester) async {
@@ -277,6 +330,23 @@ void main() {
       gps.positions.add(gpsPosition(time));
       await tester.pumpAndSettle();
       expect(find.text('Đã đến khu vực Bảo tàng 7 theo GPS.'), findsNothing);
+      gps.positions.add(gpsPosition(time, accuracy: 200));
+      await tester.pump();
+      gps.positions.add(gpsPosition(time));
+      time = time.add(const Duration(seconds: 11));
+      gps.positions.add(gpsPosition(time));
+      await tester.pumpAndSettle();
+      expect(service.arrivedMuseum?.id, '7');
+      expect(find.byType(SnackBar), findsNothing);
+      gps.positions.add(gpsPosition(time, latitude: 10.79));
+      await tester.pump();
+      time = time.add(const Duration(seconds: 5));
+      gps.positions.add(gpsPosition(time));
+      await tester.pump();
+      time = time.add(const Duration(seconds: 11));
+      gps.positions.add(gpsPosition(time));
+      await tester.pumpAndSettle();
+      expect(find.text('Đã đến khu vực Bảo tàng 7 theo GPS.'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import '../models/museum.dart';
 import '../services/automatic_location_service.dart';
 
 /// Mounted above Navigator: changing tabs/screens never stops GPS tracking.
@@ -20,7 +22,7 @@ class AutomaticLocationHost extends StatefulWidget {
 class _AutomaticLocationHostState extends State<AutomaticLocationHost>
     with WidgetsBindingObserver {
   late final _service = widget.service ?? AutomaticLocationService.instance;
-  String? _announcedMuseum;
+  Museum? _announcedMuseum;
   bool _started = false;
   @override
   void initState() {
@@ -47,17 +49,37 @@ class _AutomaticLocationHostState extends State<AutomaticLocationHost>
   void _arrivalChanged() {
     final museum = _service.arrivedMuseum;
     if (museum == null) {
-      _announcedMuseum = null;
+      final previous = _announcedMuseum;
+      final fix = _service.latest;
+      if (previous != null && fix != null && _service.hasFreshLocation) {
+        final distance = Geolocator.distanceBetween(
+          fix.latitude,
+          fix.longitude,
+          previous.latitude!,
+          previous.longitude!,
+        );
+        if (distance - fix.accuracyMeters >
+            AutomaticLocationService.radiusMeters) {
+          _announcedMuseum = null;
+        }
+      }
       return;
     }
-    if (_announcedMuseum == museum.id) return;
-    _announcedMuseum = museum.id;
+    if (_announcedMuseum?.id == museum.id) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _service.arrivedMuseum?.id != museum.id) return;
-      widget.messengerKey?.currentState?.showSnackBar(
+      if (!mounted ||
+          _service.arrivedMuseum?.id != museum.id ||
+          _announcedMuseum?.id == museum.id) {
+        return;
+      }
+      final messenger = widget.messengerKey?.currentState;
+      if (messenger == null) return;
+      _announcedMuseum = museum;
+      messenger.showSnackBar(
         SnackBar(content: Text('Đã đến khu vực ${museum.name} theo GPS.')),
       );
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   @override

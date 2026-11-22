@@ -30,6 +30,8 @@ class AutomaticLocationService extends ChangeNotifier {
   static final instance = AutomaticLocationService();
   static const permissionPromptKey = 'location_permission_prompted_v1';
   static const radiusMeters = 150.0;
+  static const arrivalRadiusMeters = 60.0;
+  static const arrivalMaxAccuracyMeters = 25.0;
   final Future<List<Museum>> Function(UserLocationResult) _fetchMuseums;
   final DateTime Function() _now;
   AutomaticLocationStatus status = AutomaticLocationStatus.idle;
@@ -45,6 +47,7 @@ class AutomaticLocationService extends ChangeNotifier {
   Timer? _maintenance, _retry;
   bool _foreground = false, _disposed = false;
   int _generation = 0, _lookup = 0;
+  int? _pendingFixGeneration;
 
   bool get hasFreshLocation => latest != null && _fresh(latest!);
   bool _fresh(UserLocationResult p) {
@@ -119,7 +122,7 @@ class AutomaticLocationService extends ChangeNotifier {
           ? AndroidSettings(
               accuracy: LocationAccuracy.high,
               distanceFilter: 0,
-              intervalDuration: const Duration(seconds: 10),
+              intervalDuration: const Duration(seconds: 3),
             )
           : const LocationSettings(
               accuracy: LocationAccuracy.high,
@@ -139,9 +142,11 @@ class AutomaticLocationService extends ChangeNotifier {
           );
       _maintenance = Timer.periodic(const Duration(seconds: 10), (_) {
         if (!current()) return;
-        if (latest != null && !hasFreshLocation) {
-          _clearLocation();
-          _setStatus(AutomaticLocationStatus.locating);
+        if (!hasFreshLocation) {
+          if (latest != null) {
+            _clearLocation();
+            _setStatus(AutomaticLocationStatus.locating);
+          }
           unawaited(_initialFix(generation));
         }
       });
@@ -177,6 +182,8 @@ class AutomaticLocationService extends ChangeNotifier {
   }
 
   Future<void> _initialFix(int generation) async {
+    if (_pendingFixGeneration == generation) return;
+    _pendingFixGeneration = generation;
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -194,6 +201,8 @@ class AutomaticLocationService extends ChangeNotifier {
           !hasFreshLocation) {
         _failed();
       }
+    } finally {
+      if (_pendingFixGeneration == generation) _pendingFixGeneration = null;
     }
   }
 
@@ -270,26 +279,33 @@ class AutomaticLocationService extends ChangeNotifier {
 
   void _evaluateArrival() {
     final sample = latest;
-    final candidates = sample == null || !hasFreshLocation
-        ? <Museum>[]
-        : _museums
-              .where(
-                (m) =>
-                    m.googleMapsVisible &&
-                    m.hasCoordinates &&
-                    Geolocator.distanceBetween(
-                              sample.latitude,
-                              sample.longitude,
-                              m.latitude!,
-                              m.longitude!,
-                            ) +
-                            sample.accuracyMeters <=
-                        radiusMeters,
-              )
-              .toList();
-    // Overlapping museums must not be selected arbitrarily.
-    nearbyMuseum = candidates.length == 1 ? candidates.single : null;
-    if (nearbyMuseum == null) {
+    nearbyMuseum = null;
+    var insideArrivalZone = false;
+    if (sample != null && hasFreshLocation) {
+      var possibleMuseums = 0;
+      for (final museum in _museums) {
+        if (!museum.googleMapsVisible || !museum.hasCoordinates) continue;
+        final distance = Geolocator.distanceBetween(
+          sample.latitude,
+          sample.longitude,
+          museum.latitude!,
+          museum.longitude!,
+        );
+        if (distance - sample.accuracyMeters > radiusMeters) continue;
+        // Even a partial overlap with a second museum makes the fix ambiguous.
+        if (++possibleMuseums > 1) {
+          nearbyMuseum = null;
+          break;
+        }
+        if (distance + sample.accuracyMeters <= radiusMeters) {
+          nearbyMuseum = museum;
+          insideArrivalZone =
+              sample.accuracyMeters <= arrivalMaxAccuracyMeters &&
+              distance + sample.accuracyMeters <= arrivalRadiusMeters;
+        }
+      }
+    }
+    if (nearbyMuseum == null || !insideArrivalZone) {
       _candidateId = null;
       _candidateAt = null;
       arrivedMuseum = null;
@@ -300,7 +316,7 @@ class AutomaticLocationService extends ChangeNotifier {
       _candidateAt = sample!.capturedAt;
       arrivedMuseum = null;
     } else if (sample!.capturedAt!.difference(_candidateAt!) >=
-        const Duration(seconds: 10)) {
+        const Duration(seconds: 5)) {
       arrivedMuseum = nearbyMuseum;
     }
   }

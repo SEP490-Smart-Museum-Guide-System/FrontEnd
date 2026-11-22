@@ -29,7 +29,7 @@ class AutomaticArrivalCard extends StatelessWidget {
                   (location.arrivedMuseum != null
                       ? 'Đã đến khu vực ${museum!.name} (GPS).'
                       : museum != null
-                      ? 'Đang ở gần ${museum.name}. Đang kiểm tra vị trí…'
+                      ? 'Bạn đang ở gần ${museum.name}.'
                       : location.hasFreshLocation
                       ? 'Tự động cập nhật vị trí khi bạn đến bảo tàng.'
                       : 'Đang tự xác định vị trí của bạn…');
@@ -43,10 +43,10 @@ class AutomaticArrivalCard extends StatelessWidget {
                     : Icons.my_location,
               ),
               title: Text(message),
-              subtitle: location.arrivedMuseum == null
+              subtitle: museum == null || !location.hasFreshLocation
                   ? null
-                  : const Text(
-                      'Vị trí GPS ước tính; phòng/tầng được xác định qua QR.',
+                  : Text(
+                      'Sai số GPS ước tính ±${location.latest!.accuracyMeters.ceil()} m.',
                     ),
               trailing: blocked || disabled || museum != null
                   ? const Icon(Icons.chevron_right)
