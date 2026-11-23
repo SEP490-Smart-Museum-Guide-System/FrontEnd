@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../core/network/api_config.dart';
 import 'token_manager.dart';
 import 'discovery_api_service.dart';
+import 'app_preferences.dart';
 
 class BackendApi {
   static Future<dynamic> request(
@@ -12,9 +13,11 @@ class BackendApi {
     Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/$path');
+    final isEn = AppPreferences.instance.language == 'en';
     final headers = {
       ...TokenManager.authHeaders,
       'Content-Type': 'application/json',
+      'Accept-Language': isEn ? 'en-US,en;q=0.9' : 'vi-VN,vi;q=0.9',
     };
     final response = await (switch (method) {
       'POST' => http.post(uri, headers: headers, body: jsonEncode(body)),

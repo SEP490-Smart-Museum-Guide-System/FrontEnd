@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../widgets/museum_ui.dart';
 import '../artifact/artifact_qr_scanner.dart';
 import '../artifact/qr_scan_screen.dart';
@@ -41,13 +42,14 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final canPop =
         widget.standalone || (ModalRoute.of(context)?.canPop ?? false);
     return MuseumPage(
       back: canPop,
-      title: 'Mở câu chuyện\ntrước mắt bạn.',
-      eyebrow: 'Nhận diện hiện vật',
-      subtitle: 'Chọn cách bạn muốn khám phá.',
+      title: l10n.isEn ? 'Uncover stories\nbefore your eyes.' : 'Mở câu chuyện\ntrước mắt bạn.',
+      eyebrow: l10n.isEn ? 'Artifact Recognition' : 'Nhận diện hiện vật',
+      subtitle: l10n.isEn ? 'Choose how you want to explore.' : 'Chọn cách bạn muốn khám phá.',
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -57,8 +59,8 @@ class _ScanScreenState extends State<ScanScreen> {
         Container(
           key: ScanScreenTour.qrTileKey,
           child: ActionTile(
-            title: 'Quét mã hiện vật',
-            subtitle: 'Dùng mã đặt cạnh hiện vật trưng bày.',
+            title: l10n.isEn ? 'Scan Artifact QR Code' : 'Quét mã hiện vật',
+            subtitle: l10n.isEn ? 'Use the code placed beside museum exhibits.' : 'Dùng mã đặt cạnh hiện vật trưng bày.',
             icon: Icons.qr_code_scanner,
             onTap: () =>
                 openPage(context, const ArtifactQrScanner(direct: true)),
@@ -67,8 +69,8 @@ class _ScanScreenState extends State<ScanScreen> {
         Container(
           key: ScanScreenTour.aiVisionTileKey,
           child: ActionTile(
-            title: 'Nhận diện qua hình ảnh',
-            subtitle: 'Tìm hiểu hiện vật qua góc nhìn của bạn.',
+            title: l10n.isEn ? 'AI Visual Recognition' : 'Nhận diện qua hình ảnh',
+            subtitle: l10n.isEn ? 'Identify artifacts through your camera angle.' : 'Tìm hiểu hiện vật qua góc nhìn của bạn.',
             icon: Icons.camera_alt_outlined,
             onTap: () =>
                 openPage(context, const QRScanScreen(recognition: true)),
@@ -77,16 +79,18 @@ class _ScanScreenState extends State<ScanScreen> {
         Container(
           key: ScanScreenTour.collectionTileKey,
           child: ActionTile(
-            title: 'Tra cứu bộ sưu tập',
-            subtitle: 'Tìm hiện vật theo tên và chủ đề.',
+            title: l10n.isEn ? 'Browse Collection' : 'Tra cứu bộ sưu tập',
+            subtitle: l10n.isEn ? 'Search artifacts by name and category.' : 'Tìm hiện vật theo tên và chủ đề.',
             icon: Icons.view_list_outlined,
             onTap: () =>
                 openPage(context, const ExploreScreen(standalone: true)),
           ),
         ),
         const SizedBox(height: 10),
-        const Notice(
-          'Bạn có thể tra cứu bộ sưu tập mà không cần cấp quyền máy ảnh.',
+        Notice(
+          l10n.isEn
+              ? 'You can browse the collection without camera permissions.'
+              : 'Bạn có thể tra cứu bộ sưu tập mà không cần cấp quyền máy ảnh.',
         ),
       ],
     );

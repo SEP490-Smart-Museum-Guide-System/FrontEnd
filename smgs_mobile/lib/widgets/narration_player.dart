@@ -425,7 +425,7 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
           FilledButton(
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(VisitorRadius.full),
               ),
               backgroundColor: AppColors.deepBurgundy,
               foregroundColor: Colors.white,

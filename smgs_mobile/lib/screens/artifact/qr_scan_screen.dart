@@ -1,8 +1,7 @@
+import '../../core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/image_picker_helper.dart';
 import '../../models/artifact.dart';
 import '../../services/app_services.dart';
@@ -140,11 +139,12 @@ class _QRScanScreenState extends State<QRScanScreen> {
       return const ArtifactQrScanner();
     }
 
+    final l10n = context.l10n;
     return MuseumPage(
       back: true,
-      title: 'Nhận diện thị giác AI',
-      eyebrow: 'Trí tuệ nhân tạo CLIP',
-      subtitle: 'Chụp ảnh hiện vật để nhận diện tự động',
+      title: l10n.isEn ? 'AI Visual Recognition' : 'Nhận diện thị giác AI',
+      eyebrow: l10n.isEn ? 'CLIP Artificial Intelligence' : 'Trí tuệ nhân tạo CLIP',
+      subtitle: l10n.isEn ? 'Photograph artifact for automatic recognition' : 'Chụp ảnh hiện vật để nhận diện tự động',
       children: [
         // Khung hiển thị ảnh chụp hoặc hướng dẫn
         Container(
@@ -152,7 +152,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
           width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.darkBrown,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
             border: Border.all(color: AppColors.mutedGold, width: 1.5),
             boxShadow: [
               BoxShadow(
@@ -174,39 +174,48 @@ class _QRScanScreenState extends State<QRScanScreen> {
                   height: double.infinity,
                 )
               else
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: AppColors.antiqueIvory.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        size: 38,
-                        color: AppColors.antiqueIvory,
-                      ),
+                SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: AppColors.antiqueIvory.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 34,
+                            color: AppColors.antiqueIvory,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.isEn ? 'Photograph exhibited artifact' : 'Chụp ảnh hiện vật trưng bày',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.antiqueIvory,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.isEn ? 'AI extracts 512-D vector for matching' : 'AI sẽ trích xuất vector 512 chiều để đối chiếu',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.antiqueIvory.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Chụp ảnh hiện vật trưng bày',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.antiqueIvory,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'AI sẽ trích xuất vector 512 chiều để đối chiếu',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.antiqueIvory.withValues(alpha: 0.75),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               if (_busy)
                 Container(
@@ -218,7 +227,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
                       const CircularProgressIndicator(color: AppColors.mutedGold),
                       const SizedBox(height: 16),
                       Text(
-                        'Đang phân tích vector thị giác…',
+                        l10n.isEn ? 'Analyzing visual vector…' : 'Đang phân tích vector thị giác…',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.antiqueIvory,
                           fontWeight: FontWeight.w600,
@@ -226,7 +235,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'So khớp đặc trưng CLIP ViT-B/32 với kho hiện vật',
+                        l10n.isEn ? 'Matching CLIP ViT-B/32 features with artifact database' : 'So khớp đặc trưng CLIP ViT-B/32 với kho hiện vật',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.antiqueIvory.withValues(alpha: 0.8),
                         ),
@@ -244,13 +253,13 @@ class _QRScanScreenState extends State<QRScanScreen> {
         // Nút bấm tác vụ chụp / chọn ảnh
         if (!_busy && _matchedArtifact == null) ...[
           PrimaryButton(
-            label: 'Chụp ảnh từ máy ảnh',
+            label: l10n.isEn ? 'Take photo with camera' : 'Chụp ảnh từ máy ảnh',
             icon: Icons.camera_alt_outlined,
             onPressed: () => _pickFromCameraOrGallery(useCamera: true),
           ),
           const SizedBox(height: 10),
           SecondaryButton(
-            label: 'Chọn ảnh từ thư viện thiết bị',
+            label: l10n.isEn ? 'Choose photo from device gallery' : 'Chọn ảnh từ thư viện thiết bị',
             icon: Icons.photo_library_outlined,
             onPressed: () => _pickFromCameraOrGallery(useCamera: false),
           ),
@@ -273,7 +282,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(VisitorRadius.md),
               border: Border.all(color: Colors.red.shade200),
             ),
             child: Row(
@@ -317,8 +326,8 @@ class _QRScanScreenState extends State<QRScanScreen> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
+              color: VisitorColors.surface1,
+              borderRadius: BorderRadius.circular(VisitorRadius.xl),
               border: Border.all(color: const Color(0xFF2E6B3E), width: 1.5),
               boxShadow: [
                 BoxShadow(
@@ -357,7 +366,7 @@ class _QRScanScreenState extends State<QRScanScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFF2E6B3E).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(VisitorRadius.xs),
                         ),
                         child: Text(
                           '${(_visionResult!.similarity * 100).toStringAsFixed(1)}% tin cậy',

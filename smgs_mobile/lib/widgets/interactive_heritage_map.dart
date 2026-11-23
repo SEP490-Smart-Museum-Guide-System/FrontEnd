@@ -4,6 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/visitor_tokens.dart';
+import '../core/theme/visitor_colors.dart';
 import '../models/museum.dart';
 
 class InteractiveHeritageMap extends StatefulWidget {
@@ -170,18 +172,22 @@ class _InteractiveHeritageMapState extends State<InteractiveHeritageMap> {
           ),
           Align(
             alignment: Alignment.bottomRight,
-            child: ColoredBox(
-              color: Colors.white,
+            child: Container(
+              margin: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.92),
+                borderRadius: BorderRadius.circular(VisitorRadius.xs),
+              ),
               child: InkWell(
                 onTap: () => launchUrl(
                   Uri.parse('https://www.openstreetmap.org/copyright'),
                   mode: LaunchMode.externalApplication,
                 ),
                 child: const Padding(
-                  padding: EdgeInsets.all(5),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   child: Text(
                     '© OpenStreetMap contributors',
-                    style: TextStyle(fontSize: 11, color: Colors.black),
+                    style: TextStyle(fontSize: 11, color: Colors.black87),
                   ),
                 ),
               ),
@@ -191,11 +197,13 @@ class _InteractiveHeritageMapState extends State<InteractiveHeritageMap> {
       ),
       if (_tileError)
         Positioned(
-          top: 4,
-          left: 8,
-          right: 8,
+          top: 8,
+          left: 12,
+          right: 12,
           child: Material(
             color: Colors.white,
+            elevation: 2,
+            borderRadius: BorderRadius.circular(VisitorRadius.md),
             child: ListTile(
               dense: true,
               title: const Text(

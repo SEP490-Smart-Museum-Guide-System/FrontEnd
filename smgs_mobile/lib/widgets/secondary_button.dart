@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
@@ -9,7 +10,7 @@ class SecondaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
-    this.height = 54,
+    this.height = 48,
   });
   final String label;
   final VoidCallback? onPressed;
@@ -23,10 +24,10 @@ class SecondaryButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         minimumSize: Size(48, height),
         foregroundColor: AppColors.darkBrown,
-        backgroundColor: AppColors.card,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        side: const BorderSide(color: AppColors.border, width: 1.2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: VisitorColors.surface2,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.md)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

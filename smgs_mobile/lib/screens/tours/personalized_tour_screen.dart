@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../services/app_preferences.dart';
 import '../../services/app_services.dart';
 import '../../services/backend_api.dart';
 import '../../services/personalized_tour_api.dart';
@@ -96,10 +98,13 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
   }
 
   void _addInterest() {
+    final isEn = AppPreferences.instance.language == 'en';
     final value = _interestInput.text.trim();
     if (value.length < 2 || value.length > 80 || _selected.length >= 8) {
       setState(
-        () => _error = 'Nhập sở thích từ 2 đến 80 ký tự, tối đa 8 lựa chọn.',
+        () => _error = isEn
+            ? 'Enter interest from 2 to 80 characters, maximum 8 items.'
+            : 'Nhập sở thích từ 2 đến 80 ký tự, tối đa 8 lựa chọn.',
       );
       return;
     }
@@ -112,21 +117,24 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final id = int.tryParse(_museumId);
     final chips = {
       ..._topics,
-      'Lịch sử',
-      'Gốm sứ',
-      'Nghệ thuật',
-      'Văn hóa',
-      'Khoa học',
+      l10n.isEn ? 'History' : 'Lịch sử',
+      l10n.isEn ? 'Ceramics' : 'Gốm sứ',
+      l10n.isEn ? 'Fine Arts' : 'Nghệ thuật',
+      l10n.isEn ? 'Culture' : 'Văn hóa',
+      l10n.isEn ? 'Science' : 'Khoa học',
       ..._selected,
     };
     return MuseumPage(
       back: widget.standalone,
-      title: 'Tham quan theo\ncách của bạn.',
-      eyebrow: 'Hành trình của bạn',
-      subtitle: 'Chọn tour có sẵn, khám phá tự do hoặc thử một gợi ý cá nhân.',
+      title: l10n.isEn ? 'Tour your\nown way.' : 'Tham quan theo\ncách của bạn.',
+      eyebrow: l10n.isEn ? 'Your Journey' : 'Hành trình của bạn',
+      subtitle: l10n.isEn
+          ? 'Choose curated tours, explore freely or try a custom itinerary.'
+          : 'Chọn tour có sẵn, khám phá tự do hoặc thử một gợi ý cá nhân.',
       children: [
         BackendPanel(
           resourceKey: 'active-visit-banner',
@@ -146,16 +154,8 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
               margin: const EdgeInsets.only(bottom: 20),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.mutedGold, width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.darkBrown.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                color: VisitorColors.surface1,
+                borderRadius: BorderRadius.circular(VisitorRadius.xl),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,11 +166,11 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.deepBurgundy,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(VisitorRadius.xs),
                         ),
-                        child: const Text(
-                          'ĐANG THAM QUAN',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.isEn ? 'CURRENT VISIT' : 'ĐANG THAM QUAN',
+                          style: const TextStyle(
                             color: AppColors.antiqueIvory,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -190,8 +190,16 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                   const SizedBox(height: 4),
                   Text(
                     v['personalizedTourId'] != null
-                        ? 'Hành trình cá nhân AI đang diễn ra'
-                        : (v['tourId'] != null ? 'Tour tham quan bảo tàng' : 'Lượt tham quan tự do'),
+                        ? (l10n.isEn
+                            ? 'AI personalized journey in progress'
+                            : 'Hành trình cá nhân AI đang diễn ra')
+                        : (v['tourId'] != null
+                            ? (l10n.isEn
+                                ? 'Museum tour in progress'
+                                : 'Tour tham quan bảo tàng')
+                            : (l10n.isEn
+                                ? 'Self-guided visit'
+                                : 'Lượt tham quan tự do')),
                     style: AppTextStyles.bodySmall,
                   ),
                   const SizedBox(height: 12),
@@ -199,7 +207,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                     children: [
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Xem tiến độ chuyến đi',
+                          label: l10n.isEn ? 'View Trip Progress' : 'Xem tiến độ chuyến đi',
                           icon: Icons.map_outlined,
                           height: 42,
                           onPressed: () {
@@ -221,7 +229,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         DropdownButtonFormField<String>(
           initialValue: id == null ? null : _museumId,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Bảo tàng'),
+          decoration: InputDecoration(labelText: l10n.isEn ? 'Museum' : 'Bảo tàng'),
           items: AppServices.catalog.museums
               .map(
                 (m) => DropdownMenuItem(
@@ -243,16 +251,20 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                 },
         ),
         if (id == null)
-          const Notice(
-            'Chưa có bảo tàng. Hãy tải lại danh mục hoặc liên hệ nhân viên.',
+          Notice(
+            l10n.isEn
+                ? 'No museum selected. Please reload catalog or contact staff.'
+                : 'Chưa có bảo tàng. Hãy tải lại danh mục hoặc liên hệ nhân viên.',
           ),
         const SizedBox(height: 20),
-        const Notice(
-          'Cá nhân hóa là lựa chọn thêm. Hành trình cá nhân không thay thế vé vào cửa hoặc tour bạn đã mua.',
+        Notice(
+          l10n.isEn
+              ? 'Personalization is an optional add-on. Personal journey does not replace admission tickets or purchased tours.'
+              : 'Cá nhân hóa là lựa chọn thêm. Hành trình cá nhân không thay thế vé vào cửa hoặc tour bạn đã mua.',
         ),
         const SizedBox(height: 16),
         SecondaryButton(
-          label: 'Xem tour có sẵn',
+          label: l10n.isEn ? 'View Available Tours' : 'Xem tour có sẵn',
           icon: Icons.route_outlined,
           onPressed: id == null || _busy
               ? null
@@ -260,7 +272,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         ),
         TextButton.icon(
           icon: const Icon(Icons.explore_outlined),
-          label: const Text('Tham quan tự do'),
+          label: Text(l10n.isEn ? 'Self-Guided Visit' : 'Tham quan tự do'),
           onPressed: id == null || _busy
               ? null
               : () => _run(() async {
@@ -272,9 +284,9 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                   );
                 }),
         ),
-        const SectionHeading('Gợi ý hành trình cá nhân'),
-        const Text(
-          'Bạn có bao nhiêu thời gian?',
+        SectionHeading(l10n.isEn ? 'Custom Itinerary Suggestions' : 'Gợi ý hành trình cá nhân'),
+        Text(
+          l10n.isEn ? 'How much time do you have?' : 'Bạn có bao nhiêu thời gian?',
           style: AppTextStyles.cardTitle,
         ),
         const SizedBox(height: 12),
@@ -284,7 +296,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           children: [15, 30, 60, 90, 120]
               .map(
                 (v) => ChoiceChip(
-                  label: Text('$v phút'),
+                  label: Text(l10n.isEn ? '$v mins' : '$v phút'),
                   labelStyle: AppTextStyles.bodySmall.copyWith(
                     color: _minutes == v
                         ? AppColors.antiqueIvory
@@ -299,7 +311,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
               )
               .toList(),
         ),
-        const SectionHeading('Bạn muốn khám phá điều gì?'),
+        SectionHeading(l10n.isEn ? 'What do you want to explore?' : 'Bạn muốn khám phá điều gì?'),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -322,7 +334,9 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                           } else if (_selected.length < 8) {
                             _selected.add(topic);
                           } else {
-                            _error = 'Bạn có thể chọn tối đa 8 sở thích.';
+                            _error = l10n.isEn
+                                ? 'You can select up to 8 interests.'
+                                : 'Bạn có thể chọn tối đa 8 sở thích.';
                           }
                         }),
                 ),
@@ -335,8 +349,10 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           maxLength: 80,
           enabled: !_busy,
           decoration: InputDecoration(
-            labelText: 'Thêm sở thích của bạn',
-            hintText: 'Ví dụ: hoa văn, nhạc cụ, đồ đồng…',
+            labelText: l10n.isEn ? 'Add your interest' : 'Thêm sở thích của bạn',
+            hintText: l10n.isEn
+                ? 'E.g.: patterns, instruments, bronze…'
+                : 'Ví dụ: hoa văn, nhạc cụ, đồ đồng…',
             suffixIcon: IconButton(
               onPressed: _busy ? null : _addInterest,
               icon: const Icon(Icons.add),
@@ -352,7 +368,9 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
             child: Notice(_error!),
           ),
         PrimaryButton(
-          label: _busy ? 'Đang chuẩn bị hành trình…' : 'Gợi ý theo sở thích',
+          label: _busy
+              ? (l10n.isEn ? 'Preparing journey…' : 'Đang chuẩn bị hành trình…')
+              : (l10n.isEn ? 'Recommend by Interest' : 'Gợi ý theo sở thích'),
           icon: Icons.auto_awesome_outlined,
           onPressed: id == null || _selected.isEmpty || _busy
               ? null
@@ -375,10 +393,12 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                 }),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Gợi ý dùng nội dung đã xuất bản và quyền truy cập của bạn. Thời lượng là ước tính; bạn có thể chọn ít điểm hơn thời gian đã dành.',
+        Text(
+          l10n.isEn
+              ? 'Recommendations use published exhibits and your access permissions. Duration is an estimate; you can visit fewer stops.'
+              : 'Gợi ý dùng nội dung đã xuất bản và quyền truy cập của bạn. Thời lượng là ước tính; bạn có thể chọn ít điểm hơn thời gian đã dành.',
         ),
-        const SectionHeading('Hành trình cá nhân đã lưu'),
+        SectionHeading(l10n.isEn ? 'Saved Personal Journeys' : 'Hành trình cá nhân đã lưu'),
         FutureBuilder<List<Map<String, dynamic>>>(
           future: _saved,
           builder: (context, snapshot) {
@@ -388,19 +408,19 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
             if (_savedFailed) {
               return Column(
                 children: [
-                  const Notice('Chưa tải được hành trình đã lưu.'),
+                  Notice(l10n.isEn ? 'Unable to load saved journeys.' : 'Chưa tải được hành trình đã lưu.'),
                   TextButton(
                     onPressed: () => setState(() {
                       _saved = _loadSaved();
                     }),
-                    child: const Text('Thử lại'),
+                    child: Text(l10n.isEn ? 'Retry' : 'Thử lại'),
                   ),
                 ],
               );
             }
             final rows = snapshot.data ?? [];
             if (rows.isEmpty) {
-              return const Notice('Bạn chưa lưu hành trình cá nhân nào.');
+              return Notice(l10n.isEn ? 'You have not saved any personal journeys yet.' : 'Bạn chưa lưu hành trình cá nhân nào.');
             }
             return Column(
               children: rows
@@ -408,7 +428,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                     (p) => ActionTile(
                       title: p['museumName'] as String,
                       subtitle:
-                          '${(p['interests'] as List).join(', ')} · ${(p['stops'] as List).length} điểm · ${tourMinutes(p['estimatedMinutes'] as num)} phút',
+                          '${(p['interests'] as List).join(', ')} · ${(p['stops'] as List).length} ${l10n.isEn ? 'stops' : 'điểm'} · ${tourMinutes(p['estimatedMinutes'] as num)} ${l10n.isEn ? 'mins' : 'phút'}',
                       icon: Icons.bookmark_outline,
                       onTap: () => openPage(
                         context,
@@ -440,21 +460,22 @@ class _PersonalizedTourDetailScreenState
   String? _error;
 
   Future<void> _showActiveVisitConflictDialog(Map<String, dynamic> active) async {
+    final isEn = AppPreferences.instance.language == 'en';
     final activeId = active['id'] as int;
-    final museumName = _plan['museumName'] as String? ?? 'bảo tàng này';
+    final museumName = _plan['museumName'] as String? ?? (isEn ? 'this museum' : 'bảo tàng này');
     final action = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.xl)),
         title: Row(
           children: [
             const Icon(Icons.info_outline, color: AppColors.deepBurgundy, size: 24),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Chuyến đi đang diễn ra',
-                style: TextStyle(
+                isEn ? 'Active Visit in Progress' : 'Chuyến đi đang diễn ra',
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkBrown,
@@ -468,20 +489,24 @@ class _PersonalizedTourDetailScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Bạn đang có chuyến tham quan #$activeId tại $museumName chưa kết thúc.',
+              isEn
+                  ? 'You have an ongoing visit #$activeId at $museumName.'
+                  : 'Bạn đang có chuyến tham quan #$activeId tại $museumName chưa kết thúc.',
               style: AppTextStyles.bodyMedium,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Bạn có thể xem tiếp tiến độ chuyến đi này, hoặc kết thúc chuyến cũ để bắt đầu hành trình cá nhân AI vừa tạo.',
-              style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
+            Text(
+              isEn
+                  ? 'You can view the progress of this visit, or complete it to start your newly generated personalized journey.'
+                  : 'Bạn có thể xem tiếp tiến độ chuyến đi này, hoặc kết thúc chuyến cũ để bắt đầu hành trình cá nhân AI vừa tạo.',
+              style: const TextStyle(fontSize: 13, color: AppColors.secondaryText),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'cancel'),
-            child: const Text('Đóng'),
+            child: Text(isEn ? 'Close' : 'Đóng'),
           ),
           OutlinedButton(
             style: OutlinedButton.styleFrom(
@@ -489,12 +514,12 @@ class _PersonalizedTourDetailScreenState
               side: const BorderSide(color: AppColors.deepBurgundy),
             ),
             onPressed: () => Navigator.pop(ctx, 'end_and_start'),
-            child: const Text('Kết thúc cũ & Bắt đầu mới'),
+            child: Text(isEn ? 'End Old & Start New' : 'Kết thúc cũ & Bắt đầu mới'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
             onPressed: () => Navigator.pop(ctx, 'continue'),
-            child: const Text('Xem tiến độ chuyến đang đi'),
+            child: Text(isEn ? 'View Current Visit' : 'Xem tiến độ chuyến đang đi'),
           ),
         ],
       ),
@@ -527,7 +552,9 @@ class _PersonalizedTourDetailScreenState
       } catch (e) {
         if (mounted) {
           setState(() {
-            _error = 'Lưu ý: Không thể tự đóng chuyến cũ: ${e.toString().replaceFirst("Exception: ", "")}. Hãy mở chuyến cũ để kiểm tra.';
+            _error = isEn
+                ? 'Note: Could not complete previous visit: ${e.toString().replaceFirst("Exception: ", "")}. Please open it to verify.'
+                : 'Lưu ý: Không thể tự đóng chuyến cũ: ${e.toString().replaceFirst("Exception: ", "")}. Hãy mở chuyến cũ để kiểm tra.';
           });
         }
       } finally {
@@ -592,17 +619,18 @@ class _PersonalizedTourDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final stops = (_plan['stops'] as List).cast<Map<String, dynamic>>();
     final interests = (_plan['interests'] as List).cast<String>();
     final estMinutes = _plan['estimatedMinutes'] as num? ?? 0;
     final availMinutes = _plan['availableMinutes'] as num? ?? 60;
-    final museumName = _plan['museumName'] as String? ?? 'Bảo tàng';
+    final museumName = _plan['museumName'] as String? ?? (l10n.isEn ? 'Museum' : 'Bảo tàng');
     final notice = _plan['notice'] as String? ?? '';
 
     return MuseumPage(
       back: true,
-      title: 'Hành trình AI\ndành riêng cho bạn.',
-      eyebrow: 'Lộ trình tham quan cá nhân hóa',
+      title: l10n.isEn ? 'AI Journey\nTailored for You.' : 'Hành trình AI\ndành riêng cho bạn.',
+      eyebrow: l10n.isEn ? 'Personalized Itinerary' : 'Lộ trình tham quan cá nhân hóa',
       subtitle: museumName,
       children: [
         // 1. Hero Itinerary Card (May đo bởi AI)
@@ -613,17 +641,18 @@ class _PersonalizedTourDetailScreenState
           availMinutes,
           museumName,
           notice,
+          l10n,
         ),
         const SizedBox(height: 20),
 
         // 2. Section Heading
-        const SectionHeading('Lộ trình các trạm dừng'),
+        SectionHeading(l10n.isEn ? 'Itinerary Stations' : 'Lộ trình các trạm dừng'),
         const SizedBox(height: 8),
 
         // 3. Vertical Connected Timeline Stations
         for (var i = 0; i < stops.length; i++) ...[
-          if (i > 0) _buildTravelConnector(stops[i]),
-          _buildStationNode(stops[i], i + 1, museumName),
+          if (i > 0) _buildTravelConnector(stops[i], l10n),
+          _buildStationNode(stops[i], i + 1, museumName, l10n),
         ],
 
         const SizedBox(height: 20),
@@ -631,10 +660,10 @@ class _PersonalizedTourDetailScreenState
         // 4. Error Notice if any
         if (_error != null) ...[
           Notice(_error!),
-          if (_error!.contains('lượt tham quan')) ...[
+          if (_error!.contains('lượt tham quan') || _error!.contains('visit')) ...[
             const SizedBox(height: 8),
             SecondaryButton(
-              label: 'Mở tiến độ chuyến đi đang diễn ra',
+              label: l10n.isEn ? 'View Current Visit Progress' : 'Mở tiến độ chuyến đi đang diễn ra',
               icon: Icons.map_outlined,
               onPressed: () async {
                 final list =
@@ -644,7 +673,7 @@ class _PersonalizedTourDetailScreenState
                   orElse: () =>
                       list.isNotEmpty ? list.first : <String, dynamic>{},
                 );
-                if (active.isNotEmpty && mounted) {
+                if (active.isNotEmpty && context.mounted) {
                   await _pushTourPage(
                     context,
                     VisitProgressScreen(visitId: active['id'] as int),
@@ -664,15 +693,17 @@ class _PersonalizedTourDetailScreenState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 PrimaryButton(
-                  label: _busy ? 'Đang xử lý…' : 'Bắt đầu hành trình này',
+                  label: _busy
+                      ? (l10n.isEn ? 'Processing…' : 'Đang xử lý…')
+                      : (l10n.isEn ? 'Start This Journey' : 'Bắt đầu hành trình này'),
                   icon: Icons.play_arrow_outlined,
                   onPressed: _busy ? null : () => _act(start: true),
                 ),
                 const SizedBox(height: 10),
                 SecondaryButton(
                   label: _plan['isSaved'] == true
-                      ? 'Đã lưu vào hành trình của bạn'
-                      : 'Lưu để đi sau',
+                      ? (l10n.isEn ? 'Saved to Your Journeys' : 'Đã lưu vào hành trình của bạn')
+                      : (l10n.isEn ? 'Save for Later' : 'Lưu để đi sau'),
                   icon: Icons.bookmark_outline,
                   onPressed:
                       _busy || _plan['isSaved'] == true ? null : () => _act(),
@@ -686,7 +717,7 @@ class _PersonalizedTourDetailScreenState
         Center(
           child: TextButton(
             onPressed: _busy ? null : () => Navigator.pop(context),
-            child: const Text('Quay lại lựa chọn tham quan'),
+            child: Text(l10n.isEn ? 'Back to Tour Options' : 'Quay lại lựa chọn tham quan'),
           ),
         ),
       ],
@@ -700,6 +731,7 @@ class _PersonalizedTourDetailScreenState
     num availMinutes,
     String museumName,
     String notice,
+    AppLocalizations l10n,
   ) {
     final ratio = availMinutes > 0
         ? (estMinutes / availMinutes).clamp(0.0, 1.0)
@@ -707,19 +739,8 @@ class _PersonalizedTourDetailScreenState
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border,
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -737,14 +758,14 @@ class _PersonalizedTourDetailScreenState
                     color: AppColors.mutedGold.withValues(alpha: 0.5),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome, size: 13, color: AppColors.deepBurgundy),
-                    SizedBox(width: 5),
+                    const Icon(Icons.auto_awesome, size: 13, color: AppColors.deepBurgundy),
+                    const SizedBox(width: 5),
                     Text(
-                      'AI TỐI ƯU LỘ TRÌNH',
-                      style: TextStyle(
+                      l10n.isEn ? 'AI-OPTIMIZED ROUTE' : 'AI TỐI ƯU LỘ TRÌNH',
+                      style: const TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.6,
@@ -793,9 +814,9 @@ class _PersonalizedTourDetailScreenState
                         ),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        'Điểm dừng',
-                        style: TextStyle(
+                      Text(
+                        l10n.isEn ? 'Stops' : 'Điểm dừng',
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.secondaryText,
                         ),
@@ -812,7 +833,7 @@ class _PersonalizedTourDetailScreenState
                   child: Column(
                     children: [
                       Text(
-                        "${tourMinutes(estMinutes)}' / ${availMinutes}'",
+                        "${tourMinutes(estMinutes)}' / $availMinutes'",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -820,9 +841,9 @@ class _PersonalizedTourDetailScreenState
                         ),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        'Dự kiến / Dành ra',
-                        style: TextStyle(
+                      Text(
+                        l10n.isEn ? 'Est. / Budget' : 'Dự kiến / Dành ra',
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.secondaryText,
                         ),
@@ -847,9 +868,9 @@ class _PersonalizedTourDetailScreenState
                         ),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        'Chủ đề khớp',
-                        style: TextStyle(
+                      Text(
+                        l10n.isEn ? 'Matched Topics' : 'Chủ đề khớp',
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.secondaryText,
                         ),
@@ -893,8 +914,8 @@ class _PersonalizedTourDetailScreenState
                       vertical: 3.5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.secondaryBackground,
-                      borderRadius: BorderRadius.circular(14),
+                      color: VisitorColors.surface2,
+                      borderRadius: BorderRadius.circular(VisitorRadius.full),
                       border: Border.all(
                         color: AppColors.border,
                       ),
@@ -959,9 +980,9 @@ class _PersonalizedTourDetailScreenState
     );
   }
 
-  Widget _buildTravelConnector(Map<String, dynamic> nextStop) {
+  Widget _buildTravelConnector(Map<String, dynamic> nextStop, AppLocalizations l10n) {
     final walk = nextStop['walkMinutes'] as num? ?? 2;
-    final gallery = nextStop['galleryName'] as String? ?? 'Phòng tiếp theo';
+    final gallery = nextStop['galleryName'] as String? ?? (l10n.isEn ? 'Next Gallery' : 'Phòng tiếp theo');
 
     return Padding(
       padding: const EdgeInsets.only(left: 18, top: 4, bottom: 4),
@@ -984,20 +1005,10 @@ class _PersonalizedTourDetailScreenState
           ),
           const SizedBox(width: 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.mutedGold.withValues(alpha: 0.3),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: VisitorColors.surface2,
+              borderRadius: BorderRadius.circular(VisitorRadius.full),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1009,7 +1020,9 @@ class _PersonalizedTourDetailScreenState
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  '${tourMinutes(walk)} phút di chuyển sang $gallery',
+                  l10n.isEn
+                      ? '${tourMinutes(walk)} mins walk to $gallery'
+                      : '${tourMinutes(walk)} phút di chuyển sang $gallery',
                   style: AppTextStyles.caption.copyWith(
                     fontWeight: FontWeight.w600,
                     color: AppColors.darkBrown,
@@ -1027,6 +1040,7 @@ class _PersonalizedTourDetailScreenState
     Map<String, dynamic> stop,
     int orderNo,
     String museumName,
+    AppLocalizations l10n,
   ) {
     final artifactId = stop['artifactId']?.toString() ?? '';
     final artifact = AppServices.catalog.artifacts
@@ -1034,23 +1048,15 @@ class _PersonalizedTourDetailScreenState
         .firstOrNull;
 
     final visitMin = stop['visitMinutes'] as num? ?? 5;
-    final gallery = stop['galleryName'] as String? ?? 'Gian trưng bày';
-    final name = stop['name'] as String? ?? 'Hiện vật';
+    final gallery = stop['galleryName'] as String? ?? (l10n.isEn ? 'Gallery' : 'Gian trưng bày');
+    final name = stop['name'] as String? ?? (l10n.isEn ? 'Artifact' : 'Hiện vật');
     final reason = stop['reason'] as String? ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.lg),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -1134,7 +1140,7 @@ class _PersonalizedTourDetailScreenState
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${tourMinutes(visitMin)} phút',
+                        l10n.isEn ? '${tourMinutes(visitMin)} mins' : '${tourMinutes(visitMin)} phút',
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1153,7 +1159,7 @@ class _PersonalizedTourDetailScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(VisitorRadius.sm),
                   child: Container(
                     width: 70,
                     height: 70,
@@ -1162,7 +1168,7 @@ class _PersonalizedTourDetailScreenState
                         ? Image.network(
                             artifact!.imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (_, _, _) => const Icon(
                               Icons.museum_outlined,
                               size: 32,
                               color: AppColors.deepBurgundy,
@@ -1225,8 +1231,8 @@ class _PersonalizedTourDetailScreenState
                                 ),
                               );
                             },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
                                 vertical: 4,
                                 horizontal: 6,
                               ),
@@ -1234,15 +1240,15 @@ class _PersonalizedTourDetailScreenState
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'Xem hiện vật',
-                                    style: TextStyle(
+                                    l10n.isEn ? 'View artifact' : 'Xem hiện vật',
+                                    style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.deepBurgundy,
                                     ),
                                   ),
-                                  SizedBox(width: 4),
-                                  Icon(
+                                  const SizedBox(width: 4),
+                                  const Icon(
                                     Icons.arrow_forward_ios,
                                     size: 11,
                                     color: AppColors.deepBurgundy,

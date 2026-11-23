@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import '../services/app_services.dart';
 
 class VisitorOnboardingDialog extends StatefulWidget {
@@ -101,15 +102,11 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
           constraints: const BoxConstraints(maxWidth: 440),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.antiqueIvory,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.mutedGold.withValues(alpha: 0.55),
-                width: 1.5,
-              ),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(VisitorRadius.xl),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 32,
                   offset: const Offset(0, 12),
                 ),
@@ -127,11 +124,8 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.mutedGold.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: AppColors.mutedGold.withValues(alpha: 0.4),
-                          ),
+                          color: VisitorColors.surfaceGold,
+                          borderRadius: BorderRadius.circular(VisitorRadius.xs),
                         ),
                         child: Text(
                           'SMGS - HƯỚNG DẪN NHẬP MÔN',
@@ -254,7 +248,7 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
                             height: 7,
                             decoration: BoxDecoration(
                               color: isActive ? AppColors.deepBurgundy : AppColors.border,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(VisitorRadius.full),
                             ),
                           );
                         }),
@@ -269,9 +263,9 @@ class _VisitorOnboardingDialogState extends State<VisitorOnboardingDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.deepBurgundy,
                             foregroundColor: AppColors.lightText,
-                            elevation: 2,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(VisitorRadius.lg),
                             ),
                           ),
                           child: Row(
