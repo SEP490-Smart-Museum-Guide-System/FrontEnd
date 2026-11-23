@@ -35,7 +35,7 @@ void main() {
   });
   for (final width in [360.0, 390.0, 430.0]) {
     apiTestWidgets(
-      'white home and floating navigation preserve 5 tabs at $width',
+      'white home and bottom navigation preserve 5 tabs at $width',
       (tester) async {
         await screenSize(tester, Size(width, 844));
         await tester.pumpWidget(
@@ -50,7 +50,10 @@ void main() {
         );
         await tester.pumpAndSettle();
         final surface = find.byKey(const ValueKey('home-white-surface'));
-        expect(tester.widget<ColoredBox>(surface).color, VisitorColors.background);
+        expect(
+          tester.widget<ColoredBox>(surface).color,
+          VisitorColors.background,
+        );
         expect(
           tester
               .widget<Text>(find.text('Mỗi hiện vật,\nmột câu chuyện'))
@@ -64,8 +67,8 @@ void main() {
           expect(photo.placeholderColor, VisitorColors.secondaryBackground);
         }
         final rail = find.byKey(const ValueKey('visitor-bottom-nav'));
-        expect(tester.getTopLeft(rail).dx, greaterThan(0));
-        expect(tester.getBottomRight(rail).dx, lessThan(width));
+        expect(tester.getTopLeft(rail).dx, 0);
+        expect(tester.getBottomRight(rail).dx, width);
         final initialSize = tester.getSize(rail);
         final scanButton = find.byKey(const ValueKey('visitor-scan-press'));
         expect(tester.getSize(scanButton), const Size(54, 54));
@@ -78,14 +81,19 @@ void main() {
           );
           final label = find.descendant(of: tab, matching: find.byType(Text));
           labelTop ??= tester.getTopLeft(label).dy;
-          expect(tester.getTopLeft(label).dy, closeTo(labelTop, .01));
+          expect(
+            tester.getTopLeft(label).dy,
+            index == 2 ? greaterThan(labelTop) : closeTo(labelTop, .01),
+          );
           final icon = find.descendant(of: tab, matching: find.byType(Icon));
           final boxes = find.ancestor(
             of: icon,
             matching: find.byType(SizedBox),
           );
           expect(
-            tester.widgetList<SizedBox>(boxes).any((box) => box.height == 54),
+            tester
+                .widgetList<SizedBox>(boxes)
+                .any((box) => box.height == (index == 2 ? 54 : 24)),
             isTrue,
           );
           if (index != 2) {

@@ -53,7 +53,7 @@ class AppTheme {
       foregroundColor: AppColors.darkBrown,
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: AppTextStyles.bodyMedium,
+      titleTextStyle: AppTextStyles.titleMedium,
     ),
     dividerTheme: const DividerThemeData(
       color: AppColors.border,

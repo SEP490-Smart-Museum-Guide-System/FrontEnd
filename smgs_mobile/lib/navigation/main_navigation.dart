@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/museum_ui.dart';
 import '../core/theme/visitor_colors.dart';
+
 import '../screens/home/home_screen.dart';
 import '../screens/explore/explore_screen.dart';
 import '../screens/scan/scan_screen.dart';
@@ -70,144 +71,128 @@ class _MainNavigationState extends State<MainNavigation> {
       color: _selectedIndex == 0
           ? VisitorColors.background
           : Theme.of(context).scaffoldBackgroundColor,
-      child: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: Container(
-          key: const ValueKey('visitor-bottom-nav'),
-          decoration: BoxDecoration(
-            color: VisitorColors.background,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x10000000),
-                blurRadius: 20,
-                offset: Offset(0, 4),
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            top: 19,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 4)],
               ),
-            ],
+            ),
           ),
-          child: Material(
-            color: VisitorColors.background,
-            borderRadius: BorderRadius.circular(24),
-            clipBehavior: Clip.antiAlias,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(_items.length, (i) {
-                final item = _items[i];
-                final active = _selectedIndex == i;
-                final scan = i == 2;
-                return Expanded(
-                  child: Semantics(
-                    key: ValueKey('visitor-tab:$i'),
-                    selected: active,
-                    button: true,
-                    label: item.label,
-                    child: ExcludeSemantics(
-                      child: InkWell(
-                        onTap: () => _select(i),
-                        onHighlightChanged: scan
-                            ? (pressed) =>
-                                  setState(() => _scanPressed = pressed)
-                            : null,
-                        splashColor: VisitorColors.burgundy.withValues(
-                          alpha: .06,
-                        ),
-                        highlightColor: VisitorColors.burgundy.withValues(
-                          alpha: .04,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                height: 54,
-                                child: Center(
-                                  child: scan
-                                      ? AnimatedScale(
-                                          key: const ValueKey(
-                                            'visitor-scan-press',
-                                          ),
-                                          scale: _scanPressed ? .96 : 1,
-                                          duration:
-                                              reduceHeritageMotion(context)
-                                              ? Duration.zero
-                                              : HeritageMotion.fast,
-                                          curve: HeritageMotion.curve,
-                                          child: Container(
-                                            width: 54,
-                                            height: 54,
-                                            decoration: BoxDecoration(
-                                              color: VisitorColors.burgundy,
-                                              borderRadius:
-                                                  BorderRadius.circular(18),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Color(0x16000000),
-                                                  blurRadius: 6,
-                                                  offset: Offset(0, 2),
-                                                ),
-                                              ],
+          SafeArea(
+            top: false,
+            child: Material(
+              key: const ValueKey('visitor-bottom-nav'),
+              color: Colors.transparent,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: List.generate(_items.length, (i) {
+                  final item = _items[i];
+                  final active = _selectedIndex == i;
+                  final scan = i == 2;
+                  return Expanded(
+                    child: Semantics(
+                      key: ValueKey('visitor-tab:$i'),
+                      selected: active,
+                      button: true,
+                      label: item.label,
+                      child: ExcludeSemantics(
+                        child: InkWell(
+                          onTap: () => _select(i),
+                          onHighlightChanged: scan
+                              ? (pressed) =>
+                                    setState(() => _scanPressed = pressed)
+                              : null,
+                          splashColor: VisitorColors.burgundy.withValues(
+                            alpha: .06,
+                          ),
+                          highlightColor: VisitorColors.burgundy.withValues(
+                            alpha: .04,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              top: scan ? 3 : 36,
+                              bottom: 4,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: scan ? 54 : 24,
+                                  child: Center(
+                                    child: scan
+                                        ? AnimatedScale(
+                                            key: const ValueKey(
+                                              'visitor-scan-press',
                                             ),
-                                            child: const Icon(
-                                              Icons.qr_code_scanner,
-                                              size: 24,
-                                              color: VisitorColors.background,
+                                            scale: _scanPressed ? .96 : 1,
+                                            duration:
+                                                reduceHeritageMotion(context)
+                                                ? Duration.zero
+                                                : HeritageMotion.fast,
+                                            curve: HeritageMotion.curve,
+                                            child: Container(
+                                              width: 54,
+                                              height: 54,
+                                              decoration: BoxDecoration(
+                                                color: VisitorColors.burgundy,
+                                                borderRadius:
+                                                    BorderRadius.circular(18),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: Color(0x16000000),
+                                                    blurRadius: 6,
+                                                    offset: Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.qr_code_scanner,
+                                                size: 24,
+                                                color: Colors.white,
+                                              ),
                                             ),
-                                          ),
-                                        )
-                                      : AnimatedContainer(
-                                          duration:
-                                              reduceHeritageMotion(context)
-                                              ? Duration.zero
-                                              : HeritageMotion.fast,
-                                          curve: HeritageMotion.curve,
-                                          width: 44,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            color: active
-                                                ? VisitorColors.brandSoft
-                                                : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Icon(
+                                          )
+                                        : Icon(
                                             item.icon,
                                             size: 22,
                                             color: active
-                                                ? VisitorColors.burgundy
+                                                ? VisitorColors.text
                                                 : VisitorColors.secondaryText,
                                           ),
-                                        ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                item.label,
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.caption.copyWith(
-                                  fontSize: 11,
-                                  letterSpacing: 0,
-                                  fontWeight: active
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
-                                  color: active
-                                      ? VisitorColors.burgundy
-                                      : VisitorColors.secondaryText,
+                                SizedBox(height: scan ? 10 : 2),
+                                Text(
+                                  item.label,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontSize: 12,
+                                    letterSpacing: 0,
+                                    fontWeight: active
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: active
+                                        ? VisitorColors.text
+                                        : VisitorColors.secondaryText,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     ),
   );

@@ -73,7 +73,11 @@ class _VisitorDirectoryScreenState extends State<VisitorDirectoryScreen> {
           widget.museumId,
           visitId: _visitId,
         );
-        if (presence['isFresh'] == true) preferred = presence['mapId'];
+        preferred =
+            presence['mapId'] ??
+            maps
+                .where((m) => m['floorId'] == presence['floorId'])
+                .firstOrNull?['id'];
       } catch (_) {
         /* Location is optional for browsing. */
       }

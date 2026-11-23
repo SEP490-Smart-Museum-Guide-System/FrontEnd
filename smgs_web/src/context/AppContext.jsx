@@ -206,7 +206,7 @@ function DataProvider({ children, session, login, endSession }) {
   const updateMuseum = (id, form, file) => mutate(() => updateMuseumApi(requireId(id), form, file), 'Đã cập nhật bảo tàng.');
   const deleteMuseum = id => mutate(() => deleteMuseumApi(requireId(id)), 'Đã vô hiệu hóa bảo tàng.');
   const artifactPayload = a => ({ museumId: requireId(a.museumId || currentMuseum?.id), galleryId: a.galleryId ? requireId(a.galleryId) : null, name: a.name, code: a.code || null, qrCode: a.qrCode || null, accessLevel: a.accessLevel || 'free' });
-  const addArtifact = (a, options) => mutate(async () => (await createArtifactApi(artifactPayload(a))).data, 'Đã thêm hiện vật.', options);
+  const addArtifact = (a, options) => mutate(async () => (await createArtifactApi({ ...artifactPayload(a), topicIds: a.topicIds })).data, 'Đã thêm hiện vật.', options);
   const updateArtifact = (a, options) => mutate(() => updateArtifactApi(requireId(a.id), artifactPayload(a)), 'Đã lưu thông tin cơ bản. Nội dung thuyết minh và media được lưu riêng.', options);
   const deleteArtifact = id => mutate(() => deleteArtifactApi(requireId(id)), 'Đã xóa hiện vật.');
   const downloadArtifactQr = (id, name) => mutate(() => downloadArtifactQrImageApi(requireId(id), name), 'Đã tải mã QR.');

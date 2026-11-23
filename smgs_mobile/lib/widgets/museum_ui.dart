@@ -16,6 +16,7 @@ void openPage(BuildContext context, Widget page) {
   final reduced = reduceHeritageMotion(context);
   Navigator.of(context).push(
     PageRouteBuilder<void>(
+      settings: RouteSettings(name: page.runtimeType.toString()),
       transitionDuration: reduced ? Duration.zero : HeritageMotion.standard,
       reverseTransitionDuration: reduced ? Duration.zero : HeritageMotion.fast,
       pageBuilder: (context, animation, secondaryAnimation) =>
@@ -352,3 +353,4 @@ Future<void> showReading(
     ),
   ),
 );
+
