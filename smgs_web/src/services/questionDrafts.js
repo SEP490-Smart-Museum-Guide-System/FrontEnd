@@ -1,5 +1,5 @@
 // AI output is only a draft. The editor still requires every option before saving.
-export function parseQuestionDrafts(text) {
+export function parseQuestionDrafts(text, languageCode = 'vi') {
   let rows;
   try { rows = JSON.parse(text); } catch { throw new Error('Nội dung câu hỏi cần là danh sách JSON hợp lệ. Hãy chỉnh lại hoặc nhập câu hỏi trong Ngân hàng câu hỏi.'); }
   if (!Array.isArray(rows) || !rows.length || rows.length > 100) throw new Error('Cần từ 1 đến 100 câu hỏi gợi ý.');
@@ -10,6 +10,6 @@ export function parseQuestionDrafts(text) {
       return { content: content || '', isCorrect: i === row.correctIndex };
     });
     if (row.explanation != null && (typeof row.explanation !== 'string' || row.explanation.length > 4000)) throw new Error(`Giải thích câu ${index + 1} không hợp lệ.`);
-    return { content: row.question, options, explanation: row.explanation || '', languageCode: 'vi' };
+    return { content: row.question, options, explanation: row.explanation || '', languageCode };
   });
 }

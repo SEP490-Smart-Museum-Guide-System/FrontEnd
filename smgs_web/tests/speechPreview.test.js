@@ -9,7 +9,7 @@ test('staff preview sends edited script and JWT to artifact-scoped BE and receiv
   t.mock.method(globalThis, 'fetch', async (url, request) => {
     assert.equal(url, '/api/artifacts/17/ai/speech-preview');
     assert.equal(request.headers.Authorization, 'Bearer jwt-test-only');
-    assert.deepEqual(JSON.parse(request.body), { text: 'Bản đọc đã hiệu đính.' });
+    assert.deepEqual(JSON.parse(request.body), { text: 'Bản đọc đã hiệu đính.', languageCode: 'vi' });
     assert.ok(!Object.keys(request.headers).some(k => /service-key/i.test(k)));
     return new Response(wav(), { headers: { 'Content-Type': 'audio/wav' } });
   });

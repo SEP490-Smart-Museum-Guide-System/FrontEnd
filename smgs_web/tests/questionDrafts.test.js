@@ -6,6 +6,11 @@ test('AI suggestions map to editable Vietnamese question drafts and never includ
   assert.deepEqual(draft, { content: 'Câu hỏi gợi ý', languageCode: 'vi', explanation: 'Giải thích', options: [{ content: 'A', isCorrect: false }, { content: 'B', isCorrect: true }] });
   assert.equal(draft.id, undefined);
 });
+test('English quiz keeps its language and answer for review', () => {
+  const [draft] = parseQuestionDrafts(JSON.stringify([{ question: 'What was the jar used for?', options: ['Water', 'Grain'], correctIndex: 0 }]), 'en');
+  assert.equal(draft.languageCode, 'en');
+  assert.deepEqual(draft.options[0], { content: 'Water', isCorrect: true });
+});
 test('missing source facts remain blank for the required editor rather than fabricated', () => {
   const [draft] = parseQuestionDrafts(JSON.stringify([{ question: 'Câu hỏi gợi ý', options: [null, 'B'], correctIndex: 0 }]));
   assert.equal(draft.options[0].content, '');

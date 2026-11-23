@@ -14,8 +14,8 @@ export async function generateStaffDraft(artifactId, options, signal) {
   if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Hãy chọn hiện vật đã lưu trên máy chủ.');
   if (!['narration', 'quiz'].includes(options.mode)) throw new Error('Chế độ tạo bản nháp không hợp lệ.');
   const result = await backend(`artifacts/${id}/ai/drafts`, { method: 'POST', body: options, signal, timeoutMs: 240000 });
-  if (result?.artifactId !== id || result.mode !== options.mode || result.isDraft !== true || result.languageCode !== 'vi' || !result.draft || typeof result.source?.text !== 'string') {
-    throw new Error('Phản hồi AI không đúng hiện vật hoặc không phải bản nháp tiếng Việt.');
+  if (result?.artifactId !== id || result.mode !== options.mode || result.isDraft !== true || result.languageCode !== (options.languageCode || 'vi') || !result.draft || typeof result.source?.text !== 'string') {
+    throw new Error('Phản hồi AI không đúng hiện vật hoặc không khớp ngôn ngữ bản nháp đã chọn.');
   }
   if (options.mode === 'narration' && (typeof result.draft.title !== 'string' || typeof result.draft.narrationText !== 'string' || !result.draft.narrationText.trim())) {
     throw new Error('Bản thuyết minh AI không hợp lệ.');

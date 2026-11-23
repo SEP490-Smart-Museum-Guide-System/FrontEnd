@@ -15,6 +15,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   const available = artifacts.filter(a => String(a.museumId) === String(currentMuseum?.id) && Number.isSafeInteger(Number(a.id)) && Number(a.id) > 0);
   const [artifactId, setArtifactId] = useState(String(available.find(a => String(a.id) === String(initialArtifact?.id))?.id || available[0]?.id || ''));
   const artifact = available.find(a => String(a.id) === artifactId);
+  const [languageCode, setLanguageCode] = useState('vi');
   const [mode, setMode] = useState(initialMode);
   const [sourceText, setSourceText] = useState('');
   const [audience, setAudience] = useState('general'), [tone, setTone] = useState('vivid');
@@ -28,7 +29,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   useEffect(() => () => activeRequest.current?.abort(), []);
   const allowed = ['administrator', 'museumStaff'].includes(currentRole);
 
-  function invalidate() { setOutput(''); setSource(null); setEvidence([]); setError(''); setSubmitted(false); setProgress(''); setCurrentStep(1); }
+  function invalidate() { setOutput(''); setTitle(''); setSource(null); setEvidence([]); setError(''); setSubmitted(false); setProgress(''); setCurrentStep(1); }
 
   async function generate() {
     if (!artifact || busy || !allowed) return;
@@ -53,7 +54,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             if (controller.signal.aborted) return;
           }
           const response = await generateStaffDraft(artifact.id, {
-            mode, sourceText, audience, tone, difficulty, excludeQuestions: drafts.map(d => d.question),
+            mode, languageCode, sourceText, audience, tone, difficulty, excludeQuestions: drafts.map(d => d.question),
           }, controller.signal);
           if (controller.signal.aborted) return;
           if (mode === 'quiz' && drafts.some(d => d.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' ') === response.draft.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' '))) {
@@ -113,13 +114,13 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   async function submit() {
     if (!output.trim() || !artifact || busy || saving || submitted) return;
     if (mode === 'quiz') {
-      try { onOpenQuestionBank?.({ artifactId: artifact.id, drafts: parseQuestionDrafts(output) }); }
+      try { onOpenQuestionBank?.({ artifactId: artifact.id, drafts: parseQuestionDrafts(output, languageCode) }); }
       catch (e) { setError(e.message); }
       return;
     }
     setSaving(true); setError('');
     try {
-      const result = await submitToCuration({ targetArtifactId: artifact.id, title: title.trim(), proposedContent: output, narrationText: output, languageCode: 'vi', isAiGenerated: true });
+      const result = await submitToCuration({ targetArtifactId: artifact.id, title: title.trim(), proposedContent: output, narrationText: output, languageCode, isAiGenerated: true });
       if (result.success) setSubmitted(true); else setError(result.error);
     } finally { setSaving(false); }
   }
@@ -127,11 +128,12 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   if (!allowed) return <p role="alert">Chức năng tạo bản nháp dành cho Quản trị viên và Nhân viên bảo tàng.</p>;
   return <div>
     <h1 style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-burgundy-900)', fontSize: '1.75rem' }}><Sparkles size={25} /> Xưởng nội dung AI</h1>
-    <p>Soạn thuyết minh và bộ câu hỏi tiếng Việt từ tư liệu bảo tàng. Bộ câu hỏi mặc định gồm 5 câu; kết quả luôn là bản nháp cần thẩm định.</p>
+    <p>Soạn thuyết minh và bộ câu hỏi tiếng Việt hoặc tiếng Anh từ tư liệu bảo tàng. Bộ câu hỏi mặc định gồm 5 câu; kết quả luôn là bản nháp cần thẩm định.</p>
     {currentRole === 'administrator' && <div className="form-group"><label className="form-label" htmlFor="studio-museum">Bảo tàng</label><select id="studio-museum" className="form-select" value={currentMuseum?.id || ''} disabled={busy || saving} onChange={e => setSelectedMuseumId(Number(e.target.value))}>{museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>}
     {!available.length ? <div className="card business-card">Bảo tàng chưa có hiện vật đã lưu. Hãy tạo hiện vật và bổ sung tư liệu trước.</div> : <div className="business-grid" style={{ alignItems: 'start' }}>
       <section className="card business-card">
         <h2>Cấu hình bản nháp</h2>
+        <div className="form-group"><label className="form-label" htmlFor="studio-language">Ngôn ngữ bản nháp</label><select className="form-select" id="studio-language" value={languageCode} disabled={busy || saving} onChange={e => { setLanguageCode(e.target.value); invalidate(); }}><option value="vi">Tiếng Việt</option><option value="en">English</option></select></div>
         <div className="form-group"><label className="form-label" htmlFor="studio-artifact">Hiện vật</label><select id="studio-artifact" className="form-select" value={artifactId} disabled={busy || saving} onChange={e => { setArtifactId(e.target.value); setSourceText(''); invalidate(); }}>{available.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
         {(artifact?.image || artifact?.imageUrl) && <img src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
         <div className="form-group"><label className="form-label" htmlFor="studio-source">Tư liệu nguồn bổ sung</label><textarea id="studio-source" className="form-input" rows={6} maxLength={6000} disabled={busy || saving} value={sourceText} onChange={e => { setSourceText(e.target.value); invalidate(); }} placeholder="Chép nội dung bảng tên, tài liệu hoặc thông tin đã kiểm chứng về hiện vật…" /><small>Để trống để dùng nội dung tiếng Việt đã xuất bản nếu có. Nếu chưa có nội dung, cần nhập ít nhất 20 ký tự tư liệu. Ảnh dùng để đối chiếu; model hiện tại nhận chữ, chưa phân tích ảnh.</small></div>
@@ -268,7 +270,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             {mode === 'narration' && <div className="form-group"><label className="form-label" htmlFor="studio-title">Tiêu đề bản nháp</label><input id="studio-title" className="form-input" maxLength={200} value={title} disabled={busy || saving} onChange={e => { setTitle(e.target.value); setSubmitted(false); }} /></div>}
             <label className="form-label" htmlFor="studio-output">Nội dung bản nháp</label><textarea id="studio-output" className="form-input" rows={17} value={output} disabled={busy || saving} onChange={e => { setOutput(e.target.value); setSubmitted(false); }} style={{ fontFamily: mode === 'quiz' ? 'monospace' : 'inherit', lineHeight: 1.65 }} />
             <p>AI có thể diễn giải sai. Hãy đối chiếu tên, niên đại, chất liệu và đáp án trước khi gửi.</p>
-            {mode === 'narration' && <NarrationPreview key={`${artifactId}:${output}`} artifactId={artifact.id} text={output} disabled={busy || saving} />}
+            {mode === 'narration' && <NarrationPreview key={`${artifactId}:${languageCode}:${output}`} languageCode={languageCode} artifactId={artifact.id} text={output} disabled={busy || saving} />}
             <details><summary>Tư liệu và đoạn trích AI tham khảo</summary>{source?.contentVersionId && <p>Nội dung đã xuất bản · Phiên bản {source.versionNo}</p>}<p style={{ whiteSpace: 'pre-wrap' }}>{source?.text}</p>{[...new Set(evidence)].map((q, i) => <blockquote key={i}>{q}</blockquote>)}</details>
             <div className="business-actions" style={{ marginTop: 16 }}><button className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(output)}><Copy size={16} />Sao chép</button><button className="btn btn-primary" disabled={busy || saving || submitted || !output.trim() || (mode === 'narration' && !title.trim())} onClick={submit}><Send size={16} />{submitted ? 'Đã gửi chờ thẩm định' : saving ? 'Đang gửi…' : mode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}</button></div>
           </>

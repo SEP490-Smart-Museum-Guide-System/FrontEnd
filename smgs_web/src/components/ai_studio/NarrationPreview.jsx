@@ -5,7 +5,8 @@ import { createSpeechPreview } from '../../services/speechPreviewApi.js';
 const WAVE_DELAYS = [0.1, 0.35, 0.2, 0.5, 0.15, 0.4, 0.25, 0.6, 0.3, 0.45, 0.2, 0.55, 0.1, 0.35, 0.5, 0.25];
 
 // Parent remounts this player when the edited script/artifact changes.
-export default function NarrationPreview({ artifactId, text, disabled = false }) {
+export default function NarrationPreview({ artifactId, text, languageCode = 'vi', disabled = false }) {
+  const voiceLabel = languageCode === 'en' ? 'tiếng Anh' : 'tiếng Việt';
   const [url, setUrl] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(1);
   const audio = useRef(null), request = useRef(null), blobUrl = useRef('');
@@ -24,7 +25,7 @@ export default function NarrationPreview({ artifactId, text, disabled = false })
     const controller = new AbortController(); request.current = controller;
     setBusy(true); setError('');
     try {
-      const blob = await createSpeechPreview(artifactId, text, controller.signal);
+      const blob = await createSpeechPreview(artifactId, text, controller.signal, languageCode);
       if (controller.signal.aborted) return;
       blobUrl.current = URL.createObjectURL(blob); setUrl(blobUrl.current);
     } catch (e) {
@@ -51,7 +52,7 @@ export default function NarrationPreview({ artifactId, text, disabled = false })
       `}</style>
 
       <h3 style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '0 0 8px' }}><Volume2 size={19} />Nghe bản thuyết minh</h3>
-      <p style={{ fontSize: '.88rem', marginBottom: 12 }}>Giọng tiếng Việt đọc đúng văn bản đang chỉnh sửa. Đây là bản nghe thử nội bộ, chưa xuất bản cho khách.</p>
+      <p style={{ fontSize: '.88rem', marginBottom: 12 }}>Giọng {voiceLabel} đọc đúng văn bản đang chỉnh sửa. Đây là bản nghe thử nội bộ, chưa xuất bản cho khách.</p>
       
       {!url && !busy && (
         <button type="button" className="btn btn-secondary" disabled={disabled || !text.trim()} onClick={generate}>
@@ -77,7 +78,7 @@ export default function NarrationPreview({ artifactId, text, disabled = false })
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-burgundy-900, #5C1D24)' }}>
               <Sparkles size={16} className="spin-animation" />
-              <span>AI Voice Synthesizer · Đang tổng hợp giọng tiếng Việt…</span>
+              <span>AI Voice Synthesizer · Đang tổng hợp giọng {voiceLabel}…</span>
             </div>
             <button
               type="button"
@@ -107,7 +108,7 @@ export default function NarrationPreview({ artifactId, text, disabled = false })
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#786F66' }}>
-            <span>Đang chuẩn bị dải âm học & kiểm tra ngữ điệu tiếng Việt…</span>
+            <span>Đang chuẩn bị dải âm học & kiểm tra ngữ điệu {voiceLabel}…</span>
             <span>Mô hình giọng đọc số</span>
           </div>
         </div>
@@ -115,7 +116,7 @@ export default function NarrationPreview({ artifactId, text, disabled = false })
 
       {url && (
         <>
-          <audio ref={setAudio} aria-label="Bản đọc tiếng Việt" src={url} controls controlsList="nodownload" preload="metadata" style={{ width: '100%' }}
+          <audio ref={setAudio} aria-label={`Bản đọc ${voiceLabel}`} src={url} controls controlsList="nodownload" preload="metadata" style={{ width: '100%' }}
             onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
             onError={() => { setPlaying(false); setError('Không phát được âm thanh. Hãy tạo lại bản đọc hoặc kiểm tra kết nối.'); }} />
           <div className="business-actions" style={{ marginTop: 10 }}>

@@ -2,7 +2,7 @@ import { getAuthToken } from './auth.js';
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
 
-export async function createSpeechPreview(artifactId, text, signal) {
+export async function createSpeechPreview(artifactId, text, signal, languageCode = 'vi') {
   const id = Number(artifactId);
   if (!Number.isSafeInteger(id) || id <= 0 || typeof text !== 'string' || !text.trim() || text.length > 12000) {
     throw new Error('Cần chọn hiện vật và nhập bản thuyết minh tối đa 12.000 ký tự.');
@@ -11,12 +11,15 @@ export async function createSpeechPreview(artifactId, text, signal) {
   if (!token) throw new Error('Vui lòng đăng nhập lại để nghe bản thuyết minh.');
   const response = await fetch(`${API_BASE}/artifacts/${id}/ai/speech-preview`, {
     method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'audio/wav' },
-    body: JSON.stringify({ text: text.trim() }),
+    body: JSON.stringify({ text: text.trim(), languageCode }),
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(70000)]) : AbortSignal.timeout(70000),
   });
   if (!response.ok) {
     const error = await response.json().catch(() => null);
     throw new Error(error?.message || 'Chưa tạo được giọng đọc. Vui lòng thử lại.');
+  }
+  if (languageCode === 'en' && response.headers.get('content-language') !== 'en') {
+    throw new Error('Bộ đọc tiếng Anh chưa sẵn sàng trên máy chủ.');
   }
   const blob = await response.blob();
   const header = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
