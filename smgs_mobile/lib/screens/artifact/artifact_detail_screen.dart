@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+import '../../services/app_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -77,7 +79,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
     final aId = int.tryParse(widget.artifact.id);
     if (aId != null) {
       try {
-        final content = await DiscoveryApiService.fetchPublishedContent(aId);
+        final content = await DiscoveryApiService.fetchPublishedContent(aId, languageCode: AppPreferences.instance.language);
         if (mounted) {
           setState(() {
             _publishedContent = content;
@@ -104,6 +106,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final a = widget.artifact;
     final summary = _publishedContent?['title'] as String? ?? a.summary;
     final story = _publishedContent?['description'] as String? ?? a.story;
@@ -160,7 +163,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
             TextButton(onPressed: _loadPhotos, child: const Text('Thử lại')),
           ],
         ),
-      const Eyebrow('HIỆN VẬT BẢO TÀNG'),
+      Eyebrow(l10n.isEn ? 'MUSEUM ARTIFACT' : 'HIỆN VẬT BẢO TÀNG'),
       const SizedBox(height: 8),
       Text(a.name, style: AppTextStyles.pageTitle.copyWith(height: 1.2)),
       if (metadata['tên tiếng anh'] case final String name)
@@ -207,7 +210,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Bảo vật danh mục Premium',
+                    l10n.isEn ? 'Premium Collection Artifact' : 'Bảo vật danh mục Premium',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.deepBurgundy,
@@ -237,7 +240,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         ),
       ],
       if (storyText.isNotEmpty) ...[
-        const Eyebrow('Câu chuyện'),
+        Eyebrow(l10n.isEn ? 'Story' : 'Câu chuyện'),
         const Text(
           '“',
           style: TextStyle(fontSize: 42, height: 1, color: AppColors.mutedGold),
@@ -258,31 +261,31 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Bạn đã tìm hiểu xong?',
+              Text(
+                l10n.isEn ? 'Finished exploring?' : 'Bạn đã tìm hiểu xong?',
                 style: AppTextStyles.titleMedium,
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Thử vài câu hỏi ngắn về hiện vật này.',
+              Text(
+                l10n.isEn ? 'Try a few quick questions about this artifact.' : 'Thử vài câu hỏi ngắn về hiện vật này.',
                 style: AppTextStyles.caption,
               ),
               const SizedBox(height: 12),
               PrimaryButton(
-                label: 'Làm Quiz ngay',
+                label: l10n.isEn ? 'Take Quiz Now' : 'Làm Quiz ngay',
                 onPressed: () =>
                     openPage(context, DailyQuizScreen(artifactId: a.id)),
               ),
               TextButton(
                 onPressed: () => setState(() => _skipQuiz = true),
-                child: const Text('Để sau'),
+                child: Text(l10n.isEn ? 'Later' : 'Để sau'),
               ),
             ],
           ),
         ),
       const SizedBox(height: 16),
       TextButton.icon(
-        label: const Text('Góp ý về hiện vật này'),
+        label: Text(l10n.isEn ? 'Feedback on this artifact' : 'Góp ý về hiện vật này'),
         icon: const Icon(Icons.chat_bubble_outline, size: 16),
         onPressed: () => openPage(
           context,
@@ -339,7 +342,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
             ),
             actions: [
               IconButton.filledTonal(
-                tooltip: 'Chia sẻ hiện vật',
+                tooltip: l10n.isEn ? 'Share artifact' : 'Chia sẻ hiện vật',
                 style: IconButton.styleFrom(
                   shape: const CircleBorder(),
                   backgroundColor: Colors.white,
@@ -359,8 +362,8 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã sao chép thông tin hiện vật.'),
+                      SnackBar(
+                        content: Text(l10n.isEn ? 'Copied artifact details.' : 'Đã sao chép thông tin hiện vật.'),
                       ),
                     );
                   }
@@ -375,7 +378,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                   builder: (context, _) {
                     final saved = VisitStore.instance.saved.contains(a.id);
                     return IconButton.filledTonal(
-                      tooltip: saved ? 'Bỏ lưu hiện vật' : 'Lưu hiện vật',
+                      tooltip: saved ? (l10n.isEn ? 'Remove bookmark' : 'Bỏ lưu hiện vật') : (l10n.isEn ? 'Save artifact' : 'Lưu hiện vật'),
                       style: IconButton.styleFrom(
                         shape: const CircleBorder(),
                         backgroundColor: Colors.white,
@@ -470,7 +473,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
                 ),
                 onPressed: ask,
                 icon: const Icon(Icons.chat_bubble_outline, size: 17),
-                label: const Text('Hỏi'),
+                label: Text(l10n.isEn ? 'Ask AI' : 'Hỏi'),
               ),
             ],
           ),

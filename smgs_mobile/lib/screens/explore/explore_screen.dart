@@ -1,3 +1,4 @@
+import '../../core/localization/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -171,21 +172,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ]
         : ['Tất cả', 'Lịch sử', 'Văn hóa'];
 
+    final l10n = context.l10n;
     return MuseumPage(
       back: widget.standalone,
-      title: 'Khám phá di sản',
-      eyebrow: 'Bộ sưu tập',
-      subtitle: 'Tìm một điểm đến. Mở một câu chuyện.',
+      title: l10n.isEn ? 'Discover Heritage' : 'Khám phá di sản',
+      eyebrow: l10n.isEn ? 'Collection' : 'Bộ sưu tập',
+      subtitle: l10n.isEn ? 'Find a destination. Unlock a story.' : 'Tìm một điểm đến. Mở một câu chuyện.',
       children: [
         Container(
           key: ExploreScreenTour.searchBarKey,
           child: TextField(
             controller: _input,
             onChanged: _onSearchChanged,
-            decoration: const InputDecoration(
-              labelText: 'Tìm kiếm',
-              hintText: 'Tên bảo tàng hoặc hiện vật',
-              prefixIcon: Icon(Icons.search_outlined),
+            decoration: InputDecoration(
+              labelText: l10n.search,
+              hintText: l10n.isEn ? 'Museum or artifact name' : 'Tên bảo tàng hoặc hiện vật',
+              prefixIcon: const Icon(Icons.search_outlined),
             ),
           ),
         ),
@@ -321,7 +323,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           _gallery = null;
                           _exhibition = null;
                         }),
-                        child: Text(mode ? 'Hiện vật' : 'Bảo tàng'),
+                        child: Text(mode ? (l10n.isEn ? 'Artifacts' : 'Hiện vật') : (l10n.isEn ? 'Museums' : 'Bảo tàng')),
                       ),
                     ),
                   ),
@@ -369,7 +371,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Bản đồ Khám phá & Dẫn đường',
+                        l10n.isEn ? 'Discovery & Route Map' : 'Bản đồ Khám phá & Dẫn đường',
                         style: AppTextStyles.titleMedium.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -378,7 +380,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Xem vị trí trên bản đồ, lọc bảo tàng gần tôi nhất và chỉ đường ngoài trời.',
+                        l10n.isEn
+                            ? 'View locations on map, find nearest museums, and outdoor directions.'
+                            : 'Xem vị trí trên bản đồ, lọc bảo tàng gần tôi nhất và chỉ đường ngoài trời.',
                         style: TextStyle(
                           color: Colors.white.withAlpha(215),
                           fontSize: 11,
@@ -403,9 +407,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                   onPressed: () =>
                       openPage(context, const MuseumDiscoveryMapScreen()),
-                  child: const Text(
-                    'Mở bản đồ',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  child: Text(
+                    l10n.isEn ? 'Open Map' : 'Mở bản đồ',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 ),
               ],
@@ -418,18 +422,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
           runSpacing: 4,
           children: categories
               .map(
-                (c) => ChoiceChip(
-                  label: Text(c),
-                  selected: _category == c,
-                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                  labelStyle: AppTextStyles.bodySmall.copyWith(
-                    color: _category == c
-                        ? AppColors.deepBurgundy
-                        : AppColors.darkBrown,
-                  ),
-                  checkmarkColor: AppColors.deepBurgundy,
-                  onSelected: (_) => setState(() => _category = c),
-                ),
+                (c) {
+                  final labelText = c == 'Tất cả'
+                      ? (l10n.isEn ? 'All' : 'Tất cả')
+                      : (c == 'Lịch sử'
+                          ? (l10n.isEn ? 'History' : 'Lịch sử')
+                          : (c == 'Văn hóa'
+                              ? (l10n.isEn ? 'Culture' : 'Văn hóa')
+                              : c));
+                  return ChoiceChip(
+                    label: Text(labelText),
+                    selected: _category == c,
+                    selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                    labelStyle: AppTextStyles.bodySmall.copyWith(
+                      color: _category == c
+                          ? AppColors.deepBurgundy
+                          : AppColors.darkBrown,
+                    ),
+                    checkmarkColor: AppColors.deepBurgundy,
+                    onSelected: (_) => setState(() => _category = c),
+                  );
+                },
               )
               .toList(),
         ),
@@ -474,16 +487,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         ] else ...[
           Text(
-            '${_artifacts ? artifacts.length : _backendMuseums.length} ${_artifacts ? 'hiện vật' : 'bảo tàng'} được tìm thấy',
+            l10n.isEn
+                ? '${_artifacts ? artifacts.length : _backendMuseums.length} ${_artifacts ? 'artifacts' : 'museums'} found'
+                : '${_artifacts ? artifacts.length : _backendMuseums.length} ${_artifacts ? 'hiện vật' : 'bảo tàng'} được tìm thấy',
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: 14),
           if ((_artifacts && artifacts.isEmpty) ||
               (!_artifacts && _backendMuseums.isEmpty))
-            const EmptyState(
-              title: 'Chưa tìm thấy kết quả',
-              message:
-                  'Thử một từ khóa khác hoặc chọn “Tất cả” để xem lại bộ sưu tập.',
+            EmptyState(
+              title: l10n.isEn ? 'No results found' : 'Chưa tìm thấy kết quả',
+              message: l10n.isEn
+                  ? 'Try another keyword or select "All" to view the full collection.'
+                  : 'Thử một từ khóa khác hoặc chọn “Tất cả” để xem lại bộ sưu tập.',
             ),
           if (_artifacts)
             ...artifacts.map((a) => ArtifactCard(artifact: a))
@@ -497,8 +513,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ],
 
         const SizedBox(height: 10),
-        const Notice(
-          'Dữ liệu kết nối trực tiếp từ máy chủ Smart Museum Guide System.',
+        Notice(
+          l10n.isEn
+              ? 'Data streamed directly from Smart Museum Guide System servers.'
+              : 'Dữ liệu kết nối trực tiếp từ máy chủ Smart Museum Guide System.',
         ),
       ],
     );

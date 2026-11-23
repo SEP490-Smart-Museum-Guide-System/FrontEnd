@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import '../models/museum.dart';
 import '../screens/museum/museum_detail_screen.dart';
 
@@ -34,21 +35,16 @@ class MuseumDiscoveryCard extends StatelessWidget {
         duration: const Duration(milliseconds: 250),
         width: 310,
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.imperialGold
-                : AppColors.parchmentBorder,
-            width: isSelected ? 2.0 : 1.0,
-          ),
+          color: isSelected ? Colors.white : VisitorColors.surface1,
+          borderRadius: BorderRadius.circular(VisitorRadius.xl),
+          border: isSelected ? Border.all(color: AppColors.imperialGold, width: 2.0) : null,
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? AppColors.imperialGold.withValues(alpha: 0.25)
-                  : Colors.black.withValues(alpha: 0.06),
+                  ? AppColors.imperialGold.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: isSelected ? 12 : 8,
               offset: const Offset(0, 4),
             ),
@@ -62,11 +58,11 @@ class MuseumDiscoveryCard extends StatelessWidget {
             Row(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(VisitorRadius.md),
                   child: Container(
                     width: 64,
                     height: 64,
-                    color: AppColors.softSand,
+                    color: VisitorColors.surface2,
                     child: Image.asset(
                       museum.imageUrl,
                       fit: BoxFit.cover,
@@ -92,8 +88,8 @@ class MuseumDiscoveryCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.softSand,
-                                borderRadius: BorderRadius.circular(4),
+                                color: VisitorColors.surface2,
+                                borderRadius: BorderRadius.circular(VisitorRadius.xs),
                               ),
                               child: Text(
                                 museum.category,
@@ -178,7 +174,7 @@ class MuseumDiscoveryCard extends StatelessWidget {
                       minimumSize: const Size(0, 34),
                       side: const BorderSide(color: AppColors.imperialGold),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(VisitorRadius.sm),
                       ),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -210,7 +206,7 @@ class MuseumDiscoveryCard extends StatelessWidget {
                       ),
                       minimumSize: const Size(0, 34),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(VisitorRadius.sm),
                       ),
                       visualDensity: VisualDensity.compact,
                     ),

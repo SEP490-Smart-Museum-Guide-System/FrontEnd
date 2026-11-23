@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_localizations.dart';
 import '../widgets/museum_ui.dart';
-import '../core/theme/visitor_colors.dart';
 
 import '../screens/home/home_screen.dart';
 import '../screens/explore/explore_screen.dart';
@@ -26,13 +26,16 @@ class _MainNavigationState extends State<MainNavigation> {
     const ToursScreen(),
     const ProfileScreen(),
   ];
-  static const _items = [
-    (label: 'Trang chủ', icon: Icons.home_outlined),
-    (label: 'Khám phá', icon: Icons.explore_outlined),
-    (label: 'Quét mã', icon: Icons.qr_code_scanner),
-    (label: 'Hành trình', icon: Icons.map_outlined),
-    (label: 'Cá nhân', icon: Icons.person_outline),
-  ];
+  List<({String label, IconData icon})> _items(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      (label: l10n.tabHome, icon: Icons.home_outlined),
+      (label: l10n.tabExplore, icon: Icons.explore_outlined),
+      (label: l10n.tabScan, icon: Icons.qr_code_scanner),
+      (label: l10n.tabJourneys, icon: Icons.map_outlined),
+      (label: l10n.tabProfile, icon: Icons.person_outline),
+    ];
+  }
   @override
   void dispose() {
     _pages.dispose();
@@ -54,7 +57,9 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final items = _items(context);
+    return Scaffold(
     body: PageView(
       controller: _pages,
       physics: const NeverScrollableScrollPhysics(),
@@ -90,8 +95,8 @@ class _MainNavigationState extends State<MainNavigation> {
               color: Colors.transparent,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: List.generate(_items.length, (i) {
-                  final item = _items[i];
+                children: List.generate(items.length, (i) {
+                  final item = items[i];
                   final active = _selectedIndex == i;
                   final scan = i == 2;
                   return Expanded(
@@ -195,5 +200,6 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
       ),
     ),
-  );
+    );
+  }
 }

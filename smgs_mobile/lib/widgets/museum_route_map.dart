@@ -24,7 +24,20 @@ class MuseumRouteMap extends StatelessWidget {
         for (var i = 0; i < stops.length; i++)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(child: Text('${i + 1}')),
+            leading: CircleAvatar(
+              backgroundColor: i == current
+                  ? AppColors.deepBurgundy
+                  : visited.contains(stops[i].id)
+                      ? VisitorColors.surfaceBrand
+                      : VisitorColors.surface2,
+              foregroundColor: i == current
+                  ? Colors.white
+                  : AppColors.deepBurgundy,
+              child: Text(
+                '${i + 1}',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
             title: Text(stops[i].name),
             subtitle: Text(
               '${stops[i].location} · ${visited.contains(stops[i].id)

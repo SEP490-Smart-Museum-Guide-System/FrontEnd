@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import '../services/visitor_experience_api.dart';
 import 'primary_button.dart';
 import 'secondary_button.dart';
@@ -153,8 +154,8 @@ class _VisitCompleteFeedbackDialogState
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: AppColors.antiqueIvory,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.xl)),
+      backgroundColor: Colors.white,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Padding(
@@ -209,9 +210,8 @@ class _VisitCompleteFeedbackDialogState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
+              color: VisitorColors.surface1,
+              borderRadius: BorderRadius.circular(VisitorRadius.md),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -319,7 +319,7 @@ class _VisitCompleteFeedbackDialogState
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
                 borderSide: const BorderSide(color: AppColors.border),
               ),
             ),

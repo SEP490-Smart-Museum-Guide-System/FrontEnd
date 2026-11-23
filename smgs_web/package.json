@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@google/model-viewer": "^4.3.1",
+    "@microsoft/signalr": "^11.0.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",

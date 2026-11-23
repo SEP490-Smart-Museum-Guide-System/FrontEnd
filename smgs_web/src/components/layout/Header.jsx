@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useNotification } from '../../context/NotificationContext';
+import NotificationCenter from './NotificationCenter';
+import NotificationToast from '../common/NotificationToast';
 import {
   Landmark,
   ShieldCheck,
@@ -54,44 +57,82 @@ export default function Header() {
   const {
     currentUser,
     currentRole,
-
     setActiveTab,
-    curationQueue,
-    artifacts,
     currentMuseum,
-    museums, selectedMuseumId, setSelectedMuseumId,
-
+    museums,
+    selectedMuseumId,
+    setSelectedMuseumId,
     logout
   } = useApp();
 
-  const [isSwitchOpen, setIsSwitchOpen] = useState(false);
+  const { unreadCount } = useNotification();
 
-  const museumArtifactIds = new Set(
-    artifacts.filter(item => item.museumId === currentMuseum?.id).map(item => item.id)
-  );
-  const pendingCurationCount = curationQueue.filter(
-    c => c.status === 'pending_review' && museumArtifactIds.has(c.targetArtifactId)
-  ).length;
+  const [isSwitchOpen, setIsSwitchOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  const notifRef = useRef(null);
+  const switchRef = useRef(null);
+
+  // Xử lý đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
+      }
+      if (switchRef.current && !switchRef.current.contains(event.target)) {
+        setIsSwitchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleNotificationNavigate = (notification) => {
+    const { type, actionUrl } = notification;
+    if (type === 'CONTENT_SUBMITTED') {
+      setActiveTab('curation_queue');
+    } else if (type === 'CONTENT_APPROVED' || type === 'CONTENT_REJECTED') {
+      setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'submission_status');
+    } else if (type === 'COMPLAINT_CREATED' || type === 'COMPLAINT_STATUS_UPDATED') {
+      setActiveTab('support');
+    } else if (type === 'PAYMENT_SUCCEEDED') {
+      setActiveTab('transactions');
+    } else if (type === 'FEEDBACK_RESPONDED') {
+      setActiveTab('reviews');
+    } else if (actionUrl) {
+      if (actionUrl.includes('curation') || actionUrl.includes('artifact-contents')) {
+        setActiveTab('curation_queue');
+      } else if (actionUrl.includes('complaint')) {
+        setActiveTab('support');
+      } else if (actionUrl.includes('order') || actionUrl.includes('commerce')) {
+        setActiveTab('transactions');
+      }
+    }
+  };
 
   const currentRoleInfo = roleMeta[currentRole] || roleMeta.administrator;
 
-
   return (
     <header className="topbar">
+      {/* Real-time Floating Toast Alert */}
+      <NotificationToast onNavigate={handleNotificationNavigate} />
+
       {/* TopBar Left: Scope & Museum Indicator */}
       <div className="topbar-left">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            background: 'var(--color-paper-accent)',
-            border: '1px solid var(--color-paper-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--color-burgundy-700)'
-          }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'var(--color-paper-accent)',
+              border: '1px solid var(--color-paper-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-burgundy-700)'
+            }}
+          >
             <Landmark size={18} />
           </div>
 
@@ -105,9 +146,19 @@ export default function Header() {
             ) : (
               <div>
                 <span className="museum-select-badge" style={{ fontWeight: '600', color: 'var(--color-burgundy-900)' }}>
-                  <select aria-label="Bảo tàng đang xem" value={selectedMuseumId ?? ''} onChange={e => setSelectedMuseumId(Number(e.target.value))}>
-                    <option value="" disabled>Chọn bảo tàng</option>
-                    {museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  <select
+                    aria-label="Bảo tàng đang xem"
+                    value={selectedMuseumId ?? ''}
+                    onChange={(e) => setSelectedMuseumId(Number(e.target.value))}
+                  >
+                    <option value="" disabled>
+                      Chọn bảo tàng
+                    </option>
+                    {museums.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
                   </select>
                 </span>
               </div>
@@ -116,45 +167,63 @@ export default function Header() {
         </div>
       </div>
 
-      {/* TopBar Right: Account Identity & Actions */}
+      {/* TopBar Right: Notifications & User Identity */}
       <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Pending Curation Notification for Curator / Staff */}
-        {['museumStaff', 'curator'].includes(currentRole) && (
-          <div style={{ position: 'relative' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'submission_status')}
-              style={{ padding: '8px', borderRadius: '50%', width: '38px', height: '38px' }}
-              title={`${pendingCurationCount} mục đang chờ Giám tuyển thẩm định`}
-            >
-              <Bell size={18} />
-              {pendingCurationCount > 0 && (
-                <span style={{
+        {/* Central Notification Bell for all logged-in roles */}
+        <div ref={notifRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            style={{
+              padding: '8px',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              position: 'relative'
+            }}
+            title={unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Thông báo'}
+            aria-label="Thông báo"
+            aria-expanded={isNotificationOpen}
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span
+                style={{
                   position: 'absolute',
                   top: '-2px',
                   right: '-2px',
-                  background: 'var(--color-burgundy-600)',
+                  background: 'var(--color-burgundy-700)',
                   color: '#FFF',
                   fontSize: '0.65rem',
                   fontWeight: '700',
-                  width: '18px',
+                  minWidth: '18px',
                   height: '18px',
-                  borderRadius: '50%',
+                  padding: '0 4px',
+                  borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: '2px solid #FFF'
-                }}>
-                  {pendingCurationCount}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
+                  border: '2px solid #FFF',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Dropdown Panel */}
+          {isNotificationOpen && (
+            <NotificationCenter
+              onClose={() => setIsNotificationOpen(false)}
+              onNavigate={handleNotificationNavigate}
+            />
+          )}
+        </div>
 
         {/* Current User Identity Box with Account Switcher Dropdown */}
-        <div style={{ position: 'relative' }}>
+        <div ref={switchRef} style={{ position: 'relative' }}>
           <button
             type="button"
             onClick={() => setIsSwitchOpen(!isSwitchOpen)}
@@ -172,18 +241,20 @@ export default function Header() {
             }}
           >
             {/* User Avatar */}
-            <div style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
-              color: '#FFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: '700',
-              fontSize: '0.85rem'
-            }}>
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
+                color: '#FFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '0.85rem'
+              }}
+            >
               {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
             </div>
 
@@ -193,14 +264,16 @@ export default function Header() {
                 <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--color-charcoal-900)' }}>
                   {currentUser?.name || 'Tài khoản nghiệp vụ'}
                 </span>
-                <span style={{
-                  fontSize: '0.65rem',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  background: currentRoleInfo.badgeBg,
-                  color: currentRoleInfo.badgeText,
-                  fontWeight: '700'
-                }}>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: currentRoleInfo.badgeBg,
+                    color: currentRoleInfo.badgeText,
+                    fontWeight: '700'
+                  }}
+                >
                   {currentRoleInfo.shortLabel}
                 </span>
               </div>
@@ -229,43 +302,81 @@ export default function Header() {
                 animation: 'menuAppear 140ms ease-out'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid var(--color-paper-border)' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
-                  color: '#FFF',
+              <div
+                style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  fontSize: '0.95rem'
-                }}>
+                  gap: '10px',
+                  marginBottom: '12px',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid var(--color-paper-border)'
+                }}
+              >
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    fontSize: '0.95rem'
+                  }}
+                >
                   {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--color-charcoal-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <strong
+                    style={{
+                      display: 'block',
+                      fontSize: '0.9rem',
+                      color: 'var(--color-charcoal-900)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
                     {currentUser?.name}
                   </strong>
-                  <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--color-charcoal-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: '0.74rem',
+                      color: 'var(--color-charcoal-500)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
                     {currentUser?.email}
                   </span>
                 </div>
               </div>
               <div style={{ marginBottom: '14px' }}>
-                <span style={{
-                  display: 'inline-block',
-                  fontSize: '0.72rem',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  background: currentRoleInfo.badgeBg,
-                  color: currentRoleInfo.badgeText,
-                  fontWeight: '700'
-                }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    fontSize: '0.72rem',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: currentRoleInfo.badgeBg,
+                    color: currentRoleInfo.badgeText,
+                    fontWeight: '700'
+                  }}
+                >
                   {currentRoleInfo.label}
                 </span>
-                <p style={{ fontSize: '0.74rem', color: 'var(--color-charcoal-500)', marginTop: '4px', lineHeight: 1.4 }}>
+                <p
+                  style={{
+                    fontSize: '0.74rem',
+                    color: 'var(--color-charcoal-500)',
+                    marginTop: '4px',
+                    lineHeight: 1.4
+                  }}
+                >
                   {currentRoleInfo.accountDesc}
                 </p>
               </div>
@@ -280,7 +391,6 @@ export default function Header() {
             </div>
           )}
         </div>
-
       </div>
     </header>
   );

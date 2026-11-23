@@ -1,3 +1,4 @@
+import '../../core/localization/app_localizations.dart';
 import 'qr_scan_screen.dart';
 import '../../widgets/exploration_map_button.dart';
 import '../../widgets/earned_badges.dart';
@@ -235,7 +236,9 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return MuseumPage(
     back: true,
     title: widget.direct ? 'Quét mã hiện vật' : 'Khám phá hiện vật',
     subtitle: _activeMode == 'qr'
@@ -304,14 +307,14 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 showCheckmark: false,
                 selectedColor: AppColors.deepBurgundy,
                 backgroundColor: AppColors.card,
-                label: const Row(
+                label: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.qr_code, size: 16),
-                    SizedBox(width: 6),
+                    const Icon(Icons.qr_code, size: 16),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Quét mã QR',
+                        l10n.isEn ? 'QR Scanner' : 'Quét mã QR',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -336,14 +339,14 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 showCheckmark: false,
                 selectedColor: AppColors.deepBurgundy,
                 backgroundColor: AppColors.card,
-                label: const Row(
+                label: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.camera_enhance, size: 16),
-                    SizedBox(width: 6),
+                    const Icon(Icons.camera_enhance, size: 16),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Nhận diện AI',
+                        l10n.isEn ? 'AI Recognition' : 'Nhận diện AI',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -413,7 +416,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           ),
         const SizedBox(height: 12),
         PrimaryButton(
-          label: _camera ? 'Tắt camera' : 'Mở camera quét QR',
+          label: _camera ? (l10n.isEn ? 'Close camera' : 'Tắt camera') : (l10n.isEn ? 'Open camera to scan QR' : 'Mở camera quét QR'),
           icon: Icons.qr_code_scanner,
           onPressed: _busy ? null : () => setState(() => _camera = !_camera),
         ),
@@ -422,14 +425,14 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           TextField(
             controller: _input,
             enabled: !_busy,
-            decoration: const InputDecoration(
-              labelText: 'Mã QR hoặc URL trên mã QR',
+            decoration: InputDecoration(
+              labelText: l10n.isEn ? 'QR code or URL on QR' : 'Mã QR hoặc URL trên mã QR',
             ),
             onSubmitted: _scan,
           ),
           const SizedBox(height: 12),
           SecondaryButton(
-            label: 'Xem thông tin hiện vật',
+            label: l10n.isEn ? 'View artifact details' : 'Xem thông tin hiện vật',
             icon: Icons.search,
             onPressed: _busy ? null : () => _scan(_input.text),
           ),
@@ -593,6 +596,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       ],
     ],
   );
+  }
 
   Widget _buildCyberViewfinder() {
     return AnimatedBuilder(
@@ -603,7 +607,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           height: 220,
           decoration: BoxDecoration(
             color: const Color(0xFF161412),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
             border: Border.all(
               color: AppColors.mutedGold.withValues(alpha: 0.6),
               width: 1.2,

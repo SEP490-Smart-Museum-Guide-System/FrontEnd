@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/visitor_tokens.dart';
+import '../core/theme/visitor_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../services/app_services.dart';
 
@@ -20,7 +22,7 @@ class TutorialQuestStep {
     required this.title,
     required this.description,
     required this.icon,
-    this.borderRadius = 14.0,
+    this.borderRadius = VisitorRadius.md,
   });
 }
 
@@ -339,7 +341,7 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: AppColors.antiqueIvory,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                       border: Border.all(
                         color: AppColors.mutedGold.withValues(alpha: 0.7),
                         width: 1.5,
@@ -450,7 +452,7 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                                   vertical: 10,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(VisitorRadius.md),
                                 ),
                               ),
                               icon: Icon(

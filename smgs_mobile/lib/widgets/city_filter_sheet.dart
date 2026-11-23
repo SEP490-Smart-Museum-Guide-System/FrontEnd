@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_tokens.dart';
+import '../core/theme/visitor_colors.dart';
 import '../models/city.dart';
 
 class CityFilterSheet extends StatelessWidget {
@@ -39,8 +41,8 @@ class CityFilterSheet extends StatelessWidget {
         maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
       decoration: const BoxDecoration(
-        color: AppColors.antiqueIvory,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(VisitorRadius.xxl)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -49,11 +51,11 @@ class CityFilterSheet extends StatelessWidget {
           Center(
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 44,
-              height: 5,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: AppColors.charcoalBrown.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(VisitorRadius.full),
               ),
             ),
           ),
@@ -142,7 +144,7 @@ class CityFilterSheet extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.deepBurgundy : AppColors.softSand,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(VisitorRadius.xs),
                       border: Border.all(
                         color: isSelected ? AppColors.deepBurgundy : AppColors.parchmentBorder,
                       ),

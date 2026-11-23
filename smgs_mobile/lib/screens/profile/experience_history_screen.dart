@@ -121,8 +121,8 @@ class ExperienceHistoryScreen extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
@@ -218,8 +218,8 @@ class ExperienceHistoryScreen extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
@@ -232,7 +232,7 @@ class ExperienceHistoryScreen extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(VisitorRadius.xl),
           onTap: () async {
             try {
               if (isQuiz) {
@@ -281,7 +281,7 @@ class ExperienceHistoryScreen extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.antiqueIvory,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
                     border: Border.all(color: AppColors.border),
                   ),
                   child: Center(

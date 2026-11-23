@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../models/museum.dart';
 import '../../core/network/api_config.dart';
 import '../../services/discovery_api_service.dart';
@@ -10,7 +11,6 @@ import '../../widgets/exploration_map_button.dart';
 import 'visitor_directory_screen.dart';
 
 const _burgundy = Color(0xff6d3032);
-const _paper = Color(0xfffaf7f2);
 const _label = TextStyle(
   fontFamily: AppTextStyles.sansFamily,
   color: _burgundy,
@@ -96,6 +96,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final museumId = int.tryParse(_museum.id);
     final top =
         _highlights?.topArtifacts.take(3).toList() ??
@@ -116,7 +117,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
     );
 
     return Scaffold(
-      backgroundColor: _paper,
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -125,16 +126,16 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                 widget.heroTag == null
                     ? photo
                     : Hero(tag: widget.heroTag!, child: photo),
-                const Positioned(
+                Positioned(
                   left: 0,
                   right: 0,
                   bottom: 0,
                   height: 24,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: _paper,
+                      color: Colors.white,
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24),
+                        top: Radius.circular(VisitorRadius.xxl),
                       ),
                     ),
                     child: Center(
@@ -143,8 +144,8 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                         height: 4,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Color(0xffded5c9),
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            color: VisitorColors.surface2,
+                            borderRadius: BorderRadius.all(Radius.circular(VisitorRadius.full)),
                           ),
                         ),
                       ),
@@ -159,7 +160,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                     child: Material(
                       color: Colors.white,
                       shape: const CircleBorder(),
-                      child: BackButton(color: _burgundy),
+                      child: const BackButton(color: _burgundy),
                     ),
                   ),
                 ),
@@ -174,7 +175,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('BẢO TÀNG', style: _label),
+                    Text(l10n.isEn ? 'MUSEUM' : 'BẢO TÀNG', style: _label),
                     const SizedBox(height: 5),
                     Text(
                       _museum.name,
@@ -211,11 +212,11 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                           Expanded(
                             child: _Stat(
                               icon: Icons.schedule_outlined,
-                              label: 'GIỜ THAM KHẢO',
+                              label: l10n.isEn ? 'OPENING HOURS' : 'GIỜ THAM KHẢO',
                               value:
                                   schedule?.group(1)?.trim() ??
                                   (hours.isEmpty
-                                      ? 'Chưa có thông tin giờ mở cửa'
+                                      ? (l10n.isEn ? 'Hours not provided' : 'Chưa có thông tin giờ mở cửa')
                                       : hours),
                               subtitle: schedule?.group(2),
                             ),
@@ -224,29 +225,31 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                           Expanded(
                             child: _Stat(
                               icon: Icons.museum_outlined,
-                              label: 'HIỆN VẬT QR',
+                              label: l10n.isEn ? 'QR ARTIFACTS' : 'HIỆN VẬT QR',
                               value:
                                   _highlights?.qrArtifactCount.toString() ??
                                   '—',
                               subtitle: _highlights?.publicOnly == true
-                                  ? 'Có hướng dẫn QR công khai'
-                                  : 'Có hướng dẫn QR',
+                                  ? (l10n.isEn ? 'Public QR guide available' : 'Có hướng dẫn QR công khai')
+                                  : (l10n.isEn ? 'Has QR guide' : 'Có hướng dẫn QR'),
                             ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('GIỚI THIỆU', style: _label),
+                    Text(l10n.isEn ? 'INTRODUCTION' : 'GIỚI THIỆU', style: _label),
                     const SizedBox(height: 8),
                     Text(
                       intro.trim().isEmpty
-                          ? 'Chưa có thông tin giới thiệu.'
+                          ? (l10n.isEn ? 'No introduction available.' : 'Chưa có thông tin giới thiệu.')
                           : intro,
                       style: AppTextStyles.bodyMedium,
                     ),
                     if (top.isNotEmpty) ...[
-                      const SectionHeading('Hiện vật được quan tâm nhất'),
+                      SectionHeading(
+                        l10n.isEn ? 'Most Popular Artifacts' : 'Hiện vật được quan tâm nhất',
+                      ),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -272,14 +275,13 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Material(
             color: Colors.white,
             elevation: 3,
-            shadowColor: Colors.black26,
+            shadowColor: Colors.black12,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: const BorderSide(color: AppColors.border),
+              borderRadius: BorderRadius.circular(VisitorRadius.xl),
             ),
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -291,28 +293,29 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                         backgroundColor: _burgundy,
                         foregroundColor: Colors.white,
                         textStyle: AppTextStyles.buttonText,
-                        minimumSize: const Size(0, 48),
+                        minimumSize: const Size(0, 50),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(VisitorRadius.lg),
                         ),
                       ),
                       onPressed: _explore,
                       icon: const Icon(Icons.explore_outlined, size: 18),
-                      label: const Text(
-                        'Bắt đầu khám phá',
+                      label: Text(
+                        l10n.startExploreCTA,
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton.outlined(
-                    tooltip: 'Mở bản đồ bảo tàng',
+                    tooltip: l10n.isEn ? 'Open museum map' : 'Mở bản đồ bảo tàng',
                     style: IconButton.styleFrom(
-                      minimumSize: const Size(48, 48),
+                      minimumSize: const Size(50, 50),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
                       ),
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide.none,
+                      backgroundColor: VisitorColors.surface2,
                       foregroundColor: _burgundy,
                     ),
                     onPressed: museumId == null
@@ -349,11 +352,10 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: AppColors.border),
+      color: VisitorColors.surface1,
+      borderRadius: BorderRadius.circular(VisitorRadius.xl),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,7 +397,7 @@ class _Highlight extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(VisitorRadius.md),
           child: AspectRatio(
             aspectRatio: 1,
             child: artifact.imageUrl.isEmpty

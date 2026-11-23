@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import 'primary_button.dart';
 
 /// Hiển thị Modal vinh danh di sản khi người dùng mở khóa huy hiệu mới.
@@ -32,15 +33,8 @@ class _HeritageBadgeCelebrationSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.antiqueIvory,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 24,
-            offset: Offset(0, -4),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(VisitorRadius.xxl)),
       ),
       padding: EdgeInsets.fromLTRB(
         24,
@@ -53,12 +47,12 @@ class _HeritageBadgeCelebrationSheet extends StatelessWidget {
         children: [
           // Drag handle
           Container(
-            width: 44,
+            width: 40,
             height: 4,
             margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
               color: AppColors.darkBrown.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(VisitorRadius.full),
             ),
           ),
 
@@ -130,16 +124,8 @@ class _HeritageBadgeCelebrationSheet extends StatelessWidget {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.mutedGold, width: 1.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.darkBrown.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: VisitorColors.surface1,
+                    borderRadius: BorderRadius.circular(VisitorRadius.xl),
                   ),
                   child: Row(
                     children: [
@@ -148,7 +134,7 @@ class _HeritageBadgeCelebrationSheet extends StatelessWidget {
                         height: 44,
                         decoration: BoxDecoration(
                           color: AppColors.deepBurgundy,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(VisitorRadius.md),
                         ),
                         child: const Icon(
                           Icons.workspace_premium_rounded,
@@ -183,8 +169,7 @@ class _HeritageBadgeCelebrationSheet extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.green.shade300),
+                          borderRadius: BorderRadius.circular(VisitorRadius.xs),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

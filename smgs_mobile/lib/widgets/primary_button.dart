@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_tokens.dart';
 
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
@@ -9,7 +10,7 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
-    this.height = 54,
+    this.height = 50,
   });
   final String label;
   final VoidCallback? onPressed;
@@ -22,11 +23,11 @@ class PrimaryButton extends StatelessWidget {
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         minimumSize: Size(48, height),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         backgroundColor: AppColors.deepBurgundy,
         foregroundColor: AppColors.antiqueIvory,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.lg)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

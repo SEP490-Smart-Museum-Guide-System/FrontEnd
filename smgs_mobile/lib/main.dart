@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/localization/app_localizations.dart';
 import 'screens/auth/auth_screen.dart';
 import 'services/app_services.dart';
 import 'services/app_preferences.dart';
@@ -17,6 +18,9 @@ final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Khởi tạo lưu trữ cấu hình người dùng & ngôn ngữ
+  await AppPreferences.instance.init();
 
   // Khởi tạo lưu trữ phiên Token JWT
   await TokenManager.init();
@@ -40,56 +44,63 @@ class _SMGSAppState extends State<SMGSApp> {
   String? _owner;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    navigatorObservers: [_explorationNavigation],
-    title: 'SMGS • Cẩm nang bảo tàng',
-    debugShowCheckedModeBanner: false,
-    scaffoldMessengerKey: _messengerKey,
-    locale: const Locale('vi'),
-    supportedLocales: const [Locale('vi')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: AppTheme.lightTheme,
-    builder: (context, child) => ListenableBuilder(
-      listenable: Listenable.merge([AppPreferences.instance, AppServices.auth]),
-      builder: (context, _) {
-        final user = AppServices.auth.user;
-        final owner = user?.role == UserRole.visitor ? user?.email : null;
-        if (owner != _owner) {
-          _owner = owner;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _owner == owner)
-              MuseumExploration.instance.restore(owner);
-          });
-        }
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            disableAnimations:
-                MediaQuery.disableAnimationsOf(context) ||
-                AppPreferences.instance.reducedMotion,
-            textScaler: TextScaler.linear(
-              MediaQuery.textScalerOf(context).scale(16) /
-                  16 *
-                  (AppPreferences.instance.largeText ? 1.15 : 1),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: AppPreferences.instance,
+    builder: (context, _) => MaterialApp(
+      navigatorObservers: [_explorationNavigation],
+      title: AppLocalizations.current.appTitle,
+      debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _messengerKey,
+      locale: Locale(AppPreferences.instance.language),
+      supportedLocales: const [Locale('vi'), Locale('en')],
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        ...GlobalMaterialLocalizations.delegates,
+      ],
+      theme: AppTheme.lightTheme,
+      builder: (context, child) => ListenableBuilder(
+        listenable: AppServices.auth,
+        builder: (context, _) {
+          final user = AppServices.auth.user;
+          final owner = user?.role == UserRole.visitor ? user?.email : null;
+          if (owner != _owner) {
+            _owner = owner;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _owner == owner) {
+                MuseumExploration.instance.restore(owner);
+              }
+            });
+          }
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              disableAnimations:
+                  MediaQuery.disableAnimationsOf(context) ||
+                  AppPreferences.instance.reducedMotion,
+              textScaler: TextScaler.linear(
+                MediaQuery.textScalerOf(context).scale(16) /
+                    16 *
+                    (AppPreferences.instance.largeText ? 1.15 : 1),
+              ),
             ),
-          ),
-          child: AutomaticLocationHost(
-            messengerKey: _messengerKey,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                child ?? const SizedBox.shrink(),
-                if (owner != null)
-                  Positioned.fill(
-                    child: ExplorationMapButton(
-                      navigation: _explorationNavigation,
+            child: AutomaticLocationHost(
+              messengerKey: _messengerKey,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  if (owner != null)
+                    Positioned.fill(
+                      child: ExplorationMapButton(
+                        navigation: _explorationNavigation,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
+      home: const HeritagePaper(child: AuthGate()),
     ),
-    home: const HeritagePaper(child: AuthGate()),
   );
 }

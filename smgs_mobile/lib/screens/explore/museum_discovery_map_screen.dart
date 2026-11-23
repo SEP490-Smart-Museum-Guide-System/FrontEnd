@@ -1,3 +1,4 @@
+import '../../core/localization/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -176,14 +177,16 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Scaffold(
     backgroundColor: AppColors.antiqueIvory,
-    appBar: AppBar(title: const Text('Khám phá bản đồ')),
+    appBar: AppBar(title: Text(l10n.isEn ? 'Map Discovery' : 'Khám phá bản đồ')),
     body: SafeArea(
       child: Column(
         children: [
           FilterChip(
-            label: const Text('Chỉ bảo tàng trong hệ thống'),
+            label: Text(l10n.isEn ? 'Only system museums' : 'Chỉ bảo tàng trong hệ thống'),
             selected: !_world,
             onSelected: (onlySystem) {
               _debounce?.cancel();
@@ -210,9 +213,9 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: TextField(
                 controller: _search,
-                decoration: const InputDecoration(
-                  hintText: 'Tìm tên bảo tàng',
-                  prefixIcon: Icon(Icons.search),
+                decoration: InputDecoration(
+                  hintText: l10n.isEn ? 'Search museum name' : 'Tìm tên bảo tàng',
+                  prefixIcon: const Icon(Icons.search),
                 ),
                 onChanged: (_) {
                   _debounce?.cancel();
@@ -232,11 +235,11 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value: _cityCode,
-                      hint: const Text('Tất cả tỉnh/thành'),
+                      hint: Text(l10n.isEn ? 'All provinces/cities' : 'Tất cả tỉnh/thành'),
                       items: [
-                        const DropdownMenuItem<String>(
+                        DropdownMenuItem<String>(
                           value: null,
-                          child: Text('Tất cả tỉnh/thành'),
+                          child: Text(l10n.isEn ? 'All provinces/cities' : 'Tất cả tỉnh/thành'),
                         ),
                         ..._cities.map(
                           (c) => DropdownMenuItem(
@@ -254,7 +257,7 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
                   ),
                   const SizedBox(width: 12),
                   FilterChip(
-                    label: Text(_locating ? 'Đang lấy GPS…' : 'Gần tôi'),
+                    label: Text(_locating ? (l10n.isEn ? 'Getting GPS…' : 'Đang lấy GPS…') : (l10n.isEn ? 'Near me' : 'Gần tôi')),
                     selected: _nearMe,
                     onSelected: _locating
                         ? null
@@ -381,4 +384,5 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
       ),
     ),
   );
+  }
 }

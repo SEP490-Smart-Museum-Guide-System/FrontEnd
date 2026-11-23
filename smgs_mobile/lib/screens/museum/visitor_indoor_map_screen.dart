@@ -355,12 +355,18 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(VisitorRadius.xxl),
+        ),
+      ),
       builder: (sheet) => FractionallySizedBox(
         heightFactor: .78,
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             16,
-            16,
+            12,
             16,
             MediaQuery.viewInsetsOf(sheet).bottom,
           ),
@@ -375,6 +381,15 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                   .toList();
               return Column(
                 children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.mutedGold.withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(VisitorRadius.full),
+                    ),
+                  ),
                   TextField(
                     autofocus: true,
                     decoration: const InputDecoration(
@@ -457,7 +472,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       width: 48,
       height: 48,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(VisitorRadius.sm),
         child: FutureBuilder<Map<String, dynamic>>(
           future: _thumbnails.putIfAbsent(
             id,
@@ -507,7 +522,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         child: Material(
           color: Colors.white,
           elevation: 1,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(VisitorRadius.full),
           child: buildings.length > 1
               ? PopupMenuButton<String>(
                   tooltip: 'Chọn tòa nhà',
@@ -539,7 +554,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           child: Material(
             color: Colors.white,
             elevation: 2,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -588,12 +603,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             child: position == null && selected == null
                 ? Card(
                     margin: EdgeInsets.zero,
-                    color: Colors.white,
+                    color: VisitorColors.surface1,
                     surfaceTintColor: Colors.transparent,
-                    elevation: 2,
-                    shadowColor: Colors.black26,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(VisitorRadius.md),
                     ),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minHeight: 48),
@@ -632,7 +646,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             dimension: 48,
             child: FloatingActionButton(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
               ),
               heroTag: null,
               tooltip: 'Quét QR xác định vị trí',
@@ -647,6 +661,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       if (selected != null)
         Card(
           color: Colors.white,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
@@ -912,15 +930,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     final labelWidth = map?.imageWidth.clamp(0.0, 156.0).toDouble() ?? 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xfff7f7f5),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xfff7f7f5),
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: Center(
           child: IconButton.filledTonal(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: VisitorColors.surface1,
               shape: const CircleBorder(),
             ),
             onPressed: () => Navigator.maybePop(context),
@@ -961,7 +980,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         actions: [
           IconButton.filledTonal(
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: VisitorColors.surface1,
               shape: const CircleBorder(),
             ),
             tooltip: 'Tìm hiện vật hoặc phòng',
@@ -1155,7 +1174,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 borderRadius:
-                                                    BorderRadius.circular(6),
+                                                    BorderRadius.circular(VisitorRadius.xs),
                                               ),
                                               child: Padding(
                                                 padding:
@@ -1206,7 +1225,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                                 color: const Color(0xFF2563EB),
                                               ),
                                               borderRadius:
-                                                  BorderRadius.circular(8),
+                                                  BorderRadius.circular(VisitorRadius.xs),
                                             ),
                                             child: Text(
                                               _manualStart
@@ -1262,7 +1281,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                   color: const Color(0xFFC5A059),
                                   width: 3,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(VisitorRadius.md),
                               ),
                             ),
                           ),
@@ -1309,7 +1328,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.black87,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(VisitorRadius.xs),
                               ),
                               child: const Text(
                                 'Quét mã QR tại vị trí bạn đang đứng để xác định điểm xuất phát.',
