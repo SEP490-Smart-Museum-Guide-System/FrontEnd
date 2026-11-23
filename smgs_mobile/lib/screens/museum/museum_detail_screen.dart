@@ -40,8 +40,6 @@ class MuseumDetailScreen extends StatefulWidget {
 class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   late Museum _museum;
   MuseumHighlights? _highlights;
-  bool _detailFailed = false;
-  bool _highlightsFailed = false;
 
   @override
   void initState() {
@@ -58,8 +56,6 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   void _initialize() {
     _museum = widget.museum;
     _highlights = null;
-    _detailFailed = false;
-    _highlightsFailed = false;
     if (int.tryParse(_museum.id) != null) {
       _loadMuseum();
       _loadHighlights();
@@ -74,9 +70,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
         setState(() => _museum = detail);
       }
     } catch (_) {
-      if (mounted && widget.museum.id == id) {
-        setState(() => _detailFailed = true);
-      }
+      // Keep the available museum information when this request fails.
     }
   }
 
@@ -87,21 +81,8 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
       if (mounted && widget.museum.id == id) {
         setState(() => _highlights = highlights);
       }
-    } catch (_) {
-      if (mounted && widget.museum.id == id) {
-        setState(() => _highlightsFailed = true);
-      }
-    }
-  }
-
-  void _retry() {
-    if (_detailFailed) {
-      setState(() => _detailFailed = false);
-      _loadMuseum();
-    }
-    if (_highlightsFailed) {
-      setState(() => _highlightsFailed = false);
-      _loadHighlights();
+    } catch (error) {
+      debugPrint('Museum discovery request failed: $error');
     }
   }
 
@@ -247,18 +228,14 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                               value:
                                   _highlights?.qrArtifactCount.toString() ??
                                   '—',
-                              subtitle: 'Có hướng dẫn QR',
+                              subtitle: _highlights?.publicOnly == true
+                                  ? 'Có hướng dẫn QR công khai'
+                                  : 'Có hướng dẫn QR',
                             ),
                           ),
                         ],
                       ),
                     ),
-                    if (_detailFailed || _highlightsFailed)
-                      TextButton.icon(
-                        onPressed: _retry,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Thử tải lại thông tin'),
-                      ),
                     const SizedBox(height: 24),
                     const Text('GIỚI THIỆU', style: _label),
                     const SizedBox(height: 8),
@@ -442,6 +419,7 @@ class _Highlight extends StatelessWidget {
         Text(
           artifact.name,
           style: AppTextStyles.caption.copyWith(
+            fontFamily: AppTextStyles.serifFamily,
             fontWeight: FontWeight.w600,
             color: AppColors.darkBrown,
           ),

@@ -26,8 +26,13 @@ class MuseumHighlightArtifact {
 }
 
 class MuseumHighlights {
-  const MuseumHighlights(this.qrArtifactCount, this.topArtifacts);
+  const MuseumHighlights(
+    this.qrArtifactCount,
+    this.topArtifacts, {
+    this.publicOnly = false,
+  });
 
+  final bool publicOnly;
   final int qrArtifactCount;
   final List<MuseumHighlightArtifact> topArtifacts;
 
@@ -149,12 +154,24 @@ class DiscoveryApiService {
   }
 
   static Future<MuseumHighlights> fetchMuseumHighlights(String museumId) async {
+    final uri = Uri.parse('${ApiConfig.museumDetailUrl(museumId)}/discovery');
+    final headers = TokenManager.authHeaders;
     final response = await http
-        .get(
-          Uri.parse('${ApiConfig.museumDetailUrl(museumId)}/discovery'),
-          headers: TokenManager.authHeaders,
-        )
+        .get(uri, headers: headers)
         .timeout(const Duration(seconds: 10));
+    if (response.statusCode >= 500 && headers.containsKey('Authorization')) {
+      final publicResponse = await http
+          .get(uri)
+          .timeout(const Duration(seconds: 10));
+      final public = MuseumHighlights.fromJson(
+        decodeResponse(publicResponse)['data'] as Map<String, dynamic>,
+      );
+      return MuseumHighlights(
+        public.qrArtifactCount,
+        public.topArtifacts,
+        publicOnly: true,
+      );
+    }
     return MuseumHighlights.fromJson(
       decodeResponse(response)['data'] as Map<String, dynamic>,
     );

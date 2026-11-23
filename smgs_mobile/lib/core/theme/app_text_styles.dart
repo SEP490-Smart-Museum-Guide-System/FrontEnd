@@ -5,7 +5,7 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
   static const serifFamily = 'NotoSerif';
-  static const sansFamily = 'NotoSans';
+  static const sansFamily = 'BeVietnamPro';
   static const display = TextStyle(
     fontFamily: serifFamily,
     fontSize: 30,

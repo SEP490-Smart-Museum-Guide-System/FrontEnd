@@ -120,6 +120,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(museum.name), findsOneWidget);
       expect(find.text('HIỆN VẬT QR'), findsOneWidget);
+      expect(find.text('12'), findsOneWidget);
       expect(find.text('Chưa xác định vị trí của bạn'), findsNothing);
       final last = find.text('Tượng đất nung');
       await tester.scrollUntilVisible(

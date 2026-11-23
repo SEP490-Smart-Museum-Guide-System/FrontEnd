@@ -46,10 +46,13 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     if (Platform.environment['SMGS_PRESENCE_SCREENSHOT'] != null) {
-      for (final family in ['NotoSans', 'NotoSerif']) {
+      for (final (family, file) in [
+        ('BeVietnamPro', 'BeVietnamPro-Regular'),
+        ('NotoSerif', 'NotoSerif'),
+      ]) {
         await (FontLoader(
           family,
-        )..addFont(rootBundle.load('assets/fonts/$family.ttf'))).load();
+        )..addFont(rootBundle.load('assets/fonts/$file.ttf'))).load();
       }
       await (FontLoader(
         'MaterialIcons',
