@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import 'visitor_onboarding_dialog.dart';
 
 class VisitorHandbookSheet extends StatelessWidget {
@@ -26,31 +27,20 @@ class VisitorHandbookSheet extends StatelessWidget {
       maxChildSize: 0.95,
       builder: (context, scrollController) {
         return Container(
-          decoration: BoxDecoration(
-            color: AppColors.antiqueIvory,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(
-              color: AppColors.mutedGold.withValues(alpha: 0.5),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 28,
-                offset: const Offset(0, -6),
-              ),
-            ],
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(VisitorRadius.xxl)),
           ),
           child: Column(
             children: [
               // Thanh kéo nhỏ (Handle bar)
               Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 44,
+                width: 40,
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.mutedGold.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(VisitorRadius.full),
                 ),
               ),
 
@@ -222,7 +212,7 @@ class VisitorHandbookSheet extends StatelessWidget {
                         foregroundColor: AppColors.lightText,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(VisitorRadius.md),
                         ),
                       ),
                     ),
@@ -246,7 +236,7 @@ class VisitorHandbookSheet extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(VisitorRadius.md),
                         ),
                       ),
                     ),
@@ -289,12 +279,8 @@ class VisitorHandbookSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.mutedGold.withValues(alpha: 0.35),
-          width: 1,
-        ),
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.lg),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,8 +288,8 @@ class VisitorHandbookSheet extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.mutedGold.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
+              color: VisitorColors.surface2,
+              borderRadius: BorderRadius.circular(VisitorRadius.sm),
             ),
             child: Icon(icon, size: 22, color: AppColors.deepBurgundy),
           ),

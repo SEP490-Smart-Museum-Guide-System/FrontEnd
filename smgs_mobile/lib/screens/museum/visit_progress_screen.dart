@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/backend_panel.dart';
 import '../../services/backend_api.dart';
@@ -47,10 +48,12 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return MuseumPage(
     back: true,
-    title: 'Tiến độ chuyến đi',
-    eyebrow: 'Theo dõi trực tiếp',
+    title: l10n.isEn ? 'Trip Progress' : 'Tiến độ chuyến đi',
+    eyebrow: l10n.isEn ? 'Live Tracking' : 'Theo dõi trực tiếp',
     children: [
       if (_error != null) Notice(_error!),
       BackendPanel(
@@ -76,19 +79,8 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
               // Hero Live Tracker Card
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.border,
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.darkBrown.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  color: VisitorColors.surface1,
+                  borderRadius: BorderRadius.circular(VisitorRadius.xl),
                 ),
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -106,14 +98,8 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             decoration: BoxDecoration(
                               color: active
                                   ? const Color(0xFFE8F5E9)
-                                  : AppColors.softSand,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: active
-                                    ? const Color(0xFF81C784)
-                                    : AppColors.border,
-                                width: 0.8,
-                              ),
+                                  : VisitorColors.surface2,
+                              borderRadius: BorderRadius.circular(VisitorRadius.full),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -132,7 +118,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                                 Flexible(
                                   child: Text(
                                     active
-                                        ? 'ĐANG THAM QUAN'
+                                        ? (l10n.isEn ? 'CURRENT VISIT' : 'ĐANG THAM QUAN')
                                         : backendStatus(
                                             visit['status'],
                                           ).toUpperCase(),
@@ -184,7 +170,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
-                                'Hành trình cá nhân · Thứ tự điểm dừng đã được lưu',
+                                l10n.isEn ? 'Personal journey · Stop order saved' : 'Hành trình cá nhân · Thứ tự điểm dừng đã được lưu',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.secondaryText,
@@ -196,7 +182,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                         ),
                       ),
                     Text(
-                      'Bắt đầu: ${_formatDate(visit['startedAt'])}',
+                      l10n.isEn ? 'Started: ${_formatDate(visit['startedAt'])}' : 'Bắt đầu: ${_formatDate(visit['startedAt'])}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.secondaryText,
@@ -209,7 +195,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Tiến độ: $visitedCount / $totalCount hiện vật',
+                              l10n.isEn ? 'Progress: $visitedCount / $totalCount exhibits' : 'Tiến độ: $visitedCount / $totalCount hiện vật',
                               style: const TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
@@ -230,11 +216,11 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                       ),
                       const SizedBox(height: 6),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(VisitorRadius.full),
                         child: LinearProgressIndicator(
                           value: progressRatio,
                           minHeight: 6,
-                          backgroundColor: AppColors.softSand,
+                          backgroundColor: VisitorColors.surface2,
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             AppColors.deepBurgundy,
                           ),
@@ -252,7 +238,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                         ),
                         onPressed: reload,
                         icon: const Icon(Icons.refresh, size: 14),
-                        label: const Text('Cập nhật tiến độ', style: TextStyle(fontSize: 12)),
+                        label: Text(l10n.isEn ? 'Refresh progress' : 'Cập nhật tiến độ', style: const TextStyle(fontSize: 12)),
                       ),
                     ),
                   ],
@@ -260,12 +246,14 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
               ),
 
               const SizedBox(height: 20),
-              const SectionHeading('Danh sách điểm dừng'),
+              SectionHeading(l10n.isEn ? 'Itinerary Stops' : 'Danh sách điểm dừng'),
               const SizedBox(height: 8),
 
               if (stops.isEmpty)
-                const Notice(
-                  'Lượt tham quan tự do. Quét QR tại hiện vật để ghi nhận khám phá.',
+                Notice(
+                  l10n.isEn
+                      ? 'Self-guided visit. Scan QR at exhibits to record your discoveries.'
+                      : 'Lượt tham quan tự do. Quét QR tại hiện vật để ghi nhận khám phá.',
                 )
               else
                 for (var i = 0; i < stops.length; i++) ...[
@@ -277,27 +265,14 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             .where((a) => a.id == stop['artifactId'].toString())
                             .firstOrNull
                             ?.name ??
-                        'Hiện vật #${stop['artifactId']}';
+                        (l10n.isEn ? 'Artifact #${stop['artifactId']}' : 'Hiện vật #${stop['artifactId']}');
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isNextTarget
-                              ? AppColors.mutedGold
-                              : (isVisited ? Colors.green.shade300 : AppColors.border),
-                          width: isNextTarget ? 1.5 : 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        color: VisitorColors.surface1,
+                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
                       ),
                       child: Row(
                         children: [
@@ -307,18 +282,10 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isVisited
-                                  ? Colors.green.shade100
+                                  ? const Color(0xFFE8F5E9)
                                   : (isNextTarget
                                       ? AppColors.deepBurgundy
-                                      : AppColors.antiqueIvory),
-                              border: Border.all(
-                                color: isVisited
-                                    ? Colors.green.shade700
-                                    : (isNextTarget
-                                        ? AppColors.mutedGold
-                                        : AppColors.border),
-                                width: 1.5,
-                              ),
+                                      : VisitorColors.surface2),
                             ),
                             child: Center(
                               child: isVisited
@@ -329,7 +296,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
                                         color: isNextTarget
-                                            ? AppColors.antiqueIvory
+                                            ? Colors.white
                                             : AppColors.darkBrown,
                                       ),
                                     ),
@@ -359,10 +326,10 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                                     Expanded(
                                       child: Text(
                                         isVisited
-                                            ? 'Đã khám phá · ${_formatDate(stop['lastVisitedAt'])}'
+                                            ? (l10n.isEn ? 'Explored · ${_formatDate(stop['lastVisitedAt'])}' : 'Đã khám phá · ${_formatDate(stop['lastVisitedAt'])}')
                                             : (isNextTarget
-                                                ? 'Điểm dừng kế tiếp theo gợi ý'
-                                                : 'Chưa ghi nhận quét'),
+                                                ? (l10n.isEn ? 'Next suggested stop' : 'Điểm dừng kế tiếp theo gợi ý')
+                                                : (l10n.isEn ? 'Not scanned yet' : 'Chưa ghi nhận quét')),
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: isVisited || isNextTarget ? FontWeight.w600 : FontWeight.normal,
@@ -390,7 +357,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
 
               if (active) ...[
                 PrimaryButton(
-                  label: 'Quét QR để ghi nhận',
+                  label: l10n.isEn ? 'Scan QR to Record' : 'Quét QR để ghi nhận',
                   icon: Icons.qr_code_scanner,
                   onPressed: _busy
                       ? null
@@ -405,31 +372,33 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                 ),
                 const SizedBox(height: 10),
                 SecondaryButton(
-                  label: 'Chỉ đường trên sơ đồ bảo tàng',
+                  label: l10n.isEn ? 'Directions on Museum Map' : 'Chỉ đường trên sơ đồ bảo tàng',
                   icon: Icons.map_outlined,
                   onPressed: () => _openMap(visit),
                 ),
                 const SizedBox(height: 10),
                 SecondaryButton(
-                  label: _busy ? 'Đang hoàn tất…' : 'Kết thúc chuyến tham quan',
+                  label: _busy ? (l10n.isEn ? 'Ending…' : 'Đang hoàn tất…') : (l10n.isEn ? 'End Visit' : 'Kết thúc chuyến tham quan'),
                   onPressed: _busy
                       ? null
                       : () async {
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: const Text('Kết thúc chuyến tham quan?'),
-                              content: const Text(
-                                'Hệ thống sẽ kiểm tra điều kiện hoàn thành của tuyến tham quan.',
+                              title: Text(l10n.isEn ? 'End this visit?' : 'Kết thúc chuyến tham quan?'),
+                              content: Text(
+                                l10n.isEn
+                                    ? 'The system will check tour completion conditions.'
+                                    : 'Hệ thống sẽ kiểm tra điều kiện hoàn thành của tuyến tham quan.',
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('Tiếp tục tham quan'),
+                                  child: Text(l10n.isEn ? 'Continue Visit' : 'Tiếp tục tham quan'),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, true),
-                                  child: const Text('Kết thúc'),
+                                  child: Text(l10n.isEn ? 'End Visit' : 'Kết thúc'),
                                 ),
                               ],
                             ),
@@ -463,8 +432,8 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                   padding: const EdgeInsets.only(top: 8),
                   child: PrimaryButton(
                     label: visit['hasFeedback'] == true
-                        ? 'Xem / chỉnh sửa đánh giá'
-                        : 'Đánh giá chuyến tham quan',
+                        ? (l10n.isEn ? 'View / Edit Feedback' : 'Xem / chỉnh sửa đánh giá')
+                        : (l10n.isEn ? 'Rate this Visit' : 'Đánh giá chuyến tham quan'),
                     icon: Icons.star_rate_rounded,
                     onPressed: () async {
                       await openVisitFeedback(context, visit);
@@ -477,5 +446,6 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
         },
       ),
     ],
-  );
+    );
+  }
 }

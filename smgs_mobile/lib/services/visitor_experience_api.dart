@@ -8,11 +8,12 @@ class VisitorSession {
 }
 
 class ScanRequest {
-  ScanRequest(String input, {this.visitId})
+  ScanRequest(String input, {this.visitId, this.imageMatch = false})
     : code = ArtifactScanService.extractCode(input),
       requestId = uuid();
   final String code, requestId;
   final int? visitId;
+  final bool imageMatch;
   static String uuid() {
     final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
@@ -26,13 +27,26 @@ class ScanRequest {
     final result = await BackendApi.request(
       'recognitions/qr',
       method: 'POST',
-      body: {'qrCode': code, 'visitId': visitId, 'requestId': requestId},
+      body: {
+        'qrCode': code,
+        'visitId': visitId,
+        'requestId': requestId,
+        'method': imageMatch ? 'image' : 'qr',
+      },
     );
     return Map<String, dynamic>.from(result);
   }
 }
 
 class VisitorExperienceApi {
+  static Future<void> recordDetailView(int artifactId, String requestId) async {
+    await BackendApi.request(
+      'artifacts/$artifactId/detail-views',
+      method: 'POST',
+      body: {'requestId': requestId},
+    );
+  }
+
   static Future<Map<String, dynamic>> startVisit(
     int museumId, {
     int? tourId,

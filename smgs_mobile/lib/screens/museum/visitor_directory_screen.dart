@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../widgets/backend_panel.dart';
 import '../../services/backend_api.dart';
 import '../../services/visitor_experience_api.dart';
@@ -73,7 +74,11 @@ class _VisitorDirectoryScreenState extends State<VisitorDirectoryScreen> {
           widget.museumId,
           visitId: _visitId,
         );
-        if (presence['isFresh'] == true) preferred = presence['mapId'];
+        preferred =
+            presence['mapId'] ??
+            maps
+                .where((m) => m['floorId'] == presence['floorId'])
+                .firstOrNull?['id'];
       } catch (_) {
         /* Location is optional for browsing. */
       }
@@ -84,35 +89,49 @@ class _VisitorDirectoryScreenState extends State<VisitorDirectoryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: BackendPanel(
-      resourceKey: 'directory:${widget.museumId}',
-      load: _loadDirectory,
-      builder: (raw, reload) {
-        final directory = Map<String, dynamic>.from(raw);
-        final map = directory['initialMap'];
-        if (map == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Sơ đồ bảo tàng')),
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Bảo tàng chưa xuất bản sơ đồ.'),
-                  TextButton(onPressed: reload, child: const Text('Tải lại')),
-                ],
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: BackendPanel(
+        resourceKey: 'directory:${widget.museumId}',
+        load: _loadDirectory,
+        builder: (raw, reload) {
+          final directory = Map<String, dynamic>.from(raw);
+          final map = directory['initialMap'];
+          if (map == null) {
+            return Scaffold(
+              backgroundColor: Colors.white,
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                title: Text(l10n.isEn ? 'Museum Floor Plan' : 'Sơ đồ bảo tàng'),
               ),
-            ),
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.isEn
+                          ? 'The museum has not published a floor plan yet.'
+                          : 'Bảo tàng chưa xuất bản sơ đồ.',
+                    ),
+                    TextButton(onPressed: reload, child: Text(l10n.retry)),
+                  ],
+                ),
+              ),
+            );
+          }
+          return VisitorIndoorMapScreen(
+            mapId: map['id'],
+            directory: directory,
+            museumName: directory['museumName'] ?? widget.museumName,
+            visitId: _visitId,
+            targetArtifactId: widget.initialArtifactId,
           );
-        }
-        return VisitorIndoorMapScreen(
-          mapId: map['id'],
-          directory: directory,
-          museumName: directory['museumName'] ?? widget.museumName,
-          visitId: _visitId,
-          targetArtifactId: widget.initialArtifactId,
-        );
-      },
-    ),
-  );
+        },
+      ),
+    );
+  }
 }

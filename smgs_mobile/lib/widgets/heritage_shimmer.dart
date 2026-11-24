@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
+import '../core/theme/visitor_colors.dart';
 
 class HeritageShimmer extends StatefulWidget {
   final double width;
@@ -10,7 +10,7 @@ class HeritageShimmer extends StatefulWidget {
     super.key,
     required this.width,
     required this.height,
-    this.borderRadius = 8,
+    this.borderRadius = VisitorRadius.xs,
   });
 
   @override
@@ -49,10 +49,10 @@ class _HeritageShimmerState extends State<HeritageShimmer>
             gradient: LinearGradient(
               begin: Alignment(-1.5 + (_controller.value * 3.0), -0.3),
               end: Alignment(-0.5 + (_controller.value * 3.0), 0.3),
-              colors: [
-                AppColors.softSand,
-                AppColors.antiqueIvory,
-                AppColors.softSand,
+              colors: const [
+                VisitorColors.surface2,
+                VisitorColors.surface1,
+                VisitorColors.surface2,
               ],
               stops: const [0.1, 0.5, 0.9],
             ),
@@ -72,9 +72,8 @@ class HeritageMuseumCardSkeleton extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

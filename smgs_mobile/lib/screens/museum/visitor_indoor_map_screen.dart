@@ -48,6 +48,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   int _mapRequest = 0;
   ScanRequest? _scanRequest;
   DateTime? _confirmedAt;
+  Map<String, dynamic>? _lastPosition;
   bool _manualStart = false;
   Timer? _positionTimer;
 
@@ -131,6 +132,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
 
         _manualStart = false;
         _confirmedAt = null;
+        _lastPosition = null;
         final targets = widget.targetArtifactId == null
             ? <IndoorMarker>[]
             : mapData.markers
@@ -156,11 +158,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             mapId: int.parse(_currentMapId.toString()),
           );
           if (!mounted || loadRequest != _mapRequest) return;
-          if (location['isFresh'] != true) {
-            throw const FormatException(
-              'Chưa có vị trí mới. Hãy quét QR cổng, phòng hoặc hiện vật tại chỗ.',
-            );
-          }
+          if (location['confirmedAt'] == null) return;
+          setState(() => _lastPosition = location);
           if (location['mapId'] != mapData.id) {
             throw const FormatException(
               'Vị trí vừa xác nhận thuộc sơ đồ khác. Hãy quét QR phòng để mở đúng tầng.',
@@ -206,6 +205,36 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
+    }
+  }
+
+  Future<void> _startDirections() async {
+    if (_manualStart) return _recalculateRoute();
+    final choice = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kiểm tra điểm xuất phát'),
+        content: const Text(
+          'Vị trí này được ghi nhận từ lần quét QR gần nhất. Bạn có thể đã di chuyển. Hãy quét QR tại nơi đang đứng để xác nhận vị trí trước khi chỉ đường.',
+        ),
+        actions: [
+          if (_fromNodeId != null && _lastPosition?['isFresh'] == true)
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Dùng vị trí gần nhất'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xác nhận lại vị trí'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice) {
+      _scan();
+    } else {
+      await _recalculateRoute();
     }
   }
 
@@ -326,12 +355,18 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(VisitorRadius.xxl),
+        ),
+      ),
       builder: (sheet) => FractionallySizedBox(
         heightFactor: .78,
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             16,
-            16,
+            12,
             16,
             MediaQuery.viewInsetsOf(sheet).bottom,
           ),
@@ -346,6 +381,15 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                   .toList();
               return Column(
                 children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.mutedGold.withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(VisitorRadius.full),
+                    ),
+                  ),
                   TextField(
                     autofocus: true,
                     decoration: const InputDecoration(
@@ -428,7 +472,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       width: 48,
       height: 48,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(VisitorRadius.sm),
         child: FutureBuilder<Map<String, dynamic>>(
           future: _thumbnails.putIfAbsent(
             id,
@@ -478,7 +522,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         child: Material(
           color: Colors.white,
           elevation: 1,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(VisitorRadius.full),
           child: buildings.length > 1
               ? PopupMenuButton<String>(
                   tooltip: 'Chọn tòa nhà',
@@ -510,7 +554,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           child: Material(
             color: Colors.white,
             elevation: 2,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -559,12 +603,11 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             child: position == null && selected == null
                 ? Card(
                     margin: EdgeInsets.zero,
-                    color: Colors.white,
+                    color: VisitorColors.surface1,
                     surfaceTintColor: Colors.transparent,
-                    elevation: 2,
-                    shadowColor: Colors.black26,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(VisitorRadius.md),
                     ),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minHeight: 48),
@@ -603,7 +646,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             dimension: 48,
             child: FloatingActionButton(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
               ),
               heroTag: null,
               tooltip: 'Quét QR xác định vị trí',
@@ -618,6 +661,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       if (selected != null)
         Card(
           color: Colors.white,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
@@ -664,7 +711,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       FilledButton.icon(
-                        onPressed: position == null ? _scan : _recalculateRoute,
+                        onPressed: _startDirections,
                         icon: const Icon(Icons.directions_walk),
                         label: const Text('Chỉ đường'),
                       ),
@@ -674,7 +721,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                         icon: const Icon(Icons.accessible),
                         onPressed: () {
                           setState(() => _accessibleOnly = !_accessibleOnly);
-                          if (position != null) _recalculateRoute();
+                          if (_routeNodeIds.isNotEmpty) _recalculateRoute();
                         },
                       ),
                     ],
@@ -768,7 +815,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   }
 
   Future<void> _handleQrDetected(String rawCode) async {
-    if (_isProcessingScan || _map == null) return;
+    if (!_showQrScanner || _isProcessingScan || _map == null) return;
     setState(() {
       _isProcessingScan = true;
     });
@@ -807,45 +854,46 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         }
         return;
       }
-      final result = await IndoorMapApiService.resolveQrToLocation(
-        rawQr: rawCode,
-        map: _map!,
-      );
-
       final code = ArtifactScanService.extractCode(rawCode);
+      final artifact = await ArtifactScanService.scan(code);
+      if (artifact['museumId'] != _map!.museumId) {
+        throw const FormatException('QR thuộc bảo tàng khác.');
+      }
       if (_scanRequest?.code != code ||
           _scanRequest?.visitId != widget.visitId) {
         _scanRequest = ScanRequest(code, visitId: widget.visitId);
       }
       final recognition = await _scanRequest!.record();
+      _scanRequest = null;
       if (mounted) showEarnedBadges(context, recognition['newBadges']);
       if (!mounted) return;
-      setState(() {
-        _routeError = null;
-        _fromNodeId = result.startNodeId;
-        _startMarker = result.marker;
-
-        _confirmedAt = DateTime.tryParse(
-          recognition['recognizedAt']?.toString() ?? '',
+      final location = await MuseumPresenceApi.current(
+        _map!.museumId,
+        visitId: widget.visitId,
+      );
+      if (!mounted) return;
+      final recordedAt = DateTime.tryParse(
+        recognition['recognizedAt'].toString(),
+      );
+      final confirmedAt = DateTime.tryParse(location['confirmedAt'].toString());
+      if (recordedAt == null ||
+          confirmedAt == null ||
+          recordedAt.difference(confirmedAt).abs() >=
+              const Duration(milliseconds: 1) ||
+          location['artifactId'].toString() != artifact['id'].toString()) {
+        throw const FormatException(
+          'Hiện vật chưa có vị trí hợp lệ trên sơ đồ.',
         );
-        _manualStart = false;
+      }
+      if (location['mapId'] != null) _currentMapId = location['mapId'];
+      setState(() {
         _showQrScanner = false;
         _isProcessingScan = false;
+        _selectedDestination = null;
       });
-
       await _scannerController?.dispose();
       _scannerController = null;
-      if (!mounted) return;
-      _centerOnCoordinates(result.marker.x, result.marker.y);
-      _recalculateRoute();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đã xác định vị trí tại: ${result.artifactName}'),
-          backgroundColor: AppColors.deepBurgundy,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      if (mounted) await _loadPublishedMap();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -882,15 +930,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     final labelWidth = map?.imageWidth.clamp(0.0, 156.0).toDouble() ?? 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xfff7f7f5),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xfff7f7f5),
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: Center(
           child: IconButton.filledTonal(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: VisitorColors.surface1,
               shape: const CircleBorder(),
             ),
             onPressed: () => Navigator.maybePop(context),
@@ -911,7 +960,17 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
               ),
             ),
             Text(
-              widget.museumName,
+              _lastPosition == null
+                  ? widget.museumName
+                  : [
+                      'Vị trí ghi nhận gần nhất',
+                      _lastPosition?['buildingName'],
+                      _lastPosition?['floorName'],
+                      _lastPosition?['galleryName'],
+                      DateTime.tryParse(
+                        _lastPosition?['confirmedAt']?.toString() ?? '',
+                      )?.toLocal().toString().split('.').first,
+                    ].whereType<String>().join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, color: AppColors.darkBrown),
@@ -921,7 +980,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
         actions: [
           IconButton.filledTonal(
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: VisitorColors.surface1,
               shape: const CircleBorder(),
             ),
             tooltip: 'Tìm hiện vật hoặc phòng',
@@ -1032,7 +1091,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                       final py = marker.y * _map!.imageHeight;
                                       final isSelected =
                                           _selectedDestination?.id == marker.id;
-                                      final isStart = position?.id == marker.id;
+                                      final isStart =
+                                          _startMarker?.id == marker.id;
 
                                       return Positioned(
                                         left: px - 18,
@@ -1114,7 +1174,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 borderRadius:
-                                                    BorderRadius.circular(6),
+                                                    BorderRadius.circular(VisitorRadius.xs),
                                               ),
                                               child: Padding(
                                                 padding:
@@ -1165,7 +1225,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                                 color: const Color(0xFF2563EB),
                                               ),
                                               borderRadius:
-                                                  BorderRadius.circular(8),
+                                                  BorderRadius.circular(VisitorRadius.xs),
                                             ),
                                             child: Text(
                                               _manualStart
@@ -1221,7 +1281,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                   color: const Color(0xFFC5A059),
                                   width: 3,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(VisitorRadius.md),
                               ),
                             ),
                           ),
@@ -1268,7 +1328,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.black87,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(VisitorRadius.xs),
                               ),
                               child: const Text(
                                 'Quét mã QR tại vị trí bạn đang đứng để xác định điểm xuất phát.',

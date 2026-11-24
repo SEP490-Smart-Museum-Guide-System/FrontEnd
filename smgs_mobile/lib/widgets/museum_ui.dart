@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import 'heritage_decoration.dart';
 import 'heritage_motion.dart';
 export '../core/theme/app_colors.dart';
 export '../core/theme/app_text_styles.dart';
+export '../core/theme/visitor_colors.dart';
 export 'heritage_art.dart';
 export 'primary_button.dart';
 export 'secondary_button.dart';
@@ -16,6 +18,7 @@ void openPage(BuildContext context, Widget page) {
   final reduced = reduceHeritageMotion(context);
   Navigator.of(context).push(
     PageRouteBuilder<void>(
+      settings: RouteSettings(name: page.runtimeType.toString()),
       transitionDuration: reduced ? Duration.zero : HeritageMotion.standard,
       reverseTransitionDuration: reduced ? Duration.zero : HeritageMotion.fast,
       pageBuilder: (context, animation, secondaryAnimation) =>
@@ -118,9 +121,9 @@ class MuseumPage extends StatelessWidget {
 );
     return back
         ? Scaffold(
-            backgroundColor: AppColors.antiqueIvory,
+            backgroundColor: Colors.white,
             appBar: AppBar(
-              backgroundColor: AppColors.antiqueIvory,
+              backgroundColor: Colors.white,
               surfaceTintColor: Colors.transparent,
               foregroundColor: AppColors.darkBrown,
               elevation: 0,
@@ -162,9 +165,8 @@ class Panel extends StatelessWidget {
     width: double.infinity,
     padding: padding,
     decoration: BoxDecoration(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: gold ? AppColors.mutedGold : AppColors.border),
+      color: gold ? VisitorColors.surfaceGold : VisitorColors.surface1,
+      borderRadius: BorderRadius.circular(VisitorRadius.xl),
     ),
     child: child,
   );
@@ -213,10 +215,9 @@ class ActionTile extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: HoverLift(
       child: Material(
-        color: AppColors.card,
+        color: VisitorColors.surface1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(VisitorRadius.lg),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -230,8 +231,8 @@ class ActionTile extends StatelessWidget {
                   height: 42,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.antiqueIvory,
-                    borderRadius: BorderRadius.circular(10),
+                    color: VisitorColors.surface2,
+                    borderRadius: BorderRadius.circular(VisitorRadius.sm),
                   ),
                   child: Icon(icon, size: 24, color: AppColors.deepBurgundy),
                 ),
@@ -320,6 +321,10 @@ Future<void> showReading(
   context: context,
   isScrollControlled: true,
   showDragHandle: true,
+  backgroundColor: Colors.white,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(VisitorRadius.xxl)),
+  ),
   constraints: const BoxConstraints(maxWidth: 500),
   builder: (context) => SafeArea(
     child: SingleChildScrollView(
@@ -352,3 +357,4 @@ Future<void> showReading(
     ),
   ),
 );
+

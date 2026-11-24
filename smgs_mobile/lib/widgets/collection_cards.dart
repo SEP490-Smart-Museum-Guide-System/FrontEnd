@@ -47,10 +47,9 @@ class MuseumCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => HoverLift(
     child: Material(
-      color: AppColors.card,
+      color: VisitorColors.surface1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.border),
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -90,9 +89,12 @@ class MuseumCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 8,
+                      vertical: 6,
                     ),
-                    color: AppColors.antiqueIvory,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(VisitorRadius.xs),
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -114,12 +116,12 @@ class MuseumCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 5,
+                              horizontal: 6,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.softSand,
-                              borderRadius: BorderRadius.circular(4),
+                              color: VisitorColors.surface2,
+                              borderRadius: BorderRadius.circular(VisitorRadius.xs),
                             ),
                             child: Text(
                               museum.formattedDistance,
@@ -225,10 +227,9 @@ class ArtifactCard extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: HoverLift(
       child: Material(
-        color: AppColors.card,
+        color: VisitorColors.surface1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: AppColors.border),
+          borderRadius: BorderRadius.circular(VisitorRadius.xl),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -246,7 +247,7 @@ class ArtifactCard extends StatelessWidget {
                 SizedBox(
                   width: 86,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
                     child: ArtifactPhoto(artifact: artifact, height: 108),
                   ),
                 ),

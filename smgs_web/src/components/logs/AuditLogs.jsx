@@ -239,19 +239,19 @@ export default function AuditLogs() {
 
           <div style={{
             padding: '16px 20px',
-            background: '#F0F9FF',
+            background: 'var(--color-paper-card)',
             borderRadius: '10px',
-            border: '1px solid #BAE6FD',
+            border: '1px solid var(--color-paper-border)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '12px'
           }}>
-            <ShieldCheck size={20} color="#0284C7" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <ShieldCheck size={20} color="var(--color-burgundy-700)" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <strong style={{ fontSize: '0.875rem', color: '#0369A1' }}>
+              <strong style={{ fontSize: '0.875rem', color: 'var(--color-burgundy-900)' }}>
                 Tuân thủ Tiêu chuẩn Bảo mật Kiến trúc (OWASP Security Standards):
               </strong>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: '#0C4A6E', lineHeight: '1.5' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', lineHeight: '1.5' }}>
                 Toàn bộ các khóa bảo mật nhạy cảm (Google Gemini API Key, Secret HMAC SePay, Database Connection String, JWT Signing Key) được cô lập an toàn bên trong máy chủ Backend ASP.NET Core (`appsettings.Production.json` & Linux Environment Variables). Giao diện trình duyệt của Quản trị viên chỉ tương tác qua các kênh API có xác thực JWT Bearer Role-based, tuyệt đối không lưu trữ khóa bí mật tại LocalStorage hay Client-side Bundle.
               </p>
             </div>

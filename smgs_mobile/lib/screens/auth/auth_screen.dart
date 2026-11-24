@@ -161,7 +161,7 @@ class _AuthScreenState extends State<AuthScreen> {
           children: [
             if (_mode == 'login') ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(VisitorRadius.xl),
                 child: const MuseumPhoto(
                   museumId: 'museum_national',
                   imageUrl: 'assets/images/national-museum-web.jpg',

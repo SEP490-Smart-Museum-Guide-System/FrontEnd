@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../services/app_preferences.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/backend_panel.dart';
 import '../../services/backend_api.dart';
@@ -24,20 +26,21 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final museumName = AppServices.catalog.museumName(widget.museumId.toString());
 
     return MuseumPage(
       back: true,
-      title: 'Các tuyến tham quan',
+      title: l10n.isEn ? 'Curated Tours' : 'Các tuyến tham quan',
       subtitle: museumName,
       children: [
-        const Eyebrow('TUYẾN KHÁM PHÁ CHỦ ĐỀ'),
+        Eyebrow(l10n.isEn ? 'THEMATIC EXPLORATION ROUTES' : 'TUYẾN KHÁM PHÁ CHỦ ĐỀ'),
         const SizedBox(height: 6),
-        Text('Tuyến tham quan có sẵn', style: AppTextStyles.pageTitle),
+        Text(l10n.isEn ? 'Available Curated Tours' : 'Tuyến tham quan có sẵn', style: AppTextStyles.pageTitle),
         if (widget.maxMinutes != null) ...[
           const SizedBox(height: 6),
           Text(
-            'Lọc theo thời lượng tối đa ${widget.maxMinutes} phút',
+            l10n.isEn ? 'Filtered by max duration ${widget.maxMinutes} mins' : 'Lọc theo thời lượng tối đa ${widget.maxMinutes} phút',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.deepBurgundy,
               fontWeight: FontWeight.w600,
@@ -55,15 +58,12 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: _selectedTab == 0 ? AppColors.deepBurgundy : AppColors.card,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _selectedTab == 0 ? AppColors.deepBurgundy : AppColors.border,
-                    ),
+                    color: _selectedTab == 0 ? AppColors.deepBurgundy : VisitorColors.surface2,
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
                   ),
                   child: Center(
                     child: Text(
-                      'Tất cả tuyến',
+                      l10n.isEn ? 'All Tours' : 'Tất cả tuyến',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -81,11 +81,8 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: _selectedTab == 1 ? AppColors.deepBurgundy : AppColors.card,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _selectedTab == 1 ? AppColors.deepBurgundy : AppColors.border,
-                    ),
+                    color: _selectedTab == 1 ? AppColors.deepBurgundy : VisitorColors.surface2,
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
                   ),
                   child: Center(
                     child: Row(
@@ -98,7 +95,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Lộ trình đã lưu',
+                          l10n.isEn ? 'Saved Routes' : 'Lộ trình đã lưu',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -131,7 +128,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
             return Column(
               children: [
                 if (rows.isEmpty)
-                  const Notice('Chưa có tuyến đã xuất bản phù hợp.')
+                  Notice(l10n.isEn ? 'No matching curated tours found.' : 'Chưa có tuyến đã xuất bản phù hợp.')
                 else
                   for (final tour in rows)
                     Padding(
@@ -141,20 +138,12 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                           context,
                           PublishedTourDetailScreen(tourId: tour['id'] as int),
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(VisitorRadius.xl),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            color: VisitorColors.surface1,
+                            borderRadius: BorderRadius.circular(VisitorRadius.xl),
                           ),
                           child: Row(
                             children: [
@@ -163,7 +152,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                 height: 44,
                                 decoration: BoxDecoration(
                                   color: AppColors.deepBurgundy,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(VisitorRadius.md),
                                 ),
                                 child: const Icon(
                                   Icons.route_outlined,
@@ -199,7 +188,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              '${tour['estimatedMinutes']} phút',
+                                              l10n.isEn ? '${tour['estimatedMinutes']} mins' : '${tour['estimatedMinutes']} phút',
                                               style:
                                                   AppTextStyles.caption.copyWith(
                                                 color: AppColors.darkBrown
@@ -220,7 +209,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              '${(tour['items'] as List).length} điểm dừng',
+                                              l10n.isEn ? '${(tour['items'] as List).length} stops' : '${(tour['items'] as List).length} điểm dừng',
                                               style:
                                                   AppTextStyles.caption.copyWith(
                                                 color: AppColors.darkBrown
@@ -262,9 +251,11 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
               }
               final saved = snapshot.data ?? [];
               if (saved.isEmpty) {
-                return const Column(
+                return Column(
                   children: [
-                    Notice('Bạn chưa lưu lộ trình nào cho bảo tàng này. Khi xem chi tiết tuyến tham quan, bấm "Lưu lộ trình" để ghi nhớ.'),
+                    Notice(l10n.isEn
+                        ? 'You have not saved any routes for this museum. Click "Save Route" when viewing a tour to remember.'
+                        : 'Bạn chưa lưu lộ trình nào cho bảo tàng này. Khi xem chi tiết tuyến tham quan, bấm "Lưu lộ trình" để ghi nhớ.'),
                   ],
                 );
               }
@@ -280,20 +271,12 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                             openPage(context, PublishedTourDetailScreen(tourId: tourId));
                           }
                         },
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(VisitorRadius.xl),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.mutedGold.withOpacity(0.6)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            color: VisitorColors.surface1,
+                            borderRadius: BorderRadius.circular(VisitorRadius.xl),
                           ),
                           child: Row(
                             children: [
@@ -302,7 +285,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                 height: 44,
                                 decoration: BoxDecoration(
                                   color: AppColors.mutedGold,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(VisitorRadius.md),
                                 ),
                                 child: const Icon(
                                   Icons.bookmark,
@@ -316,7 +299,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      item['title'] ?? 'Lộ trình đã lưu',
+                                      item['title'] ?? (l10n.isEn ? 'Saved Route' : 'Lộ trình đã lưu'),
                                       style: AppTextStyles.cardTitle.copyWith(
                                         fontSize: 16,
                                       ),
@@ -325,7 +308,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                     Row(
                                       children: [
                                         Text(
-                                          '${item['estimatedMinutes'] ?? item['availableMinutes']} phút',
+                                          l10n.isEn ? '${item['estimatedMinutes'] ?? item['availableMinutes']} mins' : '${item['estimatedMinutes'] ?? item['availableMinutes']} phút',
                                           style: AppTextStyles.caption.copyWith(
                                             color: AppColors.deepBurgundy,
                                             fontWeight: FontWeight.w600,
@@ -333,7 +316,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                                         ),
                                         const SizedBox(width: 14),
                                         Text(
-                                          '${(item['artifactIds'] as List?)?.length ?? 0} trạm dừng',
+                                          l10n.isEn ? '${(item['artifactIds'] as List?)?.length ?? 0} stops' : '${(item['artifactIds'] as List?)?.length ?? 0} trạm dừng',
                                           style: AppTextStyles.caption.copyWith(
                                             color: AppColors.darkBrown.withOpacity(0.7),
                                             fontWeight: FontWeight.w600,
@@ -364,7 +347,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
             child: TextButton(
               onPressed: () =>
                   openPage(context, PublishedToursScreen(museumId: widget.museumId)),
-              child: const Text('Xem tất cả tuyến tham quan'),
+              child: Text(l10n.isEn ? 'View all available tours' : 'Xem tất cả tuyến tham quan'),
             ),
           ),
       ],
@@ -394,18 +377,22 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
       final minutes = tour['estimatedMinutes'] is num ? (tour['estimatedMinutes'] as num).toInt() : 60;
       await VisitorExperienceApi.saveRoute(tourVersionId: versionId, availableMinutes: minutes);
       if (mounted) {
+        final isEn = AppPreferences.instance.language == 'en';
         setState(() => _isSaved = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã lưu lộ trình này vào mục cá nhân của bạn!'),
+          SnackBar(
+            content: Text(isEn
+                ? 'Route saved to your personal list!'
+                : 'Đã lưu lộ trình này vào mục cá nhân của bạn!'),
             backgroundColor: AppColors.deepBurgundy,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final isEn = AppPreferences.instance.language == 'en';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi lưu lộ trình: $e')),
+          SnackBar(content: Text(isEn ? 'Failed to save route: $e' : 'Lỗi khi lưu lộ trình: $e')),
         );
       }
     } finally {
@@ -414,9 +401,11 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return MuseumPage(
     back: true,
-    title: 'Tuyến tham quan',
+    title: l10n.isEn ? 'Tour Details' : 'Tuyến tham quan',
     children: [
       if (_error != null) Notice(_error!),
       BackendPanel(
@@ -440,7 +429,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.deepBurgundy,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(VisitorRadius.xl),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.08),
@@ -462,7 +451,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.mutedGold.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(VisitorRadius.xs),
                             border: Border.all(
                               color: AppColors.mutedGold,
                               width: 0.8,
@@ -478,7 +467,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'TUYẾN TIÊU BIỂU',
+                                l10n.isEn ? 'FEATURED TOUR' : 'TUYẾN TIÊU BIỂU',
                                 style: AppTextStyles.caption.copyWith(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -539,7 +528,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '${tour['estimatedMinutes']} phút',
+                              l10n.isEn ? '${tour['estimatedMinutes']} mins' : '${tour['estimatedMinutes']} phút',
                               style: AppTextStyles.bodyMedium.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.antiqueIvory,
@@ -572,7 +561,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
               ),
 
               const SizedBox(height: 24),
-              const SectionHeading('Lộ trình các điểm dừng'),
+              SectionHeading(l10n.isEn ? 'Tour Stops Route' : 'Lộ trình các điểm dừng'),
               const SizedBox(height: 12),
 
               // Connected Timeline
@@ -583,7 +572,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                       .where((a) => a.id == item['artifactId'].toString())
                       .firstOrNull;
                   final artifactName =
-                      artifact?.name ?? 'Hiện vật #${item['artifactId']}';
+                      artifact?.name ?? (l10n.isEn ? 'Artifact #${item['artifactId']}' : 'Hiện vật #${item['artifactId']}');
                   final location = artifact?.location ?? '';
                   final isLast = i == items.length - 1;
 
@@ -592,16 +581,8 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          color: VisitorColors.surface1,
+                          borderRadius: BorderRadius.circular(VisitorRadius.lg),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,7 +647,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                             if (artifact?.imageUrl.isNotEmpty == true) ...[
                               const SizedBox(width: 10),
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(VisitorRadius.sm),
                                 child: Container(
                                   width: 52,
                                   height: 52,
@@ -674,7 +655,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                                   child: Image.network(
                                     artifact!.imageUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
+                                    errorBuilder: (_, _, _) => const Icon(
                                       Icons.museum_outlined,
                                       size: 24,
                                       color: AppColors.deepBurgundy,
@@ -699,7 +680,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                               ),
                               const SizedBox(width: 16),
                               Text(
-                                'Di chuyển sang điểm tiếp theo',
+                                l10n.isEn ? 'Proceed to next stop' : 'Di chuyển sang điểm tiếp theo',
                                 style: AppTextStyles.caption.copyWith(
                                   color: AppColors.darkBrown.withOpacity(0.5),
                                   fontSize: 11,
@@ -715,7 +696,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
 
               const SizedBox(height: 24),
               PrimaryButton(
-                label: _busy ? 'Đang bắt đầu…' : 'Bắt đầu chuyến tham quan',
+                label: _busy ? (l10n.isEn ? 'Starting…' : 'Đang bắt đầu…') : (l10n.isEn ? 'Start Museum Tour' : 'Bắt đầu chuyến tham quan'),
                 icon: Icons.play_arrow_rounded,
                 onPressed: _busy
                     ? null
@@ -747,7 +728,11 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
               ),
               const SizedBox(height: 12),
               SecondaryButton(
-                label: _isSaved ? 'Đã lưu vào danh sách của bạn' : (_savingRoute ? 'Đang lưu…' : 'Lưu lộ trình này'),
+                label: _isSaved
+                    ? (l10n.isEn ? 'Saved to Your List' : 'Đã lưu vào danh sách của bạn')
+                    : (_savingRoute
+                        ? (l10n.isEn ? 'Saving…' : 'Đang lưu…')
+                        : (l10n.isEn ? 'Save Route' : 'Lưu lộ trình này')),
                 icon: _isSaved ? Icons.bookmark : Icons.bookmark_outline,
                 onPressed: _isSaved || _savingRoute ? null : () => _saveRoute(tour),
               ),
@@ -756,5 +741,6 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
         },
       ),
     ],
-  );
+    );
+  }
 }

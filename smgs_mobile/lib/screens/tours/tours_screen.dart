@@ -1,6 +1,7 @@
 import 'personalized_tour_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../widgets/museum_ui.dart';
 import '../../models/artifact.dart';
 import '../../data/visit_store.dart';
@@ -59,14 +60,17 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     if (widget.stops.isEmpty) {
-      return const MuseumPage(
+      return MuseumPage(
         back: true,
-        title: 'Chưa có lộ trình',
+        title: l10n.isEn ? 'No Route Available' : 'Chưa có lộ trình',
         children: [
           EmptyState(
-            title: 'Hãy chọn lại bảo tàng',
-            message: 'Bộ sưu tập hiện chưa có điểm dừng phù hợp.',
+            title: l10n.isEn ? 'Please choose another museum' : 'Hãy chọn lại bảo tàng',
+            message: l10n.isEn
+                ? 'The collection currently has no matching stops.'
+                : 'Bộ sưu tập hiện chưa có điểm dừng phù hợp.',
           ),
         ],
       );
@@ -83,16 +87,18 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
         key: ValueKey('$_started-$_done-$_stop'),
         back: true,
         title: _done
-            ? 'Hành trình đáng nhớ'
+            ? (l10n.isEn ? 'Memorable Journey' : 'Hành trình đáng nhớ')
             : _started
-            ? 'Dừng chân khám phá'
-            : 'Dấu ấn Việt Nam',
+            ? (l10n.isEn ? 'Exploring Stop' : 'Dừng chân khám phá')
+            : (l10n.isEn ? 'Vietnamese Imprints' : 'Dấu ấn Việt Nam'),
         eyebrow: _done
-            ? 'Đã hoàn thành'
+            ? (l10n.isEn ? 'Completed' : 'Đã hoàn thành')
             : _started
-            ? 'Điểm dừng ${_stop + 1} / ${widget.stops.length}'
-            : 'Hành trình gợi ý',
-        subtitle: (museum?.name ?? 'Bảo tàng'),
+            ? (l10n.isEn
+                ? 'Stop ${_stop + 1} / ${widget.stops.length}'
+                : 'Điểm dừng ${_stop + 1} / ${widget.stops.length}')
+            : (l10n.isEn ? 'Suggested Journey' : 'Hành trình gợi ý'),
+        subtitle: (museum?.name ?? (l10n.isEn ? 'Museum' : 'Bảo tàng')),
         children: [
           if (_done) ...[
             Panel(
@@ -105,14 +111,18 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
                     color: AppColors.mutedGold,
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Cảm ơn bạn đã dành thời gian cho di sản.',
+                  Text(
+                    l10n.isEn
+                        ? 'Thank you for exploring our cultural heritage.'
+                        : 'Cảm ơn bạn đã dành thời gian cho di sản.',
                     style: AppTextStyles.cardTitle,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Đã ghé ${_visited.length} điểm · Bỏ qua ${_skipped.length} điểm',
+                    l10n.isEn
+                        ? 'Visited ${_visited.length} stops · Skipped ${_skipped.length} stops'
+                        : 'Đã ghé ${_visited.length} điểm · Bỏ qua ${_skipped.length} điểm',
                     style: AppTextStyles.bodyMedium,
                   ),
                 ],
@@ -120,7 +130,7 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
             ),
             const SizedBox(height: 24),
             PrimaryButton(
-              label: 'Trở về',
+              label: l10n.isEn ? 'Return' : 'Trở về',
               onPressed: () => Navigator.pop(context),
             ),
           ] else if (!_started) ...[
@@ -131,18 +141,24 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${widget.duration} phút dành cho khám phá',
+                    l10n.isEn
+                        ? '${widget.duration} minutes of exploration'
+                        : '${widget.duration} phút dành cho khám phá',
                     style: AppTextStyles.sectionTitle,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${widget.stops.length} điểm dừng · Chủ đề ${widget.interest.toLowerCase()}',
+                    l10n.isEn
+                        ? '${widget.stops.length} stops · Theme: ${widget.interest.toLowerCase()}'
+                        : '${widget.stops.length} điểm dừng · Chủ đề ${widget.interest.toLowerCase()}',
                     style: AppTextStyles.bodyMedium,
                   ),
                 ],
               ),
             ),
-            const SectionHeading('Những điểm dừng của bạn'),
+            SectionHeading(
+              l10n.isEn ? 'Your Journey Stops' : 'Những điểm dừng của bạn',
+            ),
             MuseumRouteMap(stops: widget.stops, current: 0),
             const SizedBox(height: 20),
             ...widget.stops.asMap().entries.map(
@@ -183,7 +199,7 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
             ),
             const SizedBox(height: 8),
             PrimaryButton(
-              label: 'Bắt đầu hành trình',
+              label: l10n.isEn ? 'Begin Journey' : 'Bắt đầu hành trình',
               icon: Icons.arrow_forward,
               onPressed: () => setState(() => _started = true),
             ),
@@ -211,39 +227,45 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
             const SizedBox(height: 14),
             Text(a.summary, style: AppTextStyles.bodyLarge),
             const SizedBox(height: 22),
-            const Notice(
-              'Danh sách thể hiện thứ tự tham quan, không phải sơ đồ đường đi. Tiến độ được giữ trong phiên hiện tại.',
+            Notice(
+              l10n.isEn
+                  ? 'The list indicates tour order, not a physical floor route. Progress is kept in the current session.'
+                  : 'Danh sách thể hiện thứ tự tham quan, không phải sơ đồ đường đi. Tiến độ được giữ trong phiên hiện tại.',
             ),
             const SizedBox(height: 14),
             Text(
               _stop < widget.stops.length - 1
-                  ? 'Tiếp theo: ${widget.stops[_stop + 1].name} · ${widget.stops[_stop + 1].location}'
-                  : 'Đây là điểm dừng cuối của hành trình.',
+                  ? (l10n.isEn
+                      ? 'Next: ${widget.stops[_stop + 1].name} · ${widget.stops[_stop + 1].location}'
+                      : 'Tiếp theo: ${widget.stops[_stop + 1].name} · ${widget.stops[_stop + 1].location}')
+                  : (l10n.isEn
+                      ? 'This is the final stop of the journey.'
+                      : 'Đây là điểm dừng cuối của hành trình.'),
               style: AppTextStyles.bodyMedium,
             ),
             const SizedBox(height: 22),
             SecondaryButton(
-              label: 'Tìm hiểu hiện vật',
+              label: l10n.isEn ? 'Learn about artifact' : 'Tìm hiểu hiện vật',
               icon: Icons.menu_book_outlined,
               onPressed: () => openPage(
                 context,
                 ArtifactDetailScreen(
                   artifact: a,
-                  museumName: (museum?.name ?? 'Bảo tàng'),
+                  museumName: (museum?.name ?? (l10n.isEn ? 'Museum' : 'Bảo tàng')),
                 ),
               ),
             ),
             const SizedBox(height: 12),
             PrimaryButton(
               label: _stop == widget.stops.length - 1
-                  ? 'Hoàn thành hành trình'
-                  : 'Đến điểm tiếp theo',
+                  ? (l10n.isEn ? 'Complete Journey' : 'Hoàn thành hành trình')
+                  : (l10n.isEn ? 'Next Stop' : 'Đến điểm tiếp theo'),
               icon: Icons.arrow_forward,
               onPressed: () => _advance(),
             ),
             const SizedBox(height: 12),
             SecondaryButton(
-              label: 'Bỏ qua điểm này',
+              label: l10n.isEn ? 'Skip this stop' : 'Bỏ qua điểm này',
               icon: Icons.skip_next_outlined,
               onPressed: () => _advance(skip: true),
             ),
@@ -252,7 +274,9 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
                 _record(false);
                 Navigator.pop(context);
               },
-              child: const Text('Kết thúc sớm hành trình'),
+              child: Text(
+                l10n.isEn ? 'End journey early' : 'Kết thúc sớm hành trình',
+              ),
             ),
           ],
         ],

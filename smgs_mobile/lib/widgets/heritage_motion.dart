@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'heritage_decoration.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/visitor_tokens.dart';
 import '../core/theme/app_text_styles.dart';
 
 bool reduceHeritageMotion(BuildContext context) =>
@@ -284,7 +285,7 @@ class StoryScaffold extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     child: Material(
                       color: AppColors.antiqueIvory,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(VisitorRadius.sm),
                       child: const BackButton(),
                     ),
                   ),
@@ -311,7 +312,7 @@ class StoryScaffold extends StatelessWidget {
                           ),
                           child: Material(
                             color: AppColors.antiqueIvory,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(VisitorRadius.sm),
                             child: action,
                           ),
                         ),

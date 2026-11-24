@@ -54,8 +54,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      DailyQuizScreen(artifactId: widget.artifact.id);
+  Widget build(BuildContext context) => int.tryParse(widget.artifact.id) != null ? DailyQuizScreen(artifactId: widget.artifact.id) : _legacyBuild(context);
 
   Widget _legacyBuild(BuildContext context) => MuseumPage(
           key: ValueKey('$_question-$_finished'),
@@ -246,3 +245,4 @@ class _QuizScreenState extends State<QuizScreen> {
                 ],
         );
 }
+

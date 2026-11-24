@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
+import '../core/theme/visitor_colors.dart';
 import '../services/visitor_experience_api.dart';
 import 'primary_button.dart';
 import 'secondary_button.dart';
@@ -153,8 +154,8 @@ class _VisitCompleteFeedbackDialogState
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: AppColors.antiqueIvory,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.xl)),
+      backgroundColor: Colors.white,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Padding(
@@ -201,7 +202,7 @@ class _VisitCompleteFeedbackDialogState
         const SizedBox(height: 10),
         Text(
           'Hệ thống sẽ hoàn tất chuyến tham quan của bạn tại ${widget.museumName}, tổng kết các hiện vật đã khám phá và mở phần đánh giá trải nghiệm.',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoal),
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoalBrown),
           textAlign: TextAlign.center,
         ),
         if (widget.scannedCount != null && widget.scannedCount! > 0) ...[
@@ -209,9 +210,8 @@ class _VisitCompleteFeedbackDialogState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
+              color: VisitorColors.surface1,
+              borderRadius: BorderRadius.circular(VisitorRadius.md),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -281,7 +281,7 @@ class _VisitCompleteFeedbackDialogState
           const SizedBox(height: 6),
           Text(
             'Ý kiến của bạn giúp ${widget.museumName} nâng cao chất lượng phục vụ và hướng dẫn.',
-            style: AppTextStyles.caption.copyWith(color: AppColors.charcoal),
+            style: AppTextStyles.caption.copyWith(color: AppColors.charcoalBrown),
           ),
           const Divider(height: 28),
           _buildStarRating(
@@ -319,7 +319,7 @@ class _VisitCompleteFeedbackDialogState
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
                 borderSide: const BorderSide(color: AppColors.border),
               ),
             ),
@@ -384,7 +384,7 @@ class _VisitCompleteFeedbackDialogState
         const SizedBox(height: 10),
         Text(
           'Đánh giá của bạn đã được gửi tới Ban quản lý ${widget.museumName}. Chúc bạn có thêm nhiều trải nghiệm văn hóa tuyệt vời!',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoal),
+          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoalBrown),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),

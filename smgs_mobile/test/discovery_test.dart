@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:smgs_mobile/widgets/interactive_heritage_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -29,6 +30,9 @@ Map<String, dynamic> routeJson() => {
   'museumId': 7,
   'destination': {'latitude': 10.7769, 'longitude': 106.7009},
   'travelMode': 'DRIVE',
+  'steps': [
+    {'pointIndex': 0, 'sign': -2, 'text': 'Rẽ trái vào Nguyễn Huệ'},
+  ],
   'distanceMeters': 3500.5,
   'durationSeconds': 720.25,
   'routePoints': [
@@ -309,6 +313,49 @@ void main() {
     },
   );
 
+  testWidgets('System museum filter frames museums despite GPS updates', (
+    tester,
+  ) async {
+    final museum = Museum.fromBackendJson(museumJson());
+    Future<void> show(bool world, LatLng gps) async {
+      await tester.pumpWidget(
+        host(
+          InteractiveHeritageMap(
+            centerOnGps: world,
+            userLocation: gps,
+            museums: world
+                ? []
+                : [
+                    museum,
+                    Museum.fromBackendJson({
+                      ...museumJson(8),
+                      'latitude': 21.025,
+                      'longitude': 105.84,
+                    }),
+                  ],
+            selectedMuseumId: null,
+            onMuseumSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    LatLng center() => tester
+        .widget<FlutterMap>(find.byType(FlutterMap))
+        .mapController!
+        .camera
+        .center;
+    const gps = LatLng(21.03, 105.84);
+    await show(true, gps);
+    expect(center(), gps);
+    await show(false, gps);
+    final target = LatLng(museum.latitude!, museum.longitude!);
+    expect(center(), target);
+    await show(false, const LatLng(21.04, 105.85));
+    expect(center(), target);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
   testWidgets(
     'GPS denied keeps search usable and ignores stale filter responses',
     (tester) async {
@@ -341,6 +388,7 @@ void main() {
           );
           expect(find.byType(FlutterMap), findsOneWidget);
           expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
+          expect(find.byType(TileLayer), findsOneWidget);
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
         },
@@ -416,7 +464,7 @@ void main() {
   );
 
   testWidgets(
-    'Successful preview renders actual route points and OSRM metrics',
+    'Successful preview renders actual route points and route metrics',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       location.permission = LocationPermission.whileInUse;
@@ -441,6 +489,11 @@ void main() {
             tester.element(find.byType(PolylineLayer)),
           ).camera;
           expect(line.points.every(camera.visibleBounds.contains), isTrue);
+          final start = find.text('Bắt đầu chỉ đường');
+          await tester.ensureVisible(start);
+          await tester.tap(start);
+          await tester.pump();
+          expect(find.text('Dừng chỉ đường'), findsOneWidget);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -454,26 +507,11 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Route errors keep external Google Maps available with browser fallback',
-    (tester) async {
-      await screenSize(tester, const Size(320, 640));
-      location.permission = LocationPermission.whileInUse;
-      final launches = <Map>[];
-      const channel = MethodChannel('plugins.flutter.io/url_launcher');
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async {
-            if (call.method == 'launch') {
-              launches.add(call.arguments as Map);
-              return launches.length > 1;
-            }
-            return true;
-          });
-      addTearDown(
-        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, null),
-      );
-      await http.runWithClient(() async {
+  testWidgets('Route errors allow retry in app', (tester) async {
+    await screenSize(tester, const Size(320, 640));
+    location.permission = LocationPermission.whileInUse;
+    await http.runWithClient(
+      () async {
         await tester.pumpWidget(
           host(
             RoutePreviewSheet(museum: Museum.fromBackendJson(museumJson())),
@@ -484,24 +522,43 @@ void main() {
         await tester.pump();
         expect(find.textContaining('Không thể tải dữ liệu'), findsOneWidget);
         expect(find.byType(PolylineLayer), findsNothing);
-        final button = find.widgetWithText(
-          FilledButton,
-          'Chỉ đường bằng Google Maps',
-        );
-        await tester.ensureVisible(button);
-        await tester.tap(button);
+        expect(find.text('Thử lại xem đường đi'), findsOneWidget);
+        final choose = find.text('Chọn điểm xuất phát');
+        await tester.ensureVisible(choose);
+        await tester.tap(choose);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'Chợ Bến Thành');
+        await tester.pump(const Duration(milliseconds: 750));
         await tester.pump();
-        await tester.pump();
-        expect(launches.length, 2);
-        final url = Uri.parse(launches.last['url'] as String);
-        expect(url.queryParameters['travelmode'], 'driving');
-        expect(url.queryParameters['destination'], '10.7769,106.7009');
-        expect(url.queryParameters.containsKey('origin'), isFalse);
-        expect(launches.last['useWebView'], isFalse);
+        await tester.tap(find.widgetWithText(ListTile, 'Chợ Bến Thành'));
+        await tester.pumpAndSettle();
+        expect(find.byType(PolylineLayer), findsOneWidget);
+        expect(find.text('Xuất phát từ Chợ Bến Thành'), findsOneWidget);
+        await tester.tap(find.text('Bắt đầu chỉ đường'));
+        await tester.pumpAndSettle();
+        expect(find.text('Rẽ trái vào Nguyễn Huệ'), findsOneWidget);
+        expect(find.text('Dẫn đường từ vị trí GPS của tôi'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
-      }, () => MockClient((_) async => http.Response('', 502)));
-    },
-  );
+      },
+      () => MockClient((request) async {
+        if (request.url.path.endsWith('/places')) {
+          return dataResponse([
+            {
+              'name': 'Chợ Bến Thành',
+              'address': 'TP.HCM',
+              'latitude': 10.772,
+              'longitude': 106.698,
+            },
+          ]);
+        }
+        if (request.method == 'POST' &&
+            jsonDecode(request.body)['origin']['latitude'] == 10.772) {
+          return dataResponse(routeJson());
+        }
+        return http.Response('', 502);
+      }),
+    );
+  });
 }

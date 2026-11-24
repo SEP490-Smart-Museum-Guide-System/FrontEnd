@@ -1,3 +1,6 @@
+import '../../core/localization/app_localizations.dart';
+import 'qr_scan_screen.dart';
+import '../../widgets/exploration_map_button.dart';
 import '../../widgets/earned_badges.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/museum_presence_api.dart';
@@ -19,9 +22,15 @@ import '../../widgets/museum_ui.dart';
 import 'artifact_detail_screen.dart';
 
 class ArtifactQrScanner extends StatefulWidget {
-  const ArtifactQrScanner({super.key, this.visitId, this.direct = false});
+  const ArtifactQrScanner({
+    super.key,
+    this.visitId,
+    this.direct = false,
+    this.standalone = false,
+  });
   final int? visitId;
   final bool direct;
+  final bool standalone;
   @override
   State<ArtifactQrScanner> createState() => _ArtifactQrScannerState();
 }
@@ -33,7 +42,8 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
   bool _busy = false;
   String? _error;
   late int? _visitId =
-      widget.visitId ?? VisitorSession.activeVisit?['id'] as int?;
+      widget.visitId ??
+      (widget.standalone ? null : VisitorSession.activeVisit?['id'] as int?);
   ScanRequest? _scanRequest;
 
   // Mode: 'qr' or 'vision'
@@ -79,6 +89,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
         if (!mounted) return;
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
+            settings: const RouteSettings(name: 'VisitorDirectoryScreen'),
             builder: (_) => VisitorDirectoryScreen(
               museumId: result['museumId'],
               initialMapId: result['mapId'],
@@ -98,7 +109,36 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       }
       final request = _scanRequest!;
       final data = await ArtifactScanService.scan(code);
+      final exploration = MuseumExploration.instance;
+      final scannedMuseum = int.tryParse(data['museumId'].toString());
+      if (!mounted) return;
+      if (exploration.museumId != null &&
+          scannedMuseum != null &&
+          exploration.museumId != scannedMuseum) {
+        final change = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('QR thuộc bảo tàng khác'),
+            content: Text(
+              'Chuyển sang khám phá ${data['museumName'] ?? 'bảo tàng này'}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Hủy'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Chuyển bảo tàng'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || change != true) return;
+        await exploration.select(scannedMuseum);
+      }
       final recognition = await request.record();
+      _scanRequest = null;
       if (mounted) showEarnedBadges(context, recognition['newBadges']);
       if (!mounted) return;
       await Navigator.of(context).push(
@@ -196,7 +236,9 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return MuseumPage(
     back: true,
     title: widget.direct ? 'Quét mã hiện vật' : 'Khám phá hiện vật',
     subtitle: _activeMode == 'qr'
@@ -265,14 +307,14 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 showCheckmark: false,
                 selectedColor: AppColors.deepBurgundy,
                 backgroundColor: AppColors.card,
-                label: const Row(
+                label: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.qr_code, size: 16),
-                    SizedBox(width: 6),
+                    const Icon(Icons.qr_code, size: 16),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Quét mã QR',
+                        l10n.isEn ? 'QR Scanner' : 'Quét mã QR',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -297,14 +339,14 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 showCheckmark: false,
                 selectedColor: AppColors.deepBurgundy,
                 backgroundColor: AppColors.card,
-                label: const Row(
+                label: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.camera_enhance, size: 16),
-                    SizedBox(width: 6),
+                    const Icon(Icons.camera_enhance, size: 16),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Nhận diện AI',
+                        l10n.isEn ? 'AI Recognition' : 'Nhận diện AI',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -332,6 +374,25 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       if (_error != null) Notice(_error!),
 
       if (_activeMode == 'qr') ...[
+        if (widget.standalone)
+          TextButton.icon(
+            onPressed: _busy
+                ? null
+                : () {
+                    setState(() => _camera = false);
+                    openPage(
+                      context,
+                      QRScanScreen(
+                        recognition: true,
+                        museumId:
+                            MuseumExploration.instance.museumId?.toString() ??
+                            '',
+                      ),
+                    );
+                  },
+            icon: const Icon(Icons.camera_alt_outlined),
+            label: const Text('Nhận diện bằng hình ảnh'),
+          ),
         if (_camera)
           SizedBox(
             height: 280,
@@ -355,7 +416,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           ),
         const SizedBox(height: 12),
         PrimaryButton(
-          label: _camera ? 'Tắt camera' : 'Mở camera quét QR',
+          label: _camera ? (l10n.isEn ? 'Close camera' : 'Tắt camera') : (l10n.isEn ? 'Open camera to scan QR' : 'Mở camera quét QR'),
           icon: Icons.qr_code_scanner,
           onPressed: _busy ? null : () => setState(() => _camera = !_camera),
         ),
@@ -364,14 +425,14 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           TextField(
             controller: _input,
             enabled: !_busy,
-            decoration: const InputDecoration(
-              labelText: 'Mã QR hoặc URL trên mã QR',
+            decoration: InputDecoration(
+              labelText: l10n.isEn ? 'QR code or URL on QR' : 'Mã QR hoặc URL trên mã QR',
             ),
             onSubmitted: _scan,
           ),
           const SizedBox(height: 12),
           SecondaryButton(
-            label: 'Xem thông tin hiện vật',
+            label: l10n.isEn ? 'View artifact details' : 'Xem thông tin hiện vật',
             icon: Icons.search,
             onPressed: _busy ? null : () => _scan(_input.text),
           ),
@@ -535,6 +596,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       ],
     ],
   );
+  }
 
   Widget _buildCyberViewfinder() {
     return AnimatedBuilder(
@@ -545,7 +607,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           height: 220,
           decoration: BoxDecoration(
             color: const Color(0xFF161412),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
             border: Border.all(
               color: AppColors.mutedGold.withValues(alpha: 0.6),
               width: 1.2,

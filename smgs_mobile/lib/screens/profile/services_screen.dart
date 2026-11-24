@@ -713,7 +713,7 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
               ),
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
                 child: qrUrl.isNotEmpty
                     ? Image.network(
                         qrUrl,
@@ -839,13 +839,13 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
   }) {
     return InkWell(
       onTap: onCopy,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(VisitorRadius.md),
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: highlight ? AppColors.antiqueIvory : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(VisitorRadius.md),
           border: Border.all(
             color: highlight ? AppColors.mutedGold : Colors.grey.shade300,
             width: highlight ? 1.5 : 1,
@@ -1294,7 +1294,7 @@ class _PurchasedServicesScreenState extends State<PurchasedServicesScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                       border: Border.all(
                         color: p['isValid'] == true
                             ? AppColors.mutedGold.withValues(alpha: 0.6)
@@ -1411,7 +1411,7 @@ class _PurchasedServicesScreenState extends State<PurchasedServicesScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(

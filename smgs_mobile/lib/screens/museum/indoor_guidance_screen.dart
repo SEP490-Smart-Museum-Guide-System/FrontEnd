@@ -39,16 +39,8 @@ class IndoorGuidanceScreen extends StatelessWidget {
         // Waypoint Transition Journey Card
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
+            color: VisitorColors.surface1,
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
           ),
           child: Column(
             children: [
@@ -61,7 +53,7 @@ class IndoorGuidanceScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.mutedGold.withOpacity(0.15),
+                        color: VisitorColors.surfaceGold,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -136,13 +128,12 @@ class IndoorGuidanceScreen extends StatelessWidget {
                     const SizedBox(width: 20),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: 12,
+                        vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.antiqueIvory,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
+                        color: VisitorColors.surface2,
+                        borderRadius: BorderRadius.circular(VisitorRadius.full),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -182,7 +173,7 @@ class IndoorGuidanceScreen extends StatelessWidget {
                       child: const Icon(
                         Icons.flag_rounded,
                         size: 20,
-                        color: AppColors.antiqueIvory,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -195,11 +186,11 @@ class IndoorGuidanceScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
-                                  vertical: 2,
+                                  vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.mutedGold.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  color: VisitorColors.surfaceBrand,
+                                  borderRadius: BorderRadius.circular(VisitorRadius.xs),
                                 ),
                                 child: Text(
                                   'ĐÍCH ĐẾN KẾ TIẾP',
@@ -227,9 +218,8 @@ class IndoorGuidanceScreen extends StatelessWidget {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.antiqueIvory,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.border),
+                              color: VisitorColors.surface2,
+                              borderRadius: BorderRadius.circular(VisitorRadius.xs),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -260,11 +250,11 @@ class IndoorGuidanceScreen extends StatelessWidget {
                     if (nextArtifact.imageUrl.isNotEmpty) ...[
                       const SizedBox(width: 12),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(VisitorRadius.md),
                         child: Container(
                           width: 64,
                           height: 64,
-                          color: AppColors.antiqueIvory,
+                          color: VisitorColors.surface2,
                           child: Image.network(
                             nextArtifact.imageUrl,
                             fit: BoxFit.cover,

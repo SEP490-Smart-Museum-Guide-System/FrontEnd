@@ -256,15 +256,16 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(VisitorRadius.sm),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.deepBurgundy : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(VisitorRadius.sm),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
@@ -272,12 +273,16 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
               color: isSelected ? AppColors.antiqueIvory : AppColors.darkBrown,
             ),
             const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? AppColors.antiqueIvory : AppColors.darkBrown,
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? AppColors.antiqueIvory : AppColors.darkBrown,
+                ),
               ),
             ),
           ],
@@ -317,19 +322,9 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDeferred ? AppColors.mutedGold : AppColors.border,
-          width: isDeferred ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.darkBrown.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: isDeferred ? Border.all(color: AppColors.mutedGold, width: 1.5) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +336,7 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusBgColor,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(VisitorRadius.xs),
                 ),
                 child: Text(
                   statusLabel,
@@ -377,9 +372,8 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.antiqueIvory,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
+                  color: VisitorColors.surface2,
+                  borderRadius: BorderRadius.circular(VisitorRadius.md),
                 ),
                 child: const Icon(
                   Icons.history_edu_outlined,
@@ -421,7 +415,7 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                 backgroundColor: isCompleted ? AppColors.darkBrown : AppColors.deepBurgundy,
                 foregroundColor: AppColors.antiqueIvory,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.lg)),
                 elevation: 0,
               ),
               icon: Icon(
@@ -551,7 +545,7 @@ class _BackendQuizAttemptScreenState extends State<BackendQuizAttemptScreen> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: AppColors.antiqueIvory,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
             border: Border.all(color: AppColors.mutedGold, width: 1.5),
             boxShadow: [
               BoxShadow(
@@ -738,7 +732,7 @@ class _BackendQuizAttemptScreenState extends State<BackendQuizAttemptScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: isCorrect == true ? Colors.green.shade50 : Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(VisitorRadius.xs),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -796,7 +790,7 @@ class _BackendQuizAttemptScreenState extends State<BackendQuizAttemptScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.antiqueIvory,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
                 border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.6)),
               ),
               child: Row(
@@ -877,13 +871,13 @@ class _BackendQuizAttemptScreenState extends State<BackendQuizAttemptScreen> {
 
     return InkWell(
       onTap: (_busy || isQuestionAnswered) ? null : () => _answer(questionId, optionId),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(VisitorRadius.md),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: tileBgColor,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(VisitorRadius.md),
           border: Border.all(color: tileBorderColor, width: isSelected ? 1.5 : 1),
         ),
         child: Row(

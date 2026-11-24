@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/visitor_colors.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../models/experience.dart';
 import '../../models/museum.dart';
 import '../../services/app_services.dart';
@@ -67,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final museums = AppServices.catalog.museums;
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: Theme.of(context).colorScheme.copyWith(
@@ -121,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Khám phá di sản Việt',
+                                  l10n.isEn ? 'Discover Vietnamese Heritage' : 'Khám phá di sản Việt',
                                   style: AppTextStyles.caption.copyWith(
                                     color: VisitorColors.secondaryText,
                                   ),
@@ -131,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           IconButton(
                             key: HomeScreenTour.handbookBtnKey,
-                            tooltip: 'Cẩm nang tham quan',
+                            tooltip: l10n.isEn ? 'Handbook' : 'Cẩm nang tham quan',
                             constraints: const BoxConstraints(
                               minWidth: 48,
                               minHeight: 48,
@@ -158,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Material(
                             key: HomeScreenTour.scanCardKey,
                             color: VisitorColors.burgundy,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(VisitorRadius.xl),
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
                               onTap: widget.onScan,
@@ -179,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Giải mã một hiện vật',
+                                            l10n.isEn ? 'Decode an Artifact' : 'Giải mã một hiện vật',
                                             style: AppTextStyles.bodyLarge
                                                 .copyWith(
                                                   color:
@@ -190,7 +191,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            'Quét mã QR để khám phá câu chuyện phía sau hiện vật',
+                                            l10n.isEn
+                                                ? 'Scan QR code to reveal the story behind the artifact'
+                                                : 'Quét mã QR để khám phá câu chuyện phía sau hiện vật',
                                             style: AppTextStyles.caption
                                                 .copyWith(
                                                   color:
@@ -202,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               Expanded(
                                                 child: Text(
-                                                  'Quét hiện vật',
+                                                  l10n.isEn ? 'Scan Artifact' : 'Quét hiện vật',
                                                   style: AppTextStyles.bodySmall
                                                       .copyWith(
                                                         color: VisitorColors
@@ -212,8 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       ),
                                                 ),
                                               ),
-                                              SizedBox(width: 8),
-                                              Icon(
+                                              const SizedBox(width: 8),
+                                              const Icon(
                                                 Icons.arrow_forward,
                                                 size: 18,
                                                 color: VisitorColors.background,
@@ -240,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   spacing: 12,
                                   children: [
                                     Text(
-                                      'Bảo tàng nổi bật',
+                                      l10n.isEn ? 'Featured Museums' : 'Bảo tàng nổi bật',
                                       style: AppTextStyles.sectionTitle
                                           .copyWith(
                                             color: VisitorColors.text,
@@ -249,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     TextButton(
                                       onPressed: widget.onExplore,
-                                      child: Text('Xem tất cả'),
+                                      child: Text(l10n.isEn ? 'See all' : 'Xem tất cả'),
                                     ),
                                   ],
                                 ),
@@ -296,18 +299,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (snapshot.connectionState !=
                                   ConnectionState.done) {
                                 return Semantics(
-                                  label: 'Đang tải hành trình',
+                                  label: l10n.isEn ? 'Loading journey' : 'Đang tải hành trình',
                                   child: Container(
                                     key: const ValueKey('home-visit-loading'),
                                     height: 120,
                                     decoration: BoxDecoration(
-                                      color: VisitorColors.secondaryBackground,
-                                      borderRadius: BorderRadius.circular(16),
+                                      color: VisitorColors.surface2,
+                                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                                     ),
                                     alignment: Alignment.centerLeft,
                                     padding: const EdgeInsets.all(20),
                                     child: Text(
-                                      'Đang tải hành trình…',
+                                      l10n.isEn ? 'Loading journey…' : 'Đang tải hành trình…',
                                       style: AppTextStyles.bodySmall.copyWith(
                                         color: VisitorColors.secondaryText,
                                       ),
@@ -320,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Chưa tải được hành trình',
+                                      l10n.isEn ? 'Unable to load journey' : 'Chưa tải được hành trình',
                                       style: AppTextStyles.bodyMedium.copyWith(
                                         color: VisitorColors.text,
                                       ),
@@ -328,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     TextButton.icon(
                                       onPressed: _reloadVisits,
                                       icon: const Icon(Icons.refresh, size: 18),
-                                      label: Text('Thử lại'),
+                                      label: Text(l10n.isEn ? 'Retry' : 'Thử lại'),
                                     ),
                                   ],
                                 );
@@ -345,8 +348,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 16),
                           Material(
                             key: HomeScreenTour.collectionKey,
-                            color: VisitorColors.secondaryBackground,
-                            borderRadius: BorderRadius.circular(16),
+                            color: VisitorColors.surface1,
+                            borderRadius: BorderRadius.circular(VisitorRadius.xl),
                             clipBehavior: Clip.antiAlias,
                             child: InkWell(
                               onTap: () =>
@@ -367,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Bảo tàng cá nhân',
+                                            l10n.isEn ? 'My Museums' : 'Bảo tàng cá nhân',
                                             style: AppTextStyles.bodyMedium
                                                 .copyWith(
                                                   color: VisitorColors.text,
@@ -376,7 +379,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Lưu giữ những hiện vật bạn đã khám phá',
+                                            l10n.isEn
+                                                ? 'Preserve artifacts you have discovered'
+                                                : 'Lưu giữ những hiện vật bạn đã khám phá',
                                             style: AppTextStyles.caption
                                                 .copyWith(
                                                   color: VisitorColors
@@ -415,46 +420,51 @@ class _DiscoveryHero extends StatelessWidget {
   const _DiscoveryHero({this.museum});
   final Museum? museum;
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: AspectRatio(
-          aspectRatio: 1.8,
-          child: museum != null && museum!.imageUrl.isNotEmpty
-              ? MuseumPhoto(
-                  museumId: museum!.id,
-                  imageUrl: museum!.imageUrl,
-                  placeholderColor: VisitorColors.secondaryBackground,
-                )
-              : Image.asset(
-                  'assets/images/national-museum-web.jpg',
-                  fit: BoxFit.cover,
-                  semanticLabel: 'Kiến trúc Bảo tàng Lịch sử Quốc gia',
-                  errorBuilder: (_, _, _) => const HeritageArt(height: 180),
-                ),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(VisitorRadius.xxl),
+          child: AspectRatio(
+            aspectRatio: 1.8,
+            child: museum != null && museum!.imageUrl.isNotEmpty
+                ? MuseumPhoto(
+                    museumId: museum!.id,
+                    imageUrl: museum!.imageUrl,
+                    placeholderColor: VisitorColors.secondaryBackground,
+                  )
+                : Image.asset(
+                    'assets/images/national-museum-web.jpg',
+                    fit: BoxFit.cover,
+                    semanticLabel: 'Kiến trúc Bảo tàng Lịch sử Quốc gia',
+                    errorBuilder: (_, _, _) => const HeritageArt(height: 180),
+                  ),
+          ),
         ),
-      ),
-      const SizedBox(height: 20),
-      Text(
-        'Mỗi hiện vật,\nmột câu chuyện',
-        style: AppTextStyles.display.copyWith(
-          color: VisitorColors.text,
-          fontSize: 28,
-          height: 1.3,
-          letterSpacing: -.4,
+        const SizedBox(height: 20),
+        Text(
+          l10n.isEn ? 'Every artifact,\na story to tell' : 'Mỗi hiện vật,\nmột câu chuyện',
+          style: AppTextStyles.display.copyWith(
+            color: VisitorColors.text,
+            fontSize: 28,
+            height: 1.3,
+            letterSpacing: -.4,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Khám phá lịch sử và văn hóa Việt Nam theo cách của bạn',
-        style: AppTextStyles.bodySmall.copyWith(
-          color: VisitorColors.secondaryText,
+        const SizedBox(height: 8),
+        Text(
+          l10n.isEn
+              ? 'Explore Vietnamese history and culture in your own way'
+              : 'Khám phá lịch sử và văn hóa Việt Nam theo cách của bạn',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: VisitorColors.secondaryText,
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _MuseumPreview extends StatelessWidget {
@@ -464,10 +474,9 @@ class _MuseumPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     key: ValueKey('home-museum:${museum.id}'),
-    color: VisitorColors.background,
+    color: VisitorColors.surface1,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: VisitorColors.border),
+      borderRadius: BorderRadius.circular(VisitorRadius.xl),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -536,64 +545,77 @@ class _JourneyCard extends StatelessWidget {
   final Map<String, dynamic>? visit;
   final VoidCallback onPressed;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: VisitorColors.secondaryBackground,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.route_outlined,
-              size: 20,
-              color: VisitorColors.burgundy,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                visit == null ? 'Hành trình của bạn' : 'Đang tham quan',
-                style: AppTextStyles.caption.copyWith(
-                  color: VisitorColors.secondaryText,
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.route_outlined,
+                size: 20,
+                color: VisitorColors.burgundy,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  visit == null
+                      ? (l10n.isEn ? 'Your Journey' : 'Hành trình của bạn')
+                      : (l10n.isEn ? 'Visiting now' : 'Đang tham quan'),
+                  style: AppTextStyles.caption.copyWith(
+                    color: VisitorColors.secondaryText,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          visit == null ? 'Bắt đầu hành trình khám phá' : 'Tiếp tục hành trình',
-          style: AppTextStyles.sectionTitle.copyWith(
-            color: VisitorColors.text,
-            fontSize: 22,
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          visit == null
-              ? 'Chọn một bảo tàng và bắt đầu chuyến đi theo cách của bạn'
-              : AppServices.catalog.museumName(visit!['museumId'].toString()),
-          style: AppTextStyles.bodySmall.copyWith(
-            color: VisitorColors.secondaryText,
-          ),
-        ),
-        if (visit != null) ...[
           const SizedBox(height: 12),
-          _VisitProgress(key: ObjectKey(visit), visitId: visit!['id'] as int),
+          Text(
+            visit == null
+                ? (l10n.isEn ? 'Start exploration journey' : 'Bắt đầu hành trình khám phá')
+                : (l10n.isEn ? 'Continue journey' : 'Tiếp tục hành trình'),
+            style: AppTextStyles.sectionTitle.copyWith(
+              color: VisitorColors.text,
+              fontSize: 22,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            visit == null
+                ? (l10n.isEn
+                    ? 'Pick a museum and start your personal tour'
+                    : 'Chọn một bảo tàng và bắt đầu chuyến đi theo cách của bạn')
+                : AppServices.catalog.museumName(visit!['museumId'].toString()),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: VisitorColors.secondaryText,
+            ),
+          ),
+          if (visit != null) ...[
+            const SizedBox(height: 12),
+            _VisitProgress(key: ObjectKey(visit), visitId: visit!['id'] as int),
+          ],
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: onPressed,
+            iconAlignment: IconAlignment.end,
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            label: Text(
+              visit == null
+                  ? (l10n.isEn ? 'Explore museums' : 'Khám phá bảo tàng')
+                  : (l10n.isEn ? 'View progress' : 'Xem tiến độ'),
+            ),
+          ),
         ],
-        const SizedBox(height: 12),
-        TextButton.icon(
-          onPressed: onPressed,
-          iconAlignment: IconAlignment.end,
-          icon: const Icon(Icons.arrow_forward, size: 18),
-          label: Text(visit == null ? 'Khám phá bảo tàng' : 'Xem tiến độ'),
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _VisitProgress extends StatefulWidget {
@@ -606,34 +628,39 @@ class _VisitProgress extends StatefulWidget {
 class _VisitProgressState extends State<_VisitProgress> {
   late final _progress = VisitorExperienceApi.progress(widget.visitId);
   @override
-  Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
-    future: _progress,
-    builder: (context, snapshot) {
-      if (!snapshot.hasData) return const SizedBox.shrink();
-      final stops = (snapshot.data!['stops'] as List? ?? [])
-          .cast<Map<String, dynamic>>();
-      if (stops.isEmpty) return const SizedBox.shrink();
-      final visited = stops
-          .where((stop) => stop['lastVisitedAt'] != null)
-          .length;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Đã khám phá $visited / ${stops.length} hiện vật',
-            style: AppTextStyles.caption.copyWith(
-              color: VisitorColors.secondaryText,
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _progress,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final stops = (snapshot.data!['stops'] as List? ?? [])
+            .cast<Map<String, dynamic>>();
+        if (stops.isEmpty) return const SizedBox.shrink();
+        final visited = stops
+            .where((stop) => stop['lastVisitedAt'] != null)
+            .length;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.isEn
+                  ? 'Explored $visited / ${stops.length} artifacts'
+                  : 'Đã khám phá $visited / ${stops.length} hiện vật',
+              style: AppTextStyles.caption.copyWith(
+                color: VisitorColors.secondaryText,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: visited / stops.length,
-            minHeight: 4,
-            borderRadius: BorderRadius.circular(4),
-            semanticsLabel: 'Tiến độ khám phá hiện vật',
-          ),
-        ],
-      );
-    },
-  );
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: visited / stops.length,
+              minHeight: 4,
+              borderRadius: BorderRadius.circular(4),
+              semanticsLabel: l10n.isEn ? 'Exploration progress' : 'Tiến độ khám phá hiện vật',
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

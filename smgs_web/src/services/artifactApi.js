@@ -57,6 +57,7 @@ export async function createArtifactApi(artifactData) {
     body: JSON.stringify({
       museumId: Number(artifactData.museumId),
       galleryId: artifactData.galleryId ? Number(artifactData.galleryId) : null,
+      topicIds: artifactData.topicIds,
       code: artifactData.code || null,
       name: artifactData.name,
       qrCode: artifactData.qrCode || null,

@@ -1,579 +1,431 @@
-import '../../services/visitor_experience_api.dart';
-import 'visit_progress_screen.dart';
-import 'visitor_directory_screen.dart';
 import 'package:flutter/material.dart';
 
-import '../../widgets/museum_ui.dart';
-import '../../widgets/collection_cards.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../models/museum.dart';
-import '../../models/artifact.dart';
+import '../../core/network/api_config.dart';
 import '../../services/discovery_api_service.dart';
-import '../../widgets/route_preview_sheet.dart';
-import '../../widgets/museum_arrival_panel.dart';
+import '../../services/token_manager.dart';
+import '../../widgets/museum_ui.dart';
+import '../artifact/artifact_qr_scanner.dart';
+import '../../widgets/exploration_map_button.dart';
+import 'visitor_directory_screen.dart';
 
-import '../artifact/artifact_discovery_screen.dart';
-import '../explore/explore_screen.dart';
-import '../tours/tours_screen.dart';
-import '../profile/services_screen.dart';
-import '../profile/profile_screen.dart';
+const _burgundy = Color(0xff6d3032);
+const _label = TextStyle(
+  fontFamily: AppTextStyles.sansFamily,
+  color: _burgundy,
+  fontWeight: FontWeight.w700,
+  fontSize: 11,
+  letterSpacing: .8,
+);
 
 class MuseumDetailScreen extends StatefulWidget {
-  const MuseumDetailScreen({super.key, required this.museum, this.heroTag});
+  const MuseumDetailScreen({
+    super.key,
+    required this.museum,
+    this.heroTag,
+    this.loadMuseum = DiscoveryApiService.fetchMuseumDetail,
+    this.loadHighlights = DiscoveryApiService.fetchMuseumHighlights,
+  });
+
   final Museum museum;
   final Object? heroTag;
+  final Future<Museum> Function(String) loadMuseum;
+  final Future<MuseumHighlights> Function(String) loadHighlights;
 
   @override
   State<MuseumDetailScreen> createState() => _MuseumDetailScreenState();
 }
 
 class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
-  late Museum _museum = widget.museum;
-  String? _museumError;
-  bool _startingVisit = false;
-  List<Artifact>? _backendArtifacts;
-  List<Map<String, dynamic>>? _feedbacks;
-  bool _isLoading = true;
-  String? _error;
+  late Museum _museum;
+  MuseumHighlights? _highlights;
 
   @override
   void initState() {
     super.initState();
-    _loadArtifacts();
-    _loadMuseum();
-    _loadFeedbacks();
+    _initialize();
   }
 
-  Future<void> _loadFeedbacks() async {
-    final mId = int.tryParse(widget.museum.id);
-    if (mId == null) return;
-    try {
-      final items = await VisitorExperienceApi.getMuseumFeedbacks(mId);
-      if (mounted) {
-        setState(() => _feedbacks = items);
-      }
-    } catch (_) {}
+  @override
+  void didUpdateWidget(MuseumDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.museum.id != oldWidget.museum.id) _initialize();
   }
 
-  Future<void> _showEditFeedbackDialog(Map<String, dynamic> fb) async {
-    final feedbackId = fb['id'] as int?;
-    if (feedbackId == null) return;
-    int rating = (fb['overallRating'] as num?)?.toInt() ?? 5;
-    final controller = TextEditingController(text: fb['comment']?.toString() ?? '');
-    bool saving = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Chỉnh sửa đánh giá', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Số sao đánh giá:', style: TextStyle(fontSize: 13, color: AppColors.secondaryText)),
-              const SizedBox(height: 6),
-              Row(
-                children: List.generate(5, (i) {
-                  return IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                      color: AppColors.mutedGold,
-                      size: 28,
-                    ),
-                    onPressed: () => setDialogState(() => rating = i + 1),
-                  );
-                }),
-              ),
-              const SizedBox(height: 12),
-              const Text('Nội dung nhận xét:', style: TextStyle(fontSize: 13, color: AppColors.secondaryText)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: controller,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Nhận xét của bạn về trải nghiệm...',
-                  filled: true,
-                  fillColor: AppColors.antiqueIvory,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: saving ? null : () => Navigator.pop(ctx),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
-              onPressed: saving
-                  ? null
-                  : () async {
-                      setDialogState(() => saving = true);
-                      try {
-                        await VisitorExperienceApi.updateFeedback(
-                          feedbackId: feedbackId,
-                          overallRating: rating,
-                          comment: controller.text.trim(),
-                        );
-                        if (context.mounted) Navigator.pop(ctx);
-                        _loadFeedbacks();
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(content: Text('Đã cập nhật đánh giá thành công!')),
-                          );
-                        }
-                      } catch (e) {
-                        setDialogState(() => saving = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
-                          );
-                        }
-                      }
-                    },
-              child: const Text('Lưu thay đổi', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _initialize() {
+    _museum = widget.museum;
+    _highlights = null;
+    if (int.tryParse(_museum.id) != null) {
+      _loadMuseum();
+      _loadHighlights();
+    }
   }
 
   Future<void> _loadMuseum() async {
-    if (int.tryParse(widget.museum.id) == null) return;
+    final id = widget.museum.id;
     try {
-      final museum = await DiscoveryApiService.fetchMuseumDetail(
-        widget.museum.id,
-      );
-      if (mounted) {
-        setState(() {
-          _museum = museum;
-          _museumError = null;
-        });
+      final detail = await widget.loadMuseum(id);
+      if (mounted && widget.museum.id == id) {
+        setState(() => _museum = detail);
       }
-    } catch (e) {
-      if (mounted) setState(() => _museumError = e.toString());
+    } catch (_) {
+      // Keep the available museum information when this request fails.
     }
   }
 
-  Future<void> _loadArtifacts() async {
-    final mId = int.tryParse(widget.museum.id);
-    if (mId == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
+  Future<void> _loadHighlights() async {
+    final id = widget.museum.id;
     try {
-      final items = await DiscoveryApiService.fetchArtifacts(museumId: mId);
-      if (mounted) {
-        setState(() {
-          _backendArtifacts = items;
-          _isLoading = false;
-        });
+      final highlights = await widget.loadHighlights(id);
+      if (mounted && widget.museum.id == id) {
+        setState(() => _highlights = highlights);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _error = e.toString();
-        });
-      }
+    } catch (error) {
+      debugPrint('Museum discovery request failed: $error');
     }
   }
 
-  Future<void> _openDirections(BuildContext context) async {
-    if (!context.mounted) return;
-    RoutePreviewSheet.show(context, museum: _museum);
-  }
-
-  void _openIndoorMap(BuildContext context) {
-    final id = int.tryParse(widget.museum.id);
-    if (id == null) return;
-    openPage(
-      context,
-      VisitorDirectoryScreen(museumId: id, museumName: _museum.name),
-    );
-  }
-
-  Future<void> _startVisit() async {
-    if (_startingVisit) return;
-    setState(() => _startingVisit = true);
-    try {
-      final visit = await VisitorExperienceApi.startVisit(
-        int.parse(widget.museum.id),
-      );
-      if (mounted) {
-        openPage(context, VisitProgressScreen(visitId: visit['id'] as int));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    } finally {
-      if (mounted) setState(() => _startingVisit = false);
-    }
+  Future<void> _explore() async {
+    final id = int.tryParse(_museum.id);
+    if (id == null || id <= 0) return;
+    await MuseumExploration.instance.select(id);
+    if (!mounted) return;
+    openPage(context, const ArtifactQrScanner(direct: true, standalone: true));
   }
 
   @override
   Widget build(BuildContext context) {
-    final museum = _museum;
-    final artifacts = _backendArtifacts ?? <Artifact>[];
+    final l10n = context.l10n;
+    final museumId = int.tryParse(_museum.id);
+    final top =
+        _highlights?.topArtifacts.take(3).toList() ??
+        <MuseumHighlightArtifact>[];
+    final hours = _museum.openingHours.trim();
+    // The backend stores a free-form schedule, often with days in parentheses.
+    final schedule = RegExp(r'^([^()]+?)\s*\(([^()]+)\)$').firstMatch(hours);
+    final intro = _museum.description.trim().isEmpty
+        ? _museum.shortIntro
+        : _museum.description;
+    final height = (MediaQuery.sizeOf(context).width * .785 + 24)
+        .clamp(240.0, 380.0)
+        .toDouble();
+    final photo = MuseumPhoto(
+      museumId: _museum.id,
+      imageUrl: _museum.imageUrl,
+      height: height,
+    );
 
-    return StoryScaffold(
-      title: museum.name,
-      heroTag: widget.heroTag,
-      floatingActionButton: int.tryParse(museum.id) == null
-          ? null
-          : FloatingActionButton.small(
-              heroTag: null,
-              tooltip: 'Mở bản đồ bảo tàng',
-              onPressed: () => _openIndoorMap(context),
-              child: const Icon(Icons.map_outlined),
-            ),
-      photo: MuseumPhoto(
-        museumId: museum.id,
-        imageUrl: museum.imageUrl,
-        height: 300,
-      ),
-      children: [
-        if (_museumError != null) ...[
-          Notice(_museumError!),
-          TextButton(
-            onPressed: _loadMuseum,
-            child: const Text('Thử tải lại thông tin bảo tàng'),
-          ),
-        ],
-        if (_error != null) Notice(_error!),
-        if (int.tryParse(museum.id) case final int museumId)
-          MuseumArrivalPanel(museumId: museumId, museumName: museum.name),
-        PrimaryButton(
-          label: _startingVisit ? 'Đang bắt đầu…' : 'Bắt đầu lượt tham quan',
-          onPressed: _startingVisit ? null : _startVisit,
-        ),
-        const SizedBox(height: 16),
-        const SizedBox(height: 22),
-        Eyebrow(museum.category),
-        const SizedBox(height: 10),
-        Text(
-          museum.name,
-          style: AppTextStyles.display.copyWith(color: AppColors.deepBurgundy),
-        ),
-        const SizedBox(height: 12),
-        Row(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: Column(
           children: [
-            const Icon(Icons.location_on_outlined, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(museum.location, style: AppTextStyles.bodyMedium),
+            Stack(
+              children: [
+                widget.heroTag == null
+                    ? photo
+                    : Hero(tag: widget.heroTag!, child: photo),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 24,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(VisitorRadius.xxl),
+                      ),
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 38,
+                        height: 4,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: VisitorColors.surface2,
+                            borderRadius: BorderRadius.all(Radius.circular(VisitorRadius.full)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  top: 6,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Material(
+                      color: Colors.white,
+                      shape: const CircleBorder(),
+                      child: const BackButton(color: _burgundy),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        const Divider(),
-        Text(museum.shortIntro, style: AppTextStyles.bodyLarge),
-        const SizedBox(height: 18),
-        Panel(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.schedule_outlined,
-                color: AppColors.deepBurgundy,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
+            SafeArea(
+              top: false,
+              bottom: false,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 660),
+                padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Giờ tham quan tham khảo',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                    const SizedBox(height: 4),
+                    Text(l10n.isEn ? 'MUSEUM' : 'BẢO TÀNG', style: _label),
+                    const SizedBox(height: 5),
                     Text(
-                      museum.openingHours,
-                      style: AppTextStyles.sectionTitle,
+                      _museum.name,
+                      style: AppTextStyles.pageTitle.copyWith(
+                        fontWeight: FontWeight.w600,
+                        height: 1.22,
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Vui lòng xác nhận lịch mở cửa với bảo tàng trước chuyến đi.',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        if (artifacts.isNotEmpty) ...[
-          PrimaryButton(
-            label: 'Khám phá hiện vật',
-            icon: Icons.explore_outlined,
-            onPressed: () => openPage(
-              context,
-              ArtifactDiscoveryScreen(
-                museum: museum,
-                artifact: artifacts.first,
-              ),
-            ),
-          ),
-        ],
-        const SectionHeading('Câu chuyện bảo tàng'),
-        ScrollReveal(
-          child: Text(museum.description, style: AppTextStyles.bodyLarge),
-        ),
-        if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (artifacts.isNotEmpty) ...[
-          SectionHeading(
-            'Hiện vật tiêu biểu',
-            action: 'Xem tất cả',
-            onTap: () => openPage(
-              context,
-              ExploreScreen(standalone: true, museumId: museum.id),
-            ),
-          ),
-          ...artifacts.map(
-            (a) => ScrollReveal(child: ArtifactCard(artifact: a)),
-          ),
-        ],
-        const SectionHeading('Chuẩn bị chuyến tham quan'),
-        if (museum.hasCoordinates)
-          ActionTile(
-            title: 'Chỉ đường & Lộ trình đến bảo tàng',
-            subtitle: 'Xem trước cự ly, thời gian và dẫn đường ngoài trời.',
-            icon: Icons.directions_outlined,
-            onTap: () => _openDirections(context),
-          ),
-        ActionTile(
-          title: 'Sơ đồ bảo tàng & Tìm đường hiện vật',
-          subtitle: 'Bản đồ trong nhà, quét QR xác định vị trí và dẫn đường.',
-          icon: Icons.map_outlined,
-          onTap: () => _openIndoorMap(context),
-        ),
-        ActionTile(
-          title: 'Hành trình dành cho bạn',
-          subtitle: 'Chọn thời gian và sở thích để bắt đầu.',
-          icon: Icons.route_outlined,
-          onTap: () => openPage(
-            context,
-            ToursScreen(standalone: true, museumId: museum.id),
-          ),
-        ),
-        ActionTile(
-          title: 'Vé & Hướng dẫn số',
-          subtitle: 'Chọn vé vào cửa, Hướng dẫn số hoặc gói kết hợp.',
-          icon: Icons.confirmation_number_outlined,
-          onTap: () => openPage(
-            context,
-            ServicesScreen(museumName: museum.name, museumId: museum.id),
-          ),
-        ),
-        ActionTile(
-          title: 'Góp ý về bảo tàng',
-          subtitle: 'Chia sẻ cảm nhận sau chuyến tham quan.',
-          icon: Icons.rate_review_outlined,
-          onTap: () => openPage(
-            context,
-            FeedbackScreen(
-              targetType: 'museum',
-              targetId: museum.id,
-              targetName: museum.name,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Expanded(
-              child: Text(
-                'ĐÁNH GIÁ TỪ KHÁCH THAM QUAN',
-                style: TextStyle(
-                  fontFamily: AppTextStyles.sansFamily,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: AppColors.secondaryText,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (_feedbacks != null && _feedbacks!.isNotEmpty) ...[
-              const Icon(Icons.star_rounded, color: AppColors.mutedGold, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                '${(_feedbacks!.map((f) => (f['overallRating'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / _feedbacks!.length).toStringAsFixed(1)} / 5 (${_feedbacks!.length})',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkBrown,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (_feedbacks == null)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_feedbacks!.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Text(
-              'Chưa có đánh giá công khai nào cho bảo tàng này. Hãy hoàn tất chuyến đi để trở thành người đầu tiên để lại nhận xét!',
-              style: TextStyle(
-                fontFamily: AppTextStyles.sansFamily,
-                fontSize: 12.5,
-                color: AppColors.secondaryText,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          )
-        else
-          ..._feedbacks!.map((fb) {
-            final rating = (fb['overallRating'] as num?)?.toInt() ?? 5;
-            final comment = fb['comment'] as String? ?? '';
-            final staffResp = fb['staffResponse'] as Map<String, dynamic>?;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
+                    if (_museum.location.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
                       Row(
-                        children: List.generate(5, (idx) {
-                          return Icon(
-                            idx < rating
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            size: 16,
-                            color: idx < rating
-                                ? AppColors.mutedGold
-                                : Colors.grey.shade400,
-                          );
-                        }),
-                      ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: () => _showEditFeedbackDialog(fb),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.antiqueIvory,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.edit_outlined, size: 11, color: AppColors.deepBurgundy),
-                              SizedBox(width: 3),
-                              Text(
-                                'Sửa',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.deepBurgundy,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Khách tham quan',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (comment.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      comment,
-                      style: const TextStyle(
-                        fontFamily: AppTextStyles.sansFamily,
-                        fontSize: 13,
-                        color: AppColors.primaryText,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                  if (staffResp != null &&
-                      (staffResp['content'] as String? ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.antiqueIvory,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'PHẢN HỒI TỪ BẢO TÀNG',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.8,
-                              color: AppColors.deepBurgundy,
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 18,
+                            color: _burgundy,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _museum.location,
+                              style: AppTextStyles.caption,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            staffResp['content'] as String,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.darkBrown,
-                              height: 1.35,
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _Stat(
+                              icon: Icons.schedule_outlined,
+                              label: l10n.isEn ? 'OPENING HOURS' : 'GIỜ THAM KHẢO',
+                              value:
+                                  schedule?.group(1)?.trim() ??
+                                  (hours.isEmpty
+                                      ? (l10n.isEn ? 'Hours not provided' : 'Chưa có thông tin giờ mở cửa')
+                                      : hours),
+                              subtitle: schedule?.group(2),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _Stat(
+                              icon: Icons.museum_outlined,
+                              label: l10n.isEn ? 'QR ARTIFACTS' : 'HIỆN VẬT QR',
+                              value:
+                                  _highlights?.qrArtifactCount.toString() ??
+                                  '—',
+                              subtitle: _highlights?.publicOnly == true
+                                  ? (l10n.isEn ? 'Public QR guide available' : 'Có hướng dẫn QR công khai')
+                                  : (l10n.isEn ? 'Has QR guide' : 'Có hướng dẫn QR'),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    Text(l10n.isEn ? 'INTRODUCTION' : 'GIỚI THIỆU', style: _label),
+                    const SizedBox(height: 8),
+                    Text(
+                      intro.trim().isEmpty
+                          ? (l10n.isEn ? 'No introduction available.' : 'Chưa có thông tin giới thiệu.')
+                          : intro,
+                      style: AppTextStyles.bodyMedium,
+                    ),
+                    if (top.isNotEmpty) ...[
+                      SectionHeading(
+                        l10n.isEn ? 'Most Popular Artifacts' : 'Hiện vật được quan tâm nhất',
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final artifact in top) ...[
+                            if (artifact != top.first)
+                              const SizedBox(width: 10),
+                            Expanded(child: _Highlight(artifact: artifact)),
+                          ],
+                          for (var i = top.length; i < 3; i++) ...[
+                            const SizedBox(width: 10),
+                            const Spacer(),
+                          ],
+                        ],
+                      ),
+                    ],
                   ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Material(
+            color: Colors.white,
+            elevation: 3,
+            shadowColor: Colors.black12,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(VisitorRadius.xl),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _burgundy,
+                        foregroundColor: Colors.white,
+                        textStyle: AppTextStyles.buttonText,
+                        minimumSize: const Size(0, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                        ),
+                      ),
+                      onPressed: _explore,
+                      icon: const Icon(Icons.explore_outlined, size: 18),
+                      label: Text(
+                        l10n.startExploreCTA,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    tooltip: l10n.isEn ? 'Open museum map' : 'Mở bản đồ bảo tàng',
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(50, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                      ),
+                      side: BorderSide.none,
+                      backgroundColor: VisitorColors.surface2,
+                      foregroundColor: _burgundy,
+                    ),
+                    onPressed: museumId == null
+                        ? null
+                        : () => openPage(
+                            context,
+                            VisitorDirectoryScreen(
+                              museumId: museumId,
+                              museumName: _museum.name,
+                            ),
+                          ),
+                    icon: const Icon(Icons.map_outlined),
+                  ),
                 ],
               ),
-            );
-          }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.subtitle,
+  });
+  final IconData icon;
+  final String label, value;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: VisitorColors.surface1,
+      borderRadius: BorderRadius.circular(VisitorRadius.xl),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 13, color: _burgundy),
+            const SizedBox(width: 4),
+            Expanded(child: Text(label, style: _label.copyWith(fontSize: 10))),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+          ),
+        ),
+        if (subtitle != null) Text(subtitle!, style: AppTextStyles.caption),
+      ],
+    ),
+  );
+}
+
+class _Highlight extends StatelessWidget {
+  const _Highlight({required this.artifact});
+  final MuseumHighlightArtifact artifact;
+
+  @override
+  Widget build(BuildContext context) {
+    const placeholder = ColoredBox(
+      color: AppColors.softSand,
+      child: Center(
+        child: Icon(Icons.image_outlined, color: AppColors.secondaryText),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(VisitorRadius.md),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: artifact.imageUrl.isEmpty
+                ? placeholder
+                : Image.network(
+                    artifact.imageUrl,
+                    headers:
+                        artifact.imageUrl.startsWith(
+                              '${ApiConfig.baseUrl}/artifacts/',
+                            ) &&
+                            TokenManager.hasToken
+                        ? {'Authorization': 'Bearer ${TokenManager.token}'}
+                        : null,
+                    fit: BoxFit.cover,
+                    excludeFromSemantics: true,
+                    errorBuilder: (_, _, _) => placeholder,
+                  ),
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          artifact.name,
+          style: AppTextStyles.caption.copyWith(
+            fontFamily: AppTextStyles.serifFamily,
+            fontWeight: FontWeight.w600,
+            color: AppColors.darkBrown,
+          ),
+        ),
       ],
     );
   }

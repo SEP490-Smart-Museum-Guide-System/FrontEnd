@@ -1,3 +1,4 @@
+import '../../core/localization/app_localizations.dart';
 import '../../widgets/backend_panel.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/museum_ui.dart';
@@ -74,7 +75,7 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(VisitorRadius.full),
         border: Border.all(color: fg.withOpacity(0.3)),
       ),
       child: Row(
@@ -95,16 +96,20 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return MuseumPage(
     back: true,
-    title: 'Hỗ trợ & khiếu nại',
+    title: l10n.isEn ? 'Support & Inquiries' : 'Hỗ trợ & khiếu nại',
     children: [
-      const Eyebrow('TRUNG TÂM CSKH & HỖ TRỢ'),
+      Eyebrow(l10n.isEn ? 'CUSTOMER CARE & SUPPORT' : 'TRUNG TÂM CSKH & HỖ TRỢ'),
       const SizedBox(height: 6),
-      Text('Gửi phản ánh & khiếu nại', style: AppTextStyles.pageTitle),
+      Text(l10n.isEn ? 'Submit Feedback & Inquiries' : 'Gửi phản ánh & khiếu nại', style: AppTextStyles.pageTitle),
       const SizedBox(height: 10),
-      const Notice(
-        'Bạn có thể gửi vấn đề về dịch vụ hoặc đơn hàng. Việc gửi yêu cầu không tự động hoàn tiền; hệ thống chưa hỗ trợ hoàn tiền trực tiếp.',
+      Notice(
+        l10n.isEn
+            ? 'You can submit issues regarding services or passes. Submissions are reviewed by staff; automated instant refunds are not supported.'
+            : 'Bạn có thể gửi vấn đề về dịch vụ hoặc đơn hàng. Việc gửi yêu cầu không tự động hoàn tiền; hệ thống chưa hỗ trợ hoàn tiền trực tiếp.',
       ),
       const SizedBox(height: 20),
 
@@ -129,7 +134,7 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Tạo yêu cầu hỗ trợ mới',
+                l10n.isEn ? 'Create Support Request' : 'Tạo yêu cầu hỗ trợ mới',
                 style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
               ),
               const SizedBox(height: 14),
@@ -137,14 +142,14 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
                 controller: _subject,
                 maxLength: 300,
                 decoration: InputDecoration(
-                  labelText: 'Tiêu đề vấn đề',
-                  hintText: 'Tóm tắt sự cố hoặc thắc mắc…',
+                  labelText: l10n.isEn ? 'Subject' : 'Tiêu đề vấn đề',
+                  hintText: l10n.isEn ? 'Summary of issue or question...' : 'Tóm tắt sự cố hoặc thắc mắc…',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
                   ),
                 ),
                 validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Nhập tiêu đề' : null,
+                    v == null || v.trim().isEmpty ? (l10n.isEn ? 'Enter subject' : 'Nhập tiêu đề') : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -152,14 +157,14 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
                 maxLength: 5000,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  labelText: 'Nội dung và mã đơn hàng (nếu có)',
-                  hintText: 'Mô tả chi tiết để nhân viên kiểm tra nhanh nhất…',
+                  labelText: l10n.isEn ? 'Details and Order ID (if any)' : 'Nội dung và mã đơn hàng (nếu có)',
+                  hintText: l10n.isEn ? 'Detailed description to assist fast review...' : 'Mô tả chi tiết để nhân viên kiểm tra nhanh nhất…',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
                   ),
                 ),
                 validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Nhập nội dung' : null,
+                    v == null || v.trim().isEmpty ? (l10n.isEn ? 'Enter details' : 'Nhập nội dung') : null,
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
@@ -167,7 +172,9 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
               ],
               const SizedBox(height: 16),
               PrimaryButton(
-                label: _busy ? 'Đang gửi…' : 'Gửi yêu cầu hỗ trợ',
+                label: _busy
+                    ? (l10n.isEn ? 'Sending...' : 'Đang gửi…')
+                    : (l10n.isEn ? 'Submit Request' : 'Gửi yêu cầu hỗ trợ'),
                 icon: Icons.send_rounded,
                 onPressed: _busy ? null : _submit,
               ),
@@ -222,7 +229,7 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
@@ -342,6 +349,7 @@ class _SupportRefundScreenState extends State<SupportRefundScreen> {
       ),
     ],
   );
+  }
 }
 
 class ComplaintDetailScreen extends StatelessWidget {

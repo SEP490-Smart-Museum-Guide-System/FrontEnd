@@ -132,21 +132,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   (v) => Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: VisitorColors.surface1,
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                     ),
                     child: Material(
                       type: MaterialType.transparency,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(VisitorRadius.xl),
                         onTap: () => openPage(
                           context,
                           VisitDetailScreen(
@@ -165,9 +157,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 width: 42,
                                 height: 42,
                                 decoration: BoxDecoration(
-                                  color: AppColors.antiqueIvory,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.border),
+                                  color: VisitorColors.surface2,
+                                  borderRadius: BorderRadius.circular(VisitorRadius.md),
                                 ),
                                 child: const Center(
                                   child: Icon(
@@ -280,16 +271,8 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: VisitorColors.surface1,
+                  borderRadius: BorderRadius.circular(VisitorRadius.xl),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

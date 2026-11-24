@@ -1,3 +1,4 @@
+import '../../core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/museum_ui.dart';
@@ -110,9 +111,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return MuseumPage(
     back: true,
-    title: 'Chi tiết đơn hàng',
+    title: l10n.orderDetailTitle,
     children: [
       if (_error != null) Notice(_error!),
       BackendPanel(
@@ -141,7 +144,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               // Digital Pass / Ticket Header Card
               Container(
                 decoration: BoxDecoration(
-                  color: AppColors.card,
+                  color: VisitorColors.surface1,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
@@ -185,7 +188,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  'VÉ THAM QUAN',
+                                  l10n.isEn ? 'VISITOR PASS' : 'VÉ THAM QUAN',
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.caption.copyWith(
                                     fontWeight: FontWeight.w700,
@@ -225,7 +228,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: SelectableText(
-                                  'Mã đơn: ${order['id']}',
+                                  l10n.isEn ? 'Order ID: ${order['id']}' : 'Mã đơn: ${order['id']}',
                                   style: AppTextStyles.caption.copyWith(
                                     color: AppColors.darkBrown.withOpacity(0.8),
                                     fontWeight: FontWeight.w600,
@@ -366,7 +369,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.card,
+                      color: VisitorColors.surface1,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
@@ -464,8 +467,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   builder: (invoice, retry) => Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
+                      color: VisitorColors.surface1,
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Column(
@@ -671,6 +674,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     ],
   );
+  }
 }
 
 class RedeemPassScreen extends StatefulWidget {
@@ -806,8 +810,8 @@ class ResourceAccessScreen extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
+                      color: VisitorColors.surface1,
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Column(

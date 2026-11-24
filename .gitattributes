@@ -1,3 +1,8 @@
 # Preserve Flutter-generated artifacts and upstream license formatting.
 smgs_web/public/visitor/assets/AssetManifest.bin binary
 smgs_web/public/visitor/assets/NOTICES -whitespace
+
+# Collapse generated Flutter bundles in GitHub reviews.
+smgs_web/public/visitor/main.dart.js linguist-generated=true
+smgs_web/public/visitor/flutter*.js linguist-generated=true
+smgs_web/public/visitor/canvaskit/** linguist-generated=true

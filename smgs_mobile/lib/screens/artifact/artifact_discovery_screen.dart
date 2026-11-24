@@ -22,7 +22,7 @@ class ArtifactDiscoveryScreen extends StatelessWidget {
     subtitle: museum.name,
     children: [
       ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
         child: HeritageArt(kind: artifact.id, height: 215),
       ),
       const SizedBox(height: 24),

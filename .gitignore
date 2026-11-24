@@ -128,3 +128,7 @@ smgs_mobile/android/.kotlin/
 # Browser test output
 **/test-results/
 **/playwright-report/
+
+# Local Flutter build ID and optional CanvasKit debug symbols.
+/smgs_web/public/visitor/.last_build_id
+/smgs_web/public/visitor/canvaskit/**/*.symbols

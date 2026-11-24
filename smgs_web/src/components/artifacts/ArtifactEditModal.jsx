@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
-import { backend } from '../../services/backend';
+import { allPages, backend } from '../../services/backend';
 import { uploadBatch } from '../../services/uploadBatch';
 import { uploadMedia, validateMediaFile } from '../../services/mediaApi';
 import { UploadCloud, X, AlertCircle } from 'lucide-react';
@@ -11,9 +11,11 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
   const [form, setForm] = useState({
     id: artifact?.id, name: artifact?.name || '', code: artifact?.code || '',
     museumId: artifact?.museumId ?? currentMuseum?.id ?? '', galleryId: artifact?.galleryId ?? '',
-    qrCode: artifact?.qrCode || '', accessLevel: artifact?.accessLevel || 'free',
+    qrCode: artifact?.qrCode || '', accessLevel: artifact?.accessLevel || 'free', topicIds: [],
   });
   const [galleries, setGalleries] = useState([]);
+  const [topics, setTopics] = useState(null);
+  const [topicError, setTopicError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
@@ -31,6 +33,15 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
       .catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, [form.museumId]);
+
+  useEffect(() => {
+    if (artifact?.id || !form.museumId) return;
+    const controller = new AbortController();
+    allPages(`museums/${form.museumId}/topics?isActive=true`, { signal: controller.signal })
+      .then(rows => { if (!controller.signal.aborted) setTopics(rows); })
+      .catch(e => { if (!controller.signal.aborted) setTopicError(e.message); });
+    return () => controller.abort();
+  }, [artifact?.id, form.museumId]);
 
   useEffect(() => {
     const previews = selectedFiles.map(file => ({
@@ -89,8 +100,12 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
       if (!result?.success) { setError(result?.error || 'Chưa lưu được hiện vật.'); return; }
       const targetId = result.data?.id || savedId.current;
       if (!targetId) throw new Error('Máy chủ chưa trả mã hiện vật. Không thể tải ảnh.');
-      savedId.current = targetId;
-      setForm(previous => ({ ...previous, id: targetId }));
+      if (!savedId.current) {
+        setForm(previous => ({
+          ...previous, id: targetId, code: result.data.code || '', qrCode: result.data.qrCode || '',
+        }));
+        savedId.current = targetId;
+      }
       const batch = await uploadBatch(selectedFiles, {
         upload: async (file, progress) => {
           const data = new FormData(); data.append('file', file);
@@ -129,13 +144,19 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
             Tên hiện vật
             <input className="form-input" required maxLength={200} value={form.name} onChange={e => change('name', e.target.value)} />
           </label>
-          <label className="form-group">
-            Mã hiện vật
-            <input className="form-input" maxLength={100} value={form.code} onChange={e => change('code', e.target.value)} />
-          </label>
+          {artifact?.id && (
+            <label className="form-group">
+              Mã hiện vật
+              <input className="form-input" maxLength={100} value={form.code} onChange={e => change('code', e.target.value)} />
+            </label>
+          )}
           <label className="form-group">
             Bảo tàng
-            <select className="form-select" required disabled={!!artifact?.id || currentRole !== 'administrator'} value={form.museumId} onChange={e => setForm(prev => ({ ...prev, museumId: e.target.value, galleryId: '' }))}>
+            <select className="form-select" required disabled={busy || !!form.id || currentRole !== 'administrator'} value={form.museumId} onChange={e => {
+              setTopics(null);
+              setTopicError('');
+              setForm(prev => ({ ...prev, museumId: e.target.value, galleryId: '', topicIds: [] }));
+            }}>
               <option value="">Chọn bảo tàng</option>
               {museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
@@ -149,6 +170,32 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
               {galleries.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </label>
+
+          {!artifact?.id && (
+            <fieldset className="form-group" disabled={busy || !!form.id}>
+              <legend>Chủ đề</legend>
+              {!form.museumId && <p>Chọn bảo tàng để xem danh sách chủ đề.</p>}
+              {topicError && <p role="alert">Không thể tải chủ đề. {topicError}</p>}
+              {form.museumId && !topics && !topicError && <p role="status">Đang tải chủ đề…</p>}
+              {topics?.length === 0 && <p>Bảo tàng chưa có chủ đề đang hoạt động.</p>}
+              {topics?.length > 0 && (
+                <div style={{ display: 'grid', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                  {topics.map(topic => (
+                    <label key={topic.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input type="checkbox" checked={form.topicIds.includes(topic.id)} onChange={e => {
+                        const checked = e.target.checked;
+                        setForm(prev => ({
+                          ...prev,
+                          topicIds: checked ? [...prev.topicIds, topic.id] : prev.topicIds.filter(id => id !== topic.id),
+                        }));
+                      }} />
+                      {topic.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+          )}
 
           {/* Khu vực chọn hình ảnh hiện vật (Hỗ trợ tải nhiều ảnh) */}
           <div className="form-group">

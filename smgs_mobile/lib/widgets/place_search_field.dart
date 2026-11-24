@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../core/theme/visitor_colors.dart';
 import '../models/map_place.dart';
 import '../services/place_search_service.dart';
 
@@ -76,7 +77,7 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: 'Tìm địa điểm, đường, địa chỉ…',
-          helperText: 'Nhập ít nhất 3 ký tự · OpenStreetMap / Photon',
+          helperText: 'Nhập ít nhất 3 ký tự',
           counterText: '',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: IconButton(
@@ -100,40 +101,45 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
       if (_loading) const LinearProgressIndicator(),
       if (_message != null) Text(_message!),
       if (_items.isNotEmpty)
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 150),
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: _items.length,
-            itemBuilder: (context, index) {
-              final place = _items[index];
-              return ListTile(
-                dense: true,
-                leading: const Icon(Icons.place_outlined),
-                title: Text(
-                  place.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  place.address,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  _timer?.cancel();
-                  ++_generation;
-                  _text.text = place.name;
-                  setState(() {
-                    _items = [];
-                    _message = null;
-                    _loading = false;
-                  });
-                  FocusScope.of(context).unfocus();
-                  widget.onSelected(place);
-                },
-              );
-            },
+        Material(
+          color: VisitorColors.surface1,
+          borderRadius: BorderRadius.circular(VisitorRadius.md),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 150),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                final place = _items[index];
+                return ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.place_outlined),
+                  title: Text(
+                    place.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    place.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    _timer?.cancel();
+                    ++_generation;
+                    _text.text = place.name;
+                    setState(() {
+                      _items = [];
+                      _message = null;
+                      _loading = false;
+                    });
+                    FocusScope.of(context).unfocus();
+                    widget.onSelected(place);
+                  },
+                );
+              },
+            ),
           ),
         ),
     ],
