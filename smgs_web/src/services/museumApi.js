@@ -4,9 +4,11 @@ const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, 
 
 function getAuthHeaders() {
   const token = getAuthToken();
+  const lang = (localStorage.getItem('smgs.language') === 'en') ? 'en' : 'vi';
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Accept-Language': lang,
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 }
@@ -99,4 +101,34 @@ export async function deleteMuseumApi(id) {
     throw new Error(data?.message || `Không thể vô hiệu hóa bảo tàng (${response.status})`);
   }
   return data;
+}
+
+export async function getMuseumTranslationApi(museumId, lang = 'en') {
+  const response = await fetch(`${API_BASE}/museums/${museumId}/translations/${lang}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.message || `Lỗi khi tải bản dịch bảo tàng (${response.status})`);
+  }
+  return result?.data;
+}
+
+export async function updateMuseumTranslationApi(museumId, lang = 'en', data = {}) {
+  const response = await fetch(`${API_BASE}/museums/${museumId}/translations/${lang}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      name: data.name ?? '',
+      description: data.description ?? '',
+      address: data.address ?? '',
+      openingHours: data.openingHours ?? '',
+    }),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.message || `Không thể lưu bản dịch bảo tàng (${response.status})`);
+  }
+  return result?.data;
 }

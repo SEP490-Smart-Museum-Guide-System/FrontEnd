@@ -17,7 +17,7 @@ class BackendApi {
     final headers = {
       ...TokenManager.authHeaders,
       'Content-Type': 'application/json',
-      'Accept-Language': isEn ? 'en-US,en;q=0.9' : 'vi-VN,vi;q=0.9',
+      'Accept-Language': isEn ? 'en' : 'vi',
     };
     final response = await (switch (method) {
       'POST' => http.post(uri, headers: headers, body: jsonEncode(body)),

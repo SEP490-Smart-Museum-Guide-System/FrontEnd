@@ -188,6 +188,38 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
           ),
         ],
       ),
+      if (l10n.isEn &&
+          ((_publishedContent != null &&
+                  _publishedContent?['languageCode'] != null &&
+                  _publishedContent?['languageCode'] != 'en') ||
+              (a.languageCode != null && a.languageCode != 'en'))) ...[
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: VisitorColors.surface2,
+            borderRadius: BorderRadius.circular(VisitorRadius.sm),
+            border: Border.all(color: VisitorColors.borderSubtle),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.info_outline, size: 14, color: VisitorColors.secondaryText),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  l10n.fallbackTranslationNote,
+                  style: const TextStyle(
+                    fontFamily: AppTextStyles.sansFamily,
+                    fontSize: 12,
+                    color: VisitorColors.secondaryText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
       const SizedBox(height: 20),
       if (_isPremiumLocked) ...[
         Container(

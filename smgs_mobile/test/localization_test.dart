@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smgs_mobile/core/localization/app_localizations.dart';
 import 'package:smgs_mobile/services/app_preferences.dart';
+import 'package:smgs_mobile/services/token_manager.dart';
+import 'package:smgs_mobile/models/museum.dart';
+import 'package:smgs_mobile/models/artifact.dart';
 
 void main() {
   setUp(() {
@@ -68,6 +71,12 @@ void main() {
       expect(en.tabJourneys, 'Journeys');
       expect(vi.tabProfile, 'Cá nhân');
       expect(en.tabProfile, 'Profile');
+
+      // Fallback Translation & Audio notes
+      expect(vi.fallbackTranslationNote.contains('tiếng Việt'), isTrue);
+      expect(en.fallbackTranslationNote.contains('English translation not yet available'), isTrue);
+      expect(vi.fallbackAudioNote.contains('tiếng Việt'), isTrue);
+      expect(en.fallbackAudioNote.contains('English narration not yet available'), isTrue);
     });
 
     test('AppLocalizationsDelegate correctly supports vi and en', () {
@@ -102,6 +111,99 @@ void main() {
 
       // Clean up
       prefs.setLanguage('vi');
+    });
+  });
+
+  group('Accept-Language Header Tests', () {
+    test('TokenManager.authHeaders emits correct Accept-Language based on active language', () {
+      final prefs = AppPreferences.instance;
+
+      prefs.setLanguage('vi', syncRemote: false);
+      expect(TokenManager.authHeaders['Accept-Language'], 'vi');
+
+      prefs.setLanguage('en', syncRemote: false);
+      expect(TokenManager.authHeaders['Accept-Language'], 'en');
+
+      // Reset
+      prefs.setLanguage('vi', syncRemote: false);
+      expect(TokenManager.authHeaders['Accept-Language'], 'vi');
+    });
+  });
+
+  group('Dynamic Multilingual DTO Fallback Tests', () {
+    test('Museum.fromBackendJson parses languageCode', () {
+      final jsonEn = {
+        'id': 1,
+        'name': 'Vietnam National Museum of History',
+        'address': '1 Trang Tien, Hanoi',
+        'description': 'Description in English',
+        'languageCode': 'en',
+      };
+      final museumEn = Museum.fromBackendJson(jsonEn);
+      expect(museumEn.name, 'Vietnam National Museum of History');
+      expect(museumEn.languageCode, 'en');
+
+      final jsonVi = {
+        'id': 2,
+        'name': 'Bảo tàng Lịch sử Quốc gia',
+        'address': '1 Tràng Tiền, Hà Nội',
+        'description': 'Mô tả tiếng Việt',
+        'languageCode': 'vi',
+      };
+      final museumVi = Museum.fromBackendJson(jsonVi);
+      expect(museumVi.name, 'Bảo tàng Lịch sử Quốc gia');
+      expect(museumVi.languageCode, 'vi');
+    });
+
+    test('Artifact.fromBackendJson matches content by preferred language and fallback to vi', () {
+      final jsonWithBoth = {
+        'id': 100,
+        'name': 'Trống đồng Ngọc Lũ',
+        'languageCode': 'vi',
+        'contents': [
+          {
+            'languageCode': 'vi',
+            'title': 'Trống đồng Ngọc Lũ',
+            'description': 'Mô tả tiếng Việt về trống đồng'
+          },
+          {
+            'languageCode': 'en',
+            'title': 'Ngoc Lu Bronze Drum',
+            'description': 'English description of the bronze drum'
+          }
+        ]
+      };
+
+      // When language is EN, selects English content
+      AppPreferences.instance.setLanguage('en', syncRemote: false);
+      final artifactEn = Artifact.fromBackendJson(jsonWithBoth);
+      expect(artifactEn.summary, 'English description of the bronze drum');
+
+      // When language is VI, selects Vietnamese content
+      AppPreferences.instance.setLanguage('vi', syncRemote: false);
+      final artifactVi = Artifact.fromBackendJson(jsonWithBoth);
+      expect(artifactVi.summary, 'Mô tả tiếng Việt về trống đồng');
+
+      // When English is missing, fallbacks to Vietnamese
+      final jsonOnlyVi = {
+        'id': 101,
+        'name': 'Thạp đồng Đào Thịnh',
+        'languageCode': 'vi',
+        'contents': [
+          {
+            'languageCode': 'vi',
+            'title': 'Thạp đồng Đào Thịnh',
+            'description': 'Mô tả tiếng Việt duy nhất'
+          }
+        ]
+      };
+      AppPreferences.instance.setLanguage('en', syncRemote: false);
+      final fallbackArtifact = Artifact.fromBackendJson(jsonOnlyVi);
+      expect(fallbackArtifact.summary, 'Mô tả tiếng Việt duy nhất');
+      expect(fallbackArtifact.languageCode, 'vi');
+
+      // Reset
+      AppPreferences.instance.setLanguage('vi', syncRemote: false);
     });
   });
 

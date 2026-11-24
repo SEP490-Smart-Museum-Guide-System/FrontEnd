@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import MuseumMapPreview from './MuseumMapPreview';
 import MuseumStaffAssignModal from './MuseumStaffAssignModal';
+import MuseumTranslationModal from './MuseumTranslationModal';
 import { ShieldCheck } from 'lucide-react';
 
 export default function MuseumManager() {
@@ -42,11 +43,13 @@ export default function MuseumManager() {
     toggleMuseumGoogleMapsVisibility,
     createMuseum,
     updateMuseum,
-    deleteMuseum
+    deleteMuseum,
+    reload
   } = useApp();
 
   const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || null);
   const [isEditingMuseum, setIsEditingMuseum] = useState(false);
+  const [isTranslatingMuseum, setIsTranslatingMuseum] = useState(false);
   const [isAddingMuseum, setIsAddingMuseum] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isAssigningStaff, setIsAssigningStaff] = useState(false);
@@ -416,13 +419,23 @@ export default function MuseumManager() {
 
             <ActionGroup>
               {(currentRole === 'museumStaff' || currentRole === 'administrator') && (
-                <button
-                  className="btn btn-secondary btn-sm"
-                  type="button"
-                  onClick={handleOpenEditMuseum}
-                >
-                  <Edit3 size={14} /> Chỉnh sửa thông tin
-                </button>
+                <>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={handleOpenEditMuseum}
+                  >
+                    <Edit3 size={14} /> Chỉnh sửa thông tin
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={() => setIsTranslatingMuseum(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Globe size={14} /> Bản dịch tiếng Anh
+                  </button>
+                </>
               )}
               {currentRole === 'administrator' && (
                 <button
@@ -704,6 +717,15 @@ export default function MuseumManager() {
           </div>
         </div>,
         document.body
+      )}
+
+      {isTranslatingMuseum && activeMuseum && (
+        <MuseumTranslationModal
+          museum={activeMuseum}
+          onClose={() => setIsTranslatingMuseum(false)}
+          onSuccess={reload}
+          showToast={showToast}
+        />
       )}
 
     </div>

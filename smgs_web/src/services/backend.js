@@ -4,9 +4,10 @@ const base = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
 
 export async function backend(path, { method = 'GET', body, signal, timeoutMs = 15000 } = {}) {
   const token = getAuthToken();
+  const lang = (localStorage.getItem('smgs.language') === 'en') ? 'en' : 'vi';
   const response = await fetch(`${base}/${path}`, {
     method, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
-    headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}),
+    headers: { Accept: 'application/json', 'Accept-Language': lang, ...(body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });

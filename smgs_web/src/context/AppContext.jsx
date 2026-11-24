@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { clearWebSession, readWebSession, requestLogin, saveWebSession } from '../services/auth';
+import { clearWebSession, readWebSession, requestLogin, saveWebSession, getUserLanguageApi, updateUserLanguageApi } from '../services/auth';
 import { backend, allPages, latestArtifactReviews, apiRoles, museumView, artifactView, tourView, accountView, reviewView, complaintView } from '../services/backend';
 import { createMuseumApi, updateMuseumApi, deleteMuseumApi } from '../services/museumApi';
 import { createArtifactApi, updateArtifactApi, deleteArtifactApi, downloadArtifactQrImageApi, regenerateArtifactQrApi } from '../services/artifactApi';
@@ -56,10 +56,26 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!session) return;
     const timer = setTimeout(() => { clearWebSession(); setSession(null); }, Math.max(0, session.expiresAt - Date.now()));
+    getUserLanguageApi().then(remoteLang => {
+      if (remoteLang === 'vi' || remoteLang === 'en') {
+        localStorage.setItem('smgs.language', remoteLang);
+      }
+    }).catch(() => {});
     return () => clearTimeout(timer);
   }, [session]);
   const login = async (email, password) => {
-    try { setSession(saveWebSession(await requestLogin(email, password))); return { success: true }; }
+    try {
+      const data = await requestLogin(email, password);
+      const sess = saveWebSession(data);
+      setSession(sess);
+      try {
+        const remoteLang = await getUserLanguageApi();
+        if (remoteLang === 'vi' || remoteLang === 'en') {
+          localStorage.setItem('smgs.language', remoteLang);
+        }
+      } catch (_) {}
+      return { success: true };
+    }
     catch (e) { return { success: false, error: e.message }; }
   };
   const logout = () => { clearWebSession(); setSession(null); };
@@ -76,6 +92,15 @@ function DataProvider({ children, session, login, endSession }) {
   const registerNavigationGuard = useCallback(fn => { guard.current = fn; return () => { if (guard.current === fn) guard.current = null; }; }, []);
   const setActiveTab = tab => { if (!guard.current || guard.current()) setActiveTabState(tab); };
   const logout = () => { if (!guard.current || guard.current()) endSession(); };
+  const [appLanguage, setAppLanguageState] = useState(() => (localStorage.getItem('smgs.language') === 'en' ? 'en' : 'vi'));
+  const changeLanguage = async (newLang) => {
+    const code = newLang === 'en' ? 'en' : 'vi';
+    localStorage.setItem('smgs.language', code);
+    setAppLanguageState(code);
+    if (session?.accessToken) {
+      await updateUserLanguageApi(code).catch(() => {});
+    }
+  };
   const [museums, setMuseums] = useState([]), [cities, setCities] = useState([]);
   const [artifacts, setArtifacts] = useState([]), [tours, setTours] = useState([]);
   const [curationQueue, setCurationQueue] = useState([]), [users, setUsers] = useState([]);
@@ -146,6 +171,7 @@ function DataProvider({ children, session, login, endSession }) {
         const mappedContents = contents.map(c => ({ ...c, backendId: c.id, targetArtifactId: c.artifactId,
           museumId: artifacts.find(a => a.id === c.artifactId)?.museumId,
           targetArtifactName: artifacts.find(a => a.id === c.artifactId)?.name || `Hiện vật #${c.artifactId}`,
+          languageCode: c.languageCode || 'vi',
           proposedContent: c.description || '', changesSummary: c.description || '', submittedDate: c.createdAt,
           feedback: c.reviewNote || '', submittedBy: resolveSubmitterName(c.createdBy, c.isAiGenerated, users, currentUser), type: c.isAiGenerated ? 'audio_narration' : 'artifact_update', priority: 'normal' }));
 
@@ -263,6 +289,7 @@ function DataProvider({ children, session, login, endSession }) {
     ? null
     : artifactReviews.get(id)?.status ?? 'draft';
   return <AppContext.Provider value={{ currentUser, currentRole, isAuthenticated, login, logout, selectedMuseumId, setSelectedMuseumId, currentMuseum, activeTab, setActiveTab, registerNavigationGuard,
+    appLanguage, changeLanguage,
     museums, setMuseums, cities, artifacts, artifactReviewStatus, tours, curationQueue, users, passPackages, transactions, reviews, systemCases, exhibitions: [], auditLogs: [], dataErrors, loading, reload,
     isLoadingMuseums: !!loading.museums, isLoadingArtifacts: !!loading.artifacts, isLoadingCuration: !!loading.curationQueue,
     loadCities: reload, loadMuseums: reload, loadArtifacts: reload, loadCurationQueue: reload,

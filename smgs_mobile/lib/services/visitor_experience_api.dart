@@ -254,4 +254,33 @@ class VisitorExperienceApi {
     final result = await BackendApi.request('tours/saved-routes/$id');
     return Map<String, dynamic>.from(result);
   }
+
+  /// Lấy ngôn ngữ ưu tiên của tài khoản đã đăng nhập (GET /api/me/language)
+  static Future<String?> getUserLanguage() async {
+    try {
+      final result = await BackendApi.request('me/language');
+      if (result is Map && result['languageCode'] != null) {
+        final code = result['languageCode'].toString().toLowerCase();
+        return (code == 'en') ? 'en' : 'vi';
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Cập nhật ngôn ngữ ưu tiên của tài khoản (PUT /api/me/language)
+  static Future<bool> updateUserLanguage(String languageCode) async {
+    try {
+      final code = (languageCode == 'en') ? 'en' : 'vi';
+      await BackendApi.request(
+        'me/language',
+        method: 'PUT',
+        body: {'languageCode': code},
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

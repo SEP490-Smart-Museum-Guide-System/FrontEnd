@@ -293,6 +293,19 @@ export default function CurationCenter() {
                         <strong style={{ fontSize: '0.925rem', color: 'var(--color-charcoal-900)' }}>
                           {item.title}
                         </strong>
+                        {item.languageCode && (
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: '700',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: item.languageCode?.toLowerCase() === 'en' ? '#EFF6FF' : '#F1F5F9',
+                            color: item.languageCode?.toLowerCase() === 'en' ? '#1D4ED8' : '#475569',
+                            border: `1px solid ${item.languageCode?.toLowerCase() === 'en' ? '#BFDBFE' : '#CBD5E1'}`
+                          }}>
+                            {item.languageCode?.toUpperCase()}
+                          </span>
+                        )}
                         {item.priority === 'high' && (
                           <span style={{
                             fontSize: '0.68rem',
@@ -368,6 +381,22 @@ export default function CurationCenter() {
                   <span style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-500)' }}>
                     Mã hồ sơ: {selected.id}
                   </span>
+                  {selected.languageCode && (
+                    <>
+                      <span style={{ color: 'var(--color-charcoal-300)' }}>·</span>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        padding: '1px 7px',
+                        borderRadius: '4px',
+                        background: selected.languageCode?.toLowerCase() === 'en' ? '#EFF6FF' : '#F1F5F9',
+                        color: selected.languageCode?.toLowerCase() === 'en' ? '#1D4ED8' : '#475569',
+                        border: `1px solid ${selected.languageCode?.toLowerCase() === 'en' ? '#BFDBFE' : '#CBD5E1'}`
+                      }}>
+                        Ngôn ngữ: {selected.languageCode?.toUpperCase()} {selected.languageCode?.toLowerCase() === 'en' ? '(Tiếng Anh)' : '(Tiếng Việt)'}
+                      </span>
+                    </>
+                  )}
                 </div>
                 <h2 className="modal-title font-serif" style={{ fontSize: '1.25rem', color: 'var(--color-charcoal-900)' }}>
                   {selected.title}

@@ -14,6 +14,7 @@ class Museum {
     required this.longitude,
     this.cityCode = '',
     this.distanceKm,
+    this.languageCode,
   });
 
   final String id;
@@ -29,6 +30,7 @@ class Museum {
   final double? longitude;
   final String cityCode;
   final double? distanceKm;
+  final String? languageCode;
 
   bool get hasCoordinates =>
       latitude != null &&
@@ -61,6 +63,7 @@ class Museum {
       longitude: (json['longitude'] as num?)?.toDouble(),
       cityCode: json['cityCode'] as String? ?? '',
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+      languageCode: json['languageCode'] as String?,
     );
   }
 
@@ -78,6 +81,7 @@ class Museum {
     double? longitude,
     String? cityCode,
     double? distanceKm,
+    String? languageCode,
   }) {
     return Museum(
       id: id ?? this.id,
@@ -93,6 +97,7 @@ class Museum {
       longitude: longitude ?? this.longitude,
       cityCode: cityCode ?? this.cityCode,
       distanceKm: distanceKm ?? this.distanceKm,
+      languageCode: languageCode ?? this.languageCode,
     );
   }
 }

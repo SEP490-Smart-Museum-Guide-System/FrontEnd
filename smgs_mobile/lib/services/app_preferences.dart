@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'visitor_experience_api.dart';
 
 class AppPreferences extends ChangeNotifier {
   AppPreferences._();
@@ -25,13 +26,24 @@ class AppPreferences extends ChangeNotifier {
     }
   }
 
-  void setLanguage(String value) {
+  void setLanguage(String value, {bool syncRemote = true}) {
     if (language == value) return;
     language = value;
     notifyListeners();
     SharedPreferences.getInstance().then((p) {
       p.setString(_keyLanguage, value);
     }).catchError((_) {});
+    if (syncRemote) {
+      VisitorExperienceApi.updateUserLanguage(value).catchError((_) => false);
+    }
+  }
+
+  /// Nạp ngôn ngữ người dùng đã lưu trên server khi đăng nhập (GET /api/me/language)
+  Future<void> syncRemoteLanguage() async {
+    final remoteLang = await VisitorExperienceApi.getUserLanguage();
+    if (remoteLang != null && remoteLang.isNotEmpty && remoteLang != language) {
+      setLanguage(remoteLang, syncRemote: false);
+    }
   }
 
   void setReducedMotion(bool value) {

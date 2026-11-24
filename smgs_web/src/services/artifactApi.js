@@ -4,9 +4,11 @@ const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, 
 
 function getAuthHeaders() {
   const token = getAuthToken();
+  const lang = (localStorage.getItem('smgs.language') === 'en') ? 'en' : 'vi';
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Accept-Language': lang,
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 }
@@ -162,4 +164,29 @@ export async function scanArtifactQrApi(qrCode) {
     throw new Error(data?.message || `Không tìm thấy thông tin hiện vật từ mã QR (${response.status})`);
   }
   return data;
+}
+
+export async function getArtifactTranslationApi(artifactId, lang = 'en') {
+  const response = await fetch(`${API_BASE}/artifacts/${artifactId}/translations/${lang}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.message || `Lỗi khi tải bản dịch tên hiện vật (${response.status})`);
+  }
+  return result?.data;
+}
+
+export async function updateArtifactTranslationApi(artifactId, lang = 'en', name = '') {
+  const response = await fetch(`${API_BASE}/artifacts/${artifactId}/translations/${lang}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name: String(name || '').trim() }),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.message || `Không thể lưu bản dịch tên hiện vật (${response.status})`);
+  }
+  return result?.data;
 }

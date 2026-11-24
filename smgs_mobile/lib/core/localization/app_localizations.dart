@@ -262,6 +262,16 @@ class AppLocalizations {
   String get supportTitle => isEn ? 'Feedback & Assistance' : 'Hỗ trợ & Đóng góp ý kiến';
   String get submitFeedback => isEn ? 'Submit' : 'Gửi yêu cầu';
   String get feedbackSuccess => isEn ? 'Feedback submitted successfully' : 'Gửi ý kiến đóng góp thành công';
+
+  // ==========================================
+  // 11. ĐA NGÔN NGỮ ĐỘNG & DỰ PHÒNG (DYNAMIC FALLBACK)
+  // ==========================================
+  String get fallbackTranslationNote => isEn
+      ? 'English translation not yet available · Showing Vietnamese original'
+      : 'Chưa có bản dịch tiếng Anh · Đang hiển thị bản gốc tiếng Việt';
+  String get fallbackAudioNote => isEn
+      ? 'English narration not yet available · Playing Vietnamese original'
+      : 'Chưa có thuyết minh tiếng Anh · Đang phát bản gốc tiếng Việt';
 }
 
 /// Localizations delegate cho Flutter

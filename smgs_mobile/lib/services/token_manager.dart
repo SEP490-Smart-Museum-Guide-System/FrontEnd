@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/auth_session.dart';
+import 'app_preferences.dart';
 
 class TokenManager {
   static const _keySession = 'smgs_auth_session';
@@ -40,6 +41,7 @@ class TokenManager {
       throw Exception('Không lưu được phiên đăng nhập. Vui lòng thử lại.');
     }
     _session = session;
+    AppPreferences.instance.syncRemoteLanguage().catchError((_) {});
   }
 
   static Future<void> clearSession() async {
@@ -51,6 +53,7 @@ class TokenManager {
   static Map<String, String> get authHeaders => {
     'Content-Type': 'application/json; charset=UTF-8',
     'Accept': 'application/json',
+    'Accept-Language': AppPreferences.instance.language == 'en' ? 'en' : 'vi',
     if (token != null) 'Authorization': 'Bearer $token',
   };
 }

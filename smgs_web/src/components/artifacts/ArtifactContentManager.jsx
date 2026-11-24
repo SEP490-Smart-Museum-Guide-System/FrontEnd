@@ -11,7 +11,7 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
     canReadVersions ? backend(`artifacts/${artifactId}/contents/versions`, { signal }) : []
   ]), [[], []]);
 
-  const [form, setForm] = useState({ title: '', description: '', narrationText: '', audioUrl: '' });
+  const [form, setForm] = useState({ title: '', description: '', narrationText: '', audioUrl: '', languageCode: 'vi' });
   const [successMsg, setSuccessMsg] = useState('');
   const action = useAction(null);
 
@@ -30,14 +30,14 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
           ...form,
           title: form.title.trim(),
           description: form.description.trim(),
-          languageCode: 'vi',
+          languageCode: form.languageCode === 'en' ? 'en' : 'vi',
           narrationText: form.narrationText.trim() || null,
           audioUrl: form.audioUrl.trim() || null,
           isAiGenerated: false
         }
       }),
       () => {
-        setForm({ title: '', description: '', narrationText: '', audioUrl: '' });
+        setForm({ title: '', description: '', narrationText: '', audioUrl: '', languageCode: 'vi' });
         setSuccessMsg('Đã đệ trình nội dung lên hàng đợi Giám tuyển thành công! Bản thảo đang ở trạng thái Chờ thẩm định.');
         showToast('Đã gửi nội dung lên hàng đợi thẩm định của Giám tuyển thành công!', 'success');
         data.reload();
@@ -186,6 +186,18 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
                       }}
                     >
                       <div>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: '700',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          background: c.languageCode === 'en' ? '#EFF6FF' : '#F1F5F9',
+                          color: c.languageCode === 'en' ? '#1D4ED8' : '#475569',
+                          border: `1px solid ${c.languageCode === 'en' ? '#BFDBFE' : '#CBD5E1'}`,
+                          marginRight: '6px'
+                        }}>
+                          {(c.languageCode || 'vi').toUpperCase()}
+                        </span>
                         <strong>{c.title}</strong>
                         <span style={{ color: 'var(--color-charcoal-500)', marginLeft: '8px' }}>
                           • {new Date(c.createdAt).toLocaleString('vi-VN')}
@@ -256,6 +268,19 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
 
             {/* Error message banner */}
             <ErrorNotice>{action.error}</ErrorNotice>
+
+            <Field label="Ngôn ngữ bài thuyết minh">
+              <select
+                className="form-input"
+                name="languageCode"
+                value={form.languageCode}
+                onChange={change}
+                style={{ background: '#FFF' }}
+              >
+                <option value="vi">🇻🇳 Tiếng Việt (vi) - Bản gốc</option>
+                <option value="en">🇬🇧 Tiếng Anh (en) - English Translation</option>
+              </select>
+            </Field>
 
             <Field label="Tiêu đề bài thuyết minh">
               <input

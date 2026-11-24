@@ -17,11 +17,13 @@ import {
   Grid,
   List,
   Volume2,
-  Images
+  Images,
+  Globe
 } from 'lucide-react';
 import ArtifactDetailModal from './ArtifactDetailModal';
 import ArtifactEditModal from './ArtifactEditModal';
 import ArtifactPhotoGalleryModal from './ArtifactPhotoGalleryModal';
+import ArtifactTranslationModal from './ArtifactTranslationModal';
 
 
 export default function ArtifactList({ onOpenAIStudio }) {
@@ -33,7 +35,8 @@ export default function ArtifactList({ onOpenAIStudio }) {
     deleteArtifact,
     loadArtifacts,
     selectedMuseumId,
-    currentRole
+    currentRole,
+    showToast
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,6 +50,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
   // Modals state
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [editingArtifact, setEditingArtifact] = useState(null);
+  const [translatingArtifact, setTranslatingArtifact] = useState(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [galleryArtifact, setGalleryArtifact] = useState(null);
 
@@ -406,6 +410,15 @@ export default function ArtifactList({ onOpenAIStudio }) {
                           </button>}
                           {['administrator', 'museumStaff'].includes(currentRole) && <button
                             type="button"
+                            onClick={() => setTranslatingArtifact(art)}
+                            className="btn btn-secondary btn-sm"
+                            title="Dịch tên tiếng Anh"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Globe size={14} /> Dịch tên
+                          </button>}
+                          {['administrator', 'museumStaff'].includes(currentRole) && <button
+                            type="button"
                             onClick={() => onOpenAIStudio(art)}
                             className="btn btn-gold btn-sm"
                             title="Mở xưởng nội dung AI"
@@ -555,6 +568,14 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   </button>}
                   {['administrator', 'museumStaff'].includes(currentRole) && <button
                     type="button"
+                    onClick={() => setTranslatingArtifact(art)}
+                    className="btn btn-secondary btn-sm"
+                    title="Dịch tên tiếng Anh"
+                  >
+                    <Globe size={14} /> Dịch tên
+                  </button>}
+                  {['administrator', 'museumStaff'].includes(currentRole) && <button
+                    type="button"
                     onClick={() => onOpenAIStudio(art)}
                     className="btn btn-gold btn-sm"
                     title="Xưởng nội dung AI"
@@ -608,6 +629,16 @@ export default function ArtifactList({ onOpenAIStudio }) {
         <ArtifactPhotoGalleryModal
           artifact={galleryArtifact}
           onClose={() => setGalleryArtifact(null)}
+        />
+      )}
+
+      {/* English Name Translation Modal */}
+      {translatingArtifact && (
+        <ArtifactTranslationModal
+          artifact={translatingArtifact}
+          onClose={() => setTranslatingArtifact(null)}
+          onSuccess={loadArtifacts}
+          showToast={showToast}
         />
       )}
     </div>

@@ -1,4 +1,5 @@
 import '../core/network/api_config.dart';
+import '../services/app_preferences.dart';
 import '../services/app_services.dart';
 
 class Artifact {
@@ -17,6 +18,7 @@ class Artifact {
     this.exhibition = 'Trưng bày thường xuyên',
     this.modelUrl,
     this.imageUrls = const [],
+    this.languageCode,
   });
 
   final String id;
@@ -42,6 +44,7 @@ class Artifact {
   final String quizPrompt;
   final String exhibition;
   final String? modelUrl;
+  final String? languageCode;
 
   factory Artifact.fromBackendJson(Map<String, dynamic> json) {
     final media =
@@ -64,14 +67,21 @@ class Artifact {
     final id = json['id']?.toString() ?? '';
     final name = json['name'] as String? ?? 'Hiện vật di sản';
     final galleryName = json['galleryName'] as String? ?? 'Phòng trưng bày';
+    final lang = AppPreferences.instance.language;
     final contentsList = (json['contents'] as List? ?? []).whereType<Map>();
-    final contentDesc = contentsList.firstWhere(
-      (c) => c['languageCode']?.toString().toLowerCase() == 'vi',
-      orElse: () => contentsList.isNotEmpty ? contentsList.first : const {},
-    )['description'] as String?;
+    final matchedContent = contentsList.firstWhere(
+      (c) => c['languageCode']?.toString().toLowerCase() == lang,
+      orElse: () => contentsList.firstWhere(
+        (c) => c['languageCode']?.toString().toLowerCase() == 'vi',
+        orElse: () => contentsList.isNotEmpty ? contentsList.first : const {},
+      ),
+    );
+    final contentDesc = matchedContent['description'] as String?;
     final story = (json['description'] as String?)?.isNotEmpty == true
         ? json['description'] as String
         : (contentDesc ?? '');
+    final effectiveLang = json['languageCode'] as String? ??
+        matchedContent['languageCode'] as String?;
     return Artifact(
       id: id,
       name: name,
@@ -90,6 +100,7 @@ class Artifact {
       modelUrl: json['model3D'] == null
           ? null
           : ApiConfig.mediaUrl(json['model3D']?['modelUrl'] as String?),
+      languageCode: effectiveLang,
     );
   }
 }

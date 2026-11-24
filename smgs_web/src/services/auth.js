@@ -74,3 +74,40 @@ export async function requestLogin(email, password) {
   parseStaffSession(body?.data);
   return body.data;
 }
+
+export async function getUserLanguageApi() {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${apiBaseUrl}/me/language`, {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    const body = await res.json().catch(() => null);
+    if (res.ok && body?.data?.languageCode) {
+      return body.data.languageCode === 'en' ? 'en' : 'vi';
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function updateUserLanguageApi(languageCode) {
+  const token = getAuthToken();
+  if (!token) return false;
+  const normalized = languageCode === 'en' ? 'en' : 'vi';
+  try {
+    const res = await fetch(`${apiBaseUrl}/me/language`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ languageCode: normalized }),
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
