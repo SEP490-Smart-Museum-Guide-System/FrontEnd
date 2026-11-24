@@ -32,6 +32,11 @@ function visitorPreviewIndex() {
 }
 
 const proxy = {
+  '/hubs/notifications': {
+    target: 'http://127.0.0.1:5169',
+    changeOrigin: true,
+    ws: true
+  },
   '/api': {
     target: 'http://127.0.0.1:5169',
     changeOrigin: true,

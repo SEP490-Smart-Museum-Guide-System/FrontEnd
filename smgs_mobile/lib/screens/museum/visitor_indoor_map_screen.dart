@@ -158,8 +158,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             mapId: int.parse(_currentMapId.toString()),
           );
           if (!mounted || loadRequest != _mapRequest) return;
-          if (location['confirmedAt'] != null)
-            setState(() => _lastPosition = location);
+          if (location['confirmedAt'] == null) return;
+          setState(() => _lastPosition = location);
           if (location['mapId'] != mapData.id) {
             throw const FormatException(
               'Vị trí vừa xác nhận thuộc sơ đồ khác. Hãy quét QR phòng để mở đúng tầng.',
