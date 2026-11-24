@@ -24,7 +24,6 @@ dependencies:
   mobile_scanner: ^7.4.2
   audioplayers: ^6.8.1
   signalr_netcore: ^1.4.2
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -34,6 +33,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/vietmap.html
     - assets/images/national-museum-web.jpg
     - assets/images/ho-chi-minh-museum-web.jpg
     - assets/images/ngoc-lu-web.jpg
@@ -58,3 +58,4 @@ flutter:
           weight: 800
         - asset: assets/fonts/BeVietnamPro-Black.ttf
           weight: 900
+

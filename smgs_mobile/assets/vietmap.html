@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://maps.vietmap.vn"><style>html,body,#map{margin:0;width:100%;height:100%;overflow:hidden}canvas{display:block}</style>
+<link rel="stylesheet" href="https://unpkg.com/@vietmap/vietmap-gl-js@6.0.1/dist/vietmap-gl.css">
+</head><body><div id="map"></div><script>
+let map, pending, loading=false, styleReady=false, line=[], pins=[];
+function drawLine() {
+  if (!styleReady) return;
+  const data={type:'FeatureCollection',features:line.length>1?[{
+    type:'Feature',properties:{},geometry:{type:'LineString',coordinates:line}
+  }]:[]};
+  const source=map.getSource('visitor-route');
+  if (source) source.setData(data);
+  else {
+    map.addSource('visitor-route',{type:'geojson',data});
+    map.addLayer({id:'visitor-route',type:'line',source:'visitor-route',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':'#792337','line-width':5}});
+  }
+}
+function drawPins() {
+  if (!styleReady) return;
+  const data={type:'FeatureCollection',features:pins.map(([kind,lng,lat])=>({
+    type:'Feature',properties:{kind},geometry:{type:'Point',coordinates:[lng,lat]}
+  }))};
+  const source=map.getSource('visitor-pins');
+  if (source) { source.setData(data); return; }
+  map.addSource('visitor-pins',{type:'geojson',data});
+  map.addLayer({id:'visitor-pins',type:'circle',source:'visitor-pins',
+    layout:{'circle-sort-key':['match',['get','kind'],'gps',4,'selected',3,'place',2,'museum',1,0]},
+    paint:{'circle-radius':['match',['get','kind'],'gps',6,'origin',7,9],
+      'circle-color':['match',['get','kind'],'gps','#1976d2','origin','#18824e','selected','#b58120','place','#d43b37','#792337'],
+      'circle-stroke-width':2.5,'circle-stroke-color':'#fff'}});
+}
+function signal(state) {
+  if (window.VietMapHost) window.VietMapHost.postMessage(state);
+  else parent.postMessage('vietmap:'+state,location.origin);
+}
+async function setCamera(camera) {
+  pending=camera;
+  if (Array.isArray(camera[5])) { line=camera[5]; drawLine(); }
+  if (Array.isArray(camera[6])) { pins=camera[6]; drawPins(); }
+  if (!window.vietmapgl) return;
+  const [lng,lat,zoom,bearing,style]=camera;
+  const view={center:[lng,lat],zoom:zoom-1,bearing:-bearing};
+  if (map) { map.jumpTo(view); return; }
+  if (loading) return;
+  loading=true;
+  try {
+    const response=await fetch(style);
+    if (!response.ok) throw Error('style unavailable');
+    const theme=await response.json();
+    for (const source of Object.values(theme.sources)) {
+      if (source.type==='vector' && source.tiles) source.bounds=[102,8.1,110,23.5];
+    }
+    map=new vietmapgl.Map({center:[pending[0],pending[1]],zoom:pending[2]-1,bearing:-pending[3],
+      container:'map',style:theme,interactive:false,renderWorldCopies:false,attributionControl:false});
+    map.once('load',()=>{ styleReady=true; drawLine(); drawPins(); });
+    new ResizeObserver(()=>map.resize()).observe(document.getElementById('map'));
+    map.once('idle',()=>{ if(map.areTilesLoaded() && map.queryRenderedFeatures().length) signal('drawn'); });
+    map.on('error',()=>{ if (!map.isStyleLoaded()) signal('error'); });
+  } catch (_) { signal('error'); }
+}
+window.addEventListener('message',e=>{
+  if(e.source===parent && e.origin===location.origin && Array.isArray(e.data)) setCamera(e.data);
+});
+</script><script src="https://unpkg.com/@vietmap/vietmap-gl-js@6.0.1/dist/vietmap-gl.js" onerror="signal('error')" onload="if(pending)setCamera(pending)"></script>
+</body></html>

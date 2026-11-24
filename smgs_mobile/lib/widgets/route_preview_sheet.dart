@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
 import '../models/museum.dart';
 import '../models/map_place.dart';
@@ -10,6 +9,7 @@ import '../services/location_service.dart';
 import '../services/automatic_location_service.dart';
 import 'interactive_heritage_map.dart';
 import 'museum_arrival_panel.dart';
+import 'place_search_field.dart';
 
 class RoutePreviewSheet extends StatefulWidget {
   const RoutePreviewSheet({
@@ -44,10 +44,12 @@ class RoutePreviewSheet extends StatefulWidget {
 
 class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
   final _location = AutomaticLocationService.instance;
-  bool _loading = true, _opening = false;
-  String? _error;
+  bool _loading = true, _navigating = false;
+  String? _error, _guidance;
+  DateTime? _lastReroute;
   OutdoorRoutePreview? _route;
   UserLocationResult? _origin;
+  MapPlace? _from;
 
   @override
   void initState() {
@@ -61,6 +63,34 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
       setState(
         () => _origin = _location.hasFreshLocation ? _location.latest : null,
       );
+      _updateGuidance();
+    }
+  }
+
+  void _updateGuidance() {
+    final route = _route, fix = _origin;
+    if (!_navigating || route == null || fix == null || _loading) return;
+    final position = LatLng(fix.latitude, fix.longitude);
+    final match = route.match(position);
+    if (const Distance()(position, route.routePoints.last) < 25) {
+      setState(() {
+        _guidance = 'Bạn đã đến nơi';
+        _navigating = false;
+      });
+    } else if (match.meters > 65) {
+      final now = DateTime.now();
+      if (_lastReroute == null ||
+          now.difference(_lastReroute!).inSeconds >= 15) {
+        _lastReroute = now;
+        _load();
+      }
+    } else {
+      final next = route.steps
+          .where((step) => step.index > match.segment)
+          .firstOrNull;
+      setState(
+        () => _guidance = next?.label ?? 'Tiếp tục theo tuyến trên bản đồ',
+      );
     }
   }
 
@@ -68,6 +98,85 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
   void dispose() {
     _location.removeListener(_locationChanged);
     super.dispose();
+  }
+
+  Future<void> _openDirections() async {
+    final route = _route;
+    if (route == null) return;
+    if (_from != null) {
+      final useGps = await showModalBottomSheet<bool>(
+        context: context,
+        useSafeArea: true,
+        builder: (sheet) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Chỉ đường từng bước'),
+              subtitle: Text('Từ ${_from!.name}'),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  if (route.steps.isEmpty)
+                    const ListTile(
+                      title: Text('Tuyến này chưa có hướng dẫn từng bước.'),
+                    ),
+                  for (final step in route.steps.asMap().entries)
+                    ListTile(
+                      leading: Text('${step.key + 1}'),
+                      title: Text(step.value.label),
+                    ),
+                ],
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: TextButton.icon(
+                onPressed: () => Navigator.pop(sheet, true),
+                icon: const Icon(Icons.my_location),
+                label: const Text('Dẫn đường từ vị trí GPS của tôi'),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || useGps != true) return;
+      setState(() => _from = null);
+      await _load();
+      if (!mounted || _route == null) return;
+    }
+    setState(() {
+      _navigating = !_navigating;
+      _guidance = _navigating ? 'Đang xác định vị trí…' : null;
+    });
+    _updateGuidance();
+  }
+
+  Future<void> _chooseOrigin() async {
+    final selected = await showDialog<MapPlace>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Chọn điểm xuất phát'),
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: PlaceSearchField(
+              onSelected: (place) {
+                if (place != null) Navigator.pop(dialog, place);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _from = selected;
+      _guidance = null;
+      _navigating = false;
+    });
+    await _load();
   }
 
   Future<void> _load() async {
@@ -81,7 +190,10 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
       if ((widget.place == null && widget.museum?.hasCoordinates != true)) {
         throw Exception('Bảo tàng chưa có tọa độ hợp lệ.');
       }
-      final origin = _location.hasFreshLocation
+      final from = _from;
+      final origin = from != null
+          ? null
+          : _location.hasFreshLocation
           ? _location.latest!
           : await LocationService.getCurrentUserLocation();
       if (!mounted) return;
@@ -94,8 +206,8 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
                 'latitude': widget.place!.latitude,
                 'longitude': widget.place!.longitude,
               },
-        originLat: origin.latitude,
-        originLng: origin.longitude,
+        originLat: from?.latitude ?? origin!.latitude,
+        originLng: from?.longitude ?? origin!.longitude,
       );
       if (!mounted) return;
       setState(() {
@@ -103,6 +215,7 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
         _loading = false;
       });
       widget.onRouteLoaded?.call(route);
+      _updateGuidance();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -110,44 +223,6 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
           _loading = false;
         });
       }
-    }
-  }
-
-  Future<void> _openGoogleMaps() async {
-    setState(() => _opening = true);
-    final url = Uri.https('www.google.com', '/maps/dir/', {
-      'api': '1',
-      'destination':
-          '${widget.place?.latitude ?? widget.museum?.latitude},${widget.place?.longitude ?? widget.museum?.longitude}',
-      'travelmode': 'driving',
-      'dir_action': 'navigate',
-    });
-    try {
-      var opened = false;
-      try {
-        opened = await launchUrl(
-          url,
-          mode: LaunchMode.externalNonBrowserApplication,
-        );
-      } catch (_) {
-        /* Fall back to the system browser. */
-      }
-      if (!opened) {
-        opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-      }
-      if (!opened) throw Exception('Không thể mở Google Maps trên thiết bị.');
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Không thể mở Google Maps. Vui lòng kiểm tra trình duyệt.',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _opening = false);
     }
   }
 
@@ -168,6 +243,7 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
         ),
         Expanded(
           child: InteractiveHeritageMap(
+            followUser: _navigating,
             museums: [if (widget.museum != null) widget.museum!],
             placeLocation: widget.place == null
                 ? null
@@ -184,7 +260,9 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
         if (_loading) const LinearProgressIndicator(),
         if (_loading)
           Text(
-            _origin == null ? 'Đang lấy vị trí GPS…' : 'Đang tính tuyến đường…',
+            _from == null && _origin == null
+                ? 'Đang lấy vị trí GPS…'
+                : 'Đang tính tuyến đường…',
           ),
         if (_origin?.isLastKnown == true)
           const Text('Dùng vị trí gần nhất trong 2 phút, sai số tối đa 100 m.'),
@@ -196,7 +274,21 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Ô tô · Xem trước tuyến đường trên OpenStreetMap'),
+                const Text('Ô tô · Tuyến đường VietMap'),
+                if (_from != null) Text('Xuất phát từ ${_from!.name}'),
+                if (!_loading && !_navigating)
+                  TextButton(
+                    onPressed: _chooseOrigin,
+                    child: const Text('Chọn điểm xuất phát'),
+                  ),
+                if (_from != null && !_loading)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _from = null);
+                      _load();
+                    },
+                    child: const Text('Dùng vị trí GPS của tôi'),
+                  ),
                 if (_route != null) ...[
                   Text(
                     '${_route!.distanceKmString} · ${_route!.durationMinutesString}',
@@ -206,9 +298,7 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
                       color: AppColors.deepBurgundy,
                     ),
                   ),
-                  const Text(
-                    'Tuyến OSRM được tính khi mở. Vị trí của bạn tự cập nhật khi đang dùng app.',
-                  ),
+                  if (_guidance != null) Text(_guidance!),
                 ],
                 if (_error != null) ...[
                   Text(
@@ -227,20 +317,24 @@ class _RoutePreviewSheetState extends State<RoutePreviewSheet> {
                     museumId: museumId,
                     museumName: widget.museum!.name,
                   ),
-                FilledButton.icon(
-                  onPressed:
-                      (widget.place == null &&
-                              widget.museum?.hasCoordinates != true) ||
-                          _opening
-                      ? null
-                      : _openGoogleMaps,
-                  icon: const Icon(Icons.near_me),
-                  label: const Text('Chỉ đường bằng Google Maps'),
-                ),
               ],
             ),
           ),
         ),
+        if (_route != null)
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: FilledButton.icon(
+                onPressed: _openDirections,
+                icon: const Icon(Icons.navigation),
+                label: Text(
+                  _navigating ? 'Dừng chỉ đường' : 'Bắt đầu chỉ đường',
+                ),
+              ),
+            ),
+          ),
       ],
     ),
   );

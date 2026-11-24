@@ -77,7 +77,7 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: 'Tìm địa điểm, đường, địa chỉ…',
-          helperText: 'Nhập ít nhất 3 ký tự · OpenStreetMap / Photon',
+          helperText: 'Nhập ít nhất 3 ký tự',
           counterText: '',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: IconButton(

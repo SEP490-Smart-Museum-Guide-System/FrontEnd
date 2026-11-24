@@ -66,7 +66,7 @@ class LocationService {
           recent.accuracy < 0 ||
           recent.accuracy > 100) {
         throw Exception(
-          'Chưa lấy được vị trí GPS. Hãy bật Độ chính xác vị trí, ra nơi thoáng rồi nhấn Thử lại. Bạn vẫn có thể mở Google Maps.',
+          'Chưa lấy được vị trí GPS. Hãy bật Độ chính xác vị trí, ra nơi thoáng rồi nhấn Thử lại.',
         );
       }
       position = recent;

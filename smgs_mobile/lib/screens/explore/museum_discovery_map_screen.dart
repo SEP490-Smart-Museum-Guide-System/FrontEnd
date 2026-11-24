@@ -277,6 +277,7 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
           ],
           Expanded(
             child: InteractiveHeritageMap(
+              centerOnGps: _world,
               museums: _world ? const [] : _museums,
               selectedMuseumId: _world ? null : _selectedId,
               placeLocation: _world && _place != null
