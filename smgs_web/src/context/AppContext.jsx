@@ -162,7 +162,16 @@ function DataProvider({ children, session, login, endSession }) {
       finally { if (!controller.signal.aborted) setLoading(p => ({ ...p, [key]: false })); }
     }
     if (['administrator', 'museumStaff', 'curator'].includes(currentRole) && museumIds.length) {
-      load('tours', async () => (await Promise.all(museumIds.map(id => allPages(`tours/manage?museumId=${id}`, options)))).flat().map(tourView), setTours);
+      const managedTours = Promise.all(museumIds.map(async id => {
+        try {
+          return await allPages(`tours/manage?museumId=${id}`, options);
+        } catch (error) {
+          // Curators assigned to individual artifacts can review content but cannot manage museum-wide tours.
+          if (currentRole === 'curator' && error.status === 403) return [];
+          throw error;
+        }
+      })).then(groups => groups.flat());
+      load('tours', async () => (await managedTours).map(tourView), setTours);
       load('curationQueue', async () => {
         const contents = currentRole === 'curator'
           ? (await Promise.all(['pending_review', 'published', 'rejected', 'archived'].map(status => allPages(`artifact-contents?museumId=${currentMuseum.id}&status=${status}`, options)))).flat()
@@ -176,7 +185,7 @@ function DataProvider({ children, session, login, endSession }) {
           feedback: c.reviewNote || '', submittedBy: resolveSubmitterName(c.createdBy, c.isAiGenerated, users, currentUser), type: c.isAiGenerated ? 'audio_narration' : 'artifact_update', priority: 'normal' }));
 
         // Curation items for Tour Versions (WF-02)
-        const tourData = (await Promise.all(museumIds.map(id => allPages(`tours/manage?museumId=${id}`, options)))).flat();
+        const tourData = await managedTours;
         const tourItems = [];
         tourData.forEach(t => {
           (t.versions || []).forEach(v => {

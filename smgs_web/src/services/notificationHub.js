@@ -25,7 +25,7 @@ class NotificationHubService {
     if (this.isStarting) return;
     this.isStarting = true;
 
-    const url = customHubUrl || defaultHubUrl;
+    const url = customHubUrl || import.meta.env?.VITE_NOTIFICATION_HUB_URL || defaultHubUrl;
 
     try {
       if (!this.connection) {
