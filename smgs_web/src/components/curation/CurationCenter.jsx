@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Check,
@@ -46,7 +46,9 @@ export default function CurationCenter() {
     users,
     currentUser,
     approveCurationItem,
-    rejectCurationItem
+    rejectCurationItem,
+    pendingNotificationTarget,
+    setPendingNotificationTarget
   } = useApp();
 
   const [filter, setFilter] = useState('pending_review');
@@ -99,6 +101,34 @@ export default function CurationCenter() {
   }, [queue, filter, searchTerm]);
 
   const countByStatus = (status) => queue.filter(item => item.status === status).length;
+
+  // Tự động mở hồ sơ thẩm định khi điều hướng từ thông báo (Deep-Link)
+  useEffect(() => {
+    if (!pendingNotificationTarget || !queue.length) return;
+    const { type, referenceType, referenceId } = pendingNotificationTarget;
+    if (!referenceId) return;
+
+    const isTourRef = referenceType === 'TourVersion' || type?.startsWith('TOUR_');
+    const isContentRef = referenceType === 'ArtifactContent' || type?.startsWith('CONTENT_');
+    if (!isTourRef && !isContentRef) return;
+
+    const matched = queue.find((item) => {
+      if (isTourRef) {
+        return item.type === 'new_tour' && (String(item.backendId) === String(referenceId) || String(item.id) === `tour_version_${referenceId}`);
+      }
+      return item.type !== 'new_tour' && (String(item.backendId) === String(referenceId) || String(item.id) === String(referenceId));
+    });
+
+    if (matched) {
+      if (filter !== 'all' && matched.status !== filter) {
+        setFilter('all');
+      }
+      openItem(matched);
+      if (typeof setPendingNotificationTarget === 'function') {
+        setPendingNotificationTarget(null);
+      }
+    }
+  }, [pendingNotificationTarget, queue]);
 
   const openItem = async (item) => {
     setSelected(item);

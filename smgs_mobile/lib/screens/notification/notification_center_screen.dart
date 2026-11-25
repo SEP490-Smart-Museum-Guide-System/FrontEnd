@@ -4,6 +4,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/visitor_colors.dart';
 import '../../core/theme/visitor_tokens.dart';
 import '../../models/notification_item.dart';
+import '../../models/experience.dart';
 import '../../services/notification_controller.dart';
 import '../profile/history_screen.dart';
 import '../profile/order_detail_screen.dart';
@@ -54,6 +55,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       case 'COMPLAINT_STATUS_UPDATED':
       case 'COMPLAINT_CREATED':
         return Icons.support_agent_outlined;
+      case 'TOUR_SUBMITTED':
+      case 'TOUR_APPROVED':
+      case 'TOUR_REJECTED':
+        return Icons.route_outlined;
+      case 'CONTENT_SUBMITTED':
+      case 'CONTENT_APPROVED':
+      case 'CONTENT_REJECTED':
+        return Icons.menu_book_outlined;
       default:
         return Icons.notifications_none_rounded;
     }
@@ -62,11 +71,17 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   Color _getIconColor(String type) {
     switch (type) {
       case 'PAYMENT_SUCCEEDED':
+      case 'CONTENT_APPROVED':
+      case 'TOUR_APPROVED':
         return const Color(0xFF2E6B3E);
       case 'FEEDBACK_RESPONDED':
+      case 'CONTENT_SUBMITTED':
+      case 'TOUR_SUBMITTED':
         return VisitorColors.gold;
       case 'COMPLAINT_STATUS_UPDATED':
       case 'COMPLAINT_CREATED':
+      case 'CONTENT_REJECTED':
+      case 'TOUR_REJECTED':
         return VisitorColors.burgundy;
       default:
         return VisitorColors.burgundy;
@@ -86,15 +101,31 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       );
     } else if (item.type == 'COMPLAINT_STATUS_UPDATED' ||
         item.type == 'COMPLAINT_CREATED') {
+      final complaintId = item.referenceId != null
+          ? int.tryParse(item.referenceId!)
+          : null;
       Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => const SupportRefundScreen(),
+          builder: (_) => complaintId != null
+              ? ComplaintDetailScreen(id: complaintId)
+              : const SupportRefundScreen(),
         ),
       );
     } else if (item.type == 'FEEDBACK_RESPONDED') {
+      final visitId = item.referenceId != null
+          ? int.tryParse(item.referenceId!)
+          : null;
       Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => const HistoryScreen(),
+          builder: (_) => visitId != null
+              ? VisitDetailScreen(
+                  visit: VisitRecord(
+                    id: visitId.toString(),
+                    museumId: (item.museumId ?? 1).toString(),
+                    date: item.createdAt,
+                  ),
+                )
+              : const HistoryScreen(),
         ),
       );
     }
@@ -297,9 +328,32 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     ),
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      itemCount: list.length,
+                      itemCount: list.length + (_controller.hasMore ? 1 : 0),
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
+                        if (index == list.length) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Center(
+                              child: TextButton(
+                                onPressed: _controller.isLoading
+                                    ? null
+                                    : () => _controller.loadMore(
+                                          unreadOnly: _unreadOnly ? true : null,
+                                        ),
+                                child: Text(
+                                  _controller.isLoading
+                                      ? (l10n.isEn ? 'Loading…' : 'Đang tải thêm…')
+                                      : (l10n.isEn ? 'Load older notifications' : 'Xem thông báo cũ hơn'),
+                                  style: const TextStyle(
+                                    color: VisitorColors.burgundy,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
                         final item = list[index];
                         return Dismissible(
                           key: Key('notif-${item.id}'),

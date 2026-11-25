@@ -62,6 +62,7 @@ export default function Header() {
     museums,
     selectedMuseumId,
     setSelectedMuseumId,
+    setPendingNotificationTarget,
     logout
   } = useApp();
 
@@ -88,11 +89,34 @@ export default function Header() {
   }, []);
 
   const handleNotificationNavigate = (notification) => {
-    const { type, actionUrl } = notification;
-    if (type === 'CONTENT_SUBMITTED') {
+    if (!notification) return;
+    const { type, referenceType, referenceId, actionUrl, museumId } = notification;
+
+    // Tự động chuyển sang bảo tàng của thông báo nếu thông báo gắn với museumId cụ thể
+    if (museumId && ['museumStaff', 'curator', 'administrator'].includes(currentRole)) {
+      const targetMuseum = museums.find((m) => Number(m.id) === Number(museumId));
+      if (targetMuseum && Number(selectedMuseumId) !== Number(targetMuseum.id)) {
+        setSelectedMuseumId(Number(targetMuseum.id));
+      }
+    }
+
+    if (typeof setPendingNotificationTarget === 'function') {
+      setPendingNotificationTarget({
+        type,
+        referenceType,
+        referenceId,
+        actionUrl,
+        museumId,
+        timestamp: Date.now()
+      });
+    }
+
+    if (type === 'CONTENT_SUBMITTED' || type === 'TOUR_SUBMITTED') {
       setActiveTab('curation_queue');
     } else if (type === 'CONTENT_APPROVED' || type === 'CONTENT_REJECTED') {
       setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'submission_status');
+    } else if (type === 'TOUR_APPROVED' || type === 'TOUR_REJECTED') {
+      setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'tours');
     } else if (type === 'COMPLAINT_CREATED' || type === 'COMPLAINT_STATUS_UPDATED') {
       setActiveTab('support');
     } else if (type === 'PAYMENT_SUCCEEDED') {
@@ -101,11 +125,15 @@ export default function Header() {
       setActiveTab('reviews');
     } else if (actionUrl) {
       if (actionUrl.includes('curation') || actionUrl.includes('artifact-contents')) {
-        setActiveTab('curation_queue');
+        setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'submission_status');
+      } else if (actionUrl.includes('tours')) {
+        setActiveTab(currentRole === 'curator' ? 'curation_queue' : 'tours');
       } else if (actionUrl.includes('complaint')) {
         setActiveTab('support');
       } else if (actionUrl.includes('order') || actionUrl.includes('commerce')) {
         setActiveTab('transactions');
+      } else if (actionUrl.includes('feedback')) {
+        setActiveTab('reviews');
       }
     }
   };

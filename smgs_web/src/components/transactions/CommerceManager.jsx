@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { backend, allPages } from '../../services/backend';
 import { Field, Modal, PageTitle, LoadState, ErrorNotice, Empty, useData, useAction, statusLabels } from '../common/BusinessUI';
@@ -13,8 +13,20 @@ export default function CommerceManager() {
   </div>;
 }
 function MuseumCommerce({ museumId }) {
-  const { artifacts, reload: reloadApp } = useApp();
+  const { artifacts, reload: reloadApp, pendingNotificationTarget, setPendingNotificationTarget } = useApp();
   const [tab, setTab] = useState('orders'), [modal, setModal] = useState(null), [orderId, setOrderId] = useState(null);
+
+  useEffect(() => {
+    if (!pendingNotificationTarget) return;
+    const { type, referenceType, referenceId } = pendingNotificationTarget;
+    if (referenceId && (referenceType === 'PurchaseOrder' || type === 'PAYMENT_SUCCEEDED')) {
+      setTab('orders');
+      setOrderId(String(referenceId));
+      if (typeof setPendingNotificationTarget === 'function') {
+        setPendingNotificationTarget(null);
+      }
+    }
+  }, [pendingNotificationTarget, setPendingNotificationTarget]);
   const data = useData(`commerce:${museumId}`, signal => Promise.all([backend(`commerce/museums/${museumId}/resources`, { signal }), backend(`commerce/museums/${museumId}/products/manage`, { signal }), allPages(`commerce/museums/${museumId}/orders`, { signal, pagedArray: true })]), [[], [], []]);
   const [query, setQuery] = useState(''), action = useAction('Đã lưu thay đổi dịch vụ và giao dịch.');
   const refresh = () => { data.reload(); reloadApp(); };

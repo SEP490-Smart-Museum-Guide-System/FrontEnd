@@ -10,8 +10,14 @@ const labels = {
 };
 
 export default function SubmissionStatus() {
-  const { curationQueue, artifacts, currentMuseum, setActiveTab } = useApp();
-  const submissions = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum?.id);
+  const { curationQueue, artifacts, currentMuseum, setActiveTab, pendingNotificationTarget, setPendingNotificationTarget } = useApp();
+  const submissions = curationQueue.filter(item => {
+    if (item.museumId && currentMuseum?.id) {
+      return String(item.museumId) === String(currentMuseum.id);
+    }
+    return artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum?.id;
+  });
+  const highlightedId = pendingNotificationTarget?.referenceId ? String(pendingNotificationTarget.referenceId) : null;
 
   return <div>
     <section className="role-dashboard-hero" style={{ marginBottom: '24px' }}>
@@ -24,10 +30,18 @@ export default function SubmissionStatus() {
     <section className="card">
       <div className="card-header"><div className="card-title"><Send size={19} color="var(--color-burgundy-700)" /> Nội dung đã đệ trình</div><span style={{ color: 'var(--color-charcoal-500)', fontSize: '.78rem' }}>{submissions.length} mục thuộc {currentMuseum?.shortName}</span></div>
       <div className="role-dashboard-list">
-        {submissions.length ? submissions.map(item => <article className="role-dashboard-row" key={item.id}>
+        {submissions.length ? submissions.map(item => {
+          const isHighlighted = highlightedId && (String(item.backendId) === highlightedId || String(item.id) === highlightedId || String(item.id) === `tour_version_${highlightedId}`);
+          return <article
+            className="role-dashboard-row"
+            key={item.id}
+            onClick={() => { if (isHighlighted && setPendingNotificationTarget) setPendingNotificationTarget(null); }}
+            style={isHighlighted ? { background: 'rgba(197, 160, 89, 0.14)', borderLeft: '4px solid var(--color-burgundy-700)', paddingLeft: '12px' } : undefined}
+          >
           <div style={{ minWidth: 0 }}><strong>{item.title}</strong><small><Clock3 size={12} style={{ verticalAlign: 'middle' }} /> {item.submittedDate} · {item.targetArtifactName}</small>{item.feedback && <p style={{ marginTop: '8px', color: 'var(--color-charcoal-700)', fontSize: '.78rem' }}><MessageSquareText size={13} style={{ verticalAlign: 'middle', color: 'var(--color-gold-600)' }} /> Phản hồi Giám tuyển: {item.feedback}</p>}</div>
           <span className={`badge-status badge-${item.status === 'published' ? 'published' : item.status === 'pending_review' ? 'pending' : item.status === 'rejected' ? 'rejected' : 'draft'}`}><FileCheck2 size={13} /> {labels[item.status] || item.status}</span>
-        </article>) : <div className="role-dashboard-row">Chưa có nội dung nào được đệ trình từ bảo tàng này.</div>}
+        </article>;
+        }) : <div className="role-dashboard-row">Chưa có nội dung nào được đệ trình từ bảo tàng này.</div>}
       </div>
     </section>
   </div>;

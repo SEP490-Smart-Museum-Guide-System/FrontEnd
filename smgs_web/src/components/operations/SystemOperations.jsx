@@ -1,6 +1,6 @@
 import { backend } from '../../services/backend';
 import { Modal, LoadState, useData } from '../common/BusinessUI';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import AiClusterHealthPanel from './AiClusterHealthPanel';
 import {
@@ -62,10 +62,24 @@ export default function SystemOperations({ mode = 'support' }) {
     reviews,
     moderateReview,
     showToast,
-    logAction
+    logAction,
+    pendingNotificationTarget,
+    setPendingNotificationTarget
   } = useApp();
 
   const [selectedCase, setSelectedCase] = useState(null);
+
+  useEffect(() => {
+    if (!pendingNotificationTarget) return;
+    const { type, referenceType, referenceId } = pendingNotificationTarget;
+    if (referenceId && (referenceType === 'Complaint' || type === 'COMPLAINT_CREATED' || type === 'COMPLAINT_STATUS_UPDATED')) {
+      setFilter('all');
+      setSelectedCase(Number(referenceId) || referenceId);
+      if (typeof setPendingNotificationTarget === 'function') {
+        setPendingNotificationTarget(null);
+      }
+    }
+  }, [pendingNotificationTarget, setPendingNotificationTarget]);
   const [filter, setFilter] = useState('open');
   const [notes, setNotes] = useState({});
   const [searchQuery, setSearchQuery] = useState('');

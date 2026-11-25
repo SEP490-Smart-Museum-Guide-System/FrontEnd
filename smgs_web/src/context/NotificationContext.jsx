@@ -6,7 +6,7 @@ import { notificationHub } from '../services/notificationHub';
 const NotificationContext = createContext(null);
 
 export function NotificationProvider({ children }) {
-  const { isAuthenticated, currentUser } = useApp();
+  const { isAuthenticated, currentUser, reload } = useApp();
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -151,6 +151,11 @@ export function NotificationProvider({ children }) {
 
       // Hiển thị Toast nổi
       showNotificationToast(notification);
+
+      // Đồng bộ lại dữ liệu nghiệp vụ trên trang khi nhận được sự kiện thông báo mới từ Backend
+      if (typeof reload === 'function') {
+        reload();
+      }
     });
 
     // Lắng nghe sự kiện UnreadCountChanged
@@ -163,7 +168,7 @@ export function NotificationProvider({ children }) {
       unsubUnread();
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
-  }, [isAuthenticated, currentUser?.id, fetchUnreadCount, fetchNotifications, showNotificationToast, dismissToast]);
+  }, [isAuthenticated, currentUser?.id, fetchUnreadCount, fetchNotifications, showNotificationToast, dismissToast, reload]);
 
   const value = {
     unreadCount,

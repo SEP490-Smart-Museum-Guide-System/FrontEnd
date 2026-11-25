@@ -7,6 +7,7 @@ import '../core/network/api_config.dart';
 import '../models/auth_session.dart';
 import '../models/experience.dart';
 import 'app_services.dart';
+import 'notification_controller.dart';
 import 'token_manager.dart';
 
 class BackendAuthService extends AuthService {
@@ -15,6 +16,7 @@ class BackendAuthService extends AuthService {
     if (saved != null && saved.role == 'Visitor') {
       _user = saved.user;
       _scheduleExpiry(saved);
+      NotificationController.instance.init();
     }
   }
   VisitorUser? _user;
@@ -94,6 +96,7 @@ class BackendAuthService extends AuthService {
     VisitorSession.clear();
     _user = session.user;
     _scheduleExpiry(session);
+    NotificationController.instance.init();
     notifyListeners();
   }
 
@@ -118,6 +121,7 @@ class BackendAuthService extends AuthService {
     _user = null;
     VisitStore.instance.reset();
     VisitorSession.clear();
+    NotificationController.instance.resetOnLogout();
     AppServices.catalog = BackendCatalogService();
     final clearing = TokenManager.clearSession();
     notifyListeners();

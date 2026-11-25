@@ -88,6 +88,7 @@ function DataProvider({ children, session, login, endSession }) {
   const isAuthenticated = !!session;
   const [selectedMuseumId, setSelectedMuseumId] = useState(null);
   const [activeTab, setActiveTabState] = useState('overview');
+  const [pendingNotificationTarget, setPendingNotificationTarget] = useState(null);
   const guard = useRef(null);
   const registerNavigationGuard = useCallback(fn => { guard.current = fn; return () => { if (guard.current === fn) guard.current = null; }; }, []);
   const setActiveTab = tab => { if (!guard.current || guard.current()) setActiveTabState(tab); };
@@ -298,6 +299,7 @@ function DataProvider({ children, session, login, endSession }) {
     ? null
     : artifactReviews.get(id)?.status ?? 'draft';
   return <AppContext.Provider value={{ currentUser, currentRole, isAuthenticated, login, logout, selectedMuseumId, setSelectedMuseumId, currentMuseum, activeTab, setActiveTab, registerNavigationGuard,
+    pendingNotificationTarget, setPendingNotificationTarget,
     appLanguage, changeLanguage,
     museums, setMuseums, cities, artifacts, artifactReviewStatus, tours, curationQueue, users, passPackages, transactions, reviews, systemCases, exhibitions: [], auditLogs: [], dataErrors, loading, reload,
     isLoadingMuseums: !!loading.museums, isLoadingArtifacts: !!loading.artifacts, isLoadingCuration: !!loading.curationQueue,

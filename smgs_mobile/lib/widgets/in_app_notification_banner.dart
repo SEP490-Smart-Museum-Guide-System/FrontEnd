@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/theme/visitor_colors.dart';
 import '../models/notification_item.dart';
+import '../models/experience.dart';
 import '../services/notification_controller.dart';
 import '../screens/profile/order_detail_screen.dart';
 import '../screens/profile/support_refund_screen.dart';
@@ -81,15 +82,31 @@ class _NotificationBannerListenerState extends State<NotificationBannerListener>
       );
     } else if (item.type == 'COMPLAINT_STATUS_UPDATED' ||
         item.type == 'COMPLAINT_CREATED') {
+      final complaintId = item.referenceId != null
+          ? int.tryParse(item.referenceId!)
+          : null;
       Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => const SupportRefundScreen(),
+          builder: (_) => complaintId != null
+              ? ComplaintDetailScreen(id: complaintId)
+              : const SupportRefundScreen(),
         ),
       );
     } else if (item.type == 'FEEDBACK_RESPONDED') {
+      final visitId = item.referenceId != null
+          ? int.tryParse(item.referenceId!)
+          : null;
       Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (_) => const HistoryScreen(),
+          builder: (_) => visitId != null
+              ? VisitDetailScreen(
+                  visit: VisitRecord(
+                    id: visitId.toString(),
+                    museumId: (item.museumId ?? 1).toString(),
+                    date: item.createdAt,
+                  ),
+                )
+              : const HistoryScreen(),
         ),
       );
     }

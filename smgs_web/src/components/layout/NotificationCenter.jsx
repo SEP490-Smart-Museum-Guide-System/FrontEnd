@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   HelpCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Compass
 } from 'lucide-react';
 
 function getNotificationIcon(type) {
@@ -23,6 +24,12 @@ function getNotificationIcon(type) {
     case 'CONTENT_APPROVED':
       return <CheckCircle2 size={18} color="#16a34a" />;
     case 'CONTENT_REJECTED':
+      return <XCircle size={18} color="var(--color-burgundy-700)" />;
+    case 'TOUR_SUBMITTED':
+      return <Compass size={18} color="var(--color-gold-700)" />;
+    case 'TOUR_APPROVED':
+      return <CheckCircle2 size={18} color="#16a34a" />;
+    case 'TOUR_REJECTED':
       return <XCircle size={18} color="var(--color-burgundy-700)" />;
     case 'PAYMENT_SUCCEEDED':
       return <CreditCard size={18} color="#16a34a" />;
