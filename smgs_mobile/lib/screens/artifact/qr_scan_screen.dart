@@ -1,5 +1,6 @@
 import '../../core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/earned_badges.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/utils/image_picker_helper.dart';
@@ -64,7 +65,8 @@ class _QRScanScreenState extends State<QRScanScreen> {
               : null;
           final code = data['qrCode'] as String?;
           if (code != null && code.trim().isNotEmpty) {
-            await ScanRequest(code, visitId: visitId, imageMatch: true).record();
+            final rewards = await ScanRequest(code, visitId: visitId, imageMatch: true).record();
+            if (mounted) showExplorationRewards(context, rewards);
           }
         } catch (_) {
           // Ghi nhận lịch sử không chặn hiển thị chi tiết hiện vật

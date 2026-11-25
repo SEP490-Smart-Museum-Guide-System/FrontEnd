@@ -139,7 +139,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       }
       final recognition = await request.record();
       _scanRequest = null;
-      if (mounted) showEarnedBadges(context, recognition['newBadges']);
+      if (mounted) showExplorationRewards(context, recognition);
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(

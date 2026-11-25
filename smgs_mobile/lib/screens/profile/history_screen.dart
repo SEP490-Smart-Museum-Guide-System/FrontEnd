@@ -1,5 +1,6 @@
 import '../museum/visit_progress_screen.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/earned_badges.dart';
 import '../../widgets/museum_ui.dart';
 import '../../models/experience.dart';
 import '../../services/app_services.dart';
@@ -230,12 +231,13 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       _error = null;
     });
     try {
-      await BackendApi.request(
+      final rewards = await BackendApi.request(
         'visits/${widget.visit.id}/complete',
         method: 'POST',
         body: {},
       );
       if (mounted) {
+        if (mounted) showExplorationRewards(context, rewards);
         setState(() => _data = BackendApi.request('visits/${widget.visit.id}'));
       }
     } catch (e) {

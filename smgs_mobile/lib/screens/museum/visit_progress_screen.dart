@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/earned_badges.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/backend_panel.dart';
@@ -409,11 +410,12 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             _error = null;
                           });
                           try {
-                            await BackendApi.request(
+                            final rewards = await BackendApi.request(
                               'visits/${widget.visitId}/complete',
                               method: 'POST',
                               body: {},
                             );
+                            if (mounted) showExplorationRewards(context, rewards);
                             if (VisitorSession.activeVisit?['id'] ==
                                 widget.visitId) {
                               VisitorSession.clear();

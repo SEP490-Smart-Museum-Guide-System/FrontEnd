@@ -191,7 +191,7 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                         decoration: BoxDecoration(
                           color: VisitorColors.surface2,
                           borderRadius: BorderRadius.circular(VisitorRadius.sm),
-                          border: Border.all(color: VisitorColors.borderSubtle),
+                          border: Border.all(color: VisitorColors.border),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

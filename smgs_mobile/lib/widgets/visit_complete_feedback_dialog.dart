@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'earned_badges.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/theme/visitor_colors.dart';
@@ -70,7 +71,8 @@ class _VisitCompleteFeedbackDialogState
     });
 
     try {
-      await VisitorExperienceApi.completeVisit(widget.visitId);
+      final rewards = await VisitorExperienceApi.completeVisit(widget.visitId);
+      if (mounted) showExplorationRewards(context, rewards);
       if (!mounted) return;
       setState(() {
         _busy = false;

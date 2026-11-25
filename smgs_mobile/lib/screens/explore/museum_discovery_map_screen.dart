@@ -1,17 +1,17 @@
-import '../../core/localization/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-import '../../models/map_place.dart';
-import '../../widgets/place_search_field.dart';
+import '../../core/network/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/city.dart';
+import '../../models/map_place.dart';
 import '../../models/museum.dart';
+import '../../services/automatic_location_service.dart';
 import '../../services/discovery_api_service.dart';
 import '../../services/location_service.dart';
-import '../../services/automatic_location_service.dart';
 import '../../widgets/interactive_heritage_map.dart';
-import '../../widgets/museum_discovery_card.dart';
+import '../../widgets/place_search_field.dart';
 import '../../widgets/route_preview_sheet.dart';
 import '../museum/museum_detail_screen.dart';
 
@@ -23,367 +23,520 @@ class MuseumDiscoveryMapScreen extends StatefulWidget {
 }
 
 class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
-  final _automaticLocation = AutomaticLocationService.instance;
-  final _search = TextEditingController();
-  final _cards = ScrollController();
-  Timer? _debounce;
-  List<Museum> _museums = [];
-  bool _world = true;
-  MapPlace? _place;
-  List<CityItem> _cities = [];
-  String? _cityCode, _selectedId, _error, _cityError;
-  UserLocationResult? _location;
-  List<LatLng> _route = [];
-  bool _nearMe = false, _loading = false, _locating = false;
-  int _request = 0, _page = 0, _totalPages = 0, _total = 0;
+  List<CityItem> cities = [];
+  List<Museum> museums = [];
+  String? province, error;
+  Museum? selected;
+  MapPlace? place;
+  bool supportedOnly = false,
+      loading = false,
+      cityFailed = false,
+      locating = false;
+  int generation = 0, gpsFocus = 0;
+  String search = '';
+  UserLocationResult? location;
+  List<LatLng> route = [];
 
   @override
   void initState() {
     super.initState();
-    _automaticLocation.addListener(_locationChanged);
-    if (_automaticLocation.hasFreshLocation) {
-      _location = _automaticLocation.latest;
-    }
-    _loadCities();
-    _load();
+    final gps = AutomaticLocationService.instance;
+    gps.addListener(_updateGps);
+    if (gps.hasFreshLocation) location = gps.latest;
+    loadCities();
+    load();
   }
 
-  void _locationChanged() {
-    if (!mounted) return;
-    setState(
-      () => _location = _automaticLocation.hasFreshLocation
-          ? _automaticLocation.latest
-          : null,
-    );
+  void _updateGps() {
+    final gps = AutomaticLocationService.instance;
+    if (gps.hasFreshLocation && location != gps.latest) {
+      setState(() => location = gps.latest);
+    }
   }
 
   @override
   void dispose() {
-    _automaticLocation.removeListener(_locationChanged);
-    _debounce?.cancel();
-    _search.dispose();
-    _cards.dispose();
+    AutomaticLocationService.instance.removeListener(_updateGps);
     super.dispose();
   }
 
-  Future<void> _loadCities() async {
+  Future<void> loadCities() async {
     try {
-      final cities = await DiscoveryApiService.fetchCities();
-      if (mounted) {
+      final data = await DiscoveryApiService.fetchCities();
+      if (mounted)
         setState(() {
-          _cities = cities;
-          _cityError = null;
+          cities = data;
+          cityFailed = false;
         });
-      }
     } catch (_) {
-      if (mounted) setState(() => _cityError = 'Không tải được tỉnh/thành');
+      if (mounted) setState(() => cityFailed = true);
     }
   }
 
-  Future<void> _load({bool more = false}) async {
-    final request = ++_request;
-    setState(() {
-      _loading = true;
-      _error = null;
-      if (!more) {
-        _route = [];
-        _museums = [];
-        _selectedId = null;
-        _total = 0;
-        _page = 0;
-        _totalPages = 0;
-      }
-    });
-    try {
-      final result = await DiscoveryApiService.fetchMuseumPage(
-        keyword: _search.text,
-        cityCode: _cityCode,
-        latitude: _nearMe ? _location?.latitude : null,
-        longitude: _nearMe ? _location?.longitude : null,
-        sortBy: _nearMe ? 'distance' : null,
-        page: more ? _page + 1 : 1,
+  Future<List<Museum>> external(String code) async {
+    final uri = Uri.parse(
+      '${ApiConfig.baseUrl}/places/museums',
+    ).replace(queryParameters: {'cityCode': code});
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
+    final items = DiscoveryApiService.decodeResponse(res)['data'] as List;
+    return items.map((item) {
+      final p = MapPlace.fromJson(item as Map<String, dynamic>);
+      return Museum(
+        id: 'osm:${p.latitude},${p.longitude}:${p.name}',
+        name: p.name,
+        location: p.address,
+        description: '',
+        imageUrl: '',
+        openingHours: '',
+        category: '',
+        shortIntro: '',
+        googleMapsVisible: true,
+        latitude: p.latitude,
+        longitude: p.longitude,
       );
-      if (!mounted || request != _request) return;
-      setState(() {
-        _museums = more ? [..._museums, ...result.items] : result.items;
-        _page = result.page;
-        _totalPages = result.totalPages;
-        _total = result.totalCount;
-        _loading = false;
-      });
-    } catch (e) {
-      if (mounted && request == _request) {
-        setState(() {
-          _error = '$e'.replaceFirst('Exception: ', '');
-          _loading = false;
-        });
-      }
-    }
+    }).toList();
   }
 
-  Future<void> _toggleNearby() async {
-    if (_nearMe) {
-      setState(() => _nearMe = false);
-      await _load();
-      return;
-    }
-    setState(() => _locating = true);
+  Future<void> load() async {
+    final current = ++generation;
+    final code = province;
+    final includeExternal = !supportedOnly && code != null;
+    setState(() {
+      loading = true;
+      error = null;
+      selected = null;
+      place = null;
+      route = [];
+      museums = [];
+    });
+    final found = <Museum>[];
+    String? failure;
     try {
-      final location = await LocationService.getCurrentUserLocation();
-      if (!mounted) return;
-      setState(() {
-        _location = location;
-        _nearMe = true;
-      });
-      await _load();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'.replaceFirst('Exception: ', ''))),
+      var page = 1;
+      while (true) {
+        final data = await DiscoveryApiService.fetchMuseumPage(
+          cityCode: code,
+          page: page,
         );
+        if (!mounted || generation != current) return;
+        found.addAll(data.items);
+        if (page >= data.totalPages) break;
+        page++;
       }
+    } catch (e) {
+      failure = e.toString().replaceFirst('Exception: ', '');
+    }
+    if (!mounted || generation != current) return;
+    if (includeExternal) {
+      try {
+        final others = await external(code);
+        if (!mounted || generation != current) return;
+        for (final m in others) {
+          final duplicate = found.any(
+            (x) =>
+                x.name.trim().toLowerCase() == m.name.trim().toLowerCase() &&
+                (!x.hasCoordinates ||
+                    const Distance().as(
+                          LengthUnit.Meter,
+                          LatLng(x.latitude!, x.longitude!),
+                          LatLng(m.latitude!, m.longitude!),
+                        ) <
+                        500),
+          );
+          if (!duplicate) found.add(m);
+        }
+      } catch (e) {
+        failure = e.toString().replaceFirst('Exception: ', '');
+      }
+    }
+    if (!mounted || generation != current) return;
+    setState(() {
+      museums = found;
+      loading = false;
+      error = failure;
+      selected = (supportedOnly || province != null) && place == null
+          ? visible.firstOrNull
+          : null;
+    });
+  }
+
+  List<Museum> get visible => search.isEmpty
+      ? museums
+      : museums
+            .where(
+              (m) => '${m.name} ${m.location}'.toLowerCase().contains(
+                search.trim().toLowerCase(),
+              ),
+            )
+            .toList();
+
+  Future<void> locate() async {
+    setState(() => locating = true);
+    try {
+      final gps = await LocationService.getCurrentUserLocation();
+      if (mounted)
+        setState(() {
+          location = gps;
+          gpsFocus++;
+          selected = null;
+          place = null;
+          route = [];
+        });
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
     } finally {
-      if (mounted) setState(() => _locating = false);
+      if (mounted) setState(() => locating = false);
     }
   }
 
-  void _select(Museum museum) {
-    setState(() {
-      _selectedId = museum.id;
-      _route = [];
-    });
-    final index = _museums.indexOf(museum);
-    if (_cards.hasClients) {
-      _cards.animateTo(
-        (index * 322.0).clamp(0.0, _cards.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _preview(Museum museum) {
-    setState(() {
-      _selectedId = museum.id;
-      _route = [];
-    });
+  void preview() {
+    final m = selected;
+    final p =
+        place ??
+        (m != null && m.id.startsWith('osm:')
+            ? MapPlace(m.name, m.location, m.latitude!, m.longitude!)
+            : null);
     RoutePreviewSheet.show(
       context,
-      museum: museum,
-      onRouteLoaded: (route) {
-        if (mounted) setState(() => _route = route.routePoints);
+      museum: p == null ? m : null,
+      place: p,
+      onRouteLoaded: (r) {
+        if (mounted) setState(() => route = r.routePoints);
       },
     );
   }
 
+  Widget pill(Widget child) => Material(
+    color: Colors.white,
+    elevation: 3,
+    borderRadius: BorderRadius.circular(24),
+    clipBehavior: Clip.antiAlias,
+    child: child,
+  );
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final list = visible;
+    final m = selected;
+    final isSystem = m != null && !m.id.startsWith('osm:');
+    final keywordMode = supportedOnly || province != null;
+    final index = m == null ? -1 : list.indexOf(m);
+    void select(Museum value) => setState(() {
+      selected = value;
+      place = null;
+      route = [];
+    });
     return Scaffold(
-    backgroundColor: AppColors.antiqueIvory,
-    appBar: AppBar(title: Text(l10n.isEn ? 'Map Discovery' : 'Khám phá bản đồ')),
-    body: SafeArea(
-      child: Column(
+      resizeToAvoidBottomInset: false,
+      body: Stack(
         children: [
-          FilterChip(
-            label: Text(l10n.isEn ? 'Only system museums' : 'Chỉ bảo tàng trong hệ thống'),
-            selected: !_world,
-            onSelected: (onlySystem) {
-              _debounce?.cancel();
-              FocusScope.of(context).unfocus();
-              setState(() {
-                _world = !onlySystem;
-                _place = null;
-                _route = [];
-              });
-            },
-          ),
-          if (_world)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: PlaceSearchField(
-                onSelected: (place) => setState(() {
-                  _place = place;
-                  _route = [];
-                }),
-              ),
-            ),
-          if (!_world) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: TextField(
-                controller: _search,
-                decoration: InputDecoration(
-                  hintText: l10n.isEn ? 'Search museum name' : 'Tìm tên bảo tàng',
-                  prefixIcon: const Icon(Icons.search),
-                ),
-                onChanged: (_) {
-                  _debounce?.cancel();
-                  ++_request; // Invalidate any response for the previous search immediately.
-                  _debounce = Timer(
-                    const Duration(milliseconds: 400),
-                    () => _load(),
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: _cityCode,
-                      hint: Text(l10n.isEn ? 'All provinces/cities' : 'Tất cả tỉnh/thành'),
-                      items: [
-                        DropdownMenuItem<String>(
-                          value: null,
-                          child: Text(l10n.isEn ? 'All provinces/cities' : 'Tất cả tỉnh/thành'),
-                        ),
-                        ..._cities.map(
-                          (c) => DropdownMenuItem(
-                            value: c.code,
-                            child: Text(c.name),
-                          ),
-                        ),
-                      ],
-                      onChanged: (code) {
-                        _debounce?.cancel();
-                        setState(() => _cityCode = code);
-                        _load();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FilterChip(
-                    label: Text(_locating ? (l10n.isEn ? 'Getting GPS…' : 'Đang lấy GPS…') : (l10n.isEn ? 'Near me' : 'Gần tôi')),
-                    selected: _nearMe,
-                    onSelected: _locating
-                        ? null
-                        : (_) {
-                            _debounce?.cancel();
-                            _toggleNearby();
-                          },
-                  ),
-                ],
-              ),
-            ),
-            if (_cityError != null)
-              TextButton(
-                onPressed: _loadCities,
-                child: Text('$_cityError · Thử lại'),
-              ),
-          ],
-          Expanded(
+          Positioned.fill(
             child: InteractiveHeritageMap(
-              centerOnGps: _world,
-              museums: _world ? const [] : _museums,
-              selectedMuseumId: _world ? null : _selectedId,
-              placeLocation: _world && _place != null
-                  ? LatLng(_place!.latitude, _place!.longitude)
-                  : null,
-              placeName: _place?.name,
-              onMuseumSelected: _select,
-              polylinePoints: _route,
-              userLocation: _location == null
+              key: ValueKey(gpsFocus),
+              museums: list,
+              fitMuseumList: supportedOnly || province != null,
+              selectedMuseumId: m?.id,
+              centerOnGps: province == null || gpsFocus > 0,
+              onMuseumSelected: select,
+              polylinePoints: route,
+              placeLocation: place == null
                   ? null
-                  : LatLng(_location!.latitude, _location!.longitude),
+                  : LatLng(place!.latitude, place!.longitude),
+              placeName: place?.name,
+              userLocation: location == null
+                  ? null
+                  : LatLng(location!.latitude, location!.longitude),
             ),
           ),
-          if (_world && _place != null)
-            ListTile(
-              title: Text(
-                _place!.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                _place!.address,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: IconButton(
-                tooltip: 'Xem quãng đường và thời gian',
-                icon: const Icon(Icons.directions),
-                onPressed: () => RoutePreviewSheet.show(
-                  context,
-                  place: _place!,
-                  onRouteLoaded: (route) {
-                    if (mounted) setState(() => _route = route.routePoints);
-                  },
-                ),
-              ),
-            ),
-          if (!_world) ...[
-            if (_loading) const LinearProgressIndicator(),
-            if (_error != null)
-              Row(
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(_error!),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      pill(
+                        BackButton(
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: pill(
+                          keywordMode
+                              ? TextField(
+                                  key: ValueKey((province, supportedOnly)),
+                                  onChanged: (v) => setState(() {
+                                    search = v;
+                                    selected =
+                                        (supportedOnly || province != null) &&
+                                            place == null
+                                        ? visible.firstOrNull
+                                        : null;
+                                    place = null;
+                                    route = [];
+                                  }),
+                                  decoration: const InputDecoration(
+                                    prefixIcon: Icon(Icons.search),
+                                    hintText: 'Tìm bảo tàng, địa chỉ…',
+                                    border: InputBorder.none,
+                                  ),
+                                )
+                              : PlaceSearchField(
+                                  onSelected: (p) => setState(() {
+                                    place = p;
+                                    selected = null;
+                                    route = [];
+                                  }),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: pill(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.qr_code_scanner, size: 18),
+                            const SizedBox(width: 8),
+                            const Flexible(
+                              child: Text('Chỉ bảo tàng được hỗ trợ'),
+                            ),
+                            Switch(
+                              value: supportedOnly,
+                              onChanged: (v) {
+                                setState(() {
+                                  supportedOnly = v;
+                                  search = '';
+                                });
+                                load();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => _load(more: _page > 0),
-                    child: const Text('Thử lại'),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: pill(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: cityFailed
+                            ? TextButton(
+                                onPressed: loadCities,
+                                child: const Text('Tải lại tỉnh/thành'),
+                              )
+                            : DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: province,
+                                  isDense: true,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 9,
+                                  ),
+                                  hint: const Text('Tất cả tỉnh/thành'),
+                                  items: [
+                                    const DropdownMenuItem(
+                                      value: null,
+                                      child: Text('Tất cả tỉnh/thành'),
+                                    ),
+                                    ...cities.map(
+                                      (c) => DropdownMenuItem(
+                                        value: c.code,
+                                        child: Text(c.name),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (v) {
+                                    setState(() {
+                                      province = v;
+                                      search = '';
+                                      gpsFocus = 0;
+                                    });
+                                    load();
+                                  },
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            if (!_loading && _error == null && _museums.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Không tìm thấy bảo tàng theo bộ lọc.'),
-              ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
+                Align(
+                  alignment: Alignment.centerRight,
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Text('${_museums.length}/$_total bảo tàng'),
+                    padding: const EdgeInsets.all(14),
+                    child: pill(
+                      IconButton(
+                        tooltip: 'Vị trí của tôi',
+                        onPressed: locating ? null : locate,
+                        icon: const Icon(Icons.my_location),
+                      ),
+                    ),
                   ),
                 ),
-                if (_page < _totalPages)
-                  TextButton(
-                    onPressed: _loading ? null : () => _load(more: true),
-                    child: const Text('Tải thêm'),
+                Material(
+                  color: Colors.white,
+                  elevation: 8,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
                   ),
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 9, 16, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          if (loading) const LinearProgressIndicator(),
+                          if (error != null)
+                            Row(
+                              children: [
+                                Expanded(child: Text(error!, maxLines: 2)),
+                                TextButton(
+                                  onPressed: load,
+                                  child: const Text('Thử lại'),
+                                ),
+                              ],
+                            ),
+                          if (m == null &&
+                              place == null &&
+                              !loading &&
+                              error == null)
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                list.isEmpty
+                                    ? 'Không tìm thấy bảo tàng theo bộ lọc.'
+                                    : 'Chọn bảo tàng trên bản đồ.',
+                              ),
+                            ),
+                          if (m != null || place != null) ...[
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: SizedBox(
+                                width: 58,
+                                height: 58,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: m != null && m.imageUrl.isNotEmpty
+                                      ? Image.network(
+                                          m.imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              const Icon(Icons.museum),
+                                        )
+                                      : const ColoredBox(
+                                          color: AppColors.antiqueIvory,
+                                          child: Icon(Icons.museum_outlined),
+                                        ),
+                                ),
+                              ),
+                              title: Text(
+                                m?.name ?? place!.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                [
+                                  if (isSystem) 'Được hệ thống hỗ trợ',
+                                  m?.location ?? place!.address,
+                                ].join(' · '),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed:
+                                        m?.hasCoordinates == true ||
+                                            place != null
+                                        ? preview
+                                        : null,
+                                    icon: const Icon(Icons.directions_outlined),
+                                    label: const Text('Xem đường đi'),
+                                  ),
+                                ),
+                                if (isSystem) ...[
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: FilledButton(
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              MuseumDetailScreen(museum: m),
+                                        ),
+                                      ),
+                                      child: const Text('Xem bảo tàng'),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                          if (list.length > 1 && place == null && m != null)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Bảo tàng trước',
+                                  onPressed: index > 0
+                                      ? () => select(list[index - 1])
+                                      : null,
+                                  icon: const Icon(Icons.chevron_left),
+                                ),
+                                Text('${index + 1}/${list.length}'),
+                                IconButton(
+                                  tooltip: 'Bảo tàng tiếp theo',
+                                  onPressed: index + 1 < list.length
+                                      ? () => select(list[index + 1])
+                                      : null,
+                                  icon: const Icon(Icons.chevron_right),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-            if (_museums.isNotEmpty)
-              SizedBox(
-                height: 195,
-                child: ListView.builder(
-                  controller: _cards,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _museums.length,
-                  itemBuilder: (context, index) {
-                    final museum = _museums[index];
-                    return MuseumDiscoveryCard(
-                      museum: museum,
-                      isSelected: museum.id == _selectedId,
-                      onTap: () {
-                        _select(museum);
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => MuseumDetailScreen(museum: museum),
-                          ),
-                        );
-                      },
-                      onDirectionsPressed: museum.hasCoordinates
-                          ? () => _preview(museum)
-                          : null,
-                    );
-                  },
-                ),
-              ),
-          ],
+          ),
         ],
       ),
-    ),
-  );
+    );
   }
 }

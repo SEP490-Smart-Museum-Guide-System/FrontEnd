@@ -865,7 +865,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       }
       final recognition = await _scanRequest!.record();
       _scanRequest = null;
-      if (mounted) showEarnedBadges(context, recognition['newBadges']);
+      if (mounted) showExplorationRewards(context, recognition);
       if (!mounted) return;
       final location = await MuseumPresenceApi.current(
         _map!.museumId,

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../data/mock/mock_artifacts.dart';
 import '../../services/app_services.dart';
 import '../../widgets/collection_cards.dart';
 import '../../widgets/museum_ui.dart';
-import '../artifact/quiz_screen.dart';
+import '../artifact/daily_quiz_screen.dart';
 import '../explore/explore_screen.dart';
 import '../tours/tours_screen.dart';
 
@@ -179,15 +178,15 @@ class HomeQuizCard extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         const Text(
-          'Hai câu hỏi nhỏ về trống đồng và ý nghĩa của di sản. Bạn đã sẵn sàng?',
+          'Trả lời câu hỏi về những hiện vật bạn đã khám phá hôm nay.',
           style: AppTextStyles.bodyMedium,
         ),
         const SizedBox(height: 20),
         PrimaryButton(
-          label: 'Thử tài cùng trống đồng',
+          label: 'Mở câu hỏi hôm nay',
           icon: Icons.auto_awesome_outlined,
           onPressed: () =>
-              openPage(context, QuizScreen(artifact: mockArtifacts.first)),
+              openPage(context, const DailyQuizScreen()),
         ),
       ],
     ),

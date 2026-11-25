@@ -4,6 +4,15 @@ import '../core/theme/app_text_styles.dart';
 import '../core/theme/visitor_colors.dart';
 import 'primary_button.dart';
 
+void showExplorationRewards(BuildContext context, dynamic result) {
+  if (result is! Map) return;
+  final points = result['pointsAwarded'];
+  if (points is int && points > 0) {
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('Bạn nhận được $points điểm.')));
+  }
+  showEarnedBadges(context, result['newBadges']);
+}
+
 /// Hiển thị Modal vinh danh di sản khi người dùng mở khóa huy hiệu mới.
 void showEarnedBadges(BuildContext context, dynamic badges) {
   if (badges is! List || badges.isEmpty) return;

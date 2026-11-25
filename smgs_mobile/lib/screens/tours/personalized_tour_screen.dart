@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/earned_badges.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../services/app_preferences.dart';
 import '../../services/app_services.dart';
@@ -582,7 +583,8 @@ class _PersonalizedTourDetailScreenState
         _error = null;
       });
       try {
-        await BackendApi.request('visits/$activeId/complete', method: 'POST', body: {});
+        final rewards = await BackendApi.request('visits/$activeId/complete', method: 'POST', body: {});
+        if (mounted) showExplorationRewards(context, rewards);
         VisitorSession.clear();
         final newVisit = await VisitorExperienceApi.startVisit(
           _plan['museumId'] as int,

@@ -20,6 +20,7 @@ class InteractiveHeritageMap extends StatefulWidget {
     this.userLocation,
     this.followUser = false,
     this.centerOnGps = true,
+    this.fitMuseumList = true,
     this.polylinePoints = const [],
     this.placeLocation,
     this.placeName,
@@ -29,6 +30,7 @@ class InteractiveHeritageMap extends StatefulWidget {
   final ValueChanged<Museum> onMuseumSelected;
   final bool followUser;
   final bool centerOnGps;
+  final bool fitMuseumList;
   final LatLng? userLocation;
   final List<LatLng> polylinePoints;
   final LatLng? placeLocation;
@@ -154,7 +156,7 @@ class _InteractiveHeritageMapState extends State<InteractiveHeritageMap> {
         widget.polylinePoints.isEmpty &&
         widget.placeLocation == null &&
         widget.selectedMuseumId == null &&
-        (_located || _panned || _initialGps != null)) {
+        (!widget.fitMuseumList || _located || _panned || _initialGps != null)) {
       if (!_located && !_panned && _initialGps != null) {
         _located = true;
         _controller.move(_initialGps!, 15);
