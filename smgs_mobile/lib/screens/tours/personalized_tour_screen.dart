@@ -41,11 +41,21 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
   int _minutes = 60;
   bool _busy = false;
   String? _error;
+  String? _validationError;
   final _interestInput = TextEditingController();
   final Set<String> _selected = {};
+  final Set<int> _selectedTopicIds = {};
+  List<Map<String, dynamic>> _topicsMap = [];
   List<String> _topics = [];
   bool _savedFailed = false;
   late Future<List<Map<String, dynamic>>> _saved = _loadSaved();
+
+  // Curated Recommendation (WF-02) State
+  bool _isRecommendingCurated = false;
+  Map<String, dynamic>? _curatedRecommendation;
+  String? _curatedError;
+  bool _savingCurated = false;
+  int? _savedTourVersionId;
 
   Future<List<Map<String, dynamic>>> _loadSaved() async {
     _savedFailed = false;
@@ -74,13 +84,150 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
     final id = int.tryParse(_museumId);
     if (id == null) return;
     try {
+      final rows = await VisitorExperienceApi.getMuseumTopics(id);
+      if (mounted && _museumId == id.toString() && rows.isNotEmpty) {
+        setState(() {
+          _topicsMap = rows;
+          _topics = rows.map((r) => (r['name'] ?? '').toString()).where((n) => n.isNotEmpty).toList();
+        });
+        return;
+      }
+    } catch (_) {}
+
+    try {
       final rows = await PersonalizedTourApi.interests(id);
       if (mounted && _museumId == id.toString()) {
-        setState(() => _topics = rows.map((r) => r['name'] as String).toList());
+        setState(() {
+          _topicsMap = rows;
+          _topics = rows.map((r) => (r['name'] ?? '').toString()).where((n) => n.isNotEmpty).toList();
+        });
       }
     } catch (_) {
-      // Free-form interests and the existing tour/free-visit options remain usable.
-      if (mounted && _museumId == id.toString()) setState(() => _topics = []);
+      if (mounted && _museumId == id.toString()) {
+        setState(() {
+          _topicsMap = [];
+          _topics = [];
+        });
+      }
+    }
+  }
+
+  bool _validateInputs(AppLocalizations l10n) {
+    if (_selected.isEmpty && _selectedTopicIds.isEmpty) {
+      setState(() {
+        _validationError = l10n.isEn
+            ? 'Please select at least one topic of interest.'
+            : 'Vui lòng chọn ít nhất một chủ đề bạn quan tâm.';
+      });
+      return false;
+    }
+    setState(() => _validationError = null);
+    return true;
+  }
+
+  Future<void> _onRecommendCurated(int museumId, AppLocalizations l10n) async {
+    if (!_validateInputs(l10n)) return;
+    setState(() {
+      _isRecommendingCurated = true;
+      _curatedError = null;
+      _curatedRecommendation = null;
+    });
+    try {
+      final res = await VisitorExperienceApi.recommendCuratedTour(
+        museumId: museumId,
+        availableMinutes: _minutes,
+        topicIds: _selectedTopicIds.toList(),
+      );
+      if (mounted) {
+        setState(() => _curatedRecommendation = res);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _curatedError = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRecommendingCurated = false);
+      }
+    }
+  }
+
+  Future<void> _onGenerateAITour(int museumId, AppLocalizations l10n) async {
+    if (!_validateInputs(l10n)) return;
+    await _run(() async {
+      final result = await PersonalizedTourApi.recommend(
+        museumId,
+        _minutes,
+        _selected,
+      );
+      if (!context.mounted) return;
+      await _pushTourPage(
+        context,
+        PersonalizedTourDetailScreen(plan: result),
+      );
+      if (mounted) {
+        setState(() {
+          _saved = _loadSaved();
+        });
+      }
+    });
+  }
+
+  Future<void> _startCuratedVisit(int museumId, int tourId) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final visit = await VisitorExperienceApi.startVisit(
+        museumId,
+        tourId: tourId,
+      );
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => VisitProgressScreen(
+              visitId: visit['id'] as int,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _saveCuratedRoute(int tourVersionId, int minutes, List<int>? topicIds) async {
+    setState(() => _savingCurated = true);
+    try {
+      await VisitorExperienceApi.saveRoute(
+        tourVersionId: tourVersionId,
+        availableMinutes: minutes,
+        topicIds: topicIds,
+      );
+      if (mounted) {
+        final isEn = AppPreferences.instance.language == 'en';
+        setState(() => _savedTourVersionId = tourVersionId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEn
+                ? 'Route saved to your personal list!'
+                : 'Đã lưu lộ trình này vào danh sách của bạn!'),
+            backgroundColor: AppColors.deepBurgundy,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final isEn = AppPreferences.instance.language == 'en';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isEn ? 'Failed to save route: $e' : 'Lỗi khi lưu lộ trình: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingCurated = false);
     }
   }
 
@@ -257,87 +404,178 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                 ? 'No museum selected. Please reload catalog or contact staff.'
                 : 'Chưa có bảo tàng. Hãy tải lại danh mục hoặc liên hệ nhân viên.',
           ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Notice(
           l10n.isEn
               ? 'Personalization is an optional add-on. Personal journey does not replace admission tickets or purchased tours.'
               : 'Cá nhân hóa là lựa chọn thêm. Hành trình cá nhân không thay thế vé vào cửa hoặc tour bạn đã mua.',
         ),
-        const SizedBox(height: 16),
-        SecondaryButton(
-          label: l10n.isEn ? 'View Available Tours' : 'Xem tour có sẵn',
-          icon: Icons.route_outlined,
-          onPressed: id == null || _busy
-              ? null
-              : () => openPage(context, PublishedToursScreen(museumId: id)),
-        ),
-        TextButton.icon(
-          icon: const Icon(Icons.explore_outlined),
-          label: Text(l10n.isEn ? 'Self-Guided Visit' : 'Tham quan tự do'),
-          onPressed: id == null || _busy
-              ? null
-              : () => _run(() async {
-                  final visit = await VisitorExperienceApi.startVisit(id);
-                  if (!context.mounted) return;
-                  await _pushTourPage(
-                    context,
-                    VisitProgressScreen(visitId: visit['id'] as int),
-                  );
-                }),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.deepBurgundy,
-                borderRadius: BorderRadius.circular(VisitorRadius.sm),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.auto_awesome, color: AppColors.antiqueIvory, size: 12),
-                  const SizedBox(width: 4),
-                  Text(
-                    l10n.isEn ? 'AI SMART ROUTE' : 'LỘ TRÌNH THÔNG MINH AI',
-                    style: const TextStyle(
-                      color: AppColors.antiqueIvory,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                l10n.isEn ? 'Dynamic Generator' : 'Tự động tạo lộ trình',
-                style: AppTextStyles.caption.copyWith(color: AppColors.mutedGold, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        SectionHeading(l10n.isEn ? 'AI-Powered Custom Itinerary' : 'AI gợi ý hành trình cá nhân'),
+        const SizedBox(height: 12),
+        // ===== TẦNG 1: TOUR HIỆN CÓ (2 TOUR CÓ SẴN ĐÃ PHÊ DUYỆT) =====
+        SectionHeading(l10n.isEn ? 'Official Museum Tours' : 'Tour hiện có của bảo tàng'),
         Text(
           l10n.isEn
-              ? 'AI dynamically sequences individual exhibits into an optimal path matching your exact time and interests.'
-              : 'Thuật toán AI tự động sắp xếp các hiện vật riêng lẻ thành tuyến tối ưu vừa khít với thời gian và sở thích của bạn.',
+              ? 'Featured tours officially curated and approved by the museum.'
+              : 'Các tuyến tham quan tiêu biểu do giám tuyển bảo tàng xây dựng và phê duyệt.',
+          style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown.withOpacity(0.8)),
+        ),
+        const SizedBox(height: 10),
+        if (id != null)
+          BackendPanel(
+            resourceKey: 'published-tours:$_museumId',
+            load: () async {
+              try {
+                return await BackendApi.list('tours?museumId=$id');
+              } catch (_) {
+                return <Map<String, dynamic>>[];
+              }
+            },
+            builder: (data, reload) {
+              final tours = (data as List).cast<Map<String, dynamic>>();
+              if (tours.isEmpty) {
+                return Notice(
+                  l10n.isEn
+                      ? 'No official tours available for this museum yet.'
+                      : 'Hiện chưa có tour chính thức nào được công bố.',
+                );
+              }
+              // Hiển thị trực tiếp 2 tour có sẵn với thiết kế thẻ nhỏ gọn
+              return Column(
+                children: tours.take(2).map((tour) {
+                  final tourId = tour['id'] as int;
+                  final title = (tour['title'] ?? '').toString();
+                  final minutes = tour['estimatedMinutes'] ?? 45;
+                  final stopCount = (tour['items'] as List?)?.length ?? 0;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: () => openPage(
+                        context,
+                        PublishedTourDetailScreen(tourId: tourId),
+                      ),
+                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: VisitorColors.surface1,
+                          borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.deepBurgundy,
+                                borderRadius: BorderRadius.circular(VisitorRadius.md),
+                              ),
+                              child: const Icon(
+                                Icons.route_outlined,
+                                color: AppColors.antiqueIvory,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: AppTextStyles.cardTitle.copyWith(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.schedule_rounded,
+                                            size: 13,
+                                            color: AppColors.darkBrown.withOpacity(0.6),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            l10n.isEn ? '$minutes mins' : '$minutes phút',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: AppColors.darkBrown.withOpacity(0.7),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.flag_outlined,
+                                            size: 13,
+                                            color: AppColors.darkBrown.withOpacity(0.6),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            l10n.isEn ? '$stopCount stops' : '$stopCount điểm dừng',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: AppColors.darkBrown.withOpacity(0.7),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: AppColors.darkBrown.withOpacity(0.35),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        const SizedBox(height: 16),
+
+        // ===== TẦNG 2: BỘ CHỌN THỜI GIAN & CHỦ ĐỀ (BẮT BUỘC) =====
+        SectionHeading(l10n.isEn ? 'Personalize Your Journey' : 'Tùy biến hành trình theo sở thích'),
+        Text(
+          l10n.isEn
+              ? 'Tell us your time and interests to get a customized tour recommendation.'
+              : 'Chọn thời gian và chủ đề bạn yêu thích để nhận gợi ý lộ trình phù hợp.',
           style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown.withOpacity(0.85), height: 1.3),
         ),
         const SizedBox(height: 14),
-        Text(
-          l10n.isEn ? 'How much time do you have?' : 'Bạn có bao nhiêu thời gian?',
-          style: AppTextStyles.cardTitle,
+        Text.rich(
+          TextSpan(
+            text: l10n.isEn ? 'How much time do you have?' : 'Bạn có bao nhiêu thời gian?',
+            style: AppTextStyles.cardTitle,
+            children: const [
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [15, 30, 60, 90, 120]
+          children: [15, 30, 45, 60, 90, 120]
               .map(
                 (v) => ChoiceChip(
                   label: Text(l10n.isEn ? '$v mins' : '$v phút'),
@@ -345,55 +583,89 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                     color: _minutes == v
                         ? AppColors.antiqueIvory
                         : AppColors.darkBrown,
+                    fontWeight: _minutes == v ? FontWeight.bold : FontWeight.normal,
                   ),
                   checkmarkColor: AppColors.antiqueIvory,
                   selected: _minutes == v,
+                  selectedColor: AppColors.deepBurgundy,
+                  backgroundColor: VisitorColors.surface2,
                   onSelected: _busy
                       ? null
-                      : (_) => setState(() => _minutes = v),
-                ),
-              )
-              .toList(),
-        ),
-        SectionHeading(l10n.isEn ? 'What do you want to explore?' : 'Bạn muốn khám phá điều gì?'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: chips
-              .map(
-                (topic) => FilterChip(
-                  label: Text(topic),
-                  labelStyle: AppTextStyles.bodySmall.copyWith(
-                    color: _selected.contains(topic)
-                        ? AppColors.antiqueIvory
-                        : AppColors.darkBrown,
-                  ),
-                  checkmarkColor: AppColors.antiqueIvory,
-                  selected: _selected.contains(topic),
-                  onSelected: _busy
-                      ? null
-                      : (selected) => setState(() {
-                          if (!selected) {
-                            _selected.remove(topic);
-                          } else if (_selected.length < 8) {
-                            _selected.add(topic);
-                          } else {
-                            _error = l10n.isEn
-                                ? 'You can select up to 8 interests.'
-                                : 'Bạn có thể chọn tối đa 8 sở thích.';
-                          }
+                      : (_) => setState(() {
+                          _minutes = v;
+                          _validationError = null;
                         }),
                 ),
               )
               .toList(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
+        Text.rich(
+          TextSpan(
+            text: l10n.isEn ? 'Interested topics:' : 'Chủ đề quan tâm:',
+            style: AppTextStyles.cardTitle,
+            children: const [
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: chips
+              .map(
+                (topic) {
+                  final isSelected = _selected.contains(topic);
+                  final matchedMap = _topicsMap.firstWhere(
+                    (m) => (m['name'] ?? '').toString() == topic,
+                    orElse: () => <String, dynamic>{},
+                  );
+                  final topicId = matchedMap['id'] as int?;
+
+                  return FilterChip(
+                    label: Text(topic),
+                    labelStyle: AppTextStyles.bodySmall.copyWith(
+                      color: isSelected
+                          ? AppColors.antiqueIvory
+                          : AppColors.darkBrown,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    checkmarkColor: AppColors.antiqueIvory,
+                    selected: isSelected,
+                    selectedColor: AppColors.deepBurgundy,
+                    backgroundColor: VisitorColors.surface2,
+                    onSelected: _busy
+                        ? null
+                        : (selected) => setState(() {
+                            _validationError = null;
+                            if (!selected) {
+                              _selected.remove(topic);
+                              if (topicId != null) _selectedTopicIds.remove(topicId);
+                            } else if (_selected.length < 8) {
+                              _selected.add(topic);
+                              if (topicId != null) _selectedTopicIds.add(topicId);
+                            } else {
+                              _error = l10n.isEn
+                                  ? 'You can select up to 8 interests.'
+                                  : 'Bạn có thể chọn tối đa 8 sở thích.';
+                            }
+                          }),
+                  );
+                },
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 12),
         TextField(
           controller: _interestInput,
           maxLength: 80,
           enabled: !_busy,
           decoration: InputDecoration(
-            labelText: l10n.isEn ? 'Add your interest' : 'Thêm sở thích của bạn',
+            labelText: l10n.isEn ? 'Add custom interest (optional)' : 'Thêm sở thích khác (tùy chọn)',
             hintText: l10n.isEn
                 ? 'E.g.: patterns, instruments, bronze…'
                 : 'Ví dụ: hoa văn, nhạc cụ, đồ đồng…',
@@ -406,43 +678,120 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
             if (!_busy) _addInterest();
           },
         ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Notice(_error!),
+        if (_validationError != null) ...[
+          const SizedBox(height: 8),
+          Notice(_validationError!),
+        ],
+        if (_curatedError != null) ...[
+          const SizedBox(height: 8),
+          Notice(_curatedError!),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Notice(_error!),
+        ],
+        const SizedBox(height: 16),
+
+        // ===== TẦNG 3: KẾT QUẢ GỢI Ý HOẶC 2 NÚT HÀNH ĐỘNG =====
+        if (_curatedRecommendation != null) ...[
+          _buildCuratedResultCard(context, l10n, id),
+          const SizedBox(height: 16),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.deepBurgundy,
+                      foregroundColor: AppColors.antiqueIvory,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                      ),
+                    ),
+                    onPressed: id == null || _isRecommendingCurated || _busy
+                        ? null
+                        : () => _onRecommendCurated(id, l10n),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _isRecommendingCurated ? Icons.hourglass_empty : Icons.psychology_outlined,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _isRecommendingCurated
+                                  ? (l10n.isEn ? 'Finding Tour…' : 'Đang tìm tour…')
+                                  : (l10n.isEn ? 'Match Curated Tour' : 'Chọn tour phù hợp'),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 50,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: VisitorColors.surface2,
+                      foregroundColor: AppColors.darkBrown,
+                      side: BorderSide.none,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                      ),
+                    ),
+                    onPressed: id == null || _isRecommendingCurated || _busy
+                        ? null
+                        : () => _onGenerateAITour(id, l10n),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _busy ? Icons.hourglass_empty : Icons.auto_awesome_rounded,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _busy
+                                  ? (l10n.isEn ? 'AI Working…' : 'AI đang xử lý…')
+                                  : (l10n.isEn ? 'AI Custom Route' : 'Tour AI hóa'),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        PrimaryButton(
-          label: _busy
-              ? (l10n.isEn ? 'AI is crafting your route…' : 'AI đang tính toán lộ trình…')
-              : (l10n.isEn ? 'Generate AI Itinerary' : 'Tạo hành trình bằng AI'),
-          icon: Icons.auto_awesome_rounded,
-          onPressed: id == null || _selected.isEmpty || _busy
-              ? null
-              : () => _run(() async {
-                  final result = await PersonalizedTourApi.recommend(
-                    id,
-                    _minutes,
-                    _selected,
-                  );
-                  if (!context.mounted) return;
-                  await _pushTourPage(
-                    context,
-                    PersonalizedTourDetailScreen(plan: result),
-                  );
-                  if (mounted) {
-                    setState(() {
-                      _saved = _loadSaved();
-                    });
-                  }
-                }),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          l10n.isEn
-              ? 'AI dynamically calculates walking distances between exhibits and picks the highest-match items for your time.'
-              : 'AI tự động tính toán thời gian di chuyển và lựa chọn các hiện vật phù hợp nhất với quỹ thời gian của bạn.',
-          style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown.withOpacity(0.7)),
-        ),
+          const SizedBox(height: 16),
+        ],
+        const SizedBox(height: 16),
         SectionHeading(l10n.isEn ? 'Saved Personal Journeys' : 'Hành trình cá nhân đã lưu'),
         FutureBuilder<List<Map<String, dynamic>>>(
           future: _saved,
@@ -486,6 +835,223 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildCuratedResultCard(BuildContext context, AppLocalizations l10n, int? museumId) {
+    final recs = (_curatedRecommendation!['recommendations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final fallbackExplanation = _curatedRecommendation!['fallbackExplanation'] as String?;
+    final fallbackSuggestion = _curatedRecommendation!['fallbackSuggestion'] as Map<String, dynamic>?;
+
+    if (recs.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: VisitorColors.surface1,
+          borderRadius: BorderRadius.circular(VisitorRadius.xl),
+          border: Border.all(color: AppColors.mutedGold),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.deepBurgundy),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    fallbackExplanation ?? (l10n.isEn ? 'No matching curated tour found.' : 'Không tìm thấy tour có sẵn phù hợp với yêu cầu.'),
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+            if (fallbackSuggestion != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.isEn ? 'Alternative suggestion:' : 'Gợi ý thay thế:',
+                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                fallbackSuggestion['title'] ?? '',
+                style: AppTextStyles.cardTitle.copyWith(fontSize: 15),
+              ),
+            ],
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.arrow_back),
+              label: Text(l10n.isEn ? 'Back to Selection' : 'Quay lại chọn lại'),
+              onPressed: () => setState(() => _curatedRecommendation = null),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final rec = recs.first;
+    final tourId = rec['tourId'] as int;
+    final tourVersionId = rec['tourVersionId'] as int;
+    final totalScore = rec['totalScore'] is num ? (rec['totalScore'] as num).toDouble() : 1.0;
+    final matchPercent = (totalScore * 100).toInt().clamp(0, 100);
+    final explanation = (rec['explanation'] ?? '').toString();
+    final artifactCount = (rec['artifactIds'] as List?)?.length ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: Border.all(color: AppColors.mutedGold, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.deepBurgundy.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.deepBurgundy,
+                  borderRadius: BorderRadius.circular(VisitorRadius.sm),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: 14, color: AppColors.antiqueIvory),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.isEn ? 'Best Match: $matchPercent%' : 'Khớp $matchPercent%',
+                      style: const TextStyle(
+                        color: AppColors.antiqueIvory,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Text(
+                l10n.isEn ? 'Curated Recommendation' : 'Gợi ý từ tour có sẵn',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.mutedGold,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            rec['title'] ?? '',
+            style: AppTextStyles.cardTitle.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          if ((rec['description'] ?? '').toString().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              rec['description'],
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.darkBrown.withOpacity(0.8)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.schedule_rounded, size: 14, color: AppColors.darkBrown.withOpacity(0.6)),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.isEn ? '${rec['estimatedMinutes']} mins' : '${rec['estimatedMinutes']} phút',
+                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.flag_outlined, size: 14, color: AppColors.darkBrown.withOpacity(0.6)),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.isEn ? '$artifactCount stops' : '$artifactCount điểm dừng',
+                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (explanation.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: VisitorColors.surface2,
+                borderRadius: BorderRadius.circular(VisitorRadius.md),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: AppColors.deepBurgundy),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      explanation,
+                      style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          PrimaryButton(
+            label: l10n.isEn ? 'Start This Journey' : 'Bắt đầu hành trình',
+            icon: Icons.play_arrow_rounded,
+            onPressed: museumId == null || _busy
+                ? null
+                : () => _startCuratedVisit(museumId, tourId),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: SecondaryButton(
+                  label: l10n.isEn ? 'Tour Details' : 'Xem chi tiết',
+                  icon: Icons.visibility_outlined,
+                  height: 38,
+                  onPressed: () => openPage(context, PublishedTourDetailScreen(tourId: tourId)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.darkBrown,
+                    side: const BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: Text(
+                    l10n.isEn ? 'Change' : 'Quay lại',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () => setState(() => _curatedRecommendation = null),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

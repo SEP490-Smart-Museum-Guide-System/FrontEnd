@@ -42,13 +42,11 @@ void main() {
             find.textContaining('Cá nhân hóa là lựa chọn thêm.'),
             findsOneWidget,
           );
-          expect(find.text('Xem tour có sẵn'), findsOneWidget);
-          expect(find.text('Tham quan tự do'), findsOneWidget);
           expect(writes, isEmpty);
-          await tapText(tester, 'Gợi ý theo sở thích');
+          await tapText(tester, 'Tour AI hóa');
           expect(writes, isEmpty);
           await tapText(tester, 'Gốm sứ');
-          await tapText(tester, 'Gợi ý theo sở thích');
+          await tapText(tester, 'Tour AI hóa');
           expect(find.byType(PersonalizedTourDetailScreen), findsOneWidget);
           expect(writes, ['/api/personalized-tours/recommendations']);
           await tapText(tester, 'Lưu để đi sau');
