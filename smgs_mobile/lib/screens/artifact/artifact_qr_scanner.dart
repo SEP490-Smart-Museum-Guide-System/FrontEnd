@@ -225,16 +225,6 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
     }
   }
 
-  Future<void> _useSampleNgocLu() async {
-    try {
-      final byteData = await rootBundle.load('assets/images/ngoc-lu-web.jpg');
-      final bytes = byteData.buffer.asUint8List();
-      await _runVisionRecognition(bytes, 'ngoc-lu-web.jpg');
-    } catch (e) {
-      setState(() => _error = 'Không thể nạp ảnh mẫu: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

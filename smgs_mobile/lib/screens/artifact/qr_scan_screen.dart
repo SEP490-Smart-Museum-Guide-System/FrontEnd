@@ -26,7 +26,6 @@ class QRScanScreen extends StatefulWidget {
 class _QRScanScreenState extends State<QRScanScreen> {
   bool _busy = false;
   Uint8List? _selectedImageBytes;
-  String? _selectedImageName;
   Artifact? _matchedArtifact;
   String _matchedMuseum = '';
   VisionMatchResult? _visionResult;
@@ -37,7 +36,6 @@ class _QRScanScreenState extends State<QRScanScreen> {
       _busy = true;
       _error = null;
       _selectedImageBytes = bytes;
-      _selectedImageName = filename;
       _matchedArtifact = null;
       _visionResult = null;
     });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/localization/app_localizations.dart';
 import '../widgets/museum_ui.dart';
+import '../widgets/in_app_notification_banner.dart';
 
 import '../screens/home/home_screen.dart';
 import '../screens/explore/explore_screen.dart';
@@ -59,7 +60,8 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final items = _items(context);
-    return Scaffold(
+    return NotificationBannerListener(
+      child: Scaffold(
     body: PageView(
       controller: _pages,
       physics: const NeverScrollableScrollPhysics(),
@@ -199,6 +201,7 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
+    ),
     ),
     );
   }

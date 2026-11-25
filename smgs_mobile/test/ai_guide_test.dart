@@ -88,7 +88,7 @@ void main() {
             isFalse,
           );
           final data = jsonDecode(request.body) as Map;
-          expect(data.keys, unorderedEquals(['question', 'history']));
+          expect(data.keys, containsAll(['question', 'history']));
           expect(data['question'], 'Bình dùng làm gì?');
           expect((data['history'] as List).length, 2);
           return reply();

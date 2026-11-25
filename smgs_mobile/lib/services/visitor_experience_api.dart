@@ -216,6 +216,37 @@ class VisitorExperienceApi {
     return Map<String, dynamic>.from(result);
   }
 
+  /// WF-02 (F05): Gợi ý Tour có sẵn theo thời gian và sở thích (POST /api/tours/recommendations?museumId={id})
+  static Future<Map<String, dynamic>> recommendCuratedTour({
+    required int museumId,
+    required int availableMinutes,
+    List<int>? topicIds,
+  }) async {
+    final result = await BackendApi.request(
+      'tours/recommendations?museumId=$museumId',
+      method: 'POST',
+      body: {
+        'availableMinutes': availableMinutes,
+        'topicIds': topicIds ?? [],
+      },
+    );
+    return Map<String, dynamic>.from(result);
+  }
+
+  /// Lấy danh sách chủ đề theo bảo tàng (GET /api/museums/{museumId}/topics)
+  static Future<List<Map<String, dynamic>>> getMuseumTopics(int museumId) async {
+    try {
+      final result = await BackendApi.request('museums/$museumId/topics?isActive=true&pageSize=50');
+      if (result is List) return result.cast<Map<String, dynamic>>();
+      if (result is Map && result['items'] is List) {
+        return (result['items'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// WF-02 (F05): Lưu lộ trình tham quan vào danh sách cá nhân (POST /api/tours/saved-routes)
   static Future<Map<String, dynamic>> saveRoute({
     required int tourVersionId,

@@ -69,6 +69,19 @@ export default function SystemOperations({ mode = 'support' }) {
   const [filter, setFilter] = useState('open');
   const [notes, setNotes] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [logFilter, setLogFilter] = useState('unsupported'); // 'unsupported' | 'all' | 'supported'
+  const [logPage, setLogPage] = useState(1);
+
+  const aiLogsData = useData(
+    `guide-logs:${logFilter}:${logPage}`,
+    async signal => {
+      const qs = new URLSearchParams({ page: String(logPage), pageSize: '20' });
+      if (logFilter === 'unsupported') qs.set('supported', 'false');
+      if (logFilter === 'supported') qs.set('supported', 'true');
+      return await backend(`guide/logs?${qs.toString()}`, { signal }).catch(() => ({ items: [], totalCount: 0 }));
+    },
+    { items: [], totalCount: 0 }
+  );
 
   // 1. REVIEW MODERATION MODE [WEB-O05]
   if (mode === 'review_moderation') {
@@ -179,103 +192,115 @@ export default function SystemOperations({ mode = 'support' }) {
 
   // 2. OPERATIONS & AI QUALITY MODE [WEB-O06]
   if (mode === 'operations') {
-    const opCases = systemCases.filter(item => ['operations', 'ai_quality'].includes(item.type));
+    const logs = aiLogsData.data?.items || [];
+    const totalCount = aiLogsData.data?.totalCount || 0;
+
     return (
       <div className="operations-page">
         <section className="role-dashboard-hero" style={{ marginBottom: '24px' }}>
           <div className="role-dashboard-eyebrow">NHÂN VIÊN HỆ THỐNG · GIÁM SÁT KỸ THUẬT & AI</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Activity size={28} color="var(--color-burgundy-700)" />
-            <h1 style={{ margin: 0 }}>Giám sát Sự cố Vận hành & Chất lượng AI</h1>
+            <h1 style={{ margin: 0 }}>Nhật ký Hỏi đáp AI & Giám sát Chất lượng Thuyết minh</h1>
           </div>
           <p>
-            Theo dõi độ tin cậy của mô hình thuyết minh AI, rủi ro suy diễn sai lệch dữ liệu di sản (hallucination) và sự cố đọc mã QR tại bảo tàng.
+            Theo dõi thời gian thực các câu hỏi của khách tham quan tại hiện vật. Đặc biệt phát hiện các câu hỏi chưa có tài liệu trả lời (supported=false) để kịp thời bổ sung nội dung thuyết minh.
           </p>
         </section>
 
         {/* AI & System Health Metrics */}
         <div className="stat-grid" style={{ marginBottom: '20px' }}>
-          <div className="stat-card stat-card-green">
+          <div className="stat-card stat-card-burgundy">
             <div className="stat-icon-wrapper"><Bot size={22} /></div>
             <div>
-              <div className="stat-value">96.8%</div>
-              <div className="stat-label">Độ tin cậy AI</div>
-              <small>Dựa trên 1.420 câu hỏi</small>
+              <div className="stat-value">{totalCount}</div>
+              <div className="stat-label">Câu hỏi ghi nhận</div>
+              <small>Lọc: {logFilter === 'unsupported' ? 'Chưa có tài liệu' : logFilter === 'supported' ? 'Đã giải đáp tốt' : 'Tất cả'}</small>
             </div>
           </div>
           <div className="stat-card stat-card-gold">
             <div className="stat-icon-wrapper"><AlertTriangle size={22} /></div>
             <div>
-              <div className="stat-value">1.2%</div>
-              <div className="stat-label">Rủi ro suy diễn (Hallucination)</div>
-              <small>Cần đối chiếu nguồn</small>
+              <div className="stat-value">{logs.filter(l => !l.supported).length}</div>
+              <div className="stat-label">Cần bổ sung tài liệu</div>
+              <small>Trong trang hiển thị hiện tại</small>
             </div>
           </div>
-          <div className="stat-card stat-card-burgundy">
-            <div className="stat-icon-wrapper"><Clock size={22} /></div>
+          <div className="stat-card stat-card-green">
+            <div className="stat-icon-wrapper"><Sparkles size={22} /></div>
             <div>
-              <div className="stat-value">420ms</div>
-              <div className="stat-label">Độ trễ trung bình</div>
-              <small>Phản hồi thuyết minh AI</small>
+              <div className="stat-value">{aiLogsData.busy ? 'Đang tải...' : 'Hoạt động 100%'}</div>
+              <div className="stat-label">API GET /api/guide/logs</div>
+              <small>Kết nối dữ liệu thời gian thực</small>
             </div>
           </div>
+        </div>
+
+        {/* Filter Toolbar */}
+        <div className="card" style={{ padding: '14px 20px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: '0.9rem', color: 'var(--color-charcoal-900)' }}>Bộ lọc nhật ký:</strong>
+            <button
+              type="button"
+              className={`btn btn-sm ${logFilter === 'unsupported' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => { setLogFilter('unsupported'); setLogPage(1); }}
+            >
+              Chưa có tài liệu (supported=false)
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${logFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => { setLogFilter('all'); setLogPage(1); }}
+            >
+              Tất cả câu hỏi
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${logFilter === 'supported' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => { setLogFilter('supported'); setLogPage(1); }}
+            >
+              Đã giải đáp tốt
+            </button>
+          </div>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-charcoal-500)' }}>
+            Tổng cộng: <strong>{totalCount}</strong> lượt hỏi đáp
+          </span>
         </div>
 
         {/* Cases */}
         <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
           <div className="card-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-paper-border)' }}>
             <h2 className="card-title" style={{ fontSize: '1rem', margin: 0 }}>
-              Sự cố và cảnh báo chất lượng ({opCases.length})
+              Danh sách câu hỏi của Khách tham quan ({logs.length})
             </h2>
           </div>
           <div className="operations-list" style={{ padding: '16px 20px' }}>
-            {opCases.map(item => (
+            {logs.length > 0 ? logs.map(item => (
               <article className="card operations-case" key={item.id} style={{ marginBottom: '14px' }}>
                 <div className="operations-case-top">
-                  <span className="operations-tag">{typeLabels[item.type]}</span>
-                  <span className={`badge-status ${item.status === 'resolved' ? 'badge-approved' : 'badge-pending'}`}>
-                    {statusLabels[item.status]}
+                  <span className="operations-tag">{item.museumName || `Bảo tàng #${item.museumId}`}</span>
+                  <span className={`badge-status ${item.supported ? 'badge-approved' : 'badge-rejected'}`}>
+                    {item.supported ? 'Đã giải đáp từ tài liệu' : 'Chưa có tài liệu thuyết minh'}
                   </span>
                 </div>
-                <h3 style={{ fontSize: '0.95rem', margin: '4px 0', color: 'var(--color-charcoal-900)' }}>
-                  {item.title}
+                <h3 style={{ fontSize: '0.98rem', margin: '6px 0', color: 'var(--color-charcoal-900)' }}>
+                  {item.question}
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-charcoal-700)', margin: '4px 0 10px' }}>
-                  {item.detail}
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-700)', margin: '4px 0 10px', background: 'var(--color-paper-light)', padding: '10px 12px', borderRadius: '6px' }}>
+                  <strong>Trả lời:</strong> {item.answer}
                 </p>
-                <div className="operations-meta">
-                  <span>Mã: {item.id} · {item.createdAt}</span>
-                  <span>Đơn vị báo cáo: {item.visitor}</span>
-                  <span>{item.museum}</span>
+                <div className="operations-meta" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--color-charcoal-500)' }}>
+                  <span>Hiện vật: <strong>{item.artifactName || `#${item.artifactId}`}</strong></span>
+                  <span>Thời gian: {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '—'}</span>
+                  <span>Ngôn ngữ: <strong style={{ textTransform: 'uppercase' }}>{item.languageCode || 'vi'}</strong></span>
                 </div>
-                {item.status !== 'resolved' && (
-                  <div className="operations-actions" style={{ marginTop: '12px' }}>
-                    <input
-                      className="form-input"
-                      value={notes[item.id] || ''}
-                      onChange={(e) => setNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      placeholder="Ghi chú hướng khắc phục hoặc cập nhật prompt..."
-                      style={{ fontSize: '0.8rem' }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      onClick={() => {
-                        updateSystemCase(item.id, 'resolved', notes[item.id] || 'Đã khắc phục sự cố.');
-
-                      }}
-                    >
-                      Đánh dấu Đã xử lý
-                    </button>
-                  </div>
-                )}
-                {item.note && (
-                  <div className="operations-note" style={{ marginTop: '8px' }}>
-                    Kết quả: {item.note}
-                  </div>
-                )}
               </article>
-            ))}
+            )) : (
+              <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--color-charcoal-500)' }}>
+                <CheckCircle2 size={32} color="var(--color-success)" style={{ marginBottom: '8px' }} />
+                <p>Không có câu hỏi nào trong danh mục này.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

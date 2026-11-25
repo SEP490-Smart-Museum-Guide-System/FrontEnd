@@ -1,3 +1,4 @@
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'visitor_experience_api.dart';
@@ -17,7 +18,14 @@ class AppPreferences extends ChangeNotifier {
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      language = prefs.getString(_keyLanguage) ?? 'vi';
+      final savedLang = prefs.getString(_keyLanguage);
+      if (savedLang != null && savedLang.isNotEmpty) {
+        language = savedLang;
+      } else {
+        // Tự động nhận diện locale thiết bị: nếu ngôn ngữ hệ thống là Tiếng Anh hoặc quốc tế, đặt mặc định 'en'
+        final systemLocale = PlatformDispatcher.instance.locale;
+        language = systemLocale.languageCode.toLowerCase() == 'en' ? 'en' : 'vi';
+      }
       reducedMotion = prefs.getBool(_keyReducedMotion) ?? false;
       largeText = prefs.getBool(_keyLargeText) ?? false;
       notifyListeners();

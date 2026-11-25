@@ -32,6 +32,39 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
     _auth = AppServices.auth;
     _owner = _auth.user?.email;
     _auth.addListener(_onSessionChanged);
+    _loadSavedHistory();
+  }
+
+  Future<void> _loadSavedHistory() async {
+    final user = AppServices.auth.user;
+    if (user == null) return;
+    final id = int.tryParse(widget.artifact.id);
+    if (id == null || id <= 0) return;
+    try {
+      final items = await AppServices.guide.getArtifactHistory(id);
+      if (mounted && items.isNotEmpty && _messages.isEmpty) {
+        setState(() {
+          for (final item in items) {
+            _messages.add((text: item.question, visitor: true, reply: null));
+            _messages.add((
+              text: item.answer,
+              visitor: false,
+              reply: GuideReply(
+                text: item.answer,
+                supported: item.supported,
+                sources: item.sources,
+              ),
+            ));
+          }
+          final recent = items.length > 4 ? items.sublist(items.length - 4) : items;
+          _history.clear();
+          for (final item in recent) {
+            _history.add(GuideTurn('user', item.question));
+            _history.add(GuideTurn('assistant', item.answer));
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   void _onSessionChanged() {
@@ -54,6 +87,15 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
     _retryQuestion = null;
   }
 
+  Future<void> _handleClear() async {
+    final id = int.tryParse(widget.artifact.id);
+    setState(_clear);
+    final user = AppServices.auth.user;
+    if (user != null && id != null && id > 0) {
+      AppServices.guide.clearArtifactHistory(id).catchError((_) => 0);
+    }
+  }
+
   @override
   void didUpdateWidget(covariant AiGuideScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -67,6 +109,11 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
     }
     if (question.length > 1000) {
       setState(() => _error = 'Vui lòng nhập câu hỏi tối đa 1.000 ký tự.');
+      return;
+    }
+    final user = AppServices.auth.user;
+    if (user == null) {
+      setState(() => _error = 'Vui lòng đăng nhập để trao đổi với Trợ lý AI.');
       return;
     }
     final generation = _generation;
@@ -140,7 +187,7 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
         IconButton(
           tooltip: 'Cuộc trò chuyện mới',
           icon: const Icon(Icons.refresh_rounded),
-          onPressed: _busy || _messages.isEmpty ? null : () => setState(_clear),
+          onPressed: _busy || _messages.isEmpty ? null : _handleClear,
         ),
       ],
     ),

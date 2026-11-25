@@ -13,6 +13,7 @@ import '../../data/visit_store.dart';
 import 'services_screen.dart';
 import 'history_screen.dart';
 import 'support_refund_screen.dart';
+import '../ai_guide/ai_guide_history_screen.dart';
 import '../notification/notification_center_screen.dart';
 import '../../services/notification_controller.dart';
 import '../artifact/daily_quiz_screen.dart';
@@ -331,6 +332,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: l10n.isEn ? 'Challenge Results' : 'Kết quả thử tài',
               subtitle: l10n.isEn ? 'Scores and quiz answer reviews' : 'Điểm số và câu trả lời các bộ câu hỏi',
               onTap: () => openPage(context, const ExperienceHistoryScreen(kind: 'quiz')),
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.chat_bubble_outline_rounded,
+              title: l10n.isEn ? 'AI Heritage Conversations' : 'Lịch sử Trợ lý AI',
+              subtitle: l10n.isEn ? 'Review questions asked across artifacts' : 'Xem lại các cuộc trò chuyện và câu hỏi di sản',
+              onTap: () => openPage(context, const AiGuideHistoryScreen()),
             ),
 
             // 5. Section: ĐƠN HÀNG & ĐIỂM

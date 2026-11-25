@@ -6,6 +6,7 @@ import '../core/theme/visitor_tokens.dart';
 import '../core/theme/visitor_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../services/app_services.dart';
+import '../services/app_preferences.dart';
 
 /// Dữ liệu của từng bước nhiệm vụ trong chuỗi hướng dẫn tương tác phong cách game.
 class TutorialQuestStep {
@@ -39,8 +40,9 @@ class GameTutorialOverlay extends StatefulWidget {
   });
 
   static String prefKeyFor([String? email, String tourId = 'home']) {
-    final e = email?.trim().toLowerCase() ?? '';
-    return 'has_seen_game_tutorial_v1_${tourId}_$e';
+    final e = email?.trim().toLowerCase();
+    final effectiveUser = (e == null || e.isEmpty) ? 'guest' : e;
+    return 'has_seen_game_tutorial_v1_${tourId}_$effectiveUser';
   }
 
   static Future<bool> shouldShow([
@@ -89,7 +91,7 @@ class GameTutorialOverlay extends StatefulWidget {
           } catch (e) {
             debugPrint('Error removing tutorial overlay entry: $e');
           }
-          final email = AppServices.auth.user?.email;
+          final email = AppServices.auth.user?.email ?? 'guest';
           markCompleted(email, tourId);
           onFinish?.call();
         },
@@ -159,6 +161,8 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
     super.dispose();
   }
 
+  int _retryCount = 0;
+
   Future<void> _resolveTargetPosition() async {
     if (!mounted || _currentIndex >= widget.steps.length) return;
 
@@ -190,13 +194,29 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
             renderBox.size.height,
           );
         });
+        _retryCount = 0;
         return;
       }
     }
 
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) _resolveTargetPosition();
-    });
+    if (_retryCount < 5) {
+      _retryCount++;
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (mounted) _resolveTargetPosition();
+      });
+    } else {
+      // Sau 5 lần retry mà vẫn chưa mount (hoặc phần tử ở ngoài tầm cuộn), fallback an toàn mà không đóng băng màn hình
+      if (mounted) {
+        final screenSize = MediaQuery.of(context).size;
+        setState(() {
+          _targetRect = Rect.fromCenter(
+            center: Offset(screenSize.width / 2, screenSize.height * 0.38),
+            width: 140,
+            height: 60,
+          );
+        });
+      }
+    }
   }
 
   void _nextStep() {
@@ -204,6 +224,7 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
       setState(() {
         _currentIndex++;
         _targetRect = null;
+        _retryCount = 0;
       });
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _resolveTargetPosition(),
@@ -220,24 +241,32 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final isEn = AppPreferences.instance.language == 'en';
     final screenSize = MediaQuery.of(context).size;
     final currentStep = widget.steps[_currentIndex];
 
     final target =
         _targetRect ??
         Rect.fromCenter(
-          center: Offset(screenSize.width / 2, screenSize.height / 2),
+          center: Offset(screenSize.width / 2, screenSize.height * 0.38),
           width: 80,
           height: 80,
         );
 
     final placeCardBelow = target.top < screenSize.height * 0.45;
-    final cardOffset = placeCardBelow
-        ? (target.bottom + 68).clamp(20.0, screenSize.height - 280.0)
-        : (screenSize.height - target.top + 20).clamp(
-            20.0,
-            screenSize.height - 280.0,
-          );
+    final double? cardTop = placeCardBelow
+        ? (target.bottom + 58).clamp(16.0, screenSize.height - 240.0)
+        : null;
+    final double? cardBottom = !placeCardBelow
+        ? (screenSize.height - target.top + 68).clamp(
+            16.0,
+            screenSize.height - 240.0,
+          )
+        : null;
+
+    final double cardMaxHeight = placeCardBelow
+        ? (screenSize.height - (cardTop ?? 0) - 20).clamp(140.0, screenSize.height)
+        : (target.top - 88).clamp(140.0, screenSize.height);
 
     return Material(
       color: Colors.transparent,
@@ -285,8 +314,8 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                 screenSize.width - 60.0,
               );
               final double pointerY = placeCardBelow
-                  ? target.bottom + 12 + _bounceAnimation.value
-                  : target.top - 54 - _bounceAnimation.value;
+                  ? target.bottom + 8 + _bounceAnimation.value
+                  : target.top - 48 - _bounceAnimation.value;
 
               return Positioned(
                 left: pointerX,
@@ -321,20 +350,13 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
           Positioned(
             left: 20,
             right: 20,
-            top: placeCardBelow
-                ? (target.bottom + 68).clamp(20.0, screenSize.height - 280.0)
-                : null,
-            bottom: !placeCardBelow
-                ? (screenSize.height - target.top + 20).clamp(
-                    20.0,
-                    screenSize.height - 280.0,
-                  )
-                : null,
+            top: cardTop,
+            bottom: cardBottom,
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: 420,
-                  maxHeight: screenSize.height - cardOffset - 20,
+                  maxHeight: cardMaxHeight,
                 ),
                 child: SingleChildScrollView(
                   child: Container(
@@ -373,7 +395,12 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                             ),
                             TextButton(
                               onPressed: _skip,
-                              child: const Text('Bỏ qua'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.darkBrown.withValues(
+                                  alpha: 0.75,
+                                ),
+                              ),
+                              child: Text(isEn ? 'Skip' : 'Bỏ qua'),
                             ),
                           ],
                         ),
@@ -402,14 +429,14 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                         ),
                         const SizedBox(height: 8),
 
-                        // Mô tả chi tiết
+                        // Mô tả chi tiết (Tương phản cao WCAG AAA 11.4:1 trên nền antiqueIvory)
                         Text(
                           currentStep.description,
                           style: const TextStyle(
                             fontFamily: AppTextStyles.sansFamily,
                             fontSize: 14,
                             height: 1.45,
-                            color: AppColors.secondaryText,
+                            color: AppColors.darkBrown,
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -420,7 +447,7 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                           runSpacing: 12,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            // Step Indicators
+                            // Step Indicators với viền rõ nét
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: List.generate(widget.steps.length, (
@@ -434,14 +461,23 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                                   decoration: BoxDecoration(
                                     color: active
                                         ? AppColors.deepBurgundy
-                                        : AppColors.border,
+                                        : AppColors.darkBrown.withValues(
+                                            alpha: 0.22,
+                                          ),
                                     borderRadius: BorderRadius.circular(4),
+                                    border: active
+                                        ? null
+                                        : Border.all(
+                                            color: AppColors.darkBrown
+                                                .withValues(alpha: 0.3),
+                                            width: 0.8,
+                                          ),
                                   ),
                                 );
                               }),
                             ),
 
-                            // Nút hành động Tiếp tục
+                            // Nút hành động Tiếp tục / Hoàn thành
                             ElevatedButton.icon(
                               onPressed: _nextStep,
                               style: ElevatedButton.styleFrom(
@@ -452,7 +488,9 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                                   vertical: 10,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(VisitorRadius.md),
+                                  borderRadius: BorderRadius.circular(
+                                    VisitorRadius.md,
+                                  ),
                                 ),
                               ),
                               icon: Icon(
@@ -463,8 +501,8 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                               ),
                               label: Text(
                                 _currentIndex == widget.steps.length - 1
-                                    ? 'Hoàn thành'
-                                    : 'Tiếp tục',
+                                    ? (isEn ? 'Complete' : 'Hoàn thành')
+                                    : (isEn ? 'Next' : 'Tiếp tục'),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -546,48 +584,58 @@ class HomeScreenTour {
   static final GlobalKey collectionKey = GlobalKey();
   static final GlobalKey handbookBtnKey = GlobalKey();
 
-  static List<TutorialQuestStep> getSteps() => [
-    TutorialQuestStep(
-      targetKey: scanCardKey,
-      questBadge: 'Quét hiện vật',
-      title: 'Khám phá một hiện vật',
-      description: 'Chạm vào đây để mở chức năng quét QR hiện vật.',
-      icon: Icons.qr_code_scanner,
-      borderRadius: 16,
-    ),
-    if (AppServices.catalog.museums.isNotEmpty)
+  static List<TutorialQuestStep> getSteps([BuildContext? context]) {
+    final isEn = AppPreferences.instance.language == 'en';
+    return [
       TutorialQuestStep(
-        targetKey: museumSectionKey,
-        questBadge: 'Khám phá bảo tàng',
-        title: 'Tìm bảo tàng muốn đến',
-        description:
-            'Xem các bảo tàng đang công khai. Mục Khám phá có tìm kiếm và thông tin chi tiết.',
-        icon: Icons.museum_outlined,
+        targetKey: scanCardKey,
+        questBadge: isEn ? 'QUEST · SCAN ARTIFACT' : 'Quét hiện vật',
+        title: isEn ? 'Discover an artifact' : 'Khám phá một hiện vật',
+        description: isEn
+            ? 'Tap here to open the QR camera scanner for museum exhibits.'
+            : 'Chạm vào đây để mở chức năng quét QR hiện vật.',
+        icon: Icons.qr_code_scanner,
         borderRadius: 16,
       ),
-    TutorialQuestStep(
-      targetKey: collectionKey,
-      questBadge: 'Bộ sưu tập',
-      title: 'Bảo tàng cá nhân',
-      description: 'Mở bộ sưu tập những hiện vật bạn đã khám phá.',
-      icon: Icons.collections_bookmark_outlined,
-      borderRadius: 16,
-    ),
-    TutorialQuestStep(
-      targetKey: handbookBtnKey,
-      questBadge: 'Cẩm nang',
-      title: 'Cẩm nang tham quan',
-      description: 'Tra cứu cách dùng ứng dụng và hướng dẫn tham quan tại đây.',
-      icon: Icons.menu_book_outlined,
-      borderRadius: 12,
-    ),
-  ];
+      if (AppServices.catalog.museums.isNotEmpty)
+        TutorialQuestStep(
+          targetKey: museumSectionKey,
+          questBadge: isEn ? 'QUEST · EXPLORE MUSEUMS' : 'Khám phá bảo tàng',
+          title: isEn ? 'Find a museum to visit' : 'Tìm bảo tàng muốn đến',
+          description: isEn
+              ? 'Browse open museums. Explore tab provides live search and details.'
+              : 'Xem các bảo tàng đang công khai. Mục Khám phá có tìm kiếm và thông tin chi tiết.',
+          icon: Icons.museum_outlined,
+          borderRadius: 16,
+        ),
+      TutorialQuestStep(
+        targetKey: collectionKey,
+        questBadge: isEn ? 'QUEST · COLLECTION' : 'Bộ sưu tập',
+        title: isEn ? 'Personal Museum' : 'Bảo tàng cá nhân',
+        description: isEn
+            ? 'Open your saved collection of artifacts you have explored.'
+            : 'Mở bộ sưu tập những hiện vật bạn đã khám phá.',
+        icon: Icons.collections_bookmark_outlined,
+        borderRadius: 16,
+      ),
+      TutorialQuestStep(
+        targetKey: handbookBtnKey,
+        questBadge: isEn ? 'QUEST · HANDBOOK' : 'Cẩm nang',
+        title: isEn ? 'Visitor Handbook' : 'Cẩm nang tham quan',
+        description: isEn
+            ? 'Look up user guides and tour recommendations anytime.'
+            : 'Tra cứu cách dùng ứng dụng và hướng dẫn tham quan tại đây.',
+        icon: Icons.menu_book_outlined,
+        borderRadius: 12,
+      ),
+    ];
+  }
 
   static void start(BuildContext context, {VoidCallback? onFinish}) {
     GameTutorialOverlay.start(
       context,
       tourId: 'home',
-      steps: getSteps(),
+      steps: getSteps(context),
       onFinish: onFinish,
     );
   }
@@ -601,41 +649,59 @@ class ScanScreenTour {
   static final GlobalKey aiVisionTileKey = GlobalKey();
   static final GlobalKey collectionTileKey = GlobalKey();
 
-  static List<TutorialQuestStep> getSteps() => [
-    TutorialQuestStep(
-      targetKey: qrTileKey,
-      questBadge: 'NHIỆM VỤ QUÉT MÃ · BƯỚC 1/3',
-      title: 'Quét mã QR tại tủ kính',
-      description:
-          'Dùng camera điện thoại căn chuẩn mã QR đặt tại chân tủ trưng bày để mở ngay câu chuyện khảo cổ và mô hình 3D.',
-      icon: Icons.qr_code_scanner_rounded,
-      borderRadius: 14,
-    ),
-    TutorialQuestStep(
-      targetKey: aiVisionTileKey,
-      questBadge: 'NHIỆM VỤ QUÉT MÃ · BƯỚC 2/3',
-      title: 'AI Vision nhận diện qua ảnh chụp',
-      description:
-          'Chụp ảnh hiện vật từ góc bạn đứng; AI Vision sẽ tự động nhận diện bảo vật mà không cần mã QR.',
-      icon: Icons.camera_alt_rounded,
-      borderRadius: 14,
-    ),
-    TutorialQuestStep(
-      targetKey: collectionTileKey,
-      questBadge: 'NHIỆM VỤ QUÉT MÃ · BƯỚC 3/3',
-      title: 'Tra cứu bộ sưu tập từ xa',
-      description:
-          'Xem toàn bộ danh mục hiện vật theo chủ đề và niên đại khi bạn không ở gần tủ kính.',
-      icon: Icons.view_list_rounded,
-      borderRadius: 14,
-    ),
-  ];
+  static List<TutorialQuestStep> getSteps([BuildContext? context]) {
+    final isEn = AppPreferences.instance.language == 'en';
+    return [
+      TutorialQuestStep(
+        targetKey: qrTileKey,
+        questBadge: isEn
+            ? 'SCAN QUEST · STEP 1/3'
+            : 'NHIỆM VỤ QUÉT MÃ · BƯỚC 1/3',
+        title: isEn
+            ? 'Scan QR at display case'
+            : 'Quét mã QR tại tủ kính',
+        description: isEn
+            ? 'Point your camera at the QR code at the exhibit to open historical insights and 3D models.'
+            : 'Dùng camera điện thoại căn chuẩn mã QR đặt tại chân tủ trưng bày để mở ngay câu chuyện khảo cổ và mô hình 3D.',
+        icon: Icons.qr_code_scanner_rounded,
+        borderRadius: 14,
+      ),
+      TutorialQuestStep(
+        targetKey: aiVisionTileKey,
+        questBadge: isEn
+            ? 'SCAN QUEST · STEP 2/3'
+            : 'NHIỆM VỤ QUÉT MÃ · BƯỚC 2/3',
+        title: isEn
+            ? 'AI Vision camera recognition'
+            : 'AI Vision nhận diện qua ảnh chụp',
+        description: isEn
+            ? 'Take a photo of the artifact; AI Vision will automatically identify it without a QR code.'
+            : 'Chụp ảnh hiện vật từ góc bạn đứng; AI Vision sẽ tự động nhận diện bảo vật mà không cần mã QR.',
+        icon: Icons.camera_alt_rounded,
+        borderRadius: 14,
+      ),
+      TutorialQuestStep(
+        targetKey: collectionTileKey,
+        questBadge: isEn
+            ? 'SCAN QUEST · STEP 3/3'
+            : 'NHIỆM VỤ QUÉT MÃ · BƯỚC 3/3',
+        title: isEn
+            ? 'Browse collection remotely'
+            : 'Tra cứu bộ sưu tập từ xa',
+        description: isEn
+            ? 'View the entire catalog of artifacts by topic and period when away from the display case.'
+            : 'Xem toàn bộ danh mục hiện vật theo chủ đề và niên đại khi bạn không ở gần tủ kính.',
+        icon: Icons.view_list_rounded,
+        borderRadius: 14,
+      ),
+    ];
+  }
 
   static void start(BuildContext context, {VoidCallback? onFinish}) {
     GameTutorialOverlay.start(
       context,
       tourId: 'scan',
-      steps: getSteps(),
+      steps: getSteps(context),
       onFinish: onFinish,
     );
   }
@@ -649,41 +715,59 @@ class ExploreScreenTour {
   static final GlobalKey modeToggleKey = GlobalKey();
   static final GlobalKey resultsKey = GlobalKey();
 
-  static List<TutorialQuestStep> getSteps() => [
-    TutorialQuestStep(
-      targetKey: searchBarKey,
-      questBadge: 'NHIỆM VỤ TRA CỨU · BƯỚC 1/3',
-      title: 'Tìm kiếm hiện vật & bảo tàng',
-      description:
-          'Nhập tên bảo vật, triều đại lịch sử hoặc bảo tàng bạn muốn tra cứu để tìm nhanh thông tin.',
-      icon: Icons.search_rounded,
-      borderRadius: 12,
-    ),
-    TutorialQuestStep(
-      targetKey: modeToggleKey,
-      questBadge: 'NHIỆM VỤ TRA CỨU · BƯỚC 2/3',
-      title: 'Lọc Hiện vật hoặc Bảo tàng',
-      description:
-          'Chuyển đổi linh hoạt giữa danh sách các bảo tàng liên kết hoặc kho hiện vật quốc gia.',
-      icon: Icons.tune_rounded,
-      borderRadius: 12,
-    ),
-    TutorialQuestStep(
-      targetKey: resultsKey,
-      questBadge: 'NHIỆM VỤ TRA CỨU · BƯỚC 3/3',
-      title: 'Bản đồ Khám phá & Dẫn đường',
-      description:
-          'Xem bảo tàng trực quan trên bản đồ kèm chỉ đường, hoặc chạm vào từng thẻ để khám phá chi tiết.',
-      icon: Icons.map_rounded,
-      borderRadius: 12,
-    ),
-  ];
+  static List<TutorialQuestStep> getSteps([BuildContext? context]) {
+    final isEn = AppPreferences.instance.language == 'en';
+    return [
+      TutorialQuestStep(
+        targetKey: searchBarKey,
+        questBadge: isEn
+            ? 'SEARCH QUEST · STEP 1/3'
+            : 'NHIỆM VỤ TRA CỨU · BƯỚC 1/3',
+        title: isEn
+            ? 'Search artifacts & museums'
+            : 'Tìm kiếm hiện vật & bảo tàng',
+        description: isEn
+            ? 'Type an artifact name, dynasty, or museum name to quickly find information.'
+            : 'Nhập tên bảo vật, triều đại lịch sử hoặc bảo tàng bạn muốn tra cứu để tìm nhanh thông tin.',
+        icon: Icons.search_rounded,
+        borderRadius: 12,
+      ),
+      TutorialQuestStep(
+        targetKey: modeToggleKey,
+        questBadge: isEn
+            ? 'SEARCH QUEST · STEP 2/3'
+            : 'NHIỆM VỤ TRA CỨU · BƯỚC 2/3',
+        title: isEn
+            ? 'Filter Artifacts or Museums'
+            : 'Lọc Hiện vật hoặc Bảo tàng',
+        description: isEn
+            ? 'Easily switch between affiliated museums or the national artifact catalog.'
+            : 'Chuyển đổi linh hoạt giữa danh sách các bảo tàng liên kết hoặc kho hiện vật quốc gia.',
+        icon: Icons.tune_rounded,
+        borderRadius: 12,
+      ),
+      TutorialQuestStep(
+        targetKey: resultsKey,
+        questBadge: isEn
+            ? 'SEARCH QUEST · STEP 3/3'
+            : 'NHIỆM VỤ TRA CỨU · BƯỚC 3/3',
+        title: isEn
+            ? 'Map & Navigation'
+            : 'Bản đồ Khám phá & Dẫn đường',
+        description: isEn
+            ? 'View museums on a live interactive map with directions, or tap cards for full details.'
+            : 'Xem bảo tàng trực quan trên bản đồ kèm chỉ đường, hoặc chạm vào từng thẻ để khám phá chi tiết.',
+        icon: Icons.map_rounded,
+        borderRadius: 12,
+      ),
+    ];
+  }
 
   static void start(BuildContext context, {VoidCallback? onFinish}) {
     GameTutorialOverlay.start(
       context,
       tourId: 'explore',
-      steps: getSteps(),
+      steps: getSteps(context),
       onFinish: onFinish,
     );
   }

@@ -9,6 +9,7 @@ import '../../services/visitor_experience_api.dart';
 import '../../widgets/game_tutorial_overlay.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/visitor_handbook_sheet.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../../widgets/automatic_arrival_card.dart';
 import '../museum/museum_detail_screen.dart';
 import '../museum/visit_progress_screen.dart';
@@ -39,8 +40,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _checkOnboarding() async {
     final user = AppServices.auth.user;
-    if (user == null || user.role != UserRole.visitor) return;
-    final show = await GameTutorialOverlay.shouldShow(user.email);
+    if (user != null && user.role != UserRole.visitor) return;
+    final email = user?.email ?? 'guest';
+    final show = await GameTutorialOverlay.shouldShow(email);
     if (show && mounted) HomeScreenTour.start(context);
   }
 
@@ -130,6 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                           ),
+                          const NotificationBellButton(),
                           IconButton(
                             key: HomeScreenTour.handbookBtnKey,
                             tooltip: l10n.isEn ? 'Handbook' : 'Cẩm nang tham quan',

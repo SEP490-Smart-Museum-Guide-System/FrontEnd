@@ -15,6 +15,7 @@ abstract final class VisitorColors {
   static const surfaceGold = Color(0xFFF4EAD8); // Light gold surface for heritage badges
 
   // Semantic Aliases
+  static const surface = surface1;
   static const card = surface1;
   static const secondaryBackground = surface2;
   static const brandSoft = surfaceBrand;
@@ -27,4 +28,5 @@ abstract final class VisitorColors {
   static const text = Color(0xFF2B2220);
   static const secondaryText = Color(0xFF6E625C);
   static const border = Color(0xFFEBE3D8);
+  static const borderSubtle = Color(0xFFEBE3D8);
 }

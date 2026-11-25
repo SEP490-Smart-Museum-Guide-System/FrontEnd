@@ -284,7 +284,50 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                   );
                 }),
         ),
-        SectionHeading(l10n.isEn ? 'Custom Itinerary Suggestions' : 'Gợi ý hành trình cá nhân'),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.deepBurgundy,
+                borderRadius: BorderRadius.circular(VisitorRadius.sm),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.auto_awesome, color: AppColors.antiqueIvory, size: 12),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.isEn ? 'AI SMART ROUTE' : 'LỘ TRÌNH THÔNG MINH AI',
+                    style: const TextStyle(
+                      color: AppColors.antiqueIvory,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.isEn ? 'Dynamic Generator' : 'Tự động tạo lộ trình',
+                style: AppTextStyles.caption.copyWith(color: AppColors.mutedGold, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SectionHeading(l10n.isEn ? 'AI-Powered Custom Itinerary' : 'AI gợi ý hành trình cá nhân'),
+        Text(
+          l10n.isEn
+              ? 'AI dynamically sequences individual exhibits into an optimal path matching your exact time and interests.'
+              : 'Thuật toán AI tự động sắp xếp các hiện vật riêng lẻ thành tuyến tối ưu vừa khít với thời gian và sở thích của bạn.',
+          style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown.withOpacity(0.85), height: 1.3),
+        ),
+        const SizedBox(height: 14),
         Text(
           l10n.isEn ? 'How much time do you have?' : 'Bạn có bao nhiêu thời gian?',
           style: AppTextStyles.cardTitle,
@@ -369,9 +412,9 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           ),
         PrimaryButton(
           label: _busy
-              ? (l10n.isEn ? 'Preparing journey…' : 'Đang chuẩn bị hành trình…')
-              : (l10n.isEn ? 'Recommend by Interest' : 'Gợi ý theo sở thích'),
-          icon: Icons.auto_awesome_outlined,
+              ? (l10n.isEn ? 'AI is crafting your route…' : 'AI đang tính toán lộ trình…')
+              : (l10n.isEn ? 'Generate AI Itinerary' : 'Tạo hành trình bằng AI'),
+          icon: Icons.auto_awesome_rounded,
           onPressed: id == null || _selected.isEmpty || _busy
               ? null
               : () => _run(() async {
@@ -395,8 +438,9 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         const SizedBox(height: 12),
         Text(
           l10n.isEn
-              ? 'Recommendations use published exhibits and your access permissions. Duration is an estimate; you can visit fewer stops.'
-              : 'Gợi ý dùng nội dung đã xuất bản và quyền truy cập của bạn. Thời lượng là ước tính; bạn có thể chọn ít điểm hơn thời gian đã dành.',
+              ? 'AI dynamically calculates walking distances between exhibits and picks the highest-match items for your time.'
+              : 'AI tự động tính toán thời gian di chuyển và lựa chọn các hiện vật phù hợp nhất với quỹ thời gian của bạn.',
+          style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown.withOpacity(0.7)),
         ),
         SectionHeading(l10n.isEn ? 'Saved Personal Journeys' : 'Hành trình cá nhân đã lưu'),
         FutureBuilder<List<Map<String, dynamic>>>(
