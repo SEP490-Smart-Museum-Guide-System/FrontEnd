@@ -1,10 +1,25 @@
+import { getAuthToken } from './auth.js';
+
 /**
  * TTS AI Integration Service
- * Connects to SMGS Vietnamese TTS Microservice (Port 8000)
- * Note: Synthesizes only approved, curator-reviewed narration scripts.
+ * Sends speech requests through the BE gateway, which holds the Azure service key.
  */
 
-const TTS_BASE = (import.meta.env?.VITE_TTS_API_URL ?? '/ai-tts').replace(/\/+$/, '');
+const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
+
+async function getTtsResponse(text, language) {
+  const token = getAuthToken();
+  return fetch(`${API_BASE}/tts/speech`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'audio/wav',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ text, language: language.startsWith('vi') ? 'vi-VN' : 'en-US' }),
+    signal: AbortSignal.timeout(70000)
+  });
+}
 
 // In-memory cache for audio blobs during the session
 const audioCache = new Map();
@@ -15,7 +30,7 @@ const audioCache = new Map();
  */
 export async function checkTtsHealthApi() {
   try {
-    const response = await fetch(`${TTS_BASE}/health`, {
+    const response = await fetch(`${API_BASE}/tts/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(4000)
@@ -56,24 +71,13 @@ export async function generateSpeechApi({ text, speed = 1.0, language = 'vi-VN' 
     return { ...cached, cacheHit: true };
   }
 
-  const response = await fetch(`${TTS_BASE}/api/v1/speech`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'audio/wav'
-    },
-    body: JSON.stringify({
-      text: cleanText,
-      speed: Number(speed) || 1.0,
-      language: language.startsWith('vi') ? 'vi-VN' : language
-    })
-  });
+  const response = await getTtsResponse(cleanText, language);
 
   if (!response.ok) {
     let errorDetail = `Lỗi tạo thuyết minh âm thanh (${response.status})`;
     try {
       const errJson = await response.json();
-      if (errJson?.detail) errorDetail = errJson.detail;
+      if (errJson?.detail || errJson?.message) errorDetail = errJson.detail || errJson.message;
     } catch {
       // response is not json
     }

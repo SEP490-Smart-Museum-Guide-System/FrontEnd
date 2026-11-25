@@ -29,7 +29,10 @@ class TtsApiService {
   static Future<Map<String, dynamic>> checkHealth() async {
     try {
       final res = await http
-          .get(Uri.parse(ApiConfig.ttsHealthUrl))
+          .get(
+            Uri.parse('${ApiConfig.baseUrl}/tts/health'),
+            headers: TokenManager.authHeaders,
+          )
           .timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
@@ -53,21 +56,23 @@ class TtsApiService {
     // Clamp speed between 0.75 and 1.25 as enforced by TTS service schema
     final clampedSpeed = speed.clamp(0.75, 1.25);
     final cacheKey =
-        '${ApiConfig.ttsSpeechUrl}:$language:${clampedSpeed.toStringAsFixed(2)}:$cleanText';
+        '${ApiConfig.baseUrl}/tts/speech:$language:${clampedSpeed.toStringAsFixed(2)}:$cleanText';
 
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
     }
 
-    final url = Uri.parse(ApiConfig.ttsSpeechUrl);
+    final url = Uri.parse('${ApiConfig.baseUrl}/tts/speech');
     final response = await http
         .post(
           url,
-          headers: {'Content-Type': 'application/json', 'Accept': 'audio/wav'},
+          headers: {
+            ...TokenManager.authHeaders,
+            'Accept': 'audio/wav',
+          },
           body: jsonEncode({
             'text': cleanText,
-            'speed': clampedSpeed,
-            'language': language.startsWith('vi') ? 'vi-VN' : language,
+            'language': language.startsWith('vi') ? 'vi-VN' : 'en-US',
           }),
         )
         .timeout(const Duration(seconds: 25));
@@ -76,8 +81,8 @@ class TtsApiService {
       String detail = 'Lỗi tạo giọng đọc (${response.statusCode})';
       try {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map && decoded.containsKey('detail')) {
-          detail = decoded['detail'].toString();
+        if (decoded is Map && (decoded.containsKey('detail') || decoded.containsKey('message'))) {
+          detail = (decoded['detail'] ?? decoded['message']).toString();
         }
       } catch (_) {}
       throw Exception(detail);

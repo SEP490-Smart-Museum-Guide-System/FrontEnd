@@ -67,25 +67,8 @@ class ApiConfig {
   static String publishedIndoorMapImageUrl(dynamic id, String imageKey) =>
       '$baseUrl/indoor-maps/$id/published/image?key=${Uri.encodeComponent(imageKey)}';
 
-  // --- AI-System Services (Port 8000: TTS, Port 8001: Vision, Port 8002: 3D Scan) ---
-
-  static String get defaultTtsHost {
-    const configured = String.fromEnvironment('TTS_BASE_URL');
-    if (configured.isNotEmpty) {
-      return configured.replaceFirst(RegExp(r'/+$'), '');
-    }
-    if (kIsWeb) {
-      return '${Uri.base.origin}/ai-tts';
-    }
-    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
-    return 'http://localhost:8000';
-  }
-
-  static String customTtsHost = '';
-  static String get ttsBaseUrl =>
-      customTtsHost.trim().isNotEmpty ? customTtsHost.trim() : defaultTtsHost;
-  static String get ttsSpeechUrl => '$ttsBaseUrl/api/v1/speech';
-  static String get ttsHealthUrl => '$ttsBaseUrl/health';
+  // TTS is called through the BE gateway so the Azure service key stays server-side.
+  // Vision runs behind the authenticated BE gateway; no service key in the app.
 
   // Vision runs behind the authenticated BE gateway; no service key in the app.
   static String get visionBaseUrl => '$baseUrl/vision';
