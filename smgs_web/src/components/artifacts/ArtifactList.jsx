@@ -267,7 +267,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   <th>Vị trí trưng bày</th>
                   <th>Niên đại & Chất liệu</th>
                   <th style={{ textAlign: 'center' }}>Tính năng số</th>
-                  <th>Kiểm duyệt</th>
+                  <th style={{ minWidth: '205px', whiteSpace: 'nowrap' }}>Kiểm duyệt nội dung</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
@@ -384,7 +384,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
 
                       {/* Status */}
                       <td>
-                        <span className={`badge-status badge-${artifactReviewStatus(art.id) ?? "draft"}`}>
+                        <span className={`badge-status badge-${artifactReviewStatus(art.id) ?? "draft"}`} style={{ whiteSpace: 'nowrap' }}>
                           {artifactReviewLabels[artifactReviewStatus(art.id)] ?? 'Chưa tải được trạng thái'}
                         </span>
                       </td>
