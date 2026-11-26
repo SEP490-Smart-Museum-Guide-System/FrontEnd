@@ -907,7 +907,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }}>
-                  Bản dịch thuyết minh đa ngôn ngữ
+                  Bản dịch thuyết minh song ngữ
                 </h4>
                 {!readOnly && <button
                   type="button"
@@ -922,7 +922,6 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* English */}
                 <div className="card" style={{ padding: '16px', background: '#FAFAF8' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '1.25rem' }}>🇬🇧</span>
@@ -935,29 +934,15 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   </p>
                 </div>
 
-                {/* French */}
                 <div className="card" style={{ padding: '16px', background: '#FAFAF8' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🇫🇷</span>
+                    <span style={{ fontSize: '1.25rem' }}>🇻🇳</span>
                     <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-900)' }}>
-                      Français — {artifact.multilingual?.fr?.name || artifact.name}
+                      Tiếng Việt — {artifact.multilingual?.vi?.name || artifact.name}
                     </strong>
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', lineHeight: '1.6' }}>
-                    {artifact.multilingual?.fr?.shortDesc || 'Chưa có bản dịch tiếng Pháp cho hiện vật này.'}
-                  </p>
-                </div>
-
-                {/* Japanese */}
-                <div className="card" style={{ padding: '16px', background: '#FAFAF8' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🇯🇵</span>
-                    <strong style={{ fontSize: '0.875rem', color: 'var(--color-charcoal-900)' }}>
-                      日本語 — {artifact.multilingual?.ja?.name || artifact.name}
-                    </strong>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', lineHeight: '1.6' }}>
-                    {artifact.multilingual?.ja?.shortDesc || 'Chưa có bản dịch tiếng Nhật cho hiện vật này.'}
+                    {artifact.multilingual?.vi?.shortDesc || artifact.shortDesc || artifact.fullDesc || publishedContent?.description || 'Chưa có thuyết minh tiếng Việt cho hiện vật này.'}
                   </p>
                 </div>
               </div>
