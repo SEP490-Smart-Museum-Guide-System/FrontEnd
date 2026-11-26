@@ -500,7 +500,7 @@ export default function MuseumManager() {
           <div className="modal-dialog" style={{ maxWidth: '640px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={event => event.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title font-serif">Chỉnh Sửa Thông Tin Bảo Tàng</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { if (!submitLock.current) setIsEditingMuseum(false); }}>✕</button>
+              <button type="button" className="btn btn-secondary btn-sm" aria-label="Đóng" onClick={() => { if (!submitLock.current) setIsEditingMuseum(false); }}>✕</button>
             </div>
             <form onSubmit={saveMuseumInfo} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="modal-body" style={{ display: 'grid', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -708,7 +708,7 @@ export default function MuseumManager() {
           <div className="modal-dialog" style={{ maxWidth: '480px', width: '95vw' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title font-serif" style={{ color: '#B91C1C' }}>Xác Nhận Vô Hiệu Hóa</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsConfirmingDelete(false)}>✕</button>
+              <button type="button" className="btn btn-secondary btn-sm" aria-label="Đóng" onClick={() => setIsConfirmingDelete(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ padding: '20px 24px' }}>
               <p style={{ fontSize: '0.9375rem', color: 'var(--color-charcoal-700)', lineHeight: '1.6' }}>

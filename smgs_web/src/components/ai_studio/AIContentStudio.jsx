@@ -18,7 +18,6 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   const [languageCode, setLanguageCode] = useState('vi');
   const [mode, setMode] = useState(initialMode);
   const [sourceText, setSourceText] = useState('');
-  const [audience, setAudience] = useState('general'), [tone, setTone] = useState('vivid');
   const [count, setCount] = useState(5), [difficulty, setDifficulty] = useState('medium');
   const [output, setOutput] = useState(''), [title, setTitle] = useState('');
   const [source, setSource] = useState(null), [evidence, setEvidence] = useState([]);
@@ -54,7 +53,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             if (controller.signal.aborted) return;
           }
           const response = await generateStaffDraft(artifact.id, {
-            mode, languageCode, sourceText, audience, tone, difficulty, excludeQuestions: drafts.map(d => d.question),
+            mode, languageCode, sourceText, audience: 'general', tone: 'vivid', difficulty, excludeQuestions: drafts.map(d => d.question),
           }, controller.signal);
           if (controller.signal.aborted) return;
           if (mode === 'quiz' && drafts.some(d => d.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' ') === response.draft.question.normalize('NFC').trim().toLocaleLowerCase('vi').replace(/\s+/g, ' '))) {
@@ -142,10 +141,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
 
         {studioLayout && <span className="studio-mode-label">Loại nội dung</span>}
         <div className="business-actions studio-modes" style={{ marginBottom: 16 }}>{[{ id: 'narration', label: 'Thuyết minh âm thanh', Icon: Volume2 }, { id: 'quiz', label: 'Bộ câu hỏi trắc nghiệm', Icon: HelpCircle }].map(({ id, label, Icon }) => <button key={id} className={`btn ${mode === id ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={mode === id} disabled={busy || saving} onClick={() => { setMode(id); invalidate(); }}><Icon size={16} />{label}</button>)}</div>
-        {mode === 'narration' ? <>
-          <div className="form-group"><label className="form-label" htmlFor="studio-audience">Đối tượng tiếp nhận</label><select id="studio-audience" className="form-select" value={audience} disabled={busy || saving} onChange={e => { setAudience(e.target.value); invalidate(); }}><option value="children">Thiếu nhi</option><option value="general">Khách đại chúng</option><option value="scholar">Người nghiên cứu</option></select></div>
-          <div className="form-group"><label className="form-label" htmlFor="studio-tone">Phong cách</label><select id="studio-tone" className="form-select" value={tone} disabled={busy || saving} onChange={e => { setTone(e.target.value); invalidate(); }}><option value="vivid">Sinh động, dễ hiểu</option><option value="inspiring">Truyền cảm</option><option value="academic">Trang trọng</option></select></div>
-        </> : <>
+        {mode === 'quiz' && <>
           <div className="form-group"><label className="form-label" htmlFor="studio-count">Số lượng câu hỏi</label><select id="studio-count" className="form-select" value={count} disabled={busy || saving} onChange={e => { setCount(Number(e.target.value)); invalidate(); }}><option value={1}>1 câu hỏi</option><option value={3}>3 câu hỏi</option><option value={5}>5 câu hỏi</option></select><small>Model tạo từng câu; nếu tư liệu ít hoặc trùng câu hỏi, hệ thống giữ các câu đã tạo để bạn kiểm tra.</small></div>
           <div className="form-group"><label className="form-label" htmlFor="studio-difficulty">Độ khó</label><select id="studio-difficulty" className="form-select" value={difficulty} disabled={busy || saving} onChange={e => { setDifficulty(e.target.value); invalidate(); }}><option value="easy">Dễ</option><option value="medium">Trung bình</option><option value="hard">Thử thách</option></select></div>
         </>}
@@ -216,7 +212,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
               {[
                 { step: 1, title: 'Lấy tư liệu nguồn của hiện vật' },
-                { step: 2, title: `Thiết lập phong cách (${mode === 'quiz' ? `Độ khó: ${difficulty}` : `Giọng điệu: ${tone}`}) & đối tượng` },
+                { step: 2, title: mode === 'quiz' ? `Thiết lập độ khó: ${difficulty}` : 'Chuẩn bị bản thuyết minh' },
                 { step: 3, title: mode === 'quiz' ? progress || `Đang biên soạn câu đố (1/${count})…` : progress || 'Đang tạo lời bình thuyết minh…' },
                 { step: 4, title: 'Kiểm tra cấu trúc và trích dẫn của bản nháp' }
               ].map(s => {

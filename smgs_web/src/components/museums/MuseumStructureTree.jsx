@@ -675,7 +675,7 @@ function StructureFormModal({ museumId, modalState, onClose, onSuccess }) {
       <div className="modal-dialog" style={{ maxWidth: '480px', width: '95vw' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title font-serif">{title}</h3>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>✕</button>
+          <button aria-label="Đóng" type="button" className="dialog-icon-close btn btn-secondary btn-sm" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body" style={{ display: 'grid', gap: '14px', padding: '20px' }}>

@@ -89,7 +89,7 @@ export default function ArtifactTranslationModal({ artifact, onClose, onSuccess,
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Đóng" className="dialog-icon-close"
             type="button"
             onClick={onClose}
             style={{

@@ -438,7 +438,7 @@ export default function TourManager() {
                   {editingTour ? 'Chỉnh sửa tuyến tham quan' : 'Tạo hành trình mới'}
                 </h3>
               </div>
-              <button type="button" onClick={() => setIsCreatingTour(false)} className="btn btn-secondary btn-sm">✕</button>
+              <button aria-label="Đóng" type="button" onClick={() => setIsCreatingTour(false)} className="dialog-icon-close btn btn-secondary btn-sm">✕</button>
             </div>
 
             <form onSubmit={handleCreateTour} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
