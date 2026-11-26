@@ -786,12 +786,13 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px' }}>
                     <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
-                      <Upload size={14} /> Chỉ tải ảnh (quy trình thường)
+                      <Upload size={14} /> Chọn folder ảnh (quy trình thường)
                       <input
-                        aria-label="Chọn ảnh để dựng 3D theo quy trình thường"
+                        aria-label="Chọn folder ảnh để dựng 3D theo quy trình thường"
                         type="file"
                         accept=".jpg,.jpeg,.png"
                         multiple
+                        webkitdirectory=""
                         disabled={busy || running(job?.status)}
                         style={{ display: 'none' }}
                         onChange={e => {
@@ -802,12 +803,13 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                       />
                     </label>
                     <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
-                      <Upload size={14} /> Ảnh + OBJ + metadata (benchmark)
+                      <Upload size={14} /> Chọn folder bộ (ảnh + OBJ + metadata)
                       <input
-                        aria-label="Chọn ảnh và file OBJ, metadata JSON tùy chọn cho benchmark"
+                        aria-label="Chọn folder của một bộ hiện vật có ảnh, OBJ và metadata JSON"
                         type="file"
                         accept=".jpg,.jpeg,.png,.obj,.json"
                         multiple
+                        webkitdirectory=""
                         disabled={busy || running(job?.status)}
                         style={{ display: 'none' }}
                         onChange={e => {
@@ -819,7 +821,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                     </label>
                   </div>
                   <small style={{ color: 'var(--color-charcoal-500)', lineHeight: 1.5 }}>
-                    Benchmark cần đủ một file OBJ và metadata.json; không cần MTL. Nếu thiếu một trong hai, hệ thống tự chạy quy trình ảnh thường.
+                    Nút đầu chọn riêng folder images. Nút thứ hai chọn folder của một bộ (ví dụ ceramic_vases_1), chứa images, OBJ và metadata.json. Benchmark cần đủ OBJ và metadata.json; không cần MTL. Nếu thiếu file tham chiếu, hệ thống tự chạy quy trình ảnh thường.
                   </small>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
