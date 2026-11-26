@@ -148,6 +148,46 @@ class TtsApiService {
     );
   }
 
+  /// Resolve a BE-protected media URL to a short-lived storage URL. The native
+  /// player can then stream/range-read audio without downloading the whole WAV
+  /// into memory first. The signed URL is created only after BE access checks.
+  static Future<String> resolvePublishedPlaybackUrl(String url) async {
+    final source = Uri.parse(url);
+    if (!source.isAbsolute || !['https', 'http'].contains(source.scheme)) {
+      throw const FormatException('Địa chỉ bản thu âm không hợp lệ.');
+    }
+
+    final backend = Uri.parse(ApiConfig.baseUrl);
+    final match = RegExp(r'/api/artifacts/(\d+)/media/(\d+)/file/?$')
+        .firstMatch(source.path);
+    if (source.origin != backend.origin || match == null) return url;
+
+    final endpoint = Uri.parse(
+      '${ApiConfig.baseUrl}/artifacts/${match.group(1)}/media/${match.group(2)}/playback-url',
+    );
+    final response = await http
+        .get(endpoint, headers: TokenManager.authHeaders)
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) {
+      String detail = 'Chưa lấy được đường dẫn phát audio.';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['message'] is String) {
+          detail = decoded['message'] as String;
+        }
+      } catch (_) {}
+      throw Exception(detail);
+    }
+
+    final decoded = jsonDecode(response.body);
+    final playbackUrl = decoded is Map ? decoded['data'] : null;
+    final uri = playbackUrl is String ? Uri.tryParse(playbackUrl) : null;
+    if (uri == null || !uri.isAbsolute || !['https', 'http'].contains(uri.scheme)) {
+      throw const FormatException('Máy chủ trả về đường dẫn phát audio không hợp lệ.');
+    }
+    return uri.toString();
+  }
+
   static String _audioMimeType(Uint8List bytes) {
     if (bytes.length >= 12 &&
         ascii.decode(bytes.sublist(0, 4), allowInvalid: true) == 'RIFF') {
