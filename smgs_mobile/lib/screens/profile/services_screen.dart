@@ -62,8 +62,11 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
   void initState() {
     super.initState();
     _museumId = widget.museumId;
-    _initCatalogAndProducts();
-    _refreshPassesAndOrders();
+    if (_activeTab == 0) {
+      _initCatalogAndProducts();
+    } else {
+      _refreshPassesAndOrders();
+    }
   }
 
   Future<void> _initCatalogAndProducts() async {
@@ -92,12 +95,21 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
           _museumId = _museums.first.id;
         }
       }
-      if (_museumId != null) {
+      if (_activeTab == 0 && _museumId != null) {
         _products = BackendApi.request('commerce/museums/$_museumId/products');
       }
     });
   }
 
+  void _selectTab(int tab) {
+    if (tab == _activeTab) return;
+    setState(() => _activeTab = tab);
+    if (tab == 0 && _products == null) {
+      _initCatalogAndProducts();
+    } else if (tab == 1 && _passesOrdersData == null) {
+      _refreshPassesAndOrders();
+    }
+  }
   void _onSelectMuseum(String? id) {
     if (id == null || id == _museumId) return;
     setState(() {
@@ -176,7 +188,7 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => setState(() => _activeTab = 0),
+                  onTap: () => _selectTab(0),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
@@ -198,7 +210,7 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
               ),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => setState(() => _activeTab = 1),
+                  onTap: () => _selectTab(1),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(

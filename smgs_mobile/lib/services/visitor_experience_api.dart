@@ -267,17 +267,13 @@ class VisitorExperienceApi {
 
   /// WF-02 (F05): Lấy danh sách lộ trình đã lưu của khách (GET /api/tours/saved-routes)
   static Future<List<Map<String, dynamic>>> getSavedRoutes({int? museumId}) async {
-    try {
-      final query = museumId != null ? '?museumId=$museumId' : '';
-      final result = await BackendApi.request('tours/saved-routes$query');
-      if (result is List) return result.cast<Map<String, dynamic>>();
-      if (result is Map && result['items'] is List) {
-        return (result['items'] as List).cast<Map<String, dynamic>>();
-      }
-      return [];
-    } catch (_) {
-      return [];
+    final query = museumId != null ? '?museumId=$museumId' : '';
+    final result = await BackendApi.request('tours/saved-routes$query');
+    if (result is List) return result.cast<Map<String, dynamic>>();
+    if (result is Map && result['items'] is List) {
+      return (result['items'] as List).cast<Map<String, dynamic>>();
     }
+    return [];
   }
 
   /// WF-02 (F05): Lấy chi tiết một lộ trình đã lưu (GET /api/tours/saved-routes/{id})

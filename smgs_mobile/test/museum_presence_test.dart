@@ -278,11 +278,12 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          expect(routed, false);
+          expect(find.text('Vị trí hiện tại của bạn'), findsWidgets);
+          await tester.tap(find.text('Chỉ đường'));
+          await tester.pumpAndSettle();
           expect(routed, true);
-          expect(
-            find.textContaining('Vừa xác nhận: Cổng chính'),
-            findsOneWidget,
-          );
+          expect(find.text('Kiểm tra điểm xuất phát'), findsNothing);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
         },

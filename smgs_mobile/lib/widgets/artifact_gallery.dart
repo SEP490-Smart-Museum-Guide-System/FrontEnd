@@ -266,41 +266,58 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
             bottom: 20,
             child: Row(
               children: [
-                FilledButton.tonalIcon(
-                  style: galleryButtonStyle.copyWith(
-                    backgroundColor: const WidgetStatePropertyAll(
-                      Color(0xff6d3032),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FilledButton.tonalIcon(
+                          style: galleryButtonStyle.copyWith(
+                            backgroundColor: const WidgetStatePropertyAll(
+                              Color(0xff6d3032),
+                            ),
+                            foregroundColor: const WidgetStatePropertyAll(
+                              Colors.white,
+                            ),
+                          ),
+                          onPressed: _open,
+                          icon: const Icon(
+                            Icons.image_outlined,
+                            size: galleryIconSize,
+                          ),
+                          label: Text(
+                            widget.photos.length > 1
+                                ? 'Ảnh ${_index + 1}/${widget.photos.length}'
+                                : 'Ảnh',
+                          ),
+                        ),
+                        if (widget.onModel != null) ...[
+                          const SizedBox(width: 4),
+                          FilledButton.tonalIcon(
+                            style: galleryButtonStyle.copyWith(
+                              backgroundColor: const WidgetStatePropertyAll(
+                                Colors.white,
+                              ),
+                              foregroundColor: const WidgetStatePropertyAll(
+                                Color(0xff292929),
+                              ),
+                            ),
+                            onPressed: widget.onModel,
+                            icon: const Icon(
+                              Icons.view_in_ar_outlined,
+                              size: galleryIconSize,
+                            ),
+                            label: const Text('Xem 3D'),
+                          ),
+                        ],
+                      ],
                     ),
-                    foregroundColor: const WidgetStatePropertyAll(Colors.white),
-                  ),
-                  onPressed: _open,
-                  icon: const Icon(Icons.image_outlined, size: galleryIconSize),
-                  label: Text(
-                    widget.photos.length > 1
-                        ? 'Ảnh ${_index + 1}/${widget.photos.length}'
-                        : 'Ảnh',
                   ),
                 ),
-                if (widget.onModel != null) ...[
-                  const SizedBox(width: 4),
-                  FilledButton.tonalIcon(
-                    style: galleryButtonStyle.copyWith(
-                      backgroundColor: const WidgetStatePropertyAll(
-                        Colors.white,
-                      ),
-                      foregroundColor: const WidgetStatePropertyAll(
-                        Color(0xff292929),
-                      ),
-                    ),
-                    onPressed: widget.onModel,
-                    icon: const Icon(
-                      Icons.view_in_ar_outlined,
-                      size: galleryIconSize,
-                    ),
-                    label: const Text('Xem 3D'),
-                  ),
-                ],
-                const Spacer(),
+                const SizedBox(width: 8),
+
                 IconButton.filledTonal(
                   tooltip: 'Mở ảnh toàn màn hình',
                   style: IconButton.styleFrom(

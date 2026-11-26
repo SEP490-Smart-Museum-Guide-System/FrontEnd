@@ -47,8 +47,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
   final Set<int> _selectedTopicIds = {};
   List<Map<String, dynamic>> _topicsMap = [];
   List<String> _topics = [];
-  bool _savedFailed = false;
-  late Future<List<Map<String, dynamic>>> _saved = _loadSaved();
+  late Future<List<Map<String, dynamic>>?> _saved = _loadSaved();
 
   // Curated Recommendation (WF-02) State
   bool _isRecommendingCurated = false;
@@ -57,8 +56,8 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
   bool _savingCurated = false;
   int? _savedTourVersionId;
 
-  Future<List<Map<String, dynamic>>> _loadSaved() async {
-    _savedFailed = false;
+  Future<List<Map<String, dynamic>>?> _loadSaved() async {
+    var curatedFailed = false;
     final combined = <Map<String, dynamic>>[];
     final parsedMuseumId = int.tryParse(_museumId);
 
@@ -67,14 +66,18 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
       for (final r in savedRoutes) {
         combined.add({...r, '_itemKind': 'curated_saved'});
       }
-    } catch (_) {}
+    } catch (_) {
+      curatedFailed = true;
+    }
 
     try {
       final aiSaved = await PersonalizedTourApi.saved();
       for (final p in aiSaved) {
         combined.add({...p, '_itemKind': 'ai_saved'});
       }
-    } catch (_) {}
+    } catch (_) {
+      if (curatedFailed) return null;
+    }
 
     return combined;
   }
@@ -1097,13 +1100,14 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         ],
         const SizedBox(height: 16),
         SectionHeading(l10n.isEn ? 'Saved Personal Journeys' : 'Hành trình cá nhân đã lưu'),
-        FutureBuilder<List<Map<String, dynamic>>>(
+        FutureBuilder<List<Map<String, dynamic>>?>(
           future: _saved,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (_savedFailed) {
+            final rows = snapshot.data;
+            if (rows == null) {
               return Column(
                 children: [
                   Notice(l10n.isEn ? 'Unable to load saved journeys.' : 'Chưa tải được hành trình đã lưu.'),
@@ -1119,7 +1123,6 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                 ],
               );
             }
-            final rows = snapshot.data ?? [];
             if (rows.isEmpty) {
               return Notice(l10n.isEn ? 'You have not saved any personal journeys yet.' : 'Bạn chưa lưu hành trình cá nhân nào.');
             }
