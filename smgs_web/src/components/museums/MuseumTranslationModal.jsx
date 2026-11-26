@@ -99,7 +99,7 @@ export default function MuseumTranslationModal({ museum, onClose, onSuccess, sho
               </p>
             </div>
           </div>
-          <button
+          <button aria-label="Đóng" className="dialog-icon-close"
             type="button"
             onClick={onClose}
             style={{

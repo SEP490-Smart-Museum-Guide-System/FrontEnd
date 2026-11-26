@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -53,7 +54,7 @@ const roleMeta = {
   }
 };
 
-export default function Header() {
+export default function Header({ setSearchHost, accountHost }) {
   const {
     currentUser,
     currentRole,
@@ -140,117 +141,8 @@ export default function Header() {
 
   const currentRoleInfo = roleMeta[currentRole] || roleMeta.administrator;
 
-  return (
-    <header className="topbar">
-      {/* Real-time Floating Toast Alert */}
-      <NotificationToast onNavigate={handleNotificationNavigate} />
-
-      {/* TopBar Left: Scope & Museum Indicator */}
-      <div className="topbar-left">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: 'var(--color-paper-accent)',
-              border: '1px solid var(--color-paper-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--color-burgundy-700)'
-            }}
-          >
-            <Landmark size={18} />
-          </div>
-
-          <div>
-            {!['museumStaff', 'curator'].includes(currentRole) ? (
-              <div>
-                <span className="museum-select-badge" style={{ fontWeight: '600' }}>
-                  HỆ THỐNG TOÀN QUỐC
-                </span>
-              </div>
-            ) : (
-              <div>
-                <span className="museum-select-badge" style={{ fontWeight: '600', color: 'var(--color-burgundy-900)' }}>
-                  <select
-                    aria-label="Bảo tàng đang xem"
-                    value={selectedMuseumId ?? ''}
-                    onChange={(e) => setSelectedMuseumId(Number(e.target.value))}
-                  >
-                    <option value="" disabled>
-                      Chọn bảo tàng
-                    </option>
-                    {museums.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* TopBar Right: Notifications & User Identity */}
-      <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Central Notification Bell for all logged-in roles */}
-        <div ref={notifRef} style={{ position: 'relative' }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-            style={{
-              padding: '8px',
-              borderRadius: '50%',
-              width: '38px',
-              height: '38px',
-              position: 'relative'
-            }}
-            title={unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Thông báo'}
-            aria-label="Thông báo"
-            aria-expanded={isNotificationOpen}
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
-                  background: 'var(--color-burgundy-700)',
-                  color: '#FFF',
-                  fontSize: '0.65rem',
-                  fontWeight: '700',
-                  minWidth: '18px',
-                  height: '18px',
-                  padding: '0 4px',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px solid #FFF',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
-                }}
-              >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
-
-          {/* Notification Dropdown Panel */}
-          {isNotificationOpen && (
-            <NotificationCenter
-              onClose={() => setIsNotificationOpen(false)}
-              onNavigate={handleNotificationNavigate}
-            />
-          )}
-        </div>
-
-        {/* Current User Identity Box with Account Switcher Dropdown */}
+  const sidebarAccount = ['administrator', 'museumStaff'].includes(currentRole);
+  const accountMenu = (
         <div ref={switchRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -419,6 +311,117 @@ export default function Header() {
             </div>
           )}
         </div>
+  );
+
+  return (
+    <header className="topbar">
+      {/* Real-time Floating Toast Alert */}
+      {sidebarAccount && <div className="admin-search" ref={setSearchHost} />}
+      <NotificationToast onNavigate={handleNotificationNavigate} />
+
+      {/* TopBar Left: Scope & Museum Indicator */}
+      {['museumStaff', 'curator'].includes(currentRole) && (
+      <div className="topbar-left">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'var(--color-paper-accent)',
+              border: '1px solid var(--color-paper-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-burgundy-700)'
+            }}
+          >
+            <Landmark size={18} />
+          </div>
+
+          <div>
+            <span className="museum-select-badge" style={{ fontWeight: '600', color: 'var(--color-burgundy-900)' }}>
+              <select
+                aria-label="Bảo tàng đang xem"
+                value={selectedMuseumId ?? ''}
+                onChange={(e) => setSelectedMuseumId(Number(e.target.value))}
+              >
+                <option value="" disabled>
+                  Chọn bảo tàng
+                </option>
+                {museums.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      )}
+
+      {/* TopBar Right: Notifications & User Identity */}
+      <div className="topbar-right" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+        {/* Central Notification Bell for all logged-in roles */}
+        <div ref={notifRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            style={{
+              padding: '8px',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              position: 'relative'
+            }}
+            title={unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Thông báo'}
+            aria-label="Thông báo"
+            aria-expanded={isNotificationOpen}
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  background: 'var(--color-burgundy-700)',
+                  color: '#FFF',
+                  fontSize: '0.65rem',
+                  fontWeight: '700',
+                  minWidth: '18px',
+                  height: '18px',
+                  padding: '0 4px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #FFF',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Dropdown Panel */}
+          {isNotificationOpen && (
+            <NotificationCenter
+              onClose={() => setIsNotificationOpen(false)}
+              onNavigate={handleNotificationNavigate}
+            />
+          )}
+        </div>
+
+        {/* Current User Identity Box with Account Switcher Dropdown */}
+        {sidebarAccount && accountHost ? createPortal(<>
+          {accountMenu}
+          <button type="button" className="admin-signout" onClick={logout} title="Đăng xuất" aria-label="Đăng xuất"><LogOut size={16} /></button>
+        </>, accountHost) : accountMenu}
       </div>
     </header>
   );

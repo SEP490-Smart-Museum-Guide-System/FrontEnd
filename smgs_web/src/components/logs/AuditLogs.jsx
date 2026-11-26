@@ -136,7 +136,7 @@ export default function AuditLogs() {
       {/* Tab 2: Live Audit Stream */}
       {activeTab === 'audit_stream' && (
         <div className="card">
-          <div className="card-header" style={{ background: '#FAF7F2' }}>
+          <div className="card-header" style={{ background: 'var(--admin-bg, #FAF7F2)' }}>
             <div className="card-title">
               <ShieldAlert size={18} color="var(--color-burgundy-700)" />
               <span>Dòng sự kiện kiểm toán thời gian thực ({liveAuditTrail.length} bản ghi)</span>
@@ -200,7 +200,7 @@ export default function AuditLogs() {
       {activeTab === 'environment' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="card">
-            <div className="card-header" style={{ background: '#FAF7F2' }}>
+            <div className="card-header" style={{ background: 'var(--admin-bg, #FAF7F2)' }}>
               <div className="card-title">
                 <Server size={18} color="var(--color-burgundy-700)" />
                 <span>Thông số Môi trường Runtime của Hệ thống</span>

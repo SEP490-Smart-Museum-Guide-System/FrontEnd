@@ -116,7 +116,7 @@ export default function ArtifactMediaPanel({ artifactId, readOnly }) {
     </div>)}</div>
 
     {/* AI Vision Reference Management */}
-    <div style={{ marginTop: 16, marginBottom: 16, padding: 12, background: 'var(--color-bg-secondary, #faf7f2)', borderRadius: 8, border: '1px dashed var(--color-gold, #c5a059)' }}>
+    <div style={{ marginTop: 16, marginBottom: 16, padding: 12, background: 'var(--admin-bg, var(--color-bg-secondary, #faf7f2))', borderRadius: 8, border: '1px dashed var(--color-gold, #c5a059)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div>
           <strong style={{ fontSize: '0.9rem' }}>🤖 Nhận diện AI Vision (Port 8001)</strong>

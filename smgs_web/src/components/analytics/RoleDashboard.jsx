@@ -3,7 +3,7 @@ import { backend } from '../../services/backend';
 import { useData } from '../common/BusinessUI';
 import { useApp } from '../../context/AppContext';
 import {
-  ArrowRight, Building2, CheckSquare, ClipboardCheck, CreditCard,
+  FileText, ArrowRight, Building2, CheckSquare, ClipboardCheck, CreditCard,
   Layers, MessageSquare, QrCode, ShieldCheck, Sparkles, Users
 } from 'lucide-react';
 
@@ -54,8 +54,8 @@ export default function RoleDashboard({ onNavigate }) {
 
   const config = currentRole === 'administrator' ? {
     eyebrow: 'Quản trị toàn hệ thống',
-    title: 'Toàn cảnh vận hành SMGS',
-    description: 'Theo dõi tài khoản, bảo tàng và giao dịch của hệ thống theo số liệu thời gian thực từ Backend.',
+    title: 'Tổng quan hệ thống',
+    description: 'Theo dõi tài khoản, bảo tàng và giao dịch theo số liệu thời gian thực.',
     primary: ['Quản lý người dùng', 'users'],
     secondary: ['Xem giao dịch', 'transactions'],
     metrics: [
@@ -194,13 +194,15 @@ export default function RoleDashboard({ onNavigate }) {
                 <div><strong>{row.title}</strong><small>{row.subtitle}</small></div>
                 <span className={`badge-status badge-${row.status}`}>{row.badge}</span>
               </div>
-            )) : <div className="role-dashboard-row">Chưa có nội dung trong mục này.</div>}
+            )) : currentRole === 'administrator' ? <div className="admin-empty"><FileText size={24} /><strong>Chưa có giao dịch</strong><small>Giao dịch mới sẽ xuất hiện tại đây.</small></div> : <div className="role-dashboard-row">Chưa có nội dung trong mục này.</div>}
           </div>
         </section>
         <aside className="card role-dashboard-aside">
           <ShieldCheck size={24} color="var(--color-burgundy-700)" />
           <h2 className="card-title">{config.asideTitle}</h2>
-          <p>{config.asideText}</p>
+          {currentRole === 'administrator' && d ? <dl className="admin-watch">
+            {[[d.overview?.totalArtifacts, 'Hiện vật trong hệ thống'], [d.engagement?.totalVisits, 'Lượt tham quan'], [d.supportAndFeedback?.totalComplaints, 'Khiếu nại đã tiếp nhận']].map(([value, label]) => <div key={label}><dt>{label}</dt><dd>{value ?? 0}</dd></div>)}
+          </dl> : <p>{config.asideText}</p>}
           <button type="button" className="btn btn-secondary" onClick={() => onNavigate(config.asideAction[1])}>
             {config.asideAction[0]} <ArrowRight size={16} />
           </button>

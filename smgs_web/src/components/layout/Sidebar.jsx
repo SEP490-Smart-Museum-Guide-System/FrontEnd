@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
@@ -24,7 +25,7 @@ import {
   Map
 } from 'lucide-react';
 
-export default function Sidebar() {
+export default function Sidebar({ searchHost, setAccountHost }) {
   const { currentRole, currentMuseum, activeTab, setActiveTab, curationQueue, reviews, artifacts } = useApp();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -151,7 +152,8 @@ export default function Sidebar() {
   ];
   const navSections = groups.map(([title, ids]) => ({ title, items: ids.map(id => original.find(item => item.id === id)).filter(Boolean) }));
   const activeSection = navSections.find(section => section.items.some(item => item.id === activeTab))?.title;
-  const [expanded, setExpanded] = useState(() => new Set([navSections[0].title, activeSection]));
+  const staticSidebar = ['administrator', 'museumStaff'].includes(currentRole);
+  const [expanded, setExpanded] = useState(() => new Set(staticSidebar ? navSections.map(section => section.title) : [navSections[0].title, activeSection]));
   useEffect(() => { setExpanded(previous => new Set([...previous, activeSection])); }, [activeSection]);
 
   // Quick-access: first 3 items from the first group (most important)
@@ -203,24 +205,18 @@ export default function Sidebar() {
     setSearchTerm('');
   }, [setActiveTab]);
 
-  return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      {/* Sidebar Header */}
-      <div className="sidebar-header">
-        <div className="sidebar-logo-icon">
-          <span>🏛</span>
-        </div>
-        {!collapsed && (
-          <div className="sidebar-brand-text">
-            <h1>SMGS · DI SẢN</h1>
-            <p>Không gian nghiệp vụ</p>
-          </div>
-        )}
-      </div>
-
-      {/* Command Search Bar */}
-      {!collapsed && (
-        <div className="sidebar-search-area">
+  const collapseButton = (
+    <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={() => setCollapsed(prev => !prev)}
+            title={collapsed ? 'Mở rộng thanh bên (Ctrl+B)' : 'Thu gọn thanh bên (Ctrl+B)'}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+  );
+  const searchBar = (
+    <div className="sidebar-search-area">
           {searchOpen ? (
             <div className="sidebar-search-input-wrap">
               <Search size={14} />
@@ -242,8 +238,8 @@ export default function Sidebar() {
           ) : (
             <button type="button" className="sidebar-search-trigger" onClick={() => setSearchOpen(true)}>
               <Search size={14} />
-              <span>Tìm nhanh…</span>
-              <kbd>⌘K</kbd>
+              <span>{staticSidebar ? 'Tìm nhanh trong hệ thống' : 'Tìm nhanh…'}</span>
+              <kbd>Ctrl K</kbd>
             </button>
           )}
 
@@ -265,10 +261,29 @@ export default function Sidebar() {
             </div>
           )}
         </div>
-      )}
+  );
+
+  return (
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      {/* Sidebar Header */}
+      <div className="sidebar-header">
+        {staticSidebar && !collapsed && <div className="admin-collapse">{collapseButton}</div>}
+        <div className="sidebar-logo-icon">
+          {staticSidebar ? <Compass size={26} /> : <span>🏛</span>}
+        </div>
+        {!collapsed && (
+          <div className="sidebar-brand-text">
+            <h1>{staticSidebar ? 'SMGS' : 'SMGS · DI SẢN'}</h1>
+            <p>Không gian nghiệp vụ</p>
+          </div>
+        )}
+      </div>
+
+      {/* Command Search Bar */}
+      {staticSidebar && searchHost ? createPortal(searchBar, searchHost) : !collapsed && searchBar}
 
       {/* Quick Access Section */}
-      {!collapsed && (
+      {!staticSidebar && !collapsed && (
         <div className="sidebar-quick-access">
           {quickItems.map(item => {
             const Icon = item.icon;
@@ -294,7 +309,9 @@ export default function Sidebar() {
       <div className="sidebar-menu">
         {navSections.map((sec, sIdx) => (
           <section key={sec.title} className="nav-section">
-            {!collapsed ? (
+            {!collapsed && staticSidebar ? (
+              <h2 className="admin-nav-heading">{sec.title}</h2>
+            ) : !collapsed ? (
               <button type="button" className="nav-section-toggle" aria-expanded={expanded.has(sec.title)} aria-controls={`nav-section-${sIdx}`} onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(sec.title)) next.delete(sec.title); else next.add(sec.title); return next; })}>
                 {sec.title}
                 <ChevronRight size={14} className={`nav-section-chevron ${expanded.has(sec.title) ? 'is-open' : ''}`} />
@@ -302,7 +319,7 @@ export default function Sidebar() {
             ) : (
               <div className="nav-section-divider" />
             )}
-            <div id={`nav-section-${sIdx}`} hidden={!collapsed && !expanded.has(sec.title)}>
+            <div id={`nav-section-${sIdx}`} hidden={!staticSidebar && !collapsed && !expanded.has(sec.title)}>
             {sec.items.map((item, itemIdx) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -332,8 +349,9 @@ export default function Sidebar() {
 
       {/* Sidebar Footer */}
       <div className="sidebar-footer">
+        {staticSidebar && !collapsed && <div ref={setAccountHost} className="admin-account" />}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {!collapsed && (
+          {!collapsed && !staticSidebar && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{
                 width: '8px',
@@ -345,16 +363,9 @@ export default function Sidebar() {
               <span style={{ fontSize: '0.75rem', color: 'var(--color-gold-100)' }}>Bản giao diện thử nghiệm</span>
             </div>
           )}
-          <button
-            type="button"
-            className="sidebar-collapse-btn"
-            onClick={() => setCollapsed(prev => !prev)}
-            title={collapsed ? 'Mở rộng thanh bên (Ctrl+B)' : 'Thu gọn thanh bên (Ctrl+B)'}
-          >
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          </button>
+          {(collapsed || !staticSidebar) && collapseButton}
         </div>
-        {!collapsed && (
+        {!collapsed && !staticSidebar && (
           <small style={{ display: 'block', marginTop: '8px', color: 'var(--color-gold-100)' }}>Khách tham quan sử dụng ứng dụng di động.</small>
         )}
       </div>

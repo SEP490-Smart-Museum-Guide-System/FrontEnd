@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { formatOpeningHours, parseOpeningHours, weekDays } from '../../services/openingHours';
-export default function OpeningHoursPicker({ value, onChange, disabled }) {
+export default function OpeningHoursPicker({ value, onChange, disabled, compact = false }) {
   const [draft, setDraft] = useState(() => parseOpeningHours(value));
   const endInput = useRef(null);
   const error = draft.start && draft.end && draft.end <= draft.start ? 'Giờ đóng cửa phải sau giờ mở cửa.'
@@ -17,8 +17,8 @@ export default function OpeningHoursPicker({ value, onChange, disabled }) {
           onChange={e => update({ ...draft, end: e.target.value })} /></label>
       </div>
       <p style={{ marginTop: 10, marginBottom: 6 }}>Ngày mở cửa trong tuần</p>
-      <div style={{ display: 'flex', gap: '8px 14px', flexWrap: 'wrap' }}>{weekDays.map((name, index) => <label key={name} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <input type="checkbox" checked={draft.days.includes(index)} onChange={e => update({ ...draft, days: e.target.checked ? [...draft.days, index] : draft.days.filter(i => i !== index) })} />{name}
+      <div className={compact ? 'admin-weekdays' : undefined} style={compact ? undefined : { display: 'flex', gap: '8px 14px', flexWrap: 'wrap' }}>{weekDays.map((name, index) => <label key={name} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input type="checkbox" aria-label={name} checked={draft.days.includes(index)} onChange={e => update({ ...draft, days: e.target.checked ? [...draft.days, index] : draft.days.filter(i => i !== index) })} />{compact ? (index === 6 ? 'CN' : `T${index + 2}`) : name}
       </label>)}</div>
       {error && <p role="alert">{error}</p>}
       {(draft.start || draft.end) && <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={() => update(parseOpeningHours(''))}>Xóa lịch mở cửa</button>}

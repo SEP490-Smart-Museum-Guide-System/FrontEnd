@@ -60,8 +60,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
   const change = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const close = () => { if (!busy) onClose(); };
 
-  function handleFileSelect(e) {
-    const newFiles = Array.from(e.target.files || []);
+  function addImages(newFiles) {
     if (!newFiles.length) return;
 
     const validFiles = [];
@@ -84,7 +83,6 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     if (validFiles.length > 0) {
       setSelectedFiles(prev => [...prev, ...validFiles]);
     }
-    e.target.value = '';
   }
 
   function handleRemoveFile(index) {
@@ -132,17 +130,18 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
     }
   }
 
+  const creating = !artifact?.id;
   return createPortal(<div className="modal-overlay" onClick={close}>
-    <div className="modal-dialog" style={{ maxWidth: 640, width: '95vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+    <div role="dialog" aria-modal="true" aria-labelledby="artifact-editor-title" className={creating ? 'modal-dialog admin-form-dialog artifact-create' : 'modal-dialog'} style={{ maxWidth: creating ? 720 : 640, width: '95vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
       <div className="modal-header">
-        <h3>{artifact?.id ? 'Chỉnh sửa hiện vật' : 'Thêm hiện vật'}</h3>
-        <button type="button" disabled={busy} onClick={close}>Đóng</button>
+        <h3 id="artifact-editor-title">{artifact?.id ? 'Chỉnh sửa hiện vật' : 'Thêm hiện vật'}</h3>
+        <button type="button" disabled={busy} aria-label="Đóng" onClick={close}>{creating ? '×' : 'Đóng'}</button>
       </div>
       <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-        <div className="modal-body" style={{ display: 'grid', gap: 16, overflowY: 'auto', paddingRight: 6 }}>
+        <div className="modal-body" style={{ display: 'grid', gap: 16, overflowY: 'auto', paddingRight: creating ? undefined : 6 }}>
           <label className="form-group">
-            Tên hiện vật
-            <input className="form-input" required maxLength={200} value={form.name} onChange={e => change('name', e.target.value)} />
+            <span>Tên hiện vật {creating && <span aria-hidden="true">*</span>}</span>
+            <input className="form-input" aria-label="Tên hiện vật" placeholder={creating ? 'Ví dụ: Khối tiền đồng thế kỷ 18' : undefined} required maxLength={200} value={form.name} onChange={e => change('name', e.target.value)} />
           </label>
           {artifact?.id && (
             <label className="form-group">
@@ -150,6 +149,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
               <input className="form-input" maxLength={100} value={form.code} onChange={e => change('code', e.target.value)} />
             </label>
           )}
+          <div className={creating ? 'admin-form-pair' : undefined} style={creating ? undefined : { display: 'contents' }}>
           <label className="form-group">
             Bảo tàng
             <select className="form-select" required disabled={busy || !!form.id || currentRole !== 'administrator'} value={form.museumId} onChange={e => {
@@ -161,7 +161,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
               {museums.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </label>
-          {error && <p role="alert" style={{ color: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}><AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />{error}</p>}
+
           <label className="form-group">
             Phòng trưng bày
             <select className="form-select" disabled={!!error && galleries.length === 0} value={form.galleryId} onChange={e => change('galleryId', e.target.value)}>
@@ -171,6 +171,8 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
             </select>
           </label>
 
+          </div>
+          {error && <p role="alert" style={{ color: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}><AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />{error}</p>}
           {!artifact?.id && (
             <fieldset className="form-group" disabled={busy || !!form.id}>
               <legend>Chủ đề</legend>
@@ -179,7 +181,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
               {form.museumId && !topics && !topicError && <p role="status">Đang tải chủ đề…</p>}
               {topics?.length === 0 && <p>Bảo tàng chưa có chủ đề đang hoạt động.</p>}
               {topics?.length > 0 && (
-                <div style={{ display: 'grid', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                <div className="artifact-topic-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
                   {topics.map(topic => (
                     <label key={topic.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input type="checkbox" checked={form.topicIds.includes(topic.id)} onChange={e => {
@@ -221,7 +223,11 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                 transition: 'all 0.2s',
                 marginBottom: selectedFiles.length > 0 ? 12 : 0
               }}
-              onClick={() => !busy && fileInputRef.current?.click()}
+              className="artifact-dropzone" role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); if (!busy) addImages(e.dataTransfer.files); }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!busy) fileInputRef.current?.click(); } }}
+              onClick={e => { if (!busy && e.target !== fileInputRef.current) fileInputRef.current?.click(); }}
             >
               <input
                 ref={fileInputRef}
@@ -230,7 +236,7 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
                 accept=".png,.jpg,.jpeg,.webp"
                 style={{ display: 'none' }}
                 disabled={busy}
-                onChange={handleFileSelect}
+                onChange={e => { addImages(e.target.files); e.target.value = ''; }}
               />
               <UploadCloud style={{ width: 26, height: 26, margin: '0 auto 6px', color: '#8c6d58', opacity: 0.85 }} />
               <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 500, color: 'var(--color-ink, #3d332a)' }}>
@@ -301,8 +307,8 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
             )}
           </div>
 
-          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#78716c', fontStyle: 'italic' }}>
-            Ảnh được chọn sẽ tự động tải lên sau khi tạo hiện vật. Âm thanh thuyết minh và mô hình 3D có thể bổ sung trong chi tiết hiện vật; vị trí được gắn trên bản đồ bảo tàng.
+          <p className="artifact-upload-note" style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#78716c', fontStyle: 'italic' }}>
+            {creating && <AlertCircle size={15} />} Ảnh được chọn sẽ tự động tải lên sau khi tạo hiện vật. Âm thanh thuyết minh và mô hình 3D có thể bổ sung trong chi tiết hiện vật; vị trí được gắn trên bản đồ bảo tàng.
           </p>
         </div>
 

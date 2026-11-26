@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { UploadCloud } from 'lucide-react';
+import { Image as ImageIcon, UploadCloud } from 'lucide-react';
 import { uploadMedia, validateMediaFile } from '../../services/mediaApi';
 import { uploadBatch } from '../../services/uploadBatch';
 import { useApp } from '../../context/AppContext';
 
-export default function MediaUpload({ path, model = false, multiple = false, onSaved, label = 'Tải ảnh lên' }) {
+export default function MediaUpload({ path, model = false, multiple = false, compact = false, onSaved, label = 'Tải ảnh lên' }) {
   const { showToast } = useApp();
   const [busy, setBusy] = useState(false), [progress, setProgress] = useState(null);
   const [failures, setFailures] = useState([]);
+  const inputId = React.useId();
+  const fileInput = useRef(null);
   const controller = useRef(null), lock = useRef(false), alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; controller.current?.abort(); }; }, []);
   async function upload(files) {
@@ -35,7 +37,9 @@ export default function MediaUpload({ path, model = false, multiple = false, onS
     lock.current = false;
   }
   return <div className="media-upload" aria-busy={busy}>
-    <label className="upload-dropzone">
+    {compact ? <button type="button" className="btn cover-change" disabled={busy} onClick={() => fileInput.current?.click()}>
+      <ImageIcon size={16} /> {busy ? 'Đang tải…' : label}
+    </button> : <label htmlFor={inputId} className="upload-dropzone">
       <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px', border: '1px solid var(--color-paper-border)' }}>
         <UploadCloud size={24} color="var(--color-burgundy-900)" />
       </div>
@@ -46,7 +50,10 @@ export default function MediaUpload({ path, model = false, multiple = false, onS
       <span className="btn btn-secondary btn-sm" style={{ pointerEvents: 'none', fontSize: '0.78rem', height: '32px', gap: '6px' }}>
         <UploadCloud size={14} /> Chọn tệp từ thiết bị
       </span>
+    </label>}
       <input
+        ref={fileInput}
+        id={inputId}
         type="file"
         aria-label={label}
         accept={model ? '.glb' : '.png,.jpg,.jpeg,.webp'}
@@ -55,7 +62,6 @@ export default function MediaUpload({ path, model = false, multiple = false, onS
         style={{ display: 'none' }}
         onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; upload(files); }}
       />
-    </label>
     {busy && <div role="status" className="upload-progress">
       <span>{progress ? `${progress.index + 1}/${progress.total} · ${progress.file.name}` : 'Đang chuẩn bị tệp…'}</span>
       <progress max="100" value={progress?.progress || 0} aria-label="Tiến trình tải tệp" />

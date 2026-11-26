@@ -149,7 +149,7 @@ export default function MuseumStaffAssignModal({ museum, onClose, onAssigned }) 
               </p>
             </div>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
+          <button aria-label="Đóng" type="button" className="dialog-icon-close btn btn-secondary btn-sm" onClick={onClose}>
             <X size={16} />
           </button>
         </div>

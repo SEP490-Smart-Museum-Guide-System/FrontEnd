@@ -132,7 +132,7 @@ export default function ArtifactPhotoGalleryModal({ artifact, initialIndex = 0, 
             </div>
           )}
 
-          <button
+          <button aria-label="Đóng" className="dialog-icon-close"
             type="button"
             onClick={onClose}
             style={{

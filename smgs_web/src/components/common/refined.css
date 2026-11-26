@@ -848,7 +848,7 @@ td .action-trigger .action-trigger-label {
 
 .upload-dropzone:hover {
   border-color: var(--color-burgundy-600);
-  background: #faf7f2;
+  background: var(--admin-bg, #faf7f2);
 }
 
 .upload-dropzone input[type="file"] {
@@ -862,7 +862,7 @@ td .action-trigger .action-trigger-label {
   justify-content: space-between;
   position: relative;
   padding: 10px 16px;
-  background: #faf7f2;
+  background: var(--admin-bg, #faf7f2);
   border: 1px solid var(--color-paper-border);
   border-radius: 12px;
   margin-bottom: 16px;

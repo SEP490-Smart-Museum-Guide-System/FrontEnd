@@ -201,9 +201,7 @@ void main() {
         find.textContaining('Cá nhân hóa là lựa chọn thêm.'),
         findsOneWidget,
       );
-      expect(find.text('Xem tour có sẵn'), findsOneWidget);
-      expect(find.text('Tham quan tự do'), findsOneWidget);
-      await tapText(tester, 'Gợi ý theo sở thích');
+      await tapText(tester, 'Tour AI hóa');
       expect(find.byType(TourRouteScreen), findsNothing);
       expect(VisitStore.instance.history, isEmpty);
       expect(tester.takeException(), isNull);

@@ -114,7 +114,7 @@ export default function TransactionManager() {
 
       {/* Transaction History Section */}
       <div className="card">
-        <div className="card-header" style={{ background: '#FAF7F2' }}>
+        <div className="card-header" style={{ background: 'var(--admin-bg, #FAF7F2)' }}>
           <div className="card-title">
             <CreditCard size={18} color="var(--color-burgundy-700)" />
             <span>Đơn hàng từ hệ thống</span>

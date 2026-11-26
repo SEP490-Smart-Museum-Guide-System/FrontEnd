@@ -1,3 +1,4 @@
+import { ChevronDown, ExternalLink, Landmark, Map as MapIcon } from 'lucide-react';
 import { mapLabel } from './mapLabel.js';
 import StructureManager from './StructureManager';
 import { uploadMedia } from '../../services/mediaApi';
@@ -12,6 +13,7 @@ const tools = { marker: 'Thêm điểm đánh dấu', node: 'Thêm điểm dẫn
 
 export default function IndoorMapManager() {
   const { currentRole, registerNavigationGuard } = useApp();
+  const useMapLayout = ['administrator', 'museumStaff'].includes(currentRole);
   const [museums, setMuseums] = useState([]);
   const [museumId, setMuseumId] = useState('');
   const [structure, setStructure] = useState(null);
@@ -151,17 +153,24 @@ export default function IndoorMapManager() {
   const options = items => items.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>);
 
   return <section className="indoor-page" onKeyDown={e => { if (e.key === 'Escape') { setTool(''); setConnectFrom(null); } }}>
-    <h1>Bản đồ trong bảo tàng</h1>
+    {useMapLayout ? <header className="map-admin-heading">
+      <div><small>NỘI DUNG & TRẢI NGHIỆM</small><h1>Bản đồ trong bảo tàng</h1>
+        <p>Quản lý sơ đồ, điểm thông tin và đường đi trong phạm vi bảo tàng được phân công.</p></div>
+      <a className="btn btn-secondary" href={map ? `/visitor-map?map=${map.id}&preview=draft` : '/visitor-map'} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Xem thử phía khách</a>
+    </header> : <><h1>Bản đồ trong bảo tàng</h1>
     <a href={map ? `/visitor-map?map=${map.id}&preview=draft` : '/visitor-map'} target="_blank" rel="noreferrer">Xem thử phía khách {map ? '(bản nháp đã lưu)' : '(bản đồ mẫu)'} ↗</a>
-    <p>Quản lý sơ đồ, điểm thông tin và đường đi trong phạm vi bảo tàng được phân công.</p>
-    
+    <p>Quản lý sơ đồ, điểm thông tin và đường đi trong phạm vi bảo tàng được phân công.</p></>}
     {error && <div className="indoor-error" role="alert">{error}</div>}
     {message && <div className="indoor-message" role="status">{message}</div>}
     {busy && <p role="status">Đang xử lý…</p>}
     {uploadProgress !== null && <progress value={uploadProgress} max="100" aria-label="Tiến trình tải sơ đồ" />}
     {!busy && !museums.length && <p>Bạn chưa được phân công quản lý bảo tàng. Liên hệ quản trị viên để được cấp quyền.</p>}
     <fieldset disabled={busy}>
-      <label>Bảo tàng<select value={museumId} onChange={e => { if (discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
+      <label className={useMapLayout ? 'map-museum-picker' : undefined}>{useMapLayout ? <>
+        <Landmark size={14} aria-hidden="true" />
+        <span>{museums.find(museum => String(museum.id) === String(museumId))?.name || 'Chọn bảo tàng'}</span>
+        <ChevronDown size={12} aria-hidden="true" />
+      </> : 'Bảo tàng'}<select aria-label="Bảo tàng" value={museumId} onChange={e => { if (discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
 
       {structure && !structure.floors.length && <p>Vào Cấu trúc bảo tàng để thêm tòa nhà và tầng trước khi tạo sơ đồ.</p>}
       {structure && <div className="indoor-box indoor-management">
@@ -181,6 +190,11 @@ export default function IndoorMapManager() {
               <label>Chọn tòa nhà<select value={buildingId} onChange={e => { setBuildingId(e.target.value); setFloorId(''); }}><option value="">Chọn tòa nhà</option>{options(structure.buildings)}</select></label>
               <label>Chọn tầng<select value={floorId} disabled={!buildingId} onChange={e => setFloorId(e.target.value)}><option value="">Chọn tầng</option>{options(structure.floors.filter(f => String(f.buildingId) === buildingId))}</select></label>
             </div>
+            {useMapLayout && !floorId && <div className="map-start-panel">
+              <span><MapIcon size={22} /></span>
+              <strong>Chọn tòa nhà và tầng để bắt đầu</strong>
+              <small>Sơ đồ mới sẽ được tạo cho tầng bạn chọn.</small>
+            </div>}
             {maps.some(m => String(m.floorId) === floorId) && <p role="status">Phạm vi này đã có sơ đồ. Chọn tab Sơ đồ hiện có để chỉnh sửa.</p>}
             <button type="button" disabled={!floorId || maps.some(m => String(m.floorId) === floorId)} onClick={() => { if (discard()) run(async () => {
               const floor = structure.floors.find(f => String(f.id) === floorId);
