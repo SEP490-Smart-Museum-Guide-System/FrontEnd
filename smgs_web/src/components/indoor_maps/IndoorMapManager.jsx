@@ -121,7 +121,7 @@ export default function IndoorMapManager() {
     }
     setTool('');
   }
-  function remove() {
+  async function remove() {
     if (!selected) return;
     const prompt = selected.kind === 'nodes' ? 'Xóa điểm này và các đoạn nối liên quan? Các điểm đánh dấu liên kết sẽ cần chọn lại điểm dẫn đường.' : 'Xóa đối tượng đang chọn?';
     if (!await confirmAppDialog(prompt, { title: 'Xác nhận xóa đối tượng', destructive: true, confirmText: 'Xóa đối tượng' })) return;
