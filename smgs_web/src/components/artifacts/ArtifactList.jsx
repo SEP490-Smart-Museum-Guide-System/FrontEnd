@@ -1,4 +1,5 @@
 import ActionGroup from '../common/ActionGroup';
+import { confirmAppDialog } from '../common/appDialogs';
 import { artifactReviewLabels } from '../../services/backend';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -436,8 +437,8 @@ export default function ArtifactList({ onOpenAIStudio }) {
                           {currentRole === 'administrator' && (
                             <button
                               type="button"
-                              onClick={() => {
-                                if (window.confirm(`Bạn có chắc muốn xóa hiện vật "${art.name}"?`)) {
+                              onClick={async () => {
+                                if (await confirmAppDialog(`Bạn có chắc muốn xóa hiện vật "${art.name}"?`, { title: 'Xác nhận xóa', destructive: true, confirmText: 'Xóa hiện vật' })) {
                                   deleteArtifact(art.id);
                                 }
                               }}

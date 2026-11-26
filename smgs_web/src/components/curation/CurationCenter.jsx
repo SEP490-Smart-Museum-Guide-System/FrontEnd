@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { alertAppDialog } from '../common/appDialogs';
 import {
   Check,
   CheckSquare,
@@ -211,7 +212,7 @@ export default function CurationCenter() {
   const submitDecision = async () => {
     if (!decision || !selected) return;
     if (decision !== 'approve' && !note.trim()) {
-      alert('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi từ chối.');
+      alertAppDialog('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi từ chối.', { title: 'Cần ghi chú chuyên môn' });
       return;
     }
 

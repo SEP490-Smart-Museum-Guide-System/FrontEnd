@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { confirmAppDialog } from '../common/appDialogs';
 import { useApp } from '../../context/AppContext';
 import {
   CreditCard,
@@ -189,8 +190,8 @@ export default function TransactionManager() {
                     {currentRole === 'administrator' && t.status === 'completed' && (
                       <button
                         type="button"
-                        onClick={() => {
-                          if (window.confirm(`Xác nhận hoàn tiền cho giao dịch ${t.id} (${t.amount.toLocaleString()} đ)?`)) {
+                        onClick={async () => {
+                          if (await confirmAppDialog(`Xác nhận hoàn tiền cho giao dịch ${t.id} (${t.amount.toLocaleString()} đ)?`, { title: 'Xác nhận hoàn tiền', destructive: true, confirmText: 'Hoàn tiền' })) {
                             refundTransaction(t.id);
                           }
                         }}

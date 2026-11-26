@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ActionGroup from '../common/ActionGroup';
 import { createPortal } from 'react-dom';
+import { alertAppDialog } from '../common/appDialogs';
 import { useApp } from '../../context/AppContext';
 import { allPages } from '../../services/backend';
 import {
@@ -157,7 +158,7 @@ export default function TourManager() {
   const handleCreateTour = async (e) => {
     e.preventDefault();
     if (!tourForm.title) {
-      alert('Vui lòng nhập tên hành trình tham quan');
+      alertAppDialog('Vui lòng nhập tên hành trình tham quan', { title: 'Thiếu thông tin' });
       return;
     }
     const data = {

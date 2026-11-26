@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import '@google/model-viewer';
 import ArtifactModelViewer, { isSketchfabUrl } from '../common/ArtifactModelViewer';
+import { confirmAppDialog } from '../common/appDialogs';
 import { mediaApi, uploadMedia } from '../../services/mediaApi';
 import { Modal, Field } from '../common/BusinessUI';
 import {
@@ -247,8 +248,8 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     setMessage(found ? 'Đã tải lại tác vụ trên máy chủ. Kiểm tra trạng thái trước khi gửi bộ ảnh mới.' : 'Máy chủ chưa có tác vụ cho hiện vật này. Bạn có thể gửi lại bộ ảnh.');
   });
 
-  const cancel = () => {
-    if (!job?.scanJobId || !window.confirm('Hủy tác vụ dựng 3D này? Bộ ảnh và log vẫn được giữ lại.')) return;
+  const cancel = async () => {
+    if (!job?.scanJobId || !await confirmAppDialog('Hủy tác vụ dựng 3D này? Bộ ảnh và log vẫn được giữ lại.', { title: 'Xác nhận hủy tác vụ', destructive: true, confirmText: 'Hủy tác vụ' })) return;
     perform(async () => {
       const next = await cancelScanJob(artifactId, job.scanJobId);
       setJob(next);
@@ -258,8 +259,8 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     });
   };
 
-  const save = () => {
-    if (model && !window.confirm('Thay mô hình hiện đang lưu bằng bản xem thử này?')) return;
+  const save = async () => {
+    if (model && !await confirmAppDialog('Thay mô hình hiện đang lưu bằng bản xem thử này?', { title: 'Thay mô hình 3D?', destructive: true, confirmText: 'Thay mô hình' })) return;
     perform(async signal => {
       if (draft.source === 'scan') {
         await saveScanModel(artifactId, draft.jobId);
@@ -276,8 +277,8 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     });
   };
 
-  const remove = () => {
-    if (!window.confirm('Xóa mô hình đã lưu của hiện vật này?')) return;
+  const remove = async () => {
+    if (!await confirmAppDialog('Xóa mô hình đã lưu của hiện vật này?', { title: 'Xác nhận xóa mô hình', destructive: true, confirmText: 'Xóa mô hình' })) return;
     perform(async () => {
       await mediaApi(path, { method: 'DELETE' });
       setModel(null);

@@ -91,8 +91,8 @@ function DataProvider({ children, session, login, endSession }) {
   const [pendingNotificationTarget, setPendingNotificationTarget] = useState(null);
   const guard = useRef(null);
   const registerNavigationGuard = useCallback(fn => { guard.current = fn; return () => { if (guard.current === fn) guard.current = null; }; }, []);
-  const setActiveTab = tab => { if (!guard.current || guard.current()) setActiveTabState(tab); };
-  const logout = () => { if (!guard.current || guard.current()) endSession(); };
+  const setActiveTab = async tab => { if (!guard.current || await guard.current()) setActiveTabState(tab); };
+  const logout = async () => { if (!guard.current || await guard.current()) endSession(); };
   const [appLanguage, setAppLanguageState] = useState(() => (localStorage.getItem('smgs.language') === 'en' ? 'en' : 'vi'));
   const changeLanguage = async (newLang) => {
     const code = newLang === 'en' ? 'en' : 'vi';
