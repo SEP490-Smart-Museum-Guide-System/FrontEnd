@@ -106,9 +106,9 @@ export default function QuestionBank({ imported, onOpenAI }) {
         ))}
       </section>
     )}
-    <ErrorNotice>{action.error}</ErrorNotice><LoadState resource={data}><div className="business-grid">
+    <ErrorNotice>{action.error}</ErrorNotice><LoadState resource={data}><div className="business-grid question-bank-columns">
       <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div className="question-bank-column-heading">
           <h3 style={{ margin: 0 }}>Câu hỏi ({data.data[0].length})</h3>
           {canReview && pendingQuestions.length > 1 && (
             <button className="btn btn-primary btn-sm" disabled={batchBusy} onClick={handleApproveAllPending}>
@@ -119,7 +119,7 @@ export default function QuestionBank({ imported, onOpenAI }) {
         {!data.data[0].length && <Empty>Chưa có câu hỏi.</Empty>}
         {data.data[0].map(q => <article key={q.id} className="card business-card"><strong>{q.content}</strong><p>{statusLabels[q.status] || q.status}</p><ol>{q.options.map(o => <li key={o.id}>{o.content}{o.isCorrect ? ' ✓ Đáp án đúng' : ''}</li>)}</ol><p>{q.explanation}</p>{q.reviewNote && <p>Nhận xét: {q.reviewNote}</p>}<div className="business-actions">{q.status !== 'approved' && <button className="btn btn-secondary btn-sm" onClick={() => setModal({ type: 'question', value: q })}>Chỉnh sửa</button>}{canReview && q.status !== 'approved' && <button className="btn btn-primary btn-sm" onClick={() => setModal({ type: 'review', value: q })}>Thẩm định</button>}</div></article>)}
       </section>
-      <section><h3>Bộ câu hỏi</h3>{!data.data[1].length && <Empty>Chưa có bộ câu hỏi.</Empty>}{data.data[1].map(q => <article key={q.id} className="card business-card"><h4>{q.title}</h4><p>{statusLabels[q.status] || q.status} · {q.questionsPerAttempt} câu mỗi lượt</p><p>{q.questions.length} câu trong bộ</p>{canReview && q.status !== 'published' && <button className="btn btn-primary" disabled={action.busy} onClick={async () => { if (await confirmAppDialog('Xuất bản bộ câu hỏi này cho khách?', { title: 'Xác nhận xuất bản', confirmText: 'Xuất bản' })) action.run(() => backend(`question-bank/quizzes/${q.id}/publish`, { method: 'POST' }), data.reload); }}>Xuất bản</button>}</article>)}</section></div></LoadState>
+      <section><div className="question-bank-column-heading"><h3>Bộ câu hỏi</h3></div>{!data.data[1].length && <Empty>Chưa có bộ câu hỏi.</Empty>}{data.data[1].map(q => <article key={q.id} className="card business-card"><h4>{q.title}</h4><p>{statusLabels[q.status] || q.status} · {q.questionsPerAttempt} câu mỗi lượt</p><p>{q.questions.length} câu trong bộ</p>{canReview && q.status !== 'published' && <button className="btn btn-primary" disabled={action.busy} onClick={async () => { if (await confirmAppDialog('Xuất bản bộ câu hỏi này cho khách?', { title: 'Xác nhận xuất bản', confirmText: 'Xuất bản' })) action.run(() => backend(`question-bank/quizzes/${q.id}/publish`, { method: 'POST' }), data.reload); }}>Xuất bản</button>}</article>)}</section></div></LoadState>
     {modal && selected && <QuestionModal key={`${modal.type}:${modal.value?.id || 'new'}:${selected}`} modal={modal} artifactId={selected} questions={data.data[0]} onClose={() => setModal(null)} onSaved={() => { if (modal.draftIndex != null) setSavedDrafts(p => [...p, modal.draftIndex]); setModal(null); data.reload(); }} />}
   </div>;
 }
