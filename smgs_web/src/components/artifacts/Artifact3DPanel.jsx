@@ -220,6 +220,16 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     }
   }
 
+  function chooseExistingModel(files) {
+    const entries = Array.from(files || []);
+    if (!entries.length) return;
+    const glbs = entries.filter(file => /\.glb$/i.test(file.name));
+    const objs = entries.filter(file => /\.obj$/i.test(file.name));
+    if (glbs.length === 1 && entries.length === 1) return chooseGlb(glbs[0]);
+    if (glbs.length === 0 && objs.length === 1) return chooseObjBundle(entries);
+    setError('Chọn một file GLB, hoặc đúng một file OBJ cùng MTL và các ảnh texture của model.');
+  }
+
   async function perform(task) {
     setBusy(true);
     setError('');
@@ -489,34 +499,16 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                 className="btn btn-secondary btn-sm"
                 style={{ flex: 1, cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}
               >
-                <Upload size={14} /> Tải file GLB có sẵn
+                <Upload size={14} /> Tải model 3D có sẵn
                 <input
-                  aria-label="Chọn GLB để xem thử"
+                  aria-label="Chọn GLB hoặc bộ file OBJ để xem thử"
                   type="file"
-                  accept=".glb"
+                  accept=".glb,.obj,.mtl,.png,.jpg,.jpeg,.webp"
+                  multiple
                   disabled={busy}
                   style={{ display: 'none' }}
                   onChange={e => {
-                    chooseGlb(e.target.files[0]);
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-
-              <label
-                className="btn btn-secondary btn-sm"
-                style={{ flex: 1, cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}
-                title="Chọn thư mục chứa OBJ, MTL và ảnh texture"
-              >
-                <Folder size={14} /> Chọn thư mục OBJ
-                <input
-                  aria-label="Chọn thư mục mô hình OBJ"
-                  type="file"
-                  webkitdirectory=""
-                  disabled={busy}
-                  style={{ display: 'none' }}
-                  onChange={e => {
-                    chooseObjBundle(e.target.files);
+                    chooseExistingModel(e.target.files);
                     e.target.value = '';
                   }}
                 />

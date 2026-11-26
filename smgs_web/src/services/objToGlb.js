@@ -29,7 +29,7 @@ function waitForTextures(manager, hasTextures) {
 export async function convertObjBundleToGlb(inputFiles) {
   const files = Array.from(inputFiles || []);
   const objFiles = files.filter(file => /\.obj$/i.test(file.name));
-  if (objFiles.length !== 1) throw new Error('Chọn đúng một file .obj cùng file .mtl và thư mục texture của mô hình.');
+  if (objFiles.length !== 1) throw new Error('Chọn đúng một file .obj, file .mtl tương ứng và các ảnh texture được model sử dụng. Có thể giữ Ctrl hoặc Shift để chọn nhiều file cùng lúc.');
 
   const objFile = objFiles[0];
   const objPath = normalizePath(objFile.webkitRelativePath || objFile.name);
@@ -39,7 +39,7 @@ export async function convertObjBundleToGlb(inputFiles) {
   const mtlFile = materialName
     ? findBundleFile(files, `${root ? `${root}/` : ''}${materialName}`, '') || findBundleFile(files, materialName, root)
     : files.find(file => /\.mtl$/i.test(file.name));
-  if (!mtlFile) throw new Error('Không tìm thấy file .mtl mà OBJ tham chiếu. Hãy chọn cả thư mục mô hình, gồm OBJ, MTL và images.');
+  if (!mtlFile) throw new Error('Không tìm thấy file .mtl mà OBJ tham chiếu. Hãy chọn OBJ cùng file MTL tương ứng.');
 
   const urls = new Map();
   const byPath = new Map();
