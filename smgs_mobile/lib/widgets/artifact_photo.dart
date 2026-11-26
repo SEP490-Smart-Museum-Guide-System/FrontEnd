@@ -6,15 +6,19 @@ class ArtifactPhoto extends StatelessWidget {
     super.key,
     required this.artifact,
     required this.height,
+    this.fallback,
   });
   final Artifact artifact;
   final double height;
-  Widget get placeholder => SizedBox(
-    height: height,
-    child: const Center(
-      child: Icon(Icons.image_not_supported_outlined, size: 36),
-    ),
-  );
+  final Widget? fallback;
+  Widget get placeholder =>
+      fallback ??
+      SizedBox(
+        height: height,
+        child: const Center(
+          child: Icon(Icons.image_not_supported_outlined, size: 36),
+        ),
+      );
   @override
   Widget build(BuildContext context) {
     final url = artifact.imageUrl;

@@ -342,3 +342,16 @@ test('Studio speech uses edited text and shows retry without pretending to play 
   expect(f.state.contentDraft).toBeUndefined();
   expect(f.errors).toEqual([]);
 });
+
+test('selecting an existing indoor map opens its editor', async ({ page }) => {
+  await fixture(page);
+  const draft = { id: 41, floorId: 3, name: 'Sơ đồ kiểm thử', revision: 1, nodes: [], edges: [], markers: [] };
+  const reply = (route, data) => route.fulfill({ json: { data } });
+  await page.route('**/api/museums/7/indoor-maps', route => reply(route, [draft]));
+  await page.route('**/api/indoor-maps/41/draft', route => reply(route, draft));
+  await page.route('**/api/indoor-maps/41/links', route => reply(route, { artifacts: [], galleries: [] }));
+  await page.getByRole('button', { name: 'Bản đồ trong bảo tàng', exact: true }).click();
+  await page.getByRole('tab', { name: 'Sơ đồ hiện có' }).click();
+  await page.getByLabel('Chọn sơ đồ cần chỉnh sửa').selectOption('41');
+  await expect(page.getByRole('heading', { name: draft.name })).toBeVisible();
+});

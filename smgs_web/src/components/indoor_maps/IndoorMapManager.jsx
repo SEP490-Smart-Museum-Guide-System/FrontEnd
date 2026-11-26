@@ -33,6 +33,7 @@ export default function IndoorMapManager() {
   const [route, setRoute] = useState(null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [previewTarget, setPreviewTarget] = useState(null);
   const [accessible, setAccessible] = useState(false);
   const [floorId, setFloorId] = useState('');
   const [buildingId, setBuildingId] = useState('');
@@ -40,7 +41,6 @@ export default function IndoorMapManager() {
   const [floorName, setFloorName] = useState('');
   const [level, setLevel] = useState('0');
   const [mode, setMode] = useState('new');
-  const [selectedMapId, setSelectedMapId] = useState('');
   const alive = useRef(true);
 
   useEffect(() => {
@@ -90,12 +90,12 @@ export default function IndoorMapManager() {
   async function refreshMaps() { setMaps(await indoorApi(`museums/${museumId}/indoor-maps`)); }
   async function open(id) {
     const [document, options] = await Promise.all([indoorApi(`indoor-maps/${id}/draft`), indoorApi(`indoor-maps/${id}/links`)]);
-    setImageUrl(''); setMap(document); setLinks(options); setDirty(false); setSelected(null); setRoute(null); setConnectFrom(null); setTool(''); setFrom(''); setTo('');
+    setImageUrl(''); setMap(document); setLinks(options); setDirty(false); setSelected(null); setRoute(null); setConnectFrom(null); setTool(''); setFrom(''); setTo(''); setPreviewTarget(null);
   }
   function change(update) { setMap(prev => typeof update === 'function' ? update(prev) : update); setDirty(true); setRoute(null); }
   function update(kind, id, patch) { change(prev => ({ ...prev, [kind]: prev[kind].map(item => item.id === id ? { ...item, ...patch } : item) })); }
   async function save() {
-    const result = await indoorApi(`indoor-maps/${map.id}/draft`, { method: 'PUT', body: { revision: map.revision, nodes: map.nodes, markers: map.markers, edges: map.edges } });
+    const result = await indoorApi(`indoor-maps/${map.id}/draft`, { method: 'PUT', body: { revision: map.revision, nodes: map.nodes.map(n => ({ ...n, connectorCode: n.connectorCode?.trim() || null })), markers: map.markers, edges: map.edges } });
     setMap(result); setDirty(false); return result;
   }
   function select(kind, id, connect = true) {
@@ -169,7 +169,7 @@ export default function IndoorMapManager() {
         <Landmark size={14} aria-hidden="true" />
         <span>{museums.find(museum => String(museum.id) === String(museumId))?.name || 'Chọn bảo tàng'}</span>
         <ChevronDown size={12} aria-hidden="true" />
-      </> : 'Bảo tàng'}<select aria-label="Bảo tàng" value={museumId} onChange={async e => { if (await discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
+      </> : 'Bảo tàng'}<select aria-label="Bảo tàng" value={museumId} onChange={async e => { if (await discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
 
       {structure && !structure.floors.length && <p>Vào Cấu trúc bảo tàng để thêm tòa nhà và tầng trước khi tạo sơ đồ.</p>}
       {structure && <div className="indoor-box indoor-management">
@@ -177,13 +177,14 @@ export default function IndoorMapManager() {
         <div className="indoor-row" role="tablist" aria-label="Quản lý sơ đồ bảo tàng">{[['existing', 'Sơ đồ hiện có'], ['new', 'Tạo sơ đồ mới']].map(([value, label]) => <button type="button" role="tab" id={`map-tab-${value}`} aria-controls="map-management-panel" aria-selected={mode === value} key={value} onClick={async () => { if (mode !== value && await discard()) setMode(value); }}>{label}</button>)}</div>
         <div role="tabpanel" id="map-management-panel" aria-labelledby={`map-tab-${mode}`}>
           {mode === 'existing' ? <>
-            <label>Chọn sơ đồ cần chỉnh sửa<select value={selectedMapId} onChange={async e => { if (await discard()) setSelectedMapId(e.target.value); }}><option value="">Chọn sơ đồ</option>{maps.map(m => {
+            <label>Chọn sơ đồ cần chỉnh sửa<select value={map?.id ?? ''} onChange={e => {
+              const id = e.currentTarget.value;
+              run(async () => { if (await discard()) await open(id); });
+            }}><option value="" disabled>Chọn sơ đồ</option>{maps.map(m => {
               const floor = structure.floors.find(f => f.id === m.floorId);
               const building = structure.buildings.find(b => b.id === floor?.buildingId);
               return <option key={m.id} value={m.id}>{mapLabel(m, floor, building)}</option>;
             })}</select></label>
-            {maps.filter(m => String(m.id) === selectedMapId).map(m => <p key={m.id}>{m.publishedAt ? 'Đã xuất bản' : 'Bản nháp'}{m.revision != null ? ` · Phiên bản ${m.revision}` : ''}</p>)}
-            <button type="button" disabled={!selectedMapId} onClick={async () => { if (await discard()) run(() => open(selectedMapId)); }}>Chỉnh sửa sơ đồ</button>
           </> : <>
             <div className="indoor-row">
               <label>Chọn tòa nhà<select value={buildingId} onChange={e => { setBuildingId(e.target.value); setFloorId(''); }}><option value="">Chọn tòa nhà</option>{options(structure.buildings)}</select></label>
@@ -198,7 +199,7 @@ export default function IndoorMapManager() {
             <button type="button" disabled={!floorId || maps.some(m => String(m.floorId) === floorId)} onClick={async () => { if (await discard()) run(async () => {
               const floor = structure.floors.find(f => String(f.id) === floorId);
               const id = await indoorApi(`museums/${museumId}/indoor-maps`, { method: 'POST', body: { floorId: Number(floorId), name: `Sơ đồ ${floor.name || 'Tầng ' + floor.levelNo}`.slice(0, 200) } });
-              await refreshMaps(); await open(id); setSelectedMapId(String(id)); setMode('existing');
+              await refreshMaps(); await open(id); setMode('existing');
             }); }}>Tạo sơ đồ mới</button>
           </>}
         </div>
@@ -218,7 +219,7 @@ export default function IndoorMapManager() {
             setMap(await indoorApi(`indoor-maps/${map.id}/unpublish`, { method: 'POST', body: { revision: map.revision } })); await refreshMaps(); setMessage('Đã ngừng xuất bản.');
           })}>Ngừng xuất bản</button>
         </div>
-        <p className="indoor-hint">Bản nháp không thay đổi bản đang phục vụ khách. Lưu trước khi xuất bản hoặc thử đường đi. Phiên bản này chỉ tìm đường trong một sơ đồ, chưa kết nối xuyên tầng.</p>
+        <p className="indoor-hint">Bản nháp không thay đổi bản đang phục vụ khách. Lưu trước khi xuất bản hoặc thử đường đi.</p>
         {!map.imageKey ? <p>Tải ảnh mặt bằng để bắt đầu đặt điểm.</p> : <>
           {map.markers.some(marker => marker.type === 'qr') && <p role="alert" className="indoor-error">Sơ đồ có điểm QR riêng từ phiên bản cũ. Hãy chọn từng điểm này, đổi loại sang hiện vật và liên kết hiện vật tương ứng, hoặc chọn loại điểm khác trước khi lưu/xuất bản.</p>}
           <div className="indoor-row" role="toolbar" aria-label="Công cụ chỉnh sửa sơ đồ">{Object.entries(tools).map(([key, label]) => <button key={key} type="button" aria-pressed={tool === key} onClick={() => { setTool(tool === key ? '' : key); setConnectFrom(null); setMessage(tool !== key && key === 'connect' ? 'Nhấn lần lượt hai điểm để nối; giữ và kéo để di chuyển điểm. Nhấn Esc để thoát.' : ''); }}>{label}</button>)}<button type="button" disabled={!selected} onClick={remove}>Xóa đối tượng</button></div>
@@ -231,7 +232,11 @@ export default function IndoorMapManager() {
               <p>{map.floorId ? `Tầng: ${structure?.floors.find(f => f.id === map.floorId)?.name || map.name}` : 'Mặt bằng chung của bảo tàng'}</p>
               {item && selected.kind !== 'edges' && <>
                 <label>Tên<input maxLength={200} value={item.label} onChange={e => update(selected.kind, item.id, { label: e.target.value })} /></label>
-                <label>Loại<select value={item.type} onChange={e => update(selected.kind, item.id, { type: e.target.value, ...(selected.kind === 'markers' ? { artifactId: null, galleryId: null } : {}) })}>{item.type === 'qr' && <option value="qr">{selected.kind === 'nodes' ? 'Điểm dẫn đường cũ' : 'QR riêng cũ — hãy đổi loại'}</option>}{Object.entries(selected.kind === 'nodes' ? nodeTypes : markerTypes).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+                <label>Loại<select value={item.type} onChange={e => update(selected.kind, item.id, { type: e.target.value, ...(selected.kind === 'markers' ? { artifactId: null, galleryId: null } : { connectorCode: null }) })}>{item.type === 'qr' && <option value="qr">{selected.kind === 'nodes' ? 'Điểm dẫn đường cũ' : 'QR riêng cũ — hãy đổi loại'}</option>}{Object.entries(selected.kind === 'nodes' ? nodeTypes : markerTypes).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+                {map.floorId && selected.kind === 'nodes' && ['stair', 'elevator'].includes(item.type) && <>
+                  <label>Mã kết nối giữa các tầng<input maxLength={64} value={item.connectorCode ?? ''} onChange={e => update('nodes', item.id, { connectorCode: e.target.value || null })} /></label>
+                  <p>Nhập cùng mã cho các điểm thuộc cùng cầu thang hoặc thang máy trong tòa nhà. Lưu và xuất bản sơ đồ ở mỗi tầng.</p>
+                </>}
                 {['x', 'y'].map(axis => <label key={axis}>Tọa độ {axis.toUpperCase()} (0–1)<input type="number" min="0" max="1" step="0.001" value={Number(item[axis].toFixed(4))} onChange={e => { const n = Number(e.target.value); if (Number.isFinite(n) && n >= 0 && n <= 1) update(selected.kind, item.id, { [axis]: n }); }} /></label>)}
               </>}
               {item && selected.kind === 'markers' && <>
@@ -260,13 +265,32 @@ export default function IndoorMapManager() {
             </aside>
           </div>
           <form className="indoor-row indoor-box" onSubmit={e => { e.preventDefault(); run(async () => {
-            setRoute(null); const result = await indoorApi(`indoor-maps/${map.id}/preview-route`, { method: 'POST', body: { revision: map.revision, fromNodeId: from, toNodeId: to, accessibleOnly: accessible } }); setRoute(result); setMessage('Đã hiển thị tuyến đường. Chi phí theo ảnh, không phải khoảng cách mét.');
+            setRoute(null);
+            const result = await indoorApi(`indoor-maps/${map.id}/preview-route`, {
+              method: 'POST', body: { revision: map.revision, fromNodeId: from, toNodeId: to,
+                accessibleOnly: accessible, targetMapId: previewTarget?.id, targetRevision: previewTarget?.revision },
+            });
+            setRoute(result.segments ? { ...result.segments[0], segments: result.segments } : result);
+            setMessage('Đã hiển thị tuyến đường.');
           }); }}>
             <label>Điểm bắt đầu<select required value={from} onChange={e => { setFrom(e.target.value); setRoute(null); }}><option value="">Chọn điểm</option>{options(map.nodes)}</select></label>
-            <label>Điểm kết thúc<select required value={to} onChange={e => { setTo(e.target.value); setRoute(null); }}><option value="">Chọn điểm</option>{options(map.nodes)}</select></label>
+            {map.floorId && <label>Sơ đồ đích<select value={previewTarget?.id ?? ''} onChange={e => {
+              const id = e.target.value;
+              run(async () => {
+                setTo(''); setRoute(null);
+                setPreviewTarget(id ? await indoorApi(`indoor-maps/${id}/draft`) : null);
+              });
+            }}><option value="">Sơ đồ đang mở</option>{options(maps.filter(other => other.id !== map.id && other.floorId &&
+              structure?.floors.find(f => f.id === other.floorId)?.buildingId === structure?.floors.find(f => f.id === map.floorId)?.buildingId))}</select></label>}
+            <label>Điểm kết thúc<select required value={to} onChange={e => { setTo(e.target.value); setRoute(null); }}><option value="">Chọn điểm</option>{options((previewTarget ?? map).nodes)}</select></label>
             <label className="indoor-check"><input type="checkbox" checked={accessible} onChange={e => { setAccessible(e.target.checked); setRoute(null); }} />Chỉ đường phù hợp xe lăn</label>
             <button disabled={dirty || !from || !to}>Xem thử đường đi</button>
           </form>
+          {route?.segments && <ol aria-label="Các đoạn đường theo tầng">
+            {route.segments.map((segment, index) => <li key={index}>{segment.mapName}
+              {segment.connectorLabel ? ` · Qua ${segment.connectorLabel}` : ' · Đến đích'}
+            </li>)}
+          </ol>}
         </>}
       </>}
     </fieldset>

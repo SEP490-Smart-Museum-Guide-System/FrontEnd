@@ -48,6 +48,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   int _mapRequest = 0;
   ScanRequest? _scanRequest;
   DateTime? _confirmedAt;
+  DateTime? _locationScanAt;
   Map<String, dynamic>? _lastPosition;
   bool _manualStart = false;
   Timer? _positionTimer;
@@ -57,6 +58,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   IndoorMarker? _startMarker;
 
   IndoorMarker? _selectedDestination;
+  List<Map<String, dynamic>> _routeSegments = [];
+  int _segmentIndex = 0;
+  int? _journeyTargetMapId;
+  IndoorMarker? _journeyDestination;
   List<String> _routeNodeIds = [];
   bool _accessibleOnly = false;
 
@@ -95,7 +100,12 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPublishedMap() async {
+  Future<void> _loadPublishedMap({
+    bool showSegment = false,
+    Map<String, dynamic>? scannedPosition,
+  }) async {
+    final segment = showSegment ? _routeSegments[_segmentIndex] : null;
+    final position = scannedPosition ?? (showSegment ? _lastPosition : null);
     final loadRequest = ++_mapRequest;
     _routeRequest++;
     setState(() {
@@ -122,6 +132,14 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       }
 
       if (!mounted || loadRequest != _mapRequest) return;
+      if (segment != null && segment['revision'] != mapData.revision) {
+        _routeSegments = [];
+        _journeyDestination = null;
+        _journeyTargetMapId = null;
+        throw const FormatException(
+          'Sơ đồ đã thay đổi. Hãy tải lại và tìm đường lại.',
+        );
+      }
       setState(() {
         _selectedArtifact = null;
         _map = mapData;
@@ -143,61 +161,39 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                         m.artifactId == widget.targetArtifactId,
                   )
                   .toList();
-        _selectedDestination = targets.length == 1 ? targets.single : null;
+        _selectedDestination = !showSegment && _journeyTargetMapId == mapData.id
+            ? mapData.markers
+                  .where((m) => m.isActive && m.id == _journeyDestination?.id)
+                  .firstOrNull
+            : (targets.length == 1 ? targets.single : null);
+        if (!showSegment) _routeSegments = [];
         _routeNodeIds = [];
         _routeError = null;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && loadRequest == _mapRequest) _fitMap();
       });
-      {
-        try {
-          final location = await MuseumPresenceApi.current(
-            mapData.museumId,
-            visitId: widget.visitId,
-            mapId: int.parse(_currentMapId.toString()),
-          );
-          if (!mounted || loadRequest != _mapRequest) return;
-          if (location['confirmedAt'] == null) return;
-          setState(() => _lastPosition = location);
-          if (location['mapId'] != mapData.id) {
-            throw const FormatException(
-              'Vị trí vừa xác nhận thuộc sơ đồ khác. Hãy quét QR phòng để mở đúng tầng.',
-            );
-          }
-          final markers = mapData.markers
-              .where(
-                (m) =>
-                    m.isActive &&
-                    m.id == location['markerId']?.toString() &&
-                    m.nodeId != null,
-              )
-              .toList();
-          if (markers.length != 1) {
-            throw const FormatException(
-              'Vị trí quét gần nhất chưa có trên sơ đồ này.',
-            );
-          }
-          setState(() {
-            _startMarker = markers.single;
-            _fromNodeId = markers.single.nodeId;
-
-            _confirmedAt = DateTime.tryParse(
-              location['confirmedAt']?.toString() ?? '',
-            );
-            _manualStart = false;
-          });
-        } catch (e) {
-          if (mounted && loadRequest == _mapRequest) {
-            setState(() => _routeError = e.toString());
-          }
-        }
+      if (segment != null) {
+        setState(() {
+          _applyPosition(mapData, position);
+          _routeNodeIds = (segment['nodeIds'] as List).cast<String>();
+        });
+        return;
       }
-      if (mounted &&
-          loadRequest == _mapRequest &&
-          _selectedDestination != null &&
-          _fromNodeId != null) {
-        _recalculateRoute();
+      try {
+        final location =
+            position ??
+            await MuseumPresenceApi.current(
+              mapData.museumId,
+              visitId: widget.visitId,
+              mapId: mapData.id,
+            );
+        if (!mounted || loadRequest != _mapRequest) return;
+        setState(() => _applyPosition(mapData, location));
+      } catch (e) {
+        if (mounted && loadRequest == _mapRequest) {
+          setState(() => _routeError = e.toString());
+        }
       }
     } catch (e) {
       if (!mounted || loadRequest != _mapRequest) return;
@@ -208,8 +204,44 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     }
   }
 
+  void _applyPosition(PublishedIndoorMap map, Map<String, dynamic>? location) {
+    _confirmedAt = DateTime.tryParse(
+      location?['confirmedAt']?.toString() ?? '',
+    );
+    _lastPosition = _confirmedAt == null ? null : location;
+    if (!_hasFreshPosition || location?['mapId'] != map.id) return;
+    _startMarker = map.markers
+        .where(
+          (marker) =>
+              marker.isActive &&
+              marker.id == location?['markerId']?.toString() &&
+              marker.nodeId != null,
+        )
+        .firstOrNull;
+    _fromNodeId = _startMarker?.nodeId;
+  }
+
+  bool get _hasFreshPosition {
+    final confirmedAt = _confirmedAt;
+    if (confirmedAt == null ||
+        _lastPosition?['isFresh'] != true ||
+        _lastPosition?['nodeId'] == null) {
+      return false;
+    }
+    final age = DateTime.now().difference(confirmedAt);
+    return !age.isNegative && age <= const Duration(minutes: 5);
+  }
+
+  bool get _hasLocationScan =>
+      _hasFreshPosition &&
+      (_lastPosition?['source'] == 'checkpoint_qr' ||
+          _confirmedAt == _locationScanAt);
   Future<void> _startDirections() async {
-    if (_manualStart) return _recalculateRoute();
+    if (_manualStart || _hasLocationScan) return _recalculateRoute();
+    if (!_hasFreshPosition) {
+      _scan();
+      return;
+    }
     final choice = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -218,11 +250,10 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           'Vị trí này được ghi nhận từ lần quét QR gần nhất. Bạn có thể đã di chuyển. Hãy quét QR tại nơi đang đứng để xác nhận vị trí trước khi chỉ đường.',
         ),
         actions: [
-          if (_fromNodeId != null && _lastPosition?['isFresh'] == true)
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Dùng vị trí gần nhất'),
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Dùng vị trí gần nhất'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Xác nhận lại vị trí'),
@@ -257,6 +288,14 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           accessible: _accessibleOnly,
         );
         if (!mounted || request != _routeRequest) return;
+        if (data['segments'] case final List segments
+            when segments.isNotEmpty) {
+          _journeyTargetMapId = _map!.id;
+          _journeyDestination = _selectedDestination;
+          _routeSegments = segments.cast<Map<String, dynamic>>();
+          await _openRouteSegment(0);
+          return;
+        }
         if (data['revision'] != _map!.revision) {
           throw const FormatException('Sơ đồ đã thay đổi. Hãy tải lại sơ đồ.');
         }
@@ -312,7 +351,16 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
     });
   }
 
+  Future<void> _openRouteSegment(int index) async {
+    _segmentIndex = index;
+    _currentMapId = _routeSegments[index]['mapId'];
+    await _loadPublishedMap(showSegment: true);
+  }
+
   void _selectDestination(IndoorMarker marker) {
+    _journeyDestination = null;
+    _journeyTargetMapId = null;
+    _routeSegments = [];
     setState(() {
       _selectedArtifact = null;
       _selectedDestination = marker;
@@ -333,6 +381,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
   Future<void> _switch(dynamic id) async {
     if (id == _currentMapId) return;
+    _journeyDestination = null;
+    _journeyTargetMapId = null;
     _currentMapId = id;
     await _loadPublishedMap();
   }
@@ -465,25 +515,130 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
   }
 
   final _thumbnails = <int, Future<Map<String, dynamic>>>{};
-  Widget _thumbnail(int? id) {
-    const fallback = Icon(Icons.place_outlined);
+  Widget _thumbnail(int? id, {double size = 48, bool circular = false}) {
+    final fallback = circular
+        ? const Center(child: Icon(Icons.museum_outlined, color: Colors.white))
+        : const Icon(Icons.place_outlined);
     if (id == null) return fallback;
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(VisitorRadius.sm),
-        child: FutureBuilder<Map<String, dynamic>>(
-          future: _thumbnails.putIfAbsent(
-            id,
-            () => DiscoveryApiService.fetchArtifactDetail(id),
+    final photo = FutureBuilder<Map<String, dynamic>>(
+      future: _thumbnails.putIfAbsent(
+        id,
+        () => DiscoveryApiService.fetchArtifactDetail(id),
+      ),
+      builder: (_, snapshot) => snapshot.hasData
+          ? ArtifactPhoto(
+              artifact: Artifact.fromBackendJson(snapshot.data!),
+              height: size,
+              fallback: fallback,
+            )
+          : fallback,
+    );
+    return SizedBox.square(
+      dimension: size,
+      child: circular
+          ? ClipOval(child: photo)
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(VisitorRadius.sm),
+              child: photo,
+            ),
+    );
+  }
+
+  Widget _mapPin(
+    IndoorMarker marker, {
+    required bool isStart,
+    required bool isSelected,
+    required double size,
+  }) {
+    const blue = Color(0xFF155DE0);
+    final hasPhoto = marker.type == 'artifact' && marker.artifactId != null;
+    final outline = isStart
+        ? blue
+        : isSelected
+        ? const Color(0xFF227C64)
+        : Colors.white;
+    return GestureDetector(
+      onTap: () => _selectDestination(marker),
+      child: Tooltip(
+        message: isStart ? 'Vị trí hiện tại của bạn' : marker.label,
+        child: SizedBox.square(
+          dimension: size,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (hasPhoto)
+                Positioned(
+                  bottom: -3,
+                  child: Transform.rotate(
+                    angle: math.pi / 4,
+                    child: SizedBox.square(
+                      dimension: size / 5,
+                      child: ColoredBox(color: outline),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isStart && !hasPhoto ? blue : AppColors.deepBurgundy,
+                    border: Border.all(
+                      color: isStart && !hasPhoto ? Colors.white : outline,
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      if (isStart)
+                        const BoxShadow(
+                          color: Color(0x66155DE0),
+                          spreadRadius: 5,
+                          blurRadius: 1,
+                        ),
+                      const BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 5,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: hasPhoto
+                        ? _thumbnail(
+                            marker.artifactId,
+                            size: size - 6,
+                            circular: true,
+                          )
+                        : Icon(
+                            isStart ? Icons.my_location_rounded : Icons.place,
+                            color: Colors.white,
+                            size: size * 0.55,
+                          ),
+                  ),
+                ),
+              ),
+              if (hasPhoto && isStart)
+                Positioned(
+                  top: -5,
+                  right: -5,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: blue,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.my_location_rounded,
+                        color: Colors.white,
+                        size: size * 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          builder: (_, snapshot) => snapshot.hasData
-              ? ArtifactPhoto(
-                  artifact: Artifact.fromBackendJson(snapshot.data!),
-                  height: 48,
-                )
-              : fallback,
         ),
       ),
     );
@@ -596,11 +751,61 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
             ),
           ),
         ),
+      if (_hasLocationScan)
+        Card(
+          color: const Color(0xFFE6EFFF),
+          child: ListTile(
+            dense: true,
+            leading: const Icon(Icons.my_location, color: Color(0xFF1746A2)),
+            title: const Text(
+              'Vị trí hiện tại của bạn',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1746A2),
+              ),
+            ),
+            subtitle: Text(
+              [
+                _lastPosition?['floorName'],
+                _lastPosition?['label'],
+              ].whereType<String>().join(' · '),
+            ),
+          ),
+        ),
+      if (_routeSegments.isNotEmpty)
+        Card(
+          child: ListTile(
+            title: Text(_routeSegments[_segmentIndex]['mapName'] as String),
+            subtitle: Text(
+              _segmentIndex + 1 < _routeSegments.length
+                  ? 'Đi đến ${_routeSegments[_segmentIndex]['connectorLabel']} '
+                        'để sang ${_routeSegments[_segmentIndex + 1]['mapName']}.'
+                  : 'Đi theo tuyến đến ${_journeyDestination?.label ?? 'điểm đến'}.',
+            ),
+            leading: _segmentIndex > 0
+                ? IconButton(
+                    tooltip: 'Xem đoạn trước',
+                    onPressed: () => _openRouteSegment(_segmentIndex - 1),
+                    icon: const Icon(Icons.arrow_back),
+                  )
+                : null,
+            trailing: _segmentIndex + 1 < _routeSegments.length
+                ? TextButton(
+                    onPressed: () => _openRouteSegment(_segmentIndex + 1),
+                    child: const Text('Xem đoạn tiếp'),
+                  )
+                : null,
+          ),
+        ),
       const SizedBox(height: 8),
       Row(
         children: [
           Expanded(
-            child: position == null && selected == null
+            child:
+                !_hasLocationScan &&
+                    _routeSegments.isEmpty &&
+                    position == null &&
+                    selected == null
                 ? Card(
                     margin: EdgeInsets.zero,
                     color: VisitorColors.surface1,
@@ -696,6 +901,8 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                     IconButton(
                       tooltip: 'Đóng',
                       onPressed: () => setState(() {
+                        _journeyDestination = null;
+                        _journeyTargetMapId = null;
                         _selectedDestination = null;
                         _selectedArtifact = null;
                         _routeRequest++;
@@ -726,7 +933,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                       ),
                     ],
                   ),
-                if (_routeError != null && position != null)
+                if (_routeError != null)
                   Text(
                     _routeError!,
                     maxLines: 2,
@@ -814,6 +1021,26 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       ..scaleByDouble(targetScale, targetScale, 1, 1);
   }
 
+  void _prepareMapAfterScan(dynamic scannedMapId) {
+    if (_selectedDestination != null && _routeSegments.isEmpty) {
+      _journeyDestination = _selectedDestination;
+      _journeyTargetMapId = _map?.id;
+    }
+    _currentMapId = _journeyTargetMapId ?? scannedMapId ?? _currentMapId;
+  }
+
+  Future<void> _reloadAfterScan(Map<String, dynamic> location) async {
+    _locationScanAt = DateTime.tryParse(
+      location['confirmedAt']?.toString() ?? '',
+    );
+    await _loadPublishedMap(scannedPosition: location);
+    if (mounted &&
+        _errorMessage == null &&
+        _selectedDestination?.nodeId != null) {
+      await _recalculateRoute();
+    }
+  }
+
   Future<void> _handleQrDetected(String rawCode) async {
     if (!_showQrScanner || _isProcessingScan || _map == null) return;
     setState(() {
@@ -828,25 +1055,14 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           visitId: widget.visitId,
         );
         if (!mounted) return;
-        final previous = _selectedDestination;
-        final sameFloor = _currentMapId == result['mapId'];
-        _currentMapId = result['mapId'];
+        _prepareMapAfterScan(result['mapId']);
         setState(() {
           _showQrScanner = false;
           _isProcessingScan = false;
         });
         await _scannerController?.dispose();
         _scannerController = null;
-        await _loadPublishedMap();
-        if (mounted && sameFloor && previous != null) {
-          final destination = _map?.markers
-              .where((m) => m.isActive && m.id == previous.id)
-              .firstOrNull;
-          if (destination != null && _fromNodeId != null) {
-            _selectDestination(destination);
-            await _recalculateRoute();
-          }
-        }
+        await _reloadAfterScan(result);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Đã xác nhận tại ${result['label']}.')),
@@ -885,7 +1101,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
           'Hiện vật chưa có vị trí hợp lệ trên sơ đồ.',
         );
       }
-      if (location['mapId'] != null) _currentMapId = location['mapId'];
+      _prepareMapAfterScan(location['mapId']);
       setState(() {
         _showQrScanner = false;
         _isProcessingScan = false;
@@ -893,7 +1109,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
       });
       await _scannerController?.dispose();
       _scannerController = null;
-      if (mounted) await _loadPublishedMap();
+      if (mounted) await _reloadAfterScan(location);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -963,7 +1179,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
               _lastPosition == null
                   ? widget.museumName
                   : [
-                      'Vị trí ghi nhận gần nhất',
+                      _hasLocationScan
+                          ? 'Vị trí hiện tại của bạn'
+                          : 'Vị trí ghi nhận gần nhất',
                       _lastPosition?['buildingName'],
                       _lastPosition?['floorName'],
                       _lastPosition?['galleryName'],
@@ -1013,7 +1231,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: _loadPublishedMap,
+                      onPressed: () => _loadPublishedMap(
+                        showSegment: _routeSegments.isNotEmpty,
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.deepBurgundy,
                       ),
@@ -1084,60 +1304,31 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                     ),
                                   ),
 
-                                  // Clickable Markers Overlay
                                   ..._map!.markers.where((m) => m.isActive).map(
                                     (marker) {
-                                      final px = marker.x * _map!.imageWidth;
-                                      final py = marker.y * _map!.imageHeight;
+                                      final isStart = position?.id == marker.id;
                                       final isSelected =
                                           _selectedDestination?.id == marker.id;
-                                      final isStart =
-                                          _startMarker?.id == marker.id;
-
+                                      final isArtifact =
+                                          marker.type == 'artifact' &&
+                                          marker.artifactId != null;
+                                      final size = isArtifact
+                                          ? 54.0
+                                          : isStart
+                                          ? 48.0
+                                          : 36.0;
                                       return Positioned(
-                                        left: px - 18,
-                                        top: py - 18,
-                                        child: GestureDetector(
-                                          onTap: () =>
-                                              _selectDestination(marker),
-                                          child: Tooltip(
-                                            message: marker.label,
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              width: 36,
-                                              height: 36,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: isStart
-                                                    ? const Color(0xFF2563EB)
-                                                    : isSelected
-                                                    ? const Color(0xFF227C64)
-                                                    : const Color(0xFF873C32),
-                                                border: Border.all(
-                                                  color: Colors.white,
-                                                  width: isSelected || isStart
-                                                      ? 3
-                                                      : 2,
-                                                ),
-                                                boxShadow: const [
-                                                  BoxShadow(
-                                                    color: Colors.black26,
-                                                    blurRadius: 4,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Icon(
-                                                marker.type == 'artifact'
-                                                    ? Icons.museum_outlined
-                                                    : Icons.place,
-                                                size: 18,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
+                                        left:
+                                            marker.x * _map!.imageWidth -
+                                            size / 2,
+                                        top:
+                                            marker.y * _map!.imageHeight -
+                                            size / 2,
+                                        child: _mapPin(
+                                          marker,
+                                          isStart: isStart,
+                                          isSelected: isSelected,
+                                          size: size,
                                         ),
                                       );
                                     },
@@ -1147,6 +1338,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                       (m) =>
                                           m.isActive &&
                                           m.type == 'artifact' &&
+                                          m.id != position?.id &&
                                           m.label.trim().isNotEmpty,
                                     ))
                                       Positioned(
@@ -1158,7 +1350,7 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                                   map.imageWidth - labelWidth,
                                                 )
                                                 .toDouble(),
-                                        top: (marker.y * map.imageHeight + 20)
+                                        top: (marker.y * map.imageHeight + 34)
                                             .clamp(
                                               0.0,
                                               (map.imageHeight - 28).clamp(
@@ -1174,7 +1366,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 borderRadius:
-                                                    BorderRadius.circular(VisitorRadius.xs),
+                                                    BorderRadius.circular(
+                                                      VisitorRadius.xs,
+                                                    ),
                                               ),
                                               child: Padding(
                                                 padding:
@@ -1208,9 +1402,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                                 map.imageWidth - labelWidth,
                                               )
                                               .toDouble(),
-                                      top: position.y * map.imageHeight >= 52
-                                          ? position.y * map.imageHeight - 52
-                                          : position.y * map.imageHeight + 22,
+                                      top: position.y * map.imageHeight >= 75
+                                          ? position.y * map.imageHeight - 75
+                                          : position.y * map.imageHeight + 35,
                                       width: labelWidth,
                                       child: IgnorePointer(
                                         child: Center(
@@ -1225,7 +1419,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                                 color: const Color(0xFF2563EB),
                                               ),
                                               borderRadius:
-                                                  BorderRadius.circular(VisitorRadius.xs),
+                                                  BorderRadius.circular(
+                                                    VisitorRadius.xs,
+                                                  ),
                                             ),
                                             child: Text(
                                               _manualStart
@@ -1281,7 +1477,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                                   color: const Color(0xFFC5A059),
                                   width: 3,
                                 ),
-                                borderRadius: BorderRadius.circular(VisitorRadius.md),
+                                borderRadius: BorderRadius.circular(
+                                  VisitorRadius.md,
+                                ),
                               ),
                             ),
                           ),
@@ -1328,7 +1526,9 @@ class _VisitorIndoorMapScreenState extends State<VisitorIndoorMapScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.black87,
-                                borderRadius: BorderRadius.circular(VisitorRadius.xs),
+                                borderRadius: BorderRadius.circular(
+                                  VisitorRadius.xs,
+                                ),
                               ),
                               child: const Text(
                                 'Quét mã QR tại vị trí bạn đang đứng để xác định điểm xuất phát.',

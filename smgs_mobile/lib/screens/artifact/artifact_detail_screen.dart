@@ -11,7 +11,7 @@ import '../../services/discovery_api_service.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../data/visit_store.dart';
 import '../ai_guide/ai_guide_screen.dart';
-import '../../widgets/narration_player.dart';
+import 'artifact_listening_screen.dart';
 import '../profile/profile_screen.dart';
 import 'artifact_3d_screen.dart';
 import 'daily_quiz_screen.dart';
@@ -29,7 +29,6 @@ class ArtifactDetailScreen extends StatefulWidget {
 }
 
 class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
-  final _quizKey = GlobalKey();
   bool _skipQuiz = false;
   Map<String, dynamic>? _publishedContent;
   String? _contentError;
@@ -295,7 +294,6 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         ),
         const SizedBox(height: 18),
       ],
-      SizedBox(key: _quizKey),
       if (!_skipQuiz)
         Panel(
           gold: true,
@@ -495,22 +493,40 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
             children: [
               if (hasNarration) ...[
                 Expanded(
-                  child: NarrationPlayer(
-                    compact: true,
-                    text: script,
-                    audioUrl: audio.isEmpty ? null : audio,
-                    onStart: () {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        final target = _quizKey.currentContext;
-                        if (target != null) {
-                          Scrollable.ensureVisible(
-                            target,
-                            alignment: .2,
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeOutCubic,
+                  flex: 2,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 56),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: const StadiumBorder(),
+                    ),
+                    icon: const Icon(Icons.play_circle_fill),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(l10n.playAudio, maxLines: 1),
+                    ),
+                    onPressed: () async {
+                      final action = await Navigator.of(context)
+                          .push<ListeningAction>(
+                            MaterialPageRoute(
+                              builder: (_) => ArtifactListeningScreen(
+                                artifact: a,
+                                photos: photos,
+                                modelUrl: hasModel ? modelUrl : null,
+                                description: story.trim().isEmpty
+                                    ? summary
+                                    : story,
+                                narration: script,
+                                audioUrl: audio.isEmpty ? null : audio,
+                              ),
+                            ),
                           );
-                        }
-                      });
+                      if (!context.mounted) return;
+                      if (action == ListeningAction.quiz) {
+                        openPage(context, DailyQuizScreen(artifactId: a.id));
+                      } else if (action == ListeningAction.ask) {
+                        ask();
+                      }
                     },
                   ),
                 ),
@@ -519,6 +535,7 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(22),
