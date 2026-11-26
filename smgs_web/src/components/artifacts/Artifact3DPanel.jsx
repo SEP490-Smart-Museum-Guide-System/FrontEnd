@@ -3,6 +3,7 @@ import '@google/model-viewer';
 import ArtifactModelViewer, { isSketchfabUrl } from '../common/ArtifactModelViewer';
 import { confirmAppDialog } from '../common/appDialogs';
 import { mediaApi, uploadMedia } from '../../services/mediaApi';
+import { flipGlb } from '../../services/rotateGlb';
 import { Modal, Field } from '../common/BusinessUI';
 import {
   prepareScanDataset,
@@ -300,6 +301,17 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
       setManualShowProcessing(false);
       setMessage('Đã bỏ kết quả scan.');
     });
+
+  const flipModel = () => perform(async signal => {
+    const blob = draft?.file || (draft?.source === 'scan'
+      ? await getScanModel(artifactId, draft.jobId, signal)
+      : await mediaApi(path + '/file', { blob: true, signal }));
+    const file = await flipGlb(blob);
+    await validateGlbPreview(file);
+    setDraft({ file, url: URL.createObjectURL(file), source: 'file' });
+    setShowSettings(false);
+    setMessage('Đã lật mô hình 180°. Kiểm tra bản xem thử rồi bấm lưu vào hiện vật để giữ hướng mới.');
+  });
 
   const saveSettings = () =>
     perform(async () => {
@@ -908,6 +920,10 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
           onClose={() => setShowSettings(false)}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <button type="button" className="btn btn-secondary" disabled={busy || isSketchfabUrl(savedUrl)} onClick={flipModel}>
+              Lật mô hình 180° (sửa bị ngược)
+            </button>
+            <small>Lật trực tiếp mô hình GLB. Xem thử rồi lưu vào hiện vật để áp dụng hướng mới.</small>
             <label className="business-check" style={{ cursor: 'pointer' }}>
               <input
                 type="checkbox"
