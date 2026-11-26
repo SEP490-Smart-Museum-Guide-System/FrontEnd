@@ -38,6 +38,9 @@ const hateTerms = [
 
 function normalizeForModeration(value) {
   return String(value ?? '')
+    // Preserve this common, harmless word before accent removal: "đeo" and
+    // the profanity "đéo" otherwise collapse to the same normalized token.
+    .replace(/(^|[^\p{L}\p{N}])đeo(?=$|[^\p{L}\p{N}])/giu, '$1deong')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/đ/gi, 'd')
