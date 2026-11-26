@@ -24,7 +24,6 @@ import {
   CheckCircle2,
   Trash2,
   RefreshCw,
-  Folder,
   AlertCircle,
   Clock,
   Layers,
@@ -73,6 +72,11 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     scale: 1.0,
     posterUrl: ''
   });
+  const selectedPhotoCount = files.filter(file => /\.(png|jpe?g)$/i.test(file.name)).length;
+  const hasBenchmarkReference = files.some(file => file.name.toLowerCase() === 'metadata.json')
+    && files.some(file => /\.obj$/i.test(file.name));
+  const hasPartialBenchmarkReference = !hasBenchmarkReference
+    && files.some(file => file.name.toLowerCase() === 'metadata.json' || /\.obj$/i.test(file.name));
   const action = useRef(null), selection = useRef(0), viewer = useRef(null);
   const [viewerError, setViewerError] = useState('');
 
@@ -193,41 +197,6 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     } catch (e) {
       setError(e.message);
     }
-  }
-
-  async function chooseObjBundle(files) {
-    const entries = Array.from(files || []);
-    if (!entries.length) return;
-    const ticket = ++selection.current;
-    setBusy(true);
-    setError('');
-    setMessage('Đang chuyển OBJ cùng vật liệu và texture sang GLB…');
-    try {
-      const { convertObjBundleToGlb } = await import('../../services/objToGlb');
-      const file = await convertObjBundleToGlb(entries);
-      if (ticket !== selection.current) return;
-      await validateGlbPreview(file);
-      setViewerError('');
-      setDraft({ file, url: URL.createObjectURL(file), source: 'file' });
-      setMessage('Đã chuyển mô hình sang GLB. Xem thử rồi bấm lưu để gắn vào hiện vật.');
-    } catch (e) {
-      if (ticket === selection.current) {
-        setMessage('');
-        setError(e.message || 'Không chuyển được mô hình OBJ sang GLB.');
-      }
-    } finally {
-      if (ticket === selection.current) setBusy(false);
-    }
-  }
-
-  function chooseExistingModel(files) {
-    const entries = Array.from(files || []);
-    if (!entries.length) return;
-    const glbs = entries.filter(file => /\.glb$/i.test(file.name));
-    const objs = entries.filter(file => /\.obj$/i.test(file.name));
-    if (glbs.length === 1 && entries.length === 1) return chooseGlb(glbs[0]);
-    if (glbs.length === 0 && objs.length === 1) return chooseObjBundle(entries);
-    setError('Chọn một file GLB, hoặc đúng một file OBJ cùng MTL và các ảnh texture của model.');
   }
 
   async function perform(task) {
@@ -501,14 +470,13 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
               >
                 <Upload size={14} /> Tải model 3D có sẵn
                 <input
-                  aria-label="Chọn GLB hoặc bộ file OBJ để xem thử"
+                  aria-label="Chọn file GLB để xem thử"
                   type="file"
-                  accept=".glb,.obj,.mtl,.png,.jpg,.jpeg,.webp"
-                  multiple
+                  accept=".glb"
                   disabled={busy}
                   style={{ display: 'none' }}
                   onChange={e => {
-                    chooseExistingModel(e.target.files);
+                    chooseGlb(e.target.files[0]);
                     e.target.value = '';
                   }}
                 />
@@ -804,27 +772,11 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
 
               {canManage && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px' }}>
                     <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
-                      <Folder size={14} /> Chọn folder ảnh
+                      <Upload size={14} /> Chỉ tải ảnh (quy trình thường)
                       <input
-                        aria-label="Chọn folder ảnh"
-                        type="file"
-                        webkitdirectory=""
-                        multiple
-                        disabled={busy || running(job?.status)}
-                        style={{ display: 'none' }}
-                        onChange={e => {
-                          setFiles(Array.from(e.target.files || []));
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
-                      <Upload size={14} /> Chọn nhiều ảnh
-                      <input
-                        aria-label="Chọn nhiều ảnh"
+                        aria-label="Chọn ảnh để dựng 3D theo quy trình thường"
                         type="file"
                         accept=".jpg,.jpeg,.png"
                         multiple
@@ -832,28 +784,39 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                         style={{ display: 'none' }}
                         onChange={e => {
                           setFiles(Array.from(e.target.files || []));
+                          setMode('photos');
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}>
+                      <Upload size={14} /> Ảnh + OBJ + metadata (benchmark)
+                      <input
+                        aria-label="Chọn ảnh và file OBJ, metadata JSON tùy chọn cho benchmark"
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.obj,.json"
+                        multiple
+                        disabled={busy || running(job?.status)}
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          setFiles(Array.from(e.target.files || []));
+                          setMode('auto');
                           e.target.value = '';
                         }}
                       />
                     </label>
                   </div>
+                  <small style={{ color: 'var(--color-charcoal-500)', lineHeight: 1.5 }}>
+                    Benchmark cần đủ một file OBJ và metadata.json; không cần MTL. Nếu thiếu một trong hai, hệ thống tự chạy quy trình ảnh thường.
+                  </small>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.76rem', color: files.length ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-500)', fontWeight: files.length ? '600' : '400' }}>
-                      {files.length ? `✓ Đã chọn ${files.length} ảnh` : 'Chưa chọn ảnh (cần 5–200 ảnh)'}
+                    <span style={{ fontSize: '0.76rem', color: selectedPhotoCount ? 'var(--color-burgundy-700)' : 'var(--color-charcoal-500)', fontWeight: selectedPhotoCount ? '600' : '400' }}>
+                      {selectedPhotoCount ? `✓ Đã chọn ${selectedPhotoCount} ảnh${hasBenchmarkReference ? ' + OBJ + metadata.json' : ''}` : 'Chưa chọn ảnh (cần 5–200 ảnh)'}
                     </span>
-
-                    <select
-                      className="form-select form-select-sm"
-                      style={{ width: 'auto' }}
-                      value={mode}
-                      onChange={e => setMode(e.target.value)}
-                      disabled={busy}
-                    >
-                      <option value="auto">Chế độ tự động</option>
-                      <option value="photos">Chỉ ảnh chụp</option>
-                      <option value="benchmark">Dataset có OBJ</option>
-                    </select>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--color-charcoal-600)' }}>
+                      {hasBenchmarkReference ? 'Chế độ benchmark' : hasPartialBenchmarkReference ? 'Thiếu file tham chiếu — sẽ chạy quy trình ảnh thường' : 'Chế độ ảnh thường'}
+                    </span>
                   </div>
 
                   <label style={{ fontSize: '0.8rem', display: 'grid', gap: 6 }}>
