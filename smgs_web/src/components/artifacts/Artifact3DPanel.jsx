@@ -195,6 +195,31 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
     }
   }
 
+  async function chooseObjBundle(files) {
+    const entries = Array.from(files || []);
+    if (!entries.length) return;
+    const ticket = ++selection.current;
+    setBusy(true);
+    setError('');
+    setMessage('Đang chuyển OBJ cùng vật liệu và texture sang GLB…');
+    try {
+      const { convertObjBundleToGlb } = await import('../../services/objToGlb');
+      const file = await convertObjBundleToGlb(entries);
+      if (ticket !== selection.current) return;
+      await validateGlbPreview(file);
+      setViewerError('');
+      setDraft({ file, url: URL.createObjectURL(file), source: 'file' });
+      setMessage('Đã chuyển mô hình sang GLB. Xem thử rồi bấm lưu để gắn vào hiện vật.');
+    } catch (e) {
+      if (ticket === selection.current) {
+        setMessage('');
+        setError(e.message || 'Không chuyển được mô hình OBJ sang GLB.');
+      }
+    } finally {
+      if (ticket === selection.current) setBusy(false);
+    }
+  }
+
   async function perform(task) {
     setBusy(true);
     setError('');
@@ -473,6 +498,25 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
                   style={{ display: 'none' }}
                   onChange={e => {
                     chooseGlb(e.target.files[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+
+              <label
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, cursor: busy ? 'not-allowed' : 'pointer', justifyContent: 'center' }}
+                title="Chọn thư mục chứa OBJ, MTL và ảnh texture"
+              >
+                <Folder size={14} /> Chọn thư mục OBJ
+                <input
+                  aria-label="Chọn thư mục mô hình OBJ"
+                  type="file"
+                  webkitdirectory=""
+                  disabled={busy}
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    chooseObjBundle(e.target.files);
                     e.target.value = '';
                   }}
                 />
