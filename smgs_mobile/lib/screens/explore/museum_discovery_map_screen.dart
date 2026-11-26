@@ -341,6 +341,7 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
                             : DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
                                   value: province,
+                                  isExpanded: true,
                                   isDense: true,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 9,
@@ -540,3 +541,4 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
     );
   }
 }
+
