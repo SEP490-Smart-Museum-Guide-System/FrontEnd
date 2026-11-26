@@ -27,6 +27,13 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+const formatAudioTime = (sec) => {
+  if (!sec || isNaN(sec)) return '00:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
 export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio, onEdit, readOnly = false }) {
   const { artifactReviewStatus, downloadArtifactQr, regenerateArtifactQr, currentRole, showToast } = useApp();
   const [activeTab, setActiveTab] = useState('overview'); // overview | 3d | qr | multilingual | quizzes
@@ -51,6 +58,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   const [ttsCurrentTime, setTtsCurrentTime] = useState('00:00');
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
   const [ttsError, setTtsError] = useState(null);
+  const storedAudioUrl = publishedContent?.audioUrl || artifact?.audioUrl || '';
 
   useEffect(() => {
     return () => {
@@ -61,12 +69,54 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     };
   }, []);
 
-  const formatAudioTime = (sec) => {
-    if (!sec || isNaN(sec)) return '00:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
+  useEffect(() => {
+    setTtsProgress(0);
+    setTtsCurrentTime('00:00');
+    setTtsDuration('00:00');
+    setTtsError(null);
+    setIsPlayingAudio(false);
+    setTtsAudioUrl(storedAudioUrl || null);
+
+    if (!storedAudioUrl) return undefined;
+
+    const audio = new Audio();
+    audio.preload = 'metadata';
+    audio.onloadedmetadata = () => {
+      if (Number.isFinite(audio.duration)) {
+        setTtsDuration(formatAudioTime(audio.duration));
+      }
+    };
+    audio.ondurationchange = () => {
+      if (Number.isFinite(audio.duration)) {
+        setTtsDuration(formatAudioTime(audio.duration));
+      }
+    };
+    audio.ontimeupdate = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setTtsProgress((audio.currentTime / audio.duration) * 100);
+        setTtsCurrentTime(formatAudioTime(audio.currentTime));
+      }
+    };
+    audio.onended = () => {
+      setIsPlayingAudio(false);
+      setTtsProgress(0);
+      setTtsCurrentTime('00:00');
+    };
+    audio.onerror = () => {
+      setIsPlayingAudio(false);
+      setTtsError('Không tải được tệp audio đã lưu của phiên bản đã xuất bản.');
+    };
+    audio.src = storedAudioUrl;
+    audioRef.current = audio;
+    audio.load();
+
+    return () => {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      if (audioRef.current === audio) audioRef.current = null;
+    };
+  }, [storedAudioUrl]);
 
   const handleToggleAudio = async () => {
     if (isPlayingAudio && audioRef.current) {
@@ -83,7 +133,6 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
       return;
     }
 
-    const storedAudioUrl = publishedContent?.audioUrl || artifact?.audioUrl || '';
     if (!storedAudioUrl) {
       setTtsError('Phiên bản đã xuất bản chưa có tệp audio lưu trữ.');
       return;
@@ -96,7 +145,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
         audioRef.current.pause();
       }
 
-      const audio = new Audio(storedAudioUrl);
+      const audio = audioRef.current || new Audio(storedAudioUrl);
       audio.playbackRate = ttsSpeed;
       audioRef.current = audio;
       setTtsAudioUrl(storedAudioUrl);
