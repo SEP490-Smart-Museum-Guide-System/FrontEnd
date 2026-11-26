@@ -1,3 +1,4 @@
+import ArtifactThumbnail from './ArtifactThumbnail';
 import ActionGroup from '../common/ActionGroup';
 import { confirmAppDialog } from '../common/appDialogs';
 import { artifactReviewLabels } from '../../services/backend';
@@ -295,11 +296,10 @@ export default function ArtifactList({ onOpenAIStudio }) {
                           }}
                           title="Nhấn để xem từng ảnh (như bài đăng Facebook)"
                         >
-                          <img
+                          <ArtifactThumbnail
                             src={art.image || '/assets/images/placeholder.svg'}
                             alt={art.name}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                           />
                           {art.images && art.images.length > 1 && (
                             <div style={{
@@ -505,11 +505,10 @@ export default function ArtifactList({ onOpenAIStudio }) {
                 }}
                 title="Nhấn để xem từng ảnh (như bài đăng Facebook)"
               >
-                <img
+                <ArtifactThumbnail
                   src={art.image || '/assets/images/placeholder.svg'}
                   alt={art.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => { e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg'; }}
                 />
                 <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', gap: '6px' }}>
                   {art.isNationalTreasure && (

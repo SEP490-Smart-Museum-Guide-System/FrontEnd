@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { backend } from '../../services/backend';
+import { artifactReviewLabels, backend } from '../../services/backend';
 import { useData } from '../common/BusinessUI';
 import { useApp, formatCurationDate } from '../../context/AppContext';
 import {
@@ -12,7 +12,7 @@ const formatMoney = value => `${formatNumber(value)} đ`;
 
 export default function RoleDashboard({ onNavigate }) {
   const {
-    currentRole, currentMuseum, artifacts, museums, tours,
+    currentRole, currentMuseum, artifacts, artifactReviewStatus, museums, tours,
     curationQueue, transactions, users, reviews, systemCases
   } = useApp();
 
@@ -144,12 +144,15 @@ export default function RoleDashboard({ onNavigate }) {
       subtitle: `Mã hiện vật #${item.artifactId}`,
       badge: `${formatNumber(item.visits)} lượt quét`,
       status: 'approved'
-    })) : museumArtifacts.slice(0, 5).map(item => ({
-      title: item.name,
-      subtitle: `${item.galleryName} · ${item.code}`,
-      badge: item.status === 'published' ? 'Đã xuất bản' : 'Bản nháp',
-      status: item.status === 'published' ? 'published' : 'draft'
-    })),
+    })) : museumArtifacts.slice(0, 5).map(item => {
+      const status = artifactReviewStatus(item.id);
+      return {
+        title: item.name,
+        subtitle: `${item.galleryName} · ${item.code}`,
+        badge: artifactReviewLabels[status] ?? 'Chưa tải được trạng thái',
+        status: status ?? 'draft'
+      };
+    }),
     asideTitle: 'Tiếp tục công việc',
     asideText: d ? `Bảo tàng có ${d.catalog?.publishedIndoorMapsCount || 0} sơ đồ tầng đã xuất bản. Tỷ lệ khách hoàn tất lộ trình đạt ${d.visitsAndEngagement?.completionRatePercent || 0}%.` : `${museumTours.length} tour và ${museumReviews.length} phản hồi tại bảo tàng. Theo dõi phản hồi của Giám tuyển cho các nội dung đã đệ trình.`,
     asideAction: ['Xem trạng thái đệ trình', 'submission_status']

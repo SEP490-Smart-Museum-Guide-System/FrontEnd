@@ -3,64 +3,10 @@ import { Landmark, ChevronDown, ShieldCheck, Sparkles, Volume2, HelpCircle, Refr
 import { useApp } from '../../context/AppContext';
 import { parseQuestionDrafts } from '../../services/questionDrafts';
 import { generateStaffDraft, staffDraftRetry } from '../../services/staffAiApi';
-import { getAuthToken } from '../../services/auth';
+import ArtifactThumbnail from '../artifacts/ArtifactThumbnail';
 import { mediaApi, uploadMedia } from '../../services/mediaApi';
 import { findContentWarnings, inappropriateContentWarning } from '../../utils/contentModeration';
 import NarrationPreview from './NarrationPreview';
-
-const ARTIFACT_IMAGE_PLACEHOLDER = '/assets/images/placeholder.svg';
-const ARTIFACT_MEDIA_FILE_PATH = /^\/api\/artifacts\/\d+\/media\/\d+\/file$/;
-
-function ArtifactThumbnail({ src, alt, style }) {
-  const [displaySrc, setDisplaySrc] = useState(ARTIFACT_IMAGE_PLACEHOLDER);
-
-  useEffect(() => {
-    if (!src) {
-      setDisplaySrc(ARTIFACT_IMAGE_PLACEHOLDER);
-      return;
-    }
-
-    let objectUrl;
-    const controller = new AbortController();
-    const imageUrl = new URL(src, window.location.origin);
-    const requiresApiAuth = ARTIFACT_MEDIA_FILE_PATH.test(imageUrl.pathname) && imageUrl.origin === window.location.origin;
-
-    if (!requiresApiAuth) {
-      setDisplaySrc(src);
-      return () => controller.abort();
-    }
-
-    const token = getAuthToken();
-    if (!token) {
-      setDisplaySrc(ARTIFACT_IMAGE_PLACEHOLDER);
-      return () => controller.abort();
-    }
-
-    fetch(imageUrl.href, {
-      headers: { Accept: 'image/*', Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    })
-      .then(response => {
-        if (!response.ok) throw new Error(`Ảnh hiện vật không tải được (${response.status}).`);
-        return response.blob();
-      })
-      .then(blob => {
-        if (!blob.type.startsWith('image/')) throw new Error('Phản hồi ảnh hiện vật không hợp lệ.');
-        objectUrl = URL.createObjectURL(blob);
-        setDisplaySrc(objectUrl);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setDisplaySrc(ARTIFACT_IMAGE_PLACEHOLDER);
-      });
-
-    return () => {
-      controller.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [src]);
-
-  return <img src={displaySrc} alt={alt} style={style} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = ARTIFACT_IMAGE_PLACEHOLDER; }} />;
-}
 
 export default function AIContentStudio(props) {
   const app = useApp();

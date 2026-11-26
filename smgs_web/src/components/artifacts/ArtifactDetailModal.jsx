@@ -1,3 +1,4 @@
+import ArtifactThumbnail from './ArtifactThumbnail';
 import { artifactReviewLabels } from '../../services/backend';
 import ArtifactContentManager from './ArtifactContentManager';
 import ArtifactMediaPanel from './ArtifactMediaPanel';
@@ -449,13 +450,10 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <img
+                  <ArtifactThumbnail
                     src={artifact.image || '/assets/images/placeholder.svg'}
                     alt={artifact.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => {
-                      e.target.onerror = null; e.target.src = '/assets/images/placeholder.svg';
-                    }}
                   />
                 </div>
 

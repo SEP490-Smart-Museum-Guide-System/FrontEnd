@@ -1,3 +1,4 @@
+import ArtifactThumbnail from './ArtifactThumbnail';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, Image as ImageIcon, Download } from 'lucide-react';
@@ -218,7 +219,7 @@ export default function ArtifactPhotoGalleryModal({ artifact, initialIndex = 0, 
           justifyContent: 'center',
           position: 'relative'
         }}>
-          <img
+          <ArtifactThumbnail
             key={currentUrl}
             src={currentUrl}
             alt={currentTitle}
@@ -229,10 +230,6 @@ export default function ArtifactPhotoGalleryModal({ artifact, initialIndex = 0, 
               borderRadius: 8,
               boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
               animation: 'zoomIn 0.22s ease-out'
-            }}
-            onError={e => {
-              e.target.onerror = null;
-              e.target.src = '/assets/images/placeholder.svg';
             }}
           />
           {currentTitle && currentTitle !== artifact.name && (
@@ -330,14 +327,10 @@ export default function ArtifactPhotoGalleryModal({ artifact, initialIndex = 0, 
                   if (!isActive) e.currentTarget.style.opacity = '0.55';
                 }}
               >
-                <img
+                <ArtifactThumbnail
                   src={imgUrl}
                   alt={`Thumbnail ${index + 1}`}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  onError={e => {
-                    e.target.onerror = null;
-                    e.target.src = '/assets/images/placeholder.svg';
-                  }}
                 />
               </div>
             );
