@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ActionGroup from '../common/ActionGroup';
+import { confirmAppDialog } from '../common/appDialogs';
 import { useApp } from '../../context/AppContext';
 import { backend, allPages } from '../../services/backend';
 import { Field, Modal, PageTitle, LoadState, ErrorNotice, Empty, useData, useAction, roleLabels } from '../common/BusinessUI';
@@ -718,8 +719,8 @@ function Assignments({ id, eligible, onSaved }) {
                     className="btn btn-secondary btn-sm"
                     style={{ color: 'var(--color-danger)', borderColor: '#FCA5A5' }}
                     disabled={action.busy}
-                    onClick={() => {
-                      if (window.confirm(`Thu hồi phân công tại "${a.museumName}"?`)) {
+                    onClick={async () => {
+                      if (await confirmAppDialog(`Thu hồi phân công tại "${a.museumName}"?`, { title: 'Xác nhận thu hồi', destructive: true, confirmText: 'Thu hồi' })) {
                         action.run(() => backend(`admin/accounts/${id}/assignments/${a.id}`, { method: 'DELETE' }), refresh);
                       }
                     }}
@@ -901,8 +902,8 @@ function GlobalAssignments({ users, onClose, onSaved }) {
                 className="btn btn-secondary btn-sm"
                 style={{ color: 'var(--color-danger)', borderColor: '#FCA5A5', marginTop: 'auto' }}
                 disabled={action.busy}
-                onClick={() => {
-                  if (window.confirm('Thu hồi phân công này?')) {
+                onClick={async () => {
+                  if (await confirmAppDialog('Thu hồi phân công này?', { title: 'Xác nhận thu hồi', destructive: true, confirmText: 'Thu hồi' })) {
                     action.run(() => backend(`admin/assignments/${a.id}`, { method: 'DELETE' }), () => {
                       data.reload();
                       onSaved();

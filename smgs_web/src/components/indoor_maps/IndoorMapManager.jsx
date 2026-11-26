@@ -4,6 +4,7 @@ import StructureManager from './StructureManager';
 import { uploadMedia } from '../../services/mediaApi';
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { confirmAppDialog } from '../common/appDialogs';
 import { indoorApi } from '../../services/indoorMapApi';
 import MapCanvas from './MapCanvas';
 import { hasOverlappingEdge, markerTypes, nodeTypes, removeObject } from './indoorGraph';
@@ -74,11 +75,9 @@ export default function IndoorMapManager() {
   }, [map?.id, map?.imageKey]);
 
   useEffect(() => {
-    const guard = () => !busy && (!dirty || window.confirm('Bạn có thay đổi chưa lưu. Rời trang và bỏ các thay đổi này?'));
+    const guard = async () => !busy && (!dirty || await confirmAppDialog('Bạn có thay đổi chưa lưu. Rời trang và bỏ các thay đổi này?', { title: 'Bỏ thay đổi chưa lưu?', destructive: true, confirmText: 'Rời trang' }));
     const unregister = registerNavigationGuard(guard);
-    const unload = event => { if (dirty || busy) { event.preventDefault(); event.returnValue = ''; } };
-    window.addEventListener('beforeunload', unload);
-    return () => { unregister(); window.removeEventListener('beforeunload', unload); };
+    return () => { unregister(); };
   }, [dirty, busy, registerNavigationGuard]);
 
   async function run(action) {
@@ -87,7 +86,7 @@ export default function IndoorMapManager() {
     try { await action(); } catch (e) { if (alive.current) setError(e.message); }
     finally { if (alive.current) setBusy(false); }
   }
-  function discard() { return !dirty || window.confirm('Bỏ các thay đổi chưa lưu để tiếp tục?'); }
+  async function discard() { return !dirty || await confirmAppDialog('Bỏ các thay đổi chưa lưu để tiếp tục?', { title: 'Bỏ thay đổi chưa lưu?', destructive: true, confirmText: 'Tiếp tục' }); }
   async function refreshMaps() { setMaps(await indoorApi(`museums/${museumId}/indoor-maps`)); }
   async function open(id) {
     const [document, options] = await Promise.all([indoorApi(`indoor-maps/${id}/draft`), indoorApi(`indoor-maps/${id}/links`)]);
@@ -122,10 +121,10 @@ export default function IndoorMapManager() {
     }
     setTool('');
   }
-  function remove() {
+  async function remove() {
     if (!selected) return;
     const prompt = selected.kind === 'nodes' ? 'Xóa điểm này và các đoạn nối liên quan? Các điểm đánh dấu liên kết sẽ cần chọn lại điểm dẫn đường.' : 'Xóa đối tượng đang chọn?';
-    if (!window.confirm(prompt)) return;
+    if (!await confirmAppDialog(prompt, { title: 'Xác nhận xóa đối tượng', destructive: true, confirmText: 'Xóa đối tượng' })) return;
     change(prev => removeObject(prev, selected.kind, selected.id)); setSelected(null); setConnectFrom(null);
   }
   async function upload(file) {
@@ -135,7 +134,7 @@ export default function IndoorMapManager() {
     const bitmap = await createImageBitmap(file);
     const differs = map.imageWidth > 0 && Math.abs(bitmap.width / bitmap.height - map.imageWidth / map.imageHeight) > 0.001;
     bitmap.close();
-    if (differs && !window.confirm('Ảnh mới có tỷ lệ khác. Các điểm đã đặt có thể lệch vị trí. Bạn có muốn thay ảnh?')) return;
+    if (differs && !await confirmAppDialog('Ảnh mới có tỷ lệ khác. Các điểm đã đặt có thể lệch vị trí. Bạn có muốn thay ảnh?', { title: 'Xác nhận thay ảnh sơ đồ', destructive: true, confirmText: 'Thay ảnh' })) return;
     const form = new FormData(); form.append('file', file); form.append('revision', map.revision); form.append('confirm', String(differs));
     let uploaded;
     setUploadProgress(0);
@@ -170,21 +169,21 @@ export default function IndoorMapManager() {
         <Landmark size={14} aria-hidden="true" />
         <span>{museums.find(museum => String(museum.id) === String(museumId))?.name || 'Chọn bảo tàng'}</span>
         <ChevronDown size={12} aria-hidden="true" />
-      </> : 'Bảo tàng'}<select aria-label="Bảo tàng" value={museumId} onChange={e => { if (discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
+      </> : 'Bảo tàng'}<select aria-label="Bảo tàng" value={museumId} onChange={async e => { if (await discard()) { setDirty(false); setStructure(null); setMap(null); setMaps([]); setFloorId(''); setBuildingId(''); setSelectedMapId(''); setMode('new'); setError(''); setBusy(!!e.target.value); setMuseumId(e.target.value); } }}><option value="">Chọn bảo tàng</option>{options(museums)}</select></label>
 
       {structure && !structure.floors.length && <p>Vào Cấu trúc bảo tàng để thêm tòa nhà và tầng trước khi tạo sơ đồ.</p>}
       {structure && <div className="indoor-box indoor-management">
         <h2>Quản lý sơ đồ bảo tàng</h2>
-        <div className="indoor-row" role="tablist" aria-label="Quản lý sơ đồ bảo tàng">{[['existing', 'Sơ đồ hiện có'], ['new', 'Tạo sơ đồ mới']].map(([value, label]) => <button type="button" role="tab" id={`map-tab-${value}`} aria-controls="map-management-panel" aria-selected={mode === value} key={value} onClick={() => { if (mode !== value && discard()) setMode(value); }}>{label}</button>)}</div>
+        <div className="indoor-row" role="tablist" aria-label="Quản lý sơ đồ bảo tàng">{[['existing', 'Sơ đồ hiện có'], ['new', 'Tạo sơ đồ mới']].map(([value, label]) => <button type="button" role="tab" id={`map-tab-${value}`} aria-controls="map-management-panel" aria-selected={mode === value} key={value} onClick={async () => { if (mode !== value && await discard()) setMode(value); }}>{label}</button>)}</div>
         <div role="tabpanel" id="map-management-panel" aria-labelledby={`map-tab-${mode}`}>
           {mode === 'existing' ? <>
-            <label>Chọn sơ đồ cần chỉnh sửa<select value={selectedMapId} onChange={e => { if (discard()) setSelectedMapId(e.target.value); }}><option value="">Chọn sơ đồ</option>{maps.map(m => {
+            <label>Chọn sơ đồ cần chỉnh sửa<select value={selectedMapId} onChange={async e => { if (await discard()) setSelectedMapId(e.target.value); }}><option value="">Chọn sơ đồ</option>{maps.map(m => {
               const floor = structure.floors.find(f => f.id === m.floorId);
               const building = structure.buildings.find(b => b.id === floor?.buildingId);
               return <option key={m.id} value={m.id}>{mapLabel(m, floor, building)}</option>;
             })}</select></label>
             {maps.filter(m => String(m.id) === selectedMapId).map(m => <p key={m.id}>{m.publishedAt ? 'Đã xuất bản' : 'Bản nháp'}{m.revision != null ? ` · Phiên bản ${m.revision}` : ''}</p>)}
-            <button type="button" disabled={!selectedMapId} onClick={() => { if (discard()) run(() => open(selectedMapId)); }}>Chỉnh sửa sơ đồ</button>
+            <button type="button" disabled={!selectedMapId} onClick={async () => { if (await discard()) run(() => open(selectedMapId)); }}>Chỉnh sửa sơ đồ</button>
           </> : <>
             <div className="indoor-row">
               <label>Chọn tòa nhà<select value={buildingId} onChange={e => { setBuildingId(e.target.value); setFloorId(''); }}><option value="">Chọn tòa nhà</option>{options(structure.buildings)}</select></label>
@@ -196,7 +195,7 @@ export default function IndoorMapManager() {
               <small>Sơ đồ mới sẽ được tạo cho tầng bạn chọn.</small>
             </div>}
             {maps.some(m => String(m.floorId) === floorId) && <p role="status">Phạm vi này đã có sơ đồ. Chọn tab Sơ đồ hiện có để chỉnh sửa.</p>}
-            <button type="button" disabled={!floorId || maps.some(m => String(m.floorId) === floorId)} onClick={() => { if (discard()) run(async () => {
+            <button type="button" disabled={!floorId || maps.some(m => String(m.floorId) === floorId)} onClick={async () => { if (await discard()) run(async () => {
               const floor = structure.floors.find(f => String(f.id) === floorId);
               const id = await indoorApi(`museums/${museumId}/indoor-maps`, { method: 'POST', body: { floorId: Number(floorId), name: `Sơ đồ ${floor.name || 'Tầng ' + floor.levelNo}`.slice(0, 200) } });
               await refreshMaps(); await open(id); setSelectedMapId(String(id)); setMode('existing');
@@ -209,13 +208,13 @@ export default function IndoorMapManager() {
         <div className="indoor-row indoor-box">
           <label>Ảnh sơ đồ (PNG/JPG/WebP, tối đa 10 MB)<input type="file" accept=".png,.jpg,.jpeg,.webp" disabled={dirty || busy} onChange={e => { const file = e.target.files[0]; e.target.value = ''; run(() => upload(file)); }} /></label>
           <button type="button" onClick={() => run(async () => { await save(); setMessage('Đã lưu bản nháp.'); })}>Lưu bản nháp</button>
-          <button type="button" onClick={() => { if (discard()) run(() => open(map.id)); }}>Tải lại</button>
+          <button type="button" onClick={async () => { if (await discard()) run(() => open(map.id)); }}>Tải lại</button>
           <button type="button" disabled={dirty || !map.imageKey} onClick={() => run(async () => {
-            if (!window.confirm('Xuất bản cấu hình đã lưu để khách tham quan sử dụng?')) return;
+            if (!await confirmAppDialog('Xuất bản cấu hình đã lưu để khách tham quan sử dụng?', { title: 'Xác nhận xuất bản sơ đồ', confirmText: 'Xuất bản' })) return;
             const result = await indoorApi(`indoor-maps/${map.id}/publish`, { method: 'POST', body: { revision: map.revision } }); setMap(result); await refreshMaps(); setMessage(`Đã xuất bản. ${result.warnings.join(' ')}`);
           })}>Xuất bản</button>
           <button type="button" disabled={dirty || !map.publishedAt} onClick={() => run(async () => {
-            if (!window.confirm('Ngừng cung cấp sơ đồ đã xuất bản cho khách?')) return;
+            if (!await confirmAppDialog('Ngừng cung cấp sơ đồ đã xuất bản cho khách?', { title: 'Ngừng xuất bản sơ đồ?', destructive: true, confirmText: 'Ngừng xuất bản' })) return;
             setMap(await indoorApi(`indoor-maps/${map.id}/unpublish`, { method: 'POST', body: { revision: map.revision } })); await refreshMaps(); setMessage('Đã ngừng xuất bản.');
           })}>Ngừng xuất bản</button>
         </div>

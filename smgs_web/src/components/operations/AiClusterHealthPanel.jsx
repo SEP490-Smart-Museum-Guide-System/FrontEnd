@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { alertAppDialog } from '../common/appDialogs';
 import {
   Activity,
   Bot,
@@ -127,7 +128,7 @@ export default function AiClusterHealthPanel() {
         await audio.play();
       }
     } catch (err) {
-      alert('Không thể phát thử nghiệm TTS: ' + err.message + '\n\nHãy đảm bảo service TTS :8000 đang được bật.');
+      alertAppDialog('Không thể phát thử nghiệm TTS: ' + err.message + '\n\nHãy đảm bảo service TTS :8000 đang được bật.', { title: 'Lỗi TTS' });
       setTtsPlaying(false);
     }
   };

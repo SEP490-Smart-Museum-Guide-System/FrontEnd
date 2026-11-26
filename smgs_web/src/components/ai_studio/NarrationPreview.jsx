@@ -5,7 +5,7 @@ import { createSpeechPreview } from '../../services/speechPreviewApi.js';
 const WAVE_DELAYS = [0.1, 0.35, 0.2, 0.5, 0.15, 0.4, 0.25, 0.6, 0.3, 0.45, 0.2, 0.55, 0.1, 0.35, 0.5, 0.25];
 
 // Parent remounts this player when the edited script/artifact changes.
-export default function NarrationPreview({ artifactId, text, languageCode = 'vi', disabled = false }) {
+export default function NarrationPreview({ artifactId, text, languageCode = 'vi', disabled = false, onAudioGenerated }) {
   const voiceLabel = languageCode === 'en' ? 'tiếng Anh' : 'tiếng Việt';
   const [url, setUrl] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [playing, setPlaying] = useState(false), [speed, setSpeed] = useState(1);
@@ -27,6 +27,7 @@ export default function NarrationPreview({ artifactId, text, languageCode = 'vi'
     try {
       const blob = await createSpeechPreview(artifactId, text, controller.signal, languageCode);
       if (controller.signal.aborted) return;
+      onAudioGenerated?.(blob);
       blobUrl.current = URL.createObjectURL(blob); setUrl(blobUrl.current);
     } catch (e) {
       if (!controller.signal.aborted) setError(e.name === 'TimeoutError' ? 'Tạo giọng đọc quá lâu. Vui lòng thử lại.' : e.message);
@@ -52,7 +53,7 @@ export default function NarrationPreview({ artifactId, text, languageCode = 'vi'
       `}</style>
 
       <h3 style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '0 0 8px' }}><Volume2 size={19} />Nghe bản thuyết minh</h3>
-      <p style={{ fontSize: '.88rem', marginBottom: 12 }}>Giọng {voiceLabel} đọc đúng văn bản đang chỉnh sửa. Đây là bản nghe thử nội bộ, chưa xuất bản cho khách.</p>
+      <p style={{ fontSize: '.88rem', marginBottom: 12 }}>Giọng {voiceLabel} đọc đúng văn bản đang chỉnh sửa. Tạo xong, bản WAV sẽ được đính kèm khi gửi kiểm duyệt.</p>
       
       {!url && !busy && (
         <button type="button" className="btn btn-secondary" disabled={disabled || !text.trim()} onClick={generate}>

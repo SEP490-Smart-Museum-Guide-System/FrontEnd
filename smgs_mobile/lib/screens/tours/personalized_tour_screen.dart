@@ -439,9 +439,9 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                       : 'Hiện chưa có tour chính thức nào được công bố.',
                 );
               }
-              // Hiển thị trực tiếp 2 tour có sẵn với thiết kế thẻ nhỏ gọn
+              // Hiển thị đầy đủ danh sách các tour chính thức đã được công bố
               return Column(
-                children: tours.take(2).map((tour) {
+                children: tours.map((tour) {
                   final tourId = tour['id'] as int;
                   final title = (tour['title'] ?? '').toString();
                   final minutes = tour['estimatedMinutes'] ?? 45;

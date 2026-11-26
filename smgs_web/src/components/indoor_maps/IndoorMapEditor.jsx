@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
+import { alertAppDialog, confirmAppDialog } from '../common/appDialogs';
 import {
   getMyMuseumsApi,
   getIndoorStructureApi,
@@ -127,6 +128,12 @@ export default function IndoorMapEditor() {
   const containerRef = useRef(null);
   const svgRef = useRef(null);
 
+  const requestMapChange = async nextMapId => {
+    if (String(nextMapId) === String(selectedMapId)) return;
+    if (isDirty && !await confirmAppDialog('Bạn có thay đổi chưa lưu trên sơ đồ hiện tại. Tiếp tục chuyển sơ đồ sẽ bỏ thay đổi này?', { title: 'Bỏ thay đổi chưa lưu?', destructive: true, confirmText: 'Chuyển sơ đồ' })) return;
+    setSelectedMapId(nextMapId);
+  };
+
   // 1. Initial Load: Get museums assigned to user
   useEffect(() => {
     getMyMuseumsApi()
@@ -176,12 +183,6 @@ export default function IndoorMapEditor() {
       return;
     }
 
-    if (isDirty) {
-      if (!window.confirm('Bạn có thay đổi chưa lưu trên sơ đồ hiện tại. Tiếp tục chuyển sơ đồ sẽ bỏ thay đổi này?')) {
-        return;
-      }
-    }
-
     setAlertMsg(null);
     setIsDirty(false);
     setSelectedId(null);
@@ -213,18 +214,6 @@ export default function IndoorMapEditor() {
         setAlertMsg({ type: 'error', text: err.message });
       });
   }, [selectedMapId]);
-
-  // Window beforeunload check for unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
 
   // Helper: Get node by ID
   const getNode = useCallback((id) => {
@@ -387,7 +376,7 @@ export default function IndoorMapEditor() {
         setEdgeSourceNodeId(node.id);
       } else {
         if (edgeSourceNodeId === node.id) {
-          alert('Không thể nối một điểm với chính nó.');
+          alertAppDialog('Không thể nối một điểm với chính nó.', { title: 'Không thể nối điểm' });
           return;
         }
 
@@ -397,7 +386,7 @@ export default function IndoorMapEditor() {
                   (edge.fromNodeId === node.id && edge.toNodeId === edgeSourceNodeId && edge.bidirectional)
         );
         if (exists) {
-          alert('Đoạn nối giữa 2 điểm này đã tồn tại.');
+          alertAppDialog('Đoạn nối giữa 2 điểm này đã tồn tại.', { title: 'Đoạn nối đã tồn tại' });
           setEdgeSourceNodeId(null);
           return;
         }
@@ -471,11 +460,11 @@ export default function IndoorMapEditor() {
   };
 
   // Delete Object (Node, Marker, or Edge)
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (!selectedId || !selectedType) return;
 
     if (selectedType === 'node') {
-      if (!window.confirm('Xóa điểm dẫn đường này sẽ xóa các đoạn nối liên quan và bỏ liên kết ở các điểm đánh dấu. Tiếp tục?')) {
+      if (!await confirmAppDialog('Xóa điểm dẫn đường này sẽ xóa các đoạn nối liên quan và bỏ liên kết ở các điểm đánh dấu. Tiếp tục?', { title: 'Xác nhận xóa điểm dẫn đường', destructive: true, confirmText: 'Xóa điểm' })) {
         return;
       }
       setDraft(prev => ({
@@ -511,7 +500,7 @@ export default function IndoorMapEditor() {
         setActiveTool('select');
         setEdgeSourceNodeId(null);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        handleDeleteSelected();
+        void handleDeleteSelected();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -544,7 +533,7 @@ export default function IndoorMapEditor() {
   // Reload Draft API
   const handleReloadDraft = async () => {
     if (isDirty) {
-      if (!window.confirm('Bản vẽ có thay đổi chưa lưu. Tải lại sẽ khôi phục về trạng thái máy chủ đã lưu gần nhất?')) {
+      if (!await confirmAppDialog('Bản vẽ có thay đổi chưa lưu. Tải lại sẽ khôi phục về trạng thái máy chủ đã lưu gần nhất?', { title: 'Tải lại bản nháp?', destructive: true, confirmText: 'Tải lại' })) {
         return;
       }
     }
@@ -568,11 +557,11 @@ export default function IndoorMapEditor() {
     const file = e.target.files?.[0];
     if (!file || !draft) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert('Kích thước ảnh tối đa là 10 MB.');
+      alertAppDialog('Kích thước ảnh tối đa là 10 MB.', { title: 'Ảnh vượt quá giới hạn' });
       return;
     }
 
-    const confirmChange = draft.imageKey ? window.confirm('Thay đổi ảnh sơ đồ có thể ảnh hưởng đến tỷ lệ và vị trí các điểm đã đặt. Bạn có chắc chắn muốn thay?') : true;
+    const confirmChange = draft.imageKey ? await confirmAppDialog('Thay đổi ảnh sơ đồ có thể ảnh hưởng đến tỷ lệ và vị trí các điểm đã đặt. Bạn có chắc chắn muốn thay?', { title: 'Thay ảnh sơ đồ?', destructive: true, confirmText: 'Thay ảnh' }) : true;
     if (!confirmChange) return;
 
     setAlertMsg(null);
@@ -600,7 +589,7 @@ export default function IndoorMapEditor() {
   const handlePublish = async () => {
     if (!draft || isPublishing) return;
     if (isDirty) {
-      alert('Vui lòng bấm "Lưu bản nháp" trước khi xuất bản.');
+      alertAppDialog('Vui lòng bấm "Lưu bản nháp" trước khi xuất bản.', { title: 'Cần lưu bản nháp' });
       return;
     }
 
@@ -629,7 +618,7 @@ export default function IndoorMapEditor() {
       setAlertMsg({ type: 'error', text: `Điểm "${unlinkedNode.label || 'Hiện vật/Điểm đến'}" chưa liên kết điểm dẫn đường (Node). Vui lòng chọn "Điểm dẫn đường gần nhất" trước khi xuất bản.` });
       return;
     }
-    if (!window.confirm(`Xuất bản sơ đồ "${draft.name}" (phiên bản ${draft.revision}) cho khách tham quan?`)) {
+    if (!await confirmAppDialog(`Xuất bản sơ đồ "${draft.name}" (phiên bản ${draft.revision}) cho khách tham quan?`, { title: 'Xác nhận xuất bản sơ đồ', confirmText: 'Xuất bản' })) {
       return;
     }
     setIsPublishing(true);
@@ -652,7 +641,7 @@ export default function IndoorMapEditor() {
   // Unpublish Map API
   const handleUnpublish = async () => {
     if (!draft || isPublishing) return;
-    if (!window.confirm(`Ngừng xuất bản sơ đồ "${draft.name}"? Khách tham quan sẽ tạm thời không xem được sơ đồ này.`)) {
+    if (!await confirmAppDialog(`Ngừng xuất bản sơ đồ "${draft.name}"? Khách tham quan sẽ tạm thời không xem được sơ đồ này.`, { title: 'Ngừng xuất bản sơ đồ?', destructive: true, confirmText: 'Ngừng xuất bản' })) {
       return;
     }
     setIsPublishing(true);
@@ -671,15 +660,15 @@ export default function IndoorMapEditor() {
   // Route Preview in Editor API
   const handlePreviewRoute = async () => {
     if (!draft || !routeFromNodeId || !routeToNodeId) {
-      alert('Vui lòng chọn cả điểm bắt đầu và điểm kết thúc.');
+      alertAppDialog('Vui lòng chọn cả điểm bắt đầu và điểm kết thúc.', { title: 'Chưa chọn đủ điểm' });
       return;
     }
     if (routeFromNodeId === routeToNodeId) {
-      alert('Điểm bắt đầu và kết thúc trùng nhau.');
+      alertAppDialog('Điểm bắt đầu và kết thúc trùng nhau.', { title: 'Lộ trình không hợp lệ' });
       return;
     }
     if (isDirty) {
-      alert('Vui lòng bấm "Lưu bản nháp" trước khi thử đường đi.');
+      alertAppDialog('Vui lòng bấm "Lưu bản nháp" trước khi thử đường đi.', { title: 'Cần lưu bản nháp' });
       return;
     }
 
@@ -735,7 +724,7 @@ export default function IndoorMapEditor() {
       setNewMapName('');
       setAlertMsg({ type: 'success', text: `Đã tạo sơ đồ "${newMap.name}" thành công!` });
     } catch (err) {
-      alert(err.message);
+      alertAppDialog(err.message, { title: 'Không thể tạo sơ đồ' });
     }
   };
 
@@ -750,7 +739,7 @@ export default function IndoorMapEditor() {
       setShowBuildingModal(false);
       setNewBuildingName('');
     } catch (err) {
-      alert(err.message);
+      alertAppDialog(err.message, { title: 'Không thể tạo tòa nhà' });
     }
   };
 
@@ -769,7 +758,7 @@ export default function IndoorMapEditor() {
       setShowFloorModal(false);
       setNewFloorName('');
     } catch (err) {
-      alert(err.message);
+      alertAppDialog(err.message, { title: 'Không thể tạo tầng' });
     }
   };
 
@@ -780,7 +769,7 @@ export default function IndoorMapEditor() {
       const structRes = await getIndoorStructureApi(selectedMuseumId);
       setStructure(structRes?.data || structRes);
     } catch (err) {
-      alert(err.message);
+      alertAppDialog(err.message, { title: 'Không thể cập nhật cấu trúc' });
     }
   };
 
@@ -799,7 +788,7 @@ export default function IndoorMapEditor() {
       setTimeout(() => URL.revokeObjectURL(qrUrl), 1000);
       setAlertMsg({ type: 'success', text: checkpoint ? 'Đã tải QR vị trí. Đặt mã tại đúng cổng/phòng tương ứng.' : 'Đã tải QR hiện vật.' });
     } catch (err) {
-      alert(err.message);
+      alertAppDialog(err.message, { title: 'Không thể tải mã QR' });
     }
   };
 
@@ -878,7 +867,7 @@ export default function IndoorMapEditor() {
           {mapsList.length > 0 && (
             <select
               value={selectedMapId || ''}
-              onChange={(e) => setSelectedMapId(e.target.value)}
+              onChange={(e) => { void requestMapChange(e.target.value); }}
               className="form-control"
               style={{ fontSize: '0.8rem', padding: '6px 10px', height: '34px', minWidth: '160px', fontWeight: 600 }}
             >

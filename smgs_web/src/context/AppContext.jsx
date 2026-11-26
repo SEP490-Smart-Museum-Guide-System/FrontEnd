@@ -91,8 +91,8 @@ function DataProvider({ children, session, login, endSession }) {
   const [pendingNotificationTarget, setPendingNotificationTarget] = useState(null);
   const guard = useRef(null);
   const registerNavigationGuard = useCallback(fn => { guard.current = fn; return () => { if (guard.current === fn) guard.current = null; }; }, []);
-  const setActiveTab = tab => { if (!guard.current || guard.current()) setActiveTabState(tab); };
-  const logout = () => { if (!guard.current || guard.current()) endSession(); };
+  const setActiveTab = async tab => { if (!guard.current || await guard.current()) setActiveTabState(tab); };
+  const logout = async () => { if (!guard.current || await guard.current()) endSession(); };
   const [appLanguage, setAppLanguageState] = useState(() => (localStorage.getItem('smgs.language') === 'en' ? 'en' : 'vi'));
   const changeLanguage = async (newLang) => {
     const code = newLang === 'en' ? 'en' : 'vi';
@@ -247,7 +247,7 @@ function DataProvider({ children, session, login, endSession }) {
   const deleteArtifact = id => mutate(() => deleteArtifactApi(requireId(id)), 'Đã xóa hiện vật.');
   const downloadArtifactQr = (id, name) => mutate(() => downloadArtifactQrImageApi(requireId(id), name), 'Đã tải mã QR.');
   const regenerateArtifactQr = id => mutate(() => regenerateArtifactQrApi(requireId(id)), 'Đã tạo lại mã QR.');
-  const submitToCuration = item => mutate(() => submitArtifactContentApi(requireId(item.targetArtifactId), { languageCode: item.languageCode || 'vi', title: item.title, description: item.proposedContent || item.content || '', ...(item.narrationText ? { narrationText: item.narrationText } : {}), isAiGenerated: item.isAiGenerated ?? true }), 'Đã gửi bản thảo lên máy chủ.');
+  const submitToCuration = item => mutate(() => submitArtifactContentApi(requireId(item.targetArtifactId), { languageCode: item.languageCode || 'vi', title: item.title, description: item.proposedContent || item.content || '', ...(item.narrationText ? { narrationText: item.narrationText } : {}), ...(item.audioUrl ? { audioUrl: item.audioUrl } : {}), isAiGenerated: item.isAiGenerated ?? true }), 'Đã gửi bản thảo lên máy chủ.');
   const approveCurationItem = (id, note) => {
     const item = curationQueue.find(x => x.id === id || x.backendId === id);
     if (item && item.type === 'new_tour') {

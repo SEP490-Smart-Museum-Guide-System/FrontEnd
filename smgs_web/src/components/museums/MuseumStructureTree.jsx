@@ -19,6 +19,7 @@ import {
   PackageCheck
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { confirmAppDialog } from '../common/appDialogs';
 
 export default function MuseumStructureTree() {
   const { currentMuseum, museums, currentRole, setActiveTab, setSelectedMuseumId, artifacts, showToast } = useApp();
@@ -79,9 +80,9 @@ export default function MuseumStructureTree() {
     const relatedFloors = structure.floors.filter(f => f.buildingId === building.id);
     if (relatedFloors.length > 0) {
       const confirmMsg = `Tòa nhà "${building.name}" hiện đang có ${relatedFloors.length} tầng và các phòng trưng bày trực thuộc.\n\nTheo quy tắc bảo toàn dữ liệu, bạn nên xử lý/chuyển các tầng và hiện vật trước khi xóa.\n\nBạn có chắc chắn muốn xóa tòa nhà này không?`;
-      if (!window.confirm(confirmMsg)) return;
+      if (!await confirmAppDialog(confirmMsg, { title: 'Xác nhận xóa tòa nhà', destructive: true, confirmText: 'Xóa tòa nhà' })) return;
     } else {
-      if (!window.confirm(`Bạn có chắc chắn muốn xóa tòa nhà "${building.name}"?`)) return;
+      if (!await confirmAppDialog(`Bạn có chắc chắn muốn xóa tòa nhà "${building.name}"?`, { title: 'Xác nhận xóa tòa nhà', destructive: true, confirmText: 'Xóa tòa nhà' })) return;
     }
 
     try {
@@ -98,9 +99,9 @@ export default function MuseumStructureTree() {
     const relatedGalleries = structure.galleries.filter(g => g.floorId === floor.id);
     if (relatedGalleries.length > 0) {
       const confirmMsg = `Tầng "${floor.name || `Tầng ${floor.levelNo}`}" đang chứa ${relatedGalleries.length} phòng trưng bày.\n\nBạn cần xóa hoặc chuyển các phòng trưng bày trước để đảm bảo an toàn dữ liệu hiện vật.\n\nBạn có muốn tiếp tục thử xóa?`;
-      if (!window.confirm(confirmMsg)) return;
+      if (!await confirmAppDialog(confirmMsg, { title: 'Xác nhận xóa tầng', destructive: true, confirmText: 'Xóa tầng' })) return;
     } else {
-      if (!window.confirm(`Bạn có chắc chắn muốn xóa tầng "${floor.name || `Tầng ${floor.levelNo}`}"?`)) return;
+      if (!await confirmAppDialog(`Bạn có chắc chắn muốn xóa tầng "${floor.name || `Tầng ${floor.levelNo}`}"?`, { title: 'Xác nhận xóa tầng', destructive: true, confirmText: 'Xóa tầng' })) return;
     }
 
     try {
@@ -117,9 +118,9 @@ export default function MuseumStructureTree() {
     const count = artifacts.filter(a => a.galleryId === gallery.id).length;
     if (count > 0) {
       const msg = `Phòng trưng bày "${gallery.name}" hiện đang chứa ${count} hiện vật.\n\nQuy tắc hệ thống: Vui lòng chuyển các hiện vật sang phòng khác hoặc bỏ gán phòng trước khi xóa phòng này để tránh làm mất liên kết dữ liệu.\n\nBạn có chắc chắn muốn xóa không?`;
-      if (!window.confirm(msg)) return;
+      if (!await confirmAppDialog(msg, { title: 'Xác nhận xóa phòng', destructive: true, confirmText: 'Xóa phòng' })) return;
     } else {
-      if (!window.confirm(`Bạn có chắc chắn muốn xóa phòng trưng bày "${gallery.name}"?`)) return;
+      if (!await confirmAppDialog(`Bạn có chắc chắn muốn xóa phòng trưng bày "${gallery.name}"?`, { title: 'Xác nhận xóa phòng', destructive: true, confirmText: 'Xóa phòng' })) return;
     }
 
     try {

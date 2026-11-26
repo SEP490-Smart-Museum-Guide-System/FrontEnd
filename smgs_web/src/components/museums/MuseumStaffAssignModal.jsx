@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { confirmAppDialog } from '../common/appDialogs';
 import { backend, allPages } from '../../services/backend';
 import { useApp } from '../../context/AppContext';
 import {
@@ -99,7 +100,7 @@ export default function MuseumStaffAssignModal({ museum, onClose, onAssigned }) 
   // 4. Hủy phân công nhân viên
   const handleRevoke = async (assignmentId, staffName) => {
     if (mutationPending.current) return;
-    if (!window.confirm(`Bạn có chắc chắn muốn hủy phân công của nhân viên "${staffName || 'này'}" khỏi bảo tàng?`)) return;
+    if (!await confirmAppDialog(`Bạn có chắc chắn muốn hủy phân công của nhân viên "${staffName || 'này'}" khỏi bảo tàng?`, { title: 'Xác nhận hủy phân công', destructive: true, confirmText: 'Hủy phân công' })) return;
 
     mutationPending.current = true;
     setIsSubmitting(true);

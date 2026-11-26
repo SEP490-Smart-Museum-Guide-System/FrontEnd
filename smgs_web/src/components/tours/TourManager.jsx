@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ActionGroup from '../common/ActionGroup';
 import { createPortal } from 'react-dom';
+import { alertAppDialog } from '../common/appDialogs';
 import { useApp } from '../../context/AppContext';
 import { allPages } from '../../services/backend';
 import {
@@ -54,7 +55,7 @@ export default function TourManager() {
   const [tourForm, setTourForm] = useState({
     title: '',
     duration: '60 phút',
-    theme: '',
+    selectedTopics: [],
     description: '',
     selectedArtifacts: []
   });
@@ -154,16 +155,39 @@ export default function TourManager() {
 
   const handleMouseUp = () => setIsPanning(false);
 
+  const getArtifactTopicNames = (art) => {
+    if (!art) return [];
+    if (Array.isArray(art.topics) && art.topics.length > 0) {
+      return art.topics.map(t => (typeof t === 'string' ? t : t?.name)).filter(Boolean);
+    }
+    if (art.category) {
+      return art.category.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  const getTourTopicNames = (tour) => {
+    if (tour.theme) {
+      return tour.theme.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    const derived = new Set();
+    (tour.artifacts || []).forEach(artId => {
+      const art = museumArtifacts.find(a => a.id === artId);
+      getArtifactTopicNames(art).forEach(name => derived.add(name));
+    });
+    return Array.from(derived);
+  };
+
   const handleCreateTour = async (e) => {
     e.preventDefault();
     if (!tourForm.title) {
-      alert('Vui lòng nhập tên hành trình tham quan');
+      alertAppDialog('Vui lòng nhập tên hành trình tham quan', { title: 'Thiếu thông tin' });
       return;
     }
     const data = {
       title: tourForm.title,
       duration: tourForm.duration,
-      theme: tourForm.theme,
+      theme: (tourForm.selectedTopics || []).join(', '),
       isPaidGuide: false,
       price: 0,
       museumId: currentMuseum?.id,
@@ -172,12 +196,12 @@ export default function TourManager() {
       stopsCount: tourForm.selectedArtifacts.length,
       artifacts: tourForm.selectedArtifacts
     };
-    const draftVer = editingTour ? ((editingTour.versions || []).find(v => v.status === 'draft') || (editingTour.status === 'draft' && editingTour.versions?.[0] ? editingTour.versions[0] : null)) : null;
+    const draftVer = editingTour ? (editingTour.versions || []).find(v => v.status === 'draft') : null;
     let result;
     if (draftVer?.id) {
       result = await updateTourVersionDraft(draftVer.id, data);
     } else if (editingTour) {
-      result = await updateTour({ ...data, id: editingTour.id, revision: editingTour.revision });
+      result = await createTourVersionDraft(editingTour.id, null, data);
     } else {
       result = await addTour(data);
     }
@@ -187,7 +211,7 @@ export default function TourManager() {
     setTourForm({
       title: '',
       duration: '60 phút',
-      theme: '',
+      selectedTopics: [],
       description: '',
       selectedArtifacts: []
     });
@@ -198,11 +222,22 @@ export default function TourManager() {
     setTourForm({
       title: tour.title,
       duration: tour.duration,
-      theme: tour.theme || '',
+      selectedTopics: getTourTopicNames(tour),
       description: tour.description || '',
       selectedArtifacts: tour.artifacts || []
     });
     setIsCreatingTour(true);
+  };
+
+  const toggleTopicInTour = (topicName) => {
+    setTourForm(prev => {
+      const current = prev.selectedTopics || [];
+      const exists = current.includes(topicName);
+      const nextTopics = exists
+        ? current.filter(name => name !== topicName)
+        : [...current, topicName];
+      return { ...prev, selectedTopics: nextTopics };
+    });
   };
 
   const toggleArtifactInTour = (artId) => {
@@ -240,7 +275,7 @@ export default function TourManager() {
               setTourForm({
                 title: '',
                 duration: '60 phút',
-                theme: '',
+                selectedTopics: [],
                 description: '',
                 selectedArtifacts: []
               });
@@ -297,15 +332,16 @@ export default function TourManager() {
       {activeSection === 'tours' && (
         <div className="business-grid">
           {museumTours.map(tour => {
-            const draftVersion = (tour.versions || []).find(v => v.status === 'draft') || (tour.status === 'draft' && tour.versions?.[0] ? tour.versions[0] : null);
+            const draftVersion = (tour.versions || []).find(v => v.status === 'draft');
             const hasSubmittedVersion = (tour.versions || []).some(v => v.status === 'submitted');
+            const copySourceVersion = draftVersion || (tour.versions || [])[0] || null;
             return (
               <div key={tour.id} className="card business-card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <Compass size={18} color="var(--color-burgundy-700)" />
                     <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-burgundy-700)' }}>
-                      {tour.theme || 'Tuyến tổng quát'}
+                      {getTourTopicNames(tour).join(' • ') || 'Tuyến tổng quát'}
                     </span>
                   </div>
                   {hasSubmittedVersion ? (
@@ -354,7 +390,7 @@ export default function TourManager() {
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         title="Tạo bản sao phiên bản mới (Draft) để chỉnh sửa"
-                        onClick={() => createTourVersionDraft(tour.id, draftVersion?.id || tour.activeVersionId)}
+                        onClick={() => createTourVersionDraft(tour.id, copySourceVersion?.id || null)}
                       >
                         <Copy size={12} /> Tạo bản nháp mới
                       </button>
@@ -468,29 +504,63 @@ export default function TourManager() {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Thời lượng ước tính</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        value={tourForm.duration}
-                        onChange={(e) => setTourForm(prev => ({ ...prev, duration: e.target.value }))}
-                        placeholder="45 phút"
-                      />
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Thời lượng ước tính</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={tourForm.duration}
+                      onChange={(e) => setTourForm(prev => ({ ...prev, duration: e.target.value }))}
+                      placeholder="45 phút"
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label className="form-label" style={{ marginBottom: 0 }}>
+                        Chủ đề tham quan (có thể chọn nhiều):
+                      </label>
+                      {(tourForm.selectedTopics || []).length > 0 && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-burgundy-700)' }}>
+                          Đã chọn {tourForm.selectedTopics.length} chủ đề
+                        </span>
+                      )}
                     </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Chủ đề</label>
-                      <select
-                        className="form-select"
-                        value={tourForm.theme}
-                        onChange={(e) => setTourForm(prev => ({ ...prev, theme: e.target.value }))}
-                      >
-                        <option value="">-- Chọn chủ đề tham quan --</option>
-                        {topicsList.map(t => (
-                          <option key={t.id} value={t.name}>{t.name}</option>
-                        ))}
-                      </select>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 10px', border: '1px solid var(--color-paper-border)', borderRadius: '8px', background: '#FFF', maxHeight: '110px', overflowY: 'auto' }}>
+                      {topicsList.length > 0 ? topicsList.map(t => {
+                        const checked = (tourForm.selectedTopics || []).includes(t.name);
+                        return (
+                          <label
+                            key={t.id}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '16px',
+                              fontSize: '0.78rem',
+                              fontWeight: checked ? '600' : '500',
+                              cursor: 'pointer',
+                              border: checked ? '1px solid var(--color-burgundy-700)' : '1px solid var(--color-paper-border)',
+                              background: checked ? 'var(--color-paper-accent)' : '#FAF7F2',
+                              color: checked ? 'var(--color-burgundy-900)' : 'var(--color-charcoal-700)',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleTopicInTour(t.name)}
+                              style={{ margin: 0, cursor: 'pointer' }}
+                            />
+                            <span>{t.name}</span>
+                          </label>
+                        );
+                      }) : (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-500)' }}>
+                          Bảo tàng chưa có chủ đề nào.
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -511,38 +581,69 @@ export default function TourManager() {
                         </button>
                       )}
                     </div>
-                    <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--color-paper-border)', borderRadius: '8px', padding: '8px', background: '#FFF' }}>
+                    <div style={{ maxHeight: '190px', overflowY: 'auto', border: '1px solid var(--color-paper-border)', borderRadius: '8px', padding: '8px', background: '#FFF' }}>
                       {museumArtifacts.map(art => {
                         const isSelected = tourForm.selectedArtifacts.includes(art.id);
                         const stopOrder = tourForm.selectedArtifacts.indexOf(art.id);
+                        const artTopics = getArtifactTopicNames(art);
+                        const matchesSelectedTopic = (tourForm.selectedTopics || []).length > 0 && artTopics.some(t => tourForm.selectedTopics.includes(t));
                         return (
                           <label
                             key={art.id}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
+                              justifyContent: 'space-between',
                               gap: '8px',
                               padding: '6px 8px',
                               borderRadius: '6px',
                               cursor: 'pointer',
                               fontSize: '0.8125rem',
-                              background: isSelected ? '#FEF3C7' : 'transparent',
-                              marginBottom: '2px'
+                              background: isSelected ? '#FEF3C7' : (matchesSelectedTopic ? 'rgba(197, 160, 89, 0.12)' : 'transparent'),
+                              border: matchesSelectedTopic && !isSelected ? '1px dashed var(--color-gold-400)' : '1px solid transparent',
+                              marginBottom: '3px'
                             }}
                           >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleArtifactInTour(art.id)}
-                            />
-                            {isSelected && (
-                              <span style={{ background: '#F59E0B', color: '#FFF', borderRadius: '4px', padding: '1px 5px', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                                Trạm {stopOrder + 1}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleArtifactInTour(art.id)}
+                                style={{ flexShrink: 0 }}
+                              />
+                              {isSelected && (
+                                <span style={{ background: '#F59E0B', color: '#FFF', borderRadius: '4px', padding: '1px 5px', fontSize: '0.7rem', fontWeight: 'bold', flexShrink: 0 }}>
+                                  Trạm {stopOrder + 1}
+                                </span>
+                              )}
+                              <span style={{ fontWeight: isSelected ? '600' : 'normal', color: 'var(--color-charcoal-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={art.name}>
+                                {art.name}
                               </span>
-                            )}
-                            <span style={{ fontWeight: isSelected ? '600' : 'normal', color: 'var(--color-charcoal-800)' }}>
-                              {art.name} ({art.galleryName})
-                            </span>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0 }}>
+                              {artTopics.length > 0 ? artTopics.map(topicName => (
+                                <span
+                                  key={topicName}
+                                  style={{
+                                    fontSize: '0.68rem',
+                                    fontWeight: '600',
+                                    padding: '1px 7px',
+                                    borderRadius: '10px',
+                                    background: (tourForm.selectedTopics || []).includes(topicName) ? 'var(--color-burgundy-700)' : '#F1ECE1',
+                                    color: (tourForm.selectedTopics || []).includes(topicName) ? '#FFF' : 'var(--color-burgundy-800)',
+                                    border: '1px solid var(--color-paper-border)',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {topicName}
+                                </span>
+                              )) : (
+                                <span style={{ fontSize: '0.68rem', color: 'var(--color-charcoal-400)', fontStyle: 'italic' }}>
+                                  Chưa gán chủ đề
+                                </span>
+                              )}
+                            </div>
                           </label>
                         );
                       })}
