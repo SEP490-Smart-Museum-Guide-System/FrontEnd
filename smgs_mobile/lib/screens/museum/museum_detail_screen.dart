@@ -9,6 +9,8 @@ import '../../widgets/museum_ui.dart';
 import '../artifact/artifact_qr_scanner.dart';
 import '../../widgets/exploration_map_button.dart';
 import 'visitor_directory_screen.dart';
+import '../profile/services_screen.dart';
+import '../../services/backend_api.dart';
 
 const _burgundy = Color(0xff6d3032);
 const _label = TextStyle(
@@ -40,6 +42,7 @@ class MuseumDetailScreen extends StatefulWidget {
 class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   late Museum _museum;
   MuseumHighlights? _highlights;
+  List<Map<String, dynamic>> _products = [];
 
   @override
   void initState() {
@@ -56,9 +59,11 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   void _initialize() {
     _museum = widget.museum;
     _highlights = null;
+    _products = [];
     if (int.tryParse(_museum.id) != null) {
       _loadMuseum();
       _loadHighlights();
+      _loadProducts();
     }
   }
 
@@ -83,6 +88,20 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
       }
     } catch (error) {
       debugPrint('Museum discovery request failed: $error');
+    }
+  }
+
+  Future<void> _loadProducts() async {
+    final id = widget.museum.id;
+    try {
+      final res = await BackendApi.request('commerce/museums/$id/products');
+      if (mounted && widget.museum.id == id && res is List) {
+        setState(() {
+          _products = res.cast<Map<String, dynamic>>().where((p) => p['isActive'] == true).toList();
+        });
+      }
+    } catch (_) {
+      // Gracefully ignore if commerce is unavailable
     }
   }
 
@@ -274,6 +293,124 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                           : intro,
                       style: AppTextStyles.bodyMedium,
                     ),
+                    if (_products.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(l10n.isEn ? 'PASSES & DIGITAL SERVICES' : 'VÉ & GÓI DỊCH VỤ SỐ', style: _label),
+                          if (_products.length > 2)
+                            GestureDetector(
+                              onTap: () => openPage(
+                                context,
+                                ServicesScreen(
+                                  museumId: _museum.id,
+                                  museumName: _museum.name,
+                                ),
+                              ),
+                              child: Text(
+                                l10n.isEn ? 'View all' : 'Xem tất cả',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _burgundy,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      for (final p in _products.take(2)) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.45)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _burgundy.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.mutedGold.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppColors.mutedGold),
+                                    ),
+                                    child: const Text(
+                                      'Tư liệu số & Thuyết minh',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: _burgundy,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${p['price']} ${p['currency'] ?? 'VND'}',
+                                    style: const TextStyle(
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: _burgundy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                p['name']?.toString() ?? 'Gói dịch vụ',
+                                style: const TextStyle(
+                                  fontFamily: AppTextStyles.serifFamily,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkBrown,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Áp dụng: ${p['seats'] ?? 1} người · Thời hạn: ${p['validityHours'] ?? 24}h sau thanh toán',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.secondaryText),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: _burgundy,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(VisitorRadius.md),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.shopping_bag_outlined, size: 16),
+                                  label: const Text('Đặt mua gói này', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                  onPressed: () => openPage(
+                                    context,
+                                    ServiceCheckoutScreen(
+                                      museumId: _museum.id,
+                                      product: p,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                     if (top.isNotEmpty) ...[
                       SectionHeading(
                         l10n.isEn ? 'Most Popular Artifacts' : 'Hiện vật được quan tâm nhất',
@@ -333,6 +470,29 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    tooltip: l10n.isEn ? 'Buy passes and services' : 'Vé & Dịch vụ số',
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(50, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                      ),
+                      side: BorderSide.none,
+                      backgroundColor: VisitorColors.surface2,
+                      foregroundColor: _burgundy,
+                    ),
+                    onPressed: museumId == null
+                        ? null
+                        : () => openPage(
+                            context,
+                            ServicesScreen(
+                              museumId: museumId.toString(),
+                              museumName: _museum.name,
+                            ),
+                          ),
+                    icon: const Icon(Icons.confirmation_number_outlined),
                   ),
                   const SizedBox(width: 8),
                   IconButton.outlined(

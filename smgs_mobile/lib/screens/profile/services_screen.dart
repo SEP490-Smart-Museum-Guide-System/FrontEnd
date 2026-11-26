@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/experience.dart';
+import '../../models/museum.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/backend_panel.dart';
 import '../../services/app_services.dart';
@@ -10,24 +11,109 @@ import '../../services/backend_api.dart';
 import 'order_detail_screen.dart';
 
 // ============================================================================
-// 1. SERVICES SCREEN: Danh sách sản phẩm & dịch vụ bảo tàng
+// 1. SERVICES HUB & ADAPTERS
 // ============================================================================
-class ServicesScreen extends StatefulWidget {
+
+class ServicesScreen extends StatelessWidget {
   const ServicesScreen({super.key, this.museumName, this.museumId});
   final String? museumName, museumId;
 
   @override
-  State<ServicesScreen> createState() => _ServicesScreenState();
+  Widget build(BuildContext context) => ServicesHubScreen(
+        initialTab: 0,
+        museumName: museumName,
+        museumId: museumId,
+      );
 }
 
-class _ServicesScreenState extends State<ServicesScreen> {
-  late String? _museumId = widget.museumId ??
-      AppServices.catalog.museums.where((m) => m.name == widget.museumName).firstOrNull?.id ??
-      AppServices.catalog.museums.firstOrNull?.id;
+class PurchasedServicesScreen extends StatelessWidget {
+  const PurchasedServicesScreen({super.key});
 
-  late Future<dynamic>? _products = _museumId == null
-      ? null
-      : BackendApi.request('commerce/museums/$_museumId/products');
+  @override
+  Widget build(BuildContext context) => const ServicesHubScreen(
+        initialTab: 1,
+      );
+}
+
+class ServicesHubScreen extends StatefulWidget {
+  const ServicesHubScreen({
+    super.key,
+    this.initialTab = 0,
+    this.museumName,
+    this.museumId,
+  });
+
+  final int initialTab;
+  final String? museumName, museumId;
+
+  @override
+  State<ServicesHubScreen> createState() => _ServicesHubScreenState();
+}
+
+class _ServicesHubScreenState extends State<ServicesHubScreen> {
+  late int _activeTab = widget.initialTab;
+  String? _museumId;
+  List<Museum> _museums = [];
+  bool _loadingMuseums = true;
+  Future<dynamic>? _products;
+  Future<List<List<Map<String, dynamic>>>>? _passesOrdersData;
+
+  @override
+  void initState() {
+    super.initState();
+    _museumId = widget.museumId;
+    _initCatalogAndProducts();
+    _refreshPassesAndOrders();
+  }
+
+  Future<void> _initCatalogAndProducts() async {
+    try {
+      if (AppServices.catalog.museums.isEmpty) {
+        await AppServices.catalog.load();
+      }
+    } catch (_) {}
+
+    var list = AppServices.catalog.museums;
+    if (list.isEmpty) {
+      try {
+        final raw = await BackendApi.list('museums');
+        list = raw.map(Museum.fromBackendJson).toList();
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _museums = list;
+      _loadingMuseums = false;
+      if (_museumId == null && _museums.isNotEmpty) {
+        if (widget.museumName != null) {
+          _museumId = _museums.where((m) => m.name == widget.museumName).firstOrNull?.id ?? _museums.first.id;
+        } else {
+          _museumId = _museums.first.id;
+        }
+      }
+      if (_museumId != null) {
+        _products = BackendApi.request('commerce/museums/$_museumId/products');
+      }
+    });
+  }
+
+  void _onSelectMuseum(String? id) {
+    if (id == null || id == _museumId) return;
+    setState(() {
+      _museumId = id;
+      _products = BackendApi.request('commerce/museums/$id/products');
+    });
+  }
+
+  void _refreshPassesAndOrders() {
+    setState(() {
+      _passesOrdersData = Future.wait([
+        BackendApi.list('commerce/orders/me'),
+        BackendApi.list('commerce/passes/me'),
+      ]);
+    });
+  }
 
   void _onSelectProduct(Map<String, dynamic> product) {
     if (AppServices.auth.user == null) {
@@ -49,7 +135,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
               onPressed: () {
                 Navigator.of(ctx).pop();
-                // Navigate to login if available or prompt user
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Vui lòng đăng nhập từ màn hình Tài khoản.')),
                 );
@@ -65,26 +150,126 @@ class _ServicesScreenState extends State<ServicesScreen> {
     openPage(
       context,
       ServiceCheckoutScreen(
-        museumId: _museumId!,
+        museumId: _museumId ?? '1',
         product: product,
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) => MuseumPage(
-    back: true,
-    title: 'Vé & Dịch vụ số',
-    eyebrow: 'Bảo tàng điện tử',
-    children: [
-      if (AppServices.catalog.museums.isEmpty)
-        const Notice('Chưa có bảo tàng công khai trên hệ thống.')
-      else
+  Widget build(BuildContext context) {
+    return MuseumPage(
+      back: true,
+      title: _activeTab == 0 ? 'Vé & Gói dịch vụ' : 'Dịch vụ của tôi',
+      eyebrow: 'Quản lý vé & đơn hàng',
+      children: [
+        // Tab Segmented Selector
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _activeTab = 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _activeTab == 0 ? AppColors.deepBurgundy : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Gói dịch vụ đang bán',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _activeTab == 0 ? AppColors.antiqueIvory : AppColors.darkBrown,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _activeTab = 1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _activeTab == 1 ? AppColors.deepBurgundy : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Vé & Đơn của tôi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: _activeTab == 1 ? AppColors.antiqueIvory : AppColors.darkBrown,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        KeyedSubtree(
+          key: ValueKey<int>(_activeTab),
+          child: _activeTab == 0 ? _buildShopTab() : _buildMyPassesTab(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShopTab() {
+    if (_loadingMuseums) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(color: AppColors.deepBurgundy),
+              SizedBox(height: 12),
+              Text('Đang tải danh sách bảo tàng…', style: TextStyle(color: AppColors.secondaryText, fontSize: 13)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_museums.isEmpty) {
+      return Column(
+        children: [
+          const Notice('Chưa có bảo tàng công khai trên hệ thống.'),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tải lại'),
+            onPressed: _initCatalogAndProducts,
+          ),
+        ],
+      );
+    }
+
+    final safeValue = _museumId != null && _museums.any((m) => m.id == _museumId) ? _museumId : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         DropdownButtonFormField<String>(
-          initialValue: _museumId,
+          value: safeValue,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'Chọn bảo tàng'),
-          items: AppServices.catalog.museums
+          items: _museums
               .map(
                 (m) => DropdownMenuItem(
                   value: m.id,
@@ -92,141 +277,448 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 ),
               )
               .toList(),
-          onChanged: (id) => setState(() {
-            _museumId = id;
-            _products = BackendApi.request('commerce/museums/$id/products');
-          }),
+          onChanged: _onSelectMuseum,
         ),
-      const SizedBox(height: 16),
-      if (_products != null)
-        FutureBuilder<dynamic>(
-          future: _products,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            if (snapshot.hasError) {
+        const SizedBox(height: 16),
+        if (_products != null)
+          FutureBuilder<dynamic>(
+            future: _products,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator(color: AppColors.deepBurgundy)),
+                );
+              }
+              if (snapshot.hasError) {
+                return Column(
+                  children: [
+                    Notice('Không thể tải danh sách gói: ${snapshot.error}'),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _products = BackendApi.request('commerce/museums/$_museumId/products');
+                      }),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                );
+              }
+              final raw = snapshot.data;
+              final products = raw is List ? raw.cast<Map<String, dynamic>>() : <Map<String, dynamic>>[];
+              if (products.isEmpty) {
+                return const EmptyState(
+                  title: 'Chưa có gói dịch vụ',
+                  message: 'Bảo tàng này chưa mở bán gói dịch vụ số hoặc vé tham quan nào.',
+                );
+              }
               return Column(
-                children: [
-                  Notice('Không thể tải danh sách gói: ${snapshot.error}'),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _products = BackendApi.request('commerce/museums/$_museumId/products');
-                    }),
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              );
-            }
-            final products = (snapshot.data as List).cast<Map<String, dynamic>>();
-            if (products.isEmpty) {
-              return const EmptyState(
-                title: 'Chưa có gói dịch vụ',
-                message: 'Bảo tàng chưa công khai gói vé hoặc dịch vụ thuyết minh nào.',
-              );
-            }
-            return Column(
-              children: products.map((p) {
-                final kindLabel = switch (p['kind']) {
-                  'admission' => 'Vé vào cổng',
-                  'digital' => 'Tư liệu số & Thuyết minh',
-                  'combo' => 'Gói Trọn gói (Vé + Thuyết minh)',
-                  _ => p['kind'].toString(),
-                };
-                final seats = p['seats'] ?? 1;
-                final validityHours = p['validityHours'] ?? 24;
+                children: products.map((p) {
+                  final kindLabel = switch (p['kind']) {
+                    'admission' => 'Vé vào cổng',
+                    'digital' => 'Tư liệu số & Thuyết minh',
+                    'combo' => 'Gói Trọn gói (Vé + Thuyết minh)',
+                    _ => p['kind'].toString(),
+                  };
+                  final seats = p['seats'] ?? 1;
+                  final validityHours = p['validityHours'] ?? 24;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Panel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.mutedGold.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: AppColors.mutedGold),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Panel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.mutedGold.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppColors.mutedGold),
+                                ),
+                                child: Text(
+                                  kindLabel,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.deepBurgundy,
+                                  ),
+                                ),
                               ),
-                              child: Text(
-                                kindLabel,
+                              const Spacer(),
+                              Text(
+                                '${p['price']} ${p['currency'] ?? 'VND'}',
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.deepBurgundy,
                                 ),
                               ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${p['price']} ${p['currency']}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.deepBurgundy,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(p['name'] as String, style: AppTextStyles.cardTitle),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Áp dụng: $seats người · Thời hạn: $validityHours giờ sau thanh toán',
-                          style: AppTextStyles.caption,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            if (p['resourceIds'] != null && (p['resourceIds'] as List).isNotEmpty)
-                              Expanded(
-                                child: TextButton.icon(
-                                  icon: const Icon(Icons.info_outline, size: 16),
-                                  label: const Text('Quyền lợi', style: TextStyle(fontSize: 13)),
-                                  onPressed: () => openPage(
-                                    context,
-                                    ResourceAccessScreen(
-                                      museumId: _museumId!,
-                                      resourceIds: (p['resourceIds'] as List).cast<int>(),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(p['name'] as String? ?? 'Gói dịch vụ', style: AppTextStyles.cardTitle),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Áp dụng: $seats người · Thời hạn: $validityHours giờ sau thanh toán',
+                            style: AppTextStyles.caption,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              if (p['resourceIds'] != null && (p['resourceIds'] as List).isNotEmpty)
+                                Expanded(
+                                  child: TextButton.icon(
+                                    icon: const Icon(Icons.info_outline, size: 16),
+                                    label: const Text('Quyền lợi', style: TextStyle(fontSize: 13)),
+                                    onPressed: () => openPage(
+                                      context,
+                                      ResourceAccessScreen(
+                                        museumId: _museumId ?? '1',
+                                        resourceIds: (p['resourceIds'] as List).cast<int>(),
+                                      ),
                                     ),
                                   ),
                                 ),
+                              Expanded(
+                                flex: 2,
+                                child: PrimaryButton(
+                                  label: 'Xem & Mua gói',
+                                  icon: Icons.shopping_bag_outlined,
+                                  onPressed: () => _onSelectProduct(p),
+                                ),
                               ),
-                            Expanded(
-                              flex: 2,
-                              child: PrimaryButton(
-                                label: 'Xem & Mua gói',
-                                icon: Icons.shopping_bag_outlined,
-                                onPressed: () => _onSelectProduct(p),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMyPassesTab() {
+    return FutureBuilder<List<List<Map<String, dynamic>>>>(
+      future: _passesOrdersData,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: CircularProgressIndicator(color: AppColors.deepBurgundy)),
+          );
+        }
+        if (snapshot.hasError) return Notice(snapshot.error.toString());
+        final orders = snapshot.data![0], passes = snapshot.data![1];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header Thẻ tham quan & Nút Nhập mã nhóm tinh gọn
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SectionHeading('Thẻ tham quan hiện tại'),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: AppColors.deepBurgundy,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                  icon: const Icon(Icons.key_outlined, size: 15),
+                  label: const Text(
+                    'Nhập mã nhóm',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () async {
+                    final accepted = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute<bool>(builder: (_) => const RedeemPassScreen()),
+                    );
+                    if (accepted == true && mounted) _refreshPassesAndOrders();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            if (passes.isEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.confirmation_number_outlined, size: 28, color: AppColors.mutedGold),
+                    SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        'Bạn chưa có thẻ tham quan nào đang kích hoạt.',
+                        style: TextStyle(fontSize: 13, color: AppColors.secondaryText),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              for (final p in passes)
+                _buildPassCard(p),
+
+            const SizedBox(height: 24),
+
+            // Header Lịch sử đơn hàng & Nút Tải lại tinh gọn
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SectionHeading('Lịch sử đơn hàng'),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 20, color: AppColors.deepBurgundy),
+                  tooltip: 'Tải lại',
+                  onPressed: _refreshPassesAndOrders,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            if (orders.isEmpty)
+              const Notice('Bạn chưa thực hiện đơn đặt mua nào.')
+            else
+              for (final o in orders)
+                _buildOrderCard(o),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPassCard(Map<String, dynamic> p) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: Border.all(
+          color: p['isValid'] == true
+              ? AppColors.mutedGold.withValues(alpha: 0.6)
+              : AppColors.border,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.confirmation_number_outlined,
+                      size: 18,
+                      color: p['isValid'] == true
+                          ? AppColors.deepBurgundy
+                          : AppColors.secondaryText,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'VÉ THAM QUAN ĐIỆN TỬ',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: p['isValid'] == true ? const Color(0xFFE8F5E9) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: p['isValid'] == true ? const Color(0xFF2E7D32).withValues(alpha: 0.3) : Colors.grey.shade300,
                     ),
                   ),
-                );
-              }).toList(),
-            );
-          },
-        ),
-      const SizedBox(height: 12),
-      Center(
-        child: TextButton.icon(
-          icon: const Icon(Icons.receipt_long_outlined),
-          label: const Text('Xem danh sách vé & dịch vụ đã mua của tôi'),
-          onPressed: () => openPage(context, const PurchasedServicesScreen()),
+                  child: Text(
+                    p['isValid'] == true ? 'Đang có hiệu lực' : 'Hết hiệu lực',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: p['isValid'] == true ? const Color(0xFF2E7D32) : Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 18, color: AppColors.border),
+            Text(
+              p['productName'] ?? 'Thẻ bảo tàng',
+              style: const TextStyle(
+                fontFamily: AppTextStyles.sansFamily,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkBrown,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Hết hạn: ${p['expiresAt'] ?? 'Không giới hạn'}',
+              style: const TextStyle(
+                fontFamily: AppTextStyles.sansFamily,
+                fontSize: 12,
+                color: AppColors.secondaryText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.antiqueIvory,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: SelectableText(
+                'Mã thẻ: #${p['id']}',
+                style: const TextStyle(
+                  fontFamily: AppTextStyles.sansFamily,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkBrown,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-    ],
-  );
+    );
+  }
+
+  Widget _buildOrderCard(Map<String, dynamic> o) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.antiqueIvory,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.receipt_long_outlined,
+                      size: 20,
+                      color: AppColors.deepBurgundy,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        o['productName'] ?? 'Đơn hàng',
+                        style: const TextStyle(
+                          fontFamily: AppTextStyles.sansFamily,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkBrown,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Mã đơn: #${o['id']} · ${backendStatus(o['status'])}',
+                        style: const TextStyle(
+                          fontFamily: AppTextStyles.sansFamily,
+                          fontSize: 12,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${o['amount']} ${o['currency']}',
+                  style: const TextStyle(
+                    fontFamily: AppTextStyles.sansFamily,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.deepBurgundy,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 18, color: AppColors.border),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => OrderDetailScreen(orderId: o['id'].toString()),
+                    ),
+                  );
+                  if (mounted) _refreshPassesAndOrders();
+                },
+                icon: const Icon(Icons.description_outlined, size: 16),
+                label: const Text('Xem chi tiết & Hóa đơn', style: TextStyle(fontSize: 12.5)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.deepBurgundy,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ============================================================================
@@ -305,6 +797,8 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       final p = _effectiveProduct;
       final rawId = p['id'];
       final productId = rawId is int ? rawId : int.tryParse(rawId.toString()) ?? rawId;
+      final now = DateTime.now();
+      final visitDateStr = "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
       // 1. Tạo đơn hàng mới (hoặc tái sử dụng đơn chưa hoàn tất thanh toán)
       final order = _order ??
@@ -314,6 +808,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
               method: 'POST',
               body: {
                 'productId': productId,
+                'visitDate': visitDateStr,
                 'buyerName': name,
                 'buyerDetails': {
                   'email': email,
@@ -1295,300 +1790,4 @@ class PaymentFailureScreen extends StatelessWidget {
       ],
     );
   }
-}
-
-// ============================================================================
-// 6. PURCHASED SERVICES SCREEN: Quản lý Thẻ vé & Lịch sử đơn hàng của khách
-// ============================================================================
-class PurchasedServicesScreen extends StatefulWidget {
-  const PurchasedServicesScreen({super.key});
-
-  @override
-  State<PurchasedServicesScreen> createState() => _PurchasedServicesScreenState();
-}
-
-class _PurchasedServicesScreenState extends State<PurchasedServicesScreen> {
-  Future<List<List<Map<String, dynamic>>>> _fetch() => Future.wait([
-    BackendApi.list('commerce/orders/me'),
-    BackendApi.list('commerce/passes/me'),
-  ]);
-
-  late Future<List<List<Map<String, dynamic>>>> _data = _fetch();
-
-  @override
-  Widget build(BuildContext context) => MuseumPage(
-    back: true,
-    title: 'Dịch vụ của tôi',
-    eyebrow: 'Quản lý vé & Quyền truy cập',
-    children: [
-      Row(
-        children: [
-          Expanded(
-            child: PrimaryButton(
-              label: 'Nhập mã tham gia nhóm',
-              icon: Icons.key_outlined,
-              onPressed: () async {
-                final accepted = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute<bool>(builder: (_) => const RedeemPassScreen()),
-                );
-                if (accepted == true && mounted) setState(() => _data = _fetch());
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.deepBurgundy),
-            tooltip: 'Tải lại',
-            onPressed: () => setState(() => _data = _fetch()),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      FutureBuilder<List<List<Map<String, dynamic>>>>(
-        future: _data,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) return Notice(snapshot.error.toString());
-          final orders = snapshot.data![0], passes = snapshot.data![1];
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SectionHeading('Thẻ tham quan & Quyền truy cập số'),
-              const SizedBox(height: 8),
-              if (passes.isEmpty)
-                const Notice('Bạn chưa có thẻ tham quan nào đang kích hoạt.')
-              else
-                for (final p in passes)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
-                      border: Border.all(
-                        color: p['isValid'] == true
-                            ? AppColors.mutedGold.withValues(alpha: 0.6)
-                            : AppColors.border,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.confirmation_number_outlined,
-                                    size: 18,
-                                    color: p['isValid'] == true
-                                        ? AppColors.deepBurgundy
-                                        : AppColors.secondaryText,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'VÉ THAM QUAN ĐIỆN TỬ',
-                                    style: TextStyle(
-                                      fontFamily: AppTextStyles.sansFamily,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                      color: AppColors.secondaryText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: p['isValid'] == true ? const Color(0xFFE8F5E9) : Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: p['isValid'] == true ? const Color(0xFF2E7D32).withValues(alpha: 0.3) : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Text(
-                                  p['isValid'] == true ? 'Đang có hiệu lực' : 'Hết hiệu lực',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: p['isValid'] == true ? const Color(0xFF2E7D32) : Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 18, color: AppColors.border),
-                          Text(
-                            p['productName'] ?? 'Thẻ bảo tàng',
-                            style: const TextStyle(
-                              fontFamily: AppTextStyles.sansFamily,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkBrown,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Hết hạn: ${p['expiresAt'] ?? 'Không giới hạn'}',
-                            style: const TextStyle(
-                              fontFamily: AppTextStyles.sansFamily,
-                              fontSize: 12,
-                              color: AppColors.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.antiqueIvory,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: SelectableText(
-                              'Mã thẻ: #${p['id']}',
-                              style: const TextStyle(
-                                fontFamily: AppTextStyles.sansFamily,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.darkBrown,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-              const SizedBox(height: 20),
-              const SectionHeading('Lịch sử đơn hàng'),
-              const SizedBox(height: 8),
-              if (orders.isEmpty)
-                const Notice('Bạn chưa thực hiện đơn đặt mua nào.')
-              else
-                for (final o in orders)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(VisitorRadius.xl),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: AppColors.antiqueIvory,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.receipt_long_outlined,
-                                    size: 20,
-                                    color: AppColors.deepBurgundy,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      o['productName'] ?? 'Đơn hàng',
-                                      style: const TextStyle(
-                                        fontFamily: AppTextStyles.sansFamily,
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.darkBrown,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      'Mã đơn: #${o['id']} · ${backendStatus(o['status'])}',
-                                      style: const TextStyle(
-                                        fontFamily: AppTextStyles.sansFamily,
-                                        fontSize: 12,
-                                        color: AppColors.secondaryText,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '${o['amount']} ${o['currency']}',
-                                style: const TextStyle(
-                                  fontFamily: AppTextStyles.sansFamily,
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.deepBurgundy,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 18, color: AppColors.border),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => OrderDetailScreen(orderId: o['id'].toString()),
-                                  ),
-                                );
-                                if (mounted) setState(() => _data = _fetch());
-                              },
-                              icon: const Icon(Icons.description_outlined, size: 16),
-                              label: const Text('Xem chi tiết & Hóa đơn', style: TextStyle(fontSize: 12.5)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.deepBurgundy,
-                                side: const BorderSide(color: AppColors.border),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-            ],
-          );
-        },
-      ),
-    ],
-  );
 }

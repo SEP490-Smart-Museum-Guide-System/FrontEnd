@@ -33,12 +33,12 @@ function MuseumCommerce({ museumId }) {
   const refresh = () => { data.reload(); reloadApp(); };
   return <><div className="business-toolbar section-tabs" aria-label="Các mục dịch vụ">{[['orders', 'Đơn hàng'], ['products', 'Gói dịch vụ'], ['resources', 'Nội dung & quyền'], ['revenue', 'Báo cáo doanh thu'], ['visits', 'Thống kê tham quan']].map(([id, name]) => <button className={`section-tab ${tab === id ? 'is-active' : ''}`} aria-pressed={tab === id} key={id} onClick={() => setTab(id)}>{name}</button>)}<button className="btn btn-secondary" onClick={data.reload}>Tải lại</button></div>
     <ErrorNotice>{action.error}</ErrorNotice>{tab === 'revenue' ? <Revenue museumId={museumId} /> : tab === 'visits' ? <VisitReport museumId={museumId} /> : <LoadState resource={data}>
-    {tab === 'orders' && <><input className="form-input" aria-label="Tìm đơn hàng" placeholder="Tìm mã đơn, người mua, gói dịch vụ" value={query} onChange={e => setQuery(e.target.value)} /><div className="business-list">{data.data[2].filter(o => `${o.id} ${o.buyerName} ${o.productName}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))).map(o => <article key={o.id} className="card business-card"><h3>{o.productName}</h3><p>{o.buyerName} · {money(o.amount, o.currency)}</p><p>{statusLabels[o.status] || o.status} · {new Date(o.createdAt).toLocaleString('vi-VN')}</p><p className="business-muted">Mã đơn: {o.id}</p><button className="btn btn-secondary" onClick={() => setOrderId(o.id)}>Chi tiết & đối soát</button></article>)}{!data.data[2].length && <Empty>Chưa có đơn hàng.</Empty>}</div></>}
+    {tab === 'orders' && <><input className="form-input" aria-label="Tìm đơn hàng" placeholder="Tìm mã đơn, người mua, gói dịch vụ" value={query} onChange={e => setQuery(e.target.value)} /><div className="business-list">{data.data[2].filter(o => `${o.id} ${o.buyerName} ${o.productName}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))).map(o => <article key={o.id} className="card business-card"><h3>{o.productName}</h3><p>{o.buyerName} · {money(o.amount, o.currency)}</p><p>{statusLabels[o.status] || o.status} · {new Date(o.createdAt).toLocaleString('vi-VN')}</p><p className="business-muted">Mã đơn: {o.id}</p><button className="btn btn-secondary" onClick={() => setOrderId(o.id)}>Chi tiết đơn hàng</button></article>)}{!data.data[2].length && <Empty>Chưa có đơn hàng.</Empty>}</div></>}
     {tab === 'products' && <><button className="btn btn-primary" onClick={() => setModal({ type: 'product' })}>Thêm gói dịch vụ</button><div className="business-grid">{data.data[1].map(p => <article key={p.id} className="card business-card"><h3>{p.name}</h3><p>{money(p.price, p.currency)} · {p.seats} người</p><p>{p.validityHours ? `${p.validityHours} giờ từ lúc thanh toán` : 'Chưa cấu hình thời hạn mua'}</p><p>{p.isActive ? 'Đang bán' : 'Tạm ẩn'}</p><p>{p.resourceIds.map(id => data.data[0].find(r => r.id === id)?.name || `Nội dung #${id}`).join(', ')}</p><button className="btn btn-secondary" onClick={() => setModal({ type: 'product', value: p })}>Chỉnh sửa</button></article>)}</div>{!data.data[1].length && <Empty>Chưa có gói dịch vụ.</Empty>}</>}
     {tab === 'resources' && <><button className="btn btn-primary" onClick={() => setModal({ type: 'resource' })}>Thêm nội dung / quyền</button><div className="business-list">{data.data[0].map(r => <article key={r.id} className="card business-card"><h3>{r.name}</h3><p>Nội dung số · {r.accessLevel === 'premium' ? 'Trả phí' : 'Miễn phí'}</p><p>{artifacts.find(a => a.id === r.artifactId)?.name || r.scopeReference || 'Toàn phạm vi dịch vụ'}</p><button className="btn btn-secondary" onClick={() => setModal({ type: 'resource', value: r })}>Chỉnh sửa</button></article>)}</div>{!data.data[0].length && <Empty>Chưa có nội dung / quyền.</Empty>}</>}
     </LoadState>}
     {modal && <CommerceForm key={`${modal.type}:${modal.value?.id || 'new'}`} modal={modal} museumId={museumId} resources={data.data[0]} artifacts={artifacts.filter(a => a.museumId === museumId)} onClose={() => setModal(null)} onSaved={() => { setModal(null); refresh(); }} />}
-    {orderId && <ManagedOrder key={orderId} id={orderId} onClose={() => setOrderId(null)} onSaved={refresh} />}
+    {orderId && <ManagedOrder key={orderId} id={orderId} onClose={() => setOrderId(null)} />}
   </>;
 }
 function CommerceForm({ modal, museumId, resources, artifacts, onClose, onSaved }) {
@@ -66,14 +66,97 @@ function CommerceForm({ modal, museumId, resources, artifacts, onClose, onSaved 
     {product ? <><Field label="Giá"><input className="form-input" type="number" min="0.01" max="999999999999" step="0.01" required value={form.price} onChange={e => change('price', e.target.value)} /></Field><Field label="Loại tiền"><input className="form-input" required pattern="[A-Za-z]{3}" maxLength={3} value={form.currency} onChange={e => change('currency', e.target.value)} /></Field><Field label="Số người"><input className="form-input" type="number" required min={1} max={1000} value={form.seats} onChange={e => change('seats', e.target.value)} /></Field><Field label="Thời hạn tính từ lúc thanh toán (giờ)"><input className="form-input" type="number" min="1" max={87600} required={form.isActive} value={form.validityHours} onChange={e => change('validityHours', e.target.value)} /></Field><p className="business-muted">{form.isActive ? 'Bắt buộc nhập số giờ khi mở bán công khai.' : 'Để trống thời hạn nếu gói chưa sẵn sàng cho khách mua.'}</p><label className="business-check"><input type="checkbox" checked={form.isActive} onChange={e => change('isActive', e.target.checked)} />Công khai gói dịch vụ</label><h4>Nội dung được cấp quyền</h4>{resources.map(r => <label className="business-check" key={r.id}><input type="checkbox" checked={form.resourceIds.includes(r.id)} onChange={e => change('resourceIds', e.target.checked ? [...form.resourceIds, r.id] : form.resourceIds.filter(id => id !== r.id))} /><span>{r.name}</span></label>)}{!resources.length && <Empty>Tạo nội dung / quyền trước khi tạo gói dịch vụ.</Empty>}</> : <><Field label="Mức truy cập"><select className="form-select" value={form.accessLevel} onChange={e => change('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Trả phí</option></select></Field><Field label="Hiện vật liên quan"><select className="form-select" value={form.artifactId} onChange={e => change('artifactId', e.target.value)}><option value="">Không gắn hiện vật</option>{artifacts.map(a => <option value={a.id} key={a.id}>{a.name}</option>)}</select></Field><Field label="Tham chiếu phạm vi (nếu có)"><input className="form-input" maxLength={200} value={form.scopeReference} onChange={e => change('scopeReference', e.target.value)} /></Field></>}
     <button className="btn btn-primary" disabled={action.busy || (product && !form.resourceIds.length)}>{action.busy ? 'Đang lưu…' : 'Lưu cấu hình'}</button></form></Modal>;
 }
-function ManagedOrder({ id, onClose, onSaved }) {
+function ManagedOrder({ id, onClose }) {
   const detail = useData(`order:${id}`, signal => backend(`commerce/orders/${id}/manage`, { signal }));
-  const [attempt, setAttempt] = useState(null), [succeeded, setSucceeded] = useState(true), [reference, setReference] = useState(''), [reason, setReason] = useState('');
-  const action = useAction('Đã lưu thay đổi dịch vụ và giao dịch.');
-  return <Modal title="Chi tiết đơn hàng & đối soát" onClose={onClose} busy={action.busy}><ErrorNotice>{action.error}</ErrorNotice><LoadState resource={detail}>{detail.data && <><h3>{detail.data.order.productName}</h3><p>{detail.data.order.buyerName} · {money(detail.data.order.amount, detail.data.order.currency)}</p><p>{statusLabels[detail.data.order.status] || detail.data.order.status}</p><p className="business-muted">{id}</p><h4>Các lần thanh toán</h4>{!detail.data.transactions.length && <Empty>Khách chưa gửi yêu cầu thanh toán.</Empty>}{detail.data.transactions.map(t => <article className="card business-card" key={t.id}><p>{statusLabels[t.status] || t.status} · {new Date(t.createdAt).toLocaleString('vi-VN')}</p><p>{t.reference || t.failureReason}</p>{t.status === 'pending' && <button className="btn btn-secondary" disabled={action.busy} onClick={() => { setAttempt(t.id); setReference(''); setReason(''); }}>Đối soát lần thanh toán này</button>}</article>)}
-    {attempt && <form onSubmit={async e => { e.preventDefault(); if (await confirmAppDialog(succeeded ? 'Xác nhận đã thu tiền? Hệ thống sẽ cấp quyền theo đơn hàng.' : 'Xác nhận giao dịch thất bại?', { title: 'Xác nhận đối soát', confirmText: 'Xác nhận' })) action.run(() => backend(`commerce/payments/${attempt}/confirm`, { method: 'POST', body: { succeeded, reference: reference.trim() || null, failureReason: reason.trim() || null } }), () => { setAttempt(null); detail.reload(); onSaved(); }); }}><Field label="Kết quả đối soát"><select className="form-select" value={String(succeeded)} onChange={e => setSucceeded(e.target.value === 'true')}><option value="true">Đã thu tiền</option><option value="false">Thất bại</option></select></Field>{succeeded ? <Field label="Mã tham chiếu thanh toán"><input className="form-input" required maxLength={200} value={reference} onChange={e => setReference(e.target.value)} /></Field> : <Field label="Lý do thất bại"><textarea className="form-input" required maxLength={2000} value={reason} onChange={e => setReason(e.target.value)} /></Field>}<p>Đối chiếu chứng từ thực tế trước khi xác nhận.</p><button className="btn btn-primary" disabled={action.busy}>Xác nhận đối soát</button></form>}
-    {detail.data.invoice && <section className="card business-card"><h4>Thông tin hóa đơn</h4><p>{detail.data.invoice.number}</p><p>{detail.data.invoice.buyerName}</p><p>{money(detail.data.invoice.amount, detail.data.invoice.currency)}</p><p>{new Date(detail.data.invoice.issuedAt).toLocaleString('vi-VN')}</p></section>}
-    </>}</LoadState></Modal>;
+  return (
+    <Modal title="Chi tiết đơn hàng" onClose={onClose}>
+      <LoadState resource={detail}>
+        {detail.data && (() => {
+          const o = detail.data.order;
+          const buyerDetails = o.buyerDetails || {};
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="card business-card" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 0.25rem 0' }}>{o.productName}</h3>
+                    <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-primary, #6d3032)', fontSize: '1.2rem' }}>
+                      {money(o.amount, o.currency)}
+                    </p>
+                  </div>
+                  <span className={`badge badge-${o.status === 'paid' ? 'success' : o.status === 'cancelled' ? 'danger' : 'warning'}`} style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 600 }}>
+                    {statusLabels[o.status] || o.status}
+                  </span>
+                </div>
+                <hr style={{ margin: '1rem 0', borderColor: 'var(--border, #eee)' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.9rem' }}>
+                  <div><strong>Mã đơn hàng:</strong> <span style={{ wordBreak: 'break-all' }}>{id}</span></div>
+                  <div><strong>Người mua:</strong> {o.buyerName}</div>
+                  {buyerDetails.email && <div><strong>Email:</strong> {buyerDetails.email}</div>}
+                  {buyerDetails.phone && <div><strong>Số điện thoại:</strong> {buyerDetails.phone}</div>}
+                  <div><strong>Số người:</strong> {o.seats} người</div>
+                  <div><strong>Thời hạn:</strong> {o.validityHours} giờ</div>
+                  <div><strong>Ngày tham quan:</strong> {o.visitDate || 'Trong ngày'}</div>
+                  <div><strong>Ngày tạo:</strong> {new Date(o.createdAt).toLocaleString('vi-VN')}</div>
+                  {o.paidAt && <div><strong>Thời gian thanh toán:</strong> {new Date(o.paidAt).toLocaleString('vi-VN')}</div>}
+                </div>
+              </div>
+
+              <section>
+                <h4 style={{ margin: '0.5rem 0' }}>Lịch sử thanh toán & Giao dịch</h4>
+                {!detail.data.transactions.length ? (
+                  <Empty>Chưa có giao dịch thanh toán nào được ghi nhận.</Empty>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {detail.data.transactions.map(t => (
+                      <article className="card business-card" key={t.id} style={{ padding: '0.85rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                          <span style={{ fontWeight: 600, color: t.status === 'succeeded' ? '#2e7d32' : t.status === 'failed' ? '#c62828' : '#e65100' }}>
+                            {statusLabels[t.status] || t.status}
+                          </span>
+                          <span className="business-muted" style={{ fontSize: '0.85rem' }}>
+                            {new Date(t.createdAt).toLocaleString('vi-VN')}
+                          </span>
+                        </div>
+                        {t.reference && (
+                          <p style={{ margin: '0.2rem 0', fontSize: '0.85rem' }}>
+                            <strong>Mã tham chiếu:</strong> <code>{t.reference}</code>
+                          </p>
+                        )}
+                        {t.failureReason && (
+                          <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', color: '#c62828' }}>
+                            <strong>Lý do thất bại:</strong> {t.failureReason}
+                          </p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {detail.data.invoice && (
+                <section className="card business-card" style={{ padding: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0' }}>Hóa đơn điện tử</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', fontSize: '0.9rem' }}>
+                    <div><strong>Số hóa đơn:</strong> {detail.data.invoice.number}</div>
+                    <div><strong>Người nhận:</strong> {detail.data.invoice.buyerName}</div>
+                    <div><strong>Số tiền:</strong> {money(detail.data.invoice.amount, detail.data.invoice.currency)}</div>
+                    <div><strong>Ngày xuất:</strong> {new Date(detail.data.invoice.issuedAt).toLocaleString('vi-VN')}</div>
+                  </div>
+                </section>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={onClose}>
+                  Đóng
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </LoadState>
+    </Modal>
+  );
 }
 function Revenue({ museumId }) {
   const now = new Date(), start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
