@@ -134,7 +134,27 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
     {!available.length ? <div className="card business-card">Bảo tàng chưa có hiện vật đã lưu. Hãy tạo hiện vật và bổ sung tư liệu trước.</div> : <div className="business-grid" style={{ alignItems: 'start' }}>
       <section className="card business-card">
         <h2>Cấu hình bản nháp</h2>
-        <div className="form-group"><label className="form-label" htmlFor="studio-language">Ngôn ngữ bản nháp</label><select className="form-select" id="studio-language" value={languageCode} disabled={busy || saving} onChange={e => { setLanguageCode(e.target.value); invalidate(); }}><option value="vi">Tiếng Việt</option><option value="en">English</option></select></div>
+        <div className="form-group">
+          <span className="form-label" id="studio-language-label">Ngôn ngữ bản nháp</span>
+          <div className="business-actions studio-language-options" role="group" aria-labelledby="studio-language-label">
+            {[{ code: 'vi', label: 'Tiếng Việt' }, { code: 'en', label: 'English' }].map(({ code, label }) => (
+              <button
+                key={code}
+                type="button"
+                className={`btn ${languageCode === code ? 'btn-primary' : 'btn-secondary'}`}
+                aria-pressed={languageCode === code}
+                disabled={busy || saving}
+                onClick={() => {
+                  if (languageCode === code) return;
+                  setLanguageCode(code);
+                  invalidate();
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="form-group"><label className="form-label" htmlFor="studio-artifact">Hiện vật</label>{studioLayout && (artifact?.image || artifact?.imageUrl) && <img src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
           <select id="studio-artifact" className="form-select" value={artifactId} disabled={busy || saving} onChange={e => { setArtifactId(e.target.value); setSourceText(''); invalidate(); }}>{available.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
         {!studioLayout && (artifact?.image || artifact?.imageUrl) && <img src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}

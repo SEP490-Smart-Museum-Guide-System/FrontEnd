@@ -15,10 +15,27 @@ import 'artifact_detail_screen.dart';
 import 'artifact_qr_scanner.dart';
 import 'daily_quiz_screen.dart';
 
+typedef ArtifactVisionRecognizer =
+    Future<VisionMatchResult> Function(
+      Uint8List imageBytes, {
+      String filename,
+      int? museumId,
+    });
+typedef BackendArtifactLoader =
+    Future<Map<String, dynamic>> Function(String artifactId);
+
 class QRScanScreen extends StatefulWidget {
-  const QRScanScreen({super.key, this.recognition = false, this.museumId = ''});
+  const QRScanScreen({
+    super.key,
+    this.recognition = false,
+    this.museumId = '',
+    this.recognizeArtifact = VisionApiService.recognizeArtifact,
+    this.loadArtifact,
+  });
   final bool recognition;
   final String museumId;
+  final ArtifactVisionRecognizer recognizeArtifact;
+  final BackendArtifactLoader? loadArtifact;
 
   @override
   State<QRScanScreen> createState() => _QRScanScreenState();
@@ -43,16 +60,18 @@ class _QRScanScreenState extends State<QRScanScreen> {
 
     try {
       // 1. Gửi ảnh lên microservice AI Vision (Port 8001 / CLIP ViT-B/32)
-      final match = await VisionApiService.recognizeArtifact(
-        bytes,
-        filename: filename,
-      );
+      final match = await widget.recognizeArtifact(bytes, filename: filename);
 
       _visionResult = match;
 
       if (match.matched && match.artifactId != null) {
         // 2. Tải thông tin hiện vật thật từ Backend API
-        final data = await BackendApi.request('artifacts/${match.artifactId}');
+        final data = widget.loadArtifact != null
+            ? await widget.loadArtifact!(match.artifactId.toString())
+            : Map<String, dynamic>.from(
+                await BackendApi.request('artifacts/${match.artifactId}')
+                    as Map,
+              );
         final artifact = Artifact.fromBackendJson(
           Map<String, dynamic>.from(data as Map),
         );
@@ -65,7 +84,11 @@ class _QRScanScreenState extends State<QRScanScreen> {
               : null;
           final code = data['qrCode'] as String?;
           if (code != null && code.trim().isNotEmpty) {
-            final rewards = await ScanRequest(code, visitId: visitId, imageMatch: true).record();
+            final rewards = await ScanRequest(
+              code,
+              visitId: visitId,
+              imageMatch: true,
+            ).record();
             if (mounted) showExplorationRewards(context, rewards);
           }
         } catch (_) {
@@ -83,7 +106,8 @@ class _QRScanScreenState extends State<QRScanScreen> {
         if (mounted) {
           setState(() {
             _busy = false;
-            _error = match.message ??
+            _error =
+                match.message ??
                 'Không tìm thấy hiện vật phù hợp trong kho tư liệu AI. Hãy thử chụp góc nhìn khác hoặc chuyển sang Quét mã QR.';
           });
         }
@@ -106,7 +130,9 @@ class _QRScanScreenState extends State<QRScanScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = 'Không thể mở thư viện/máy ảnh: ${e.toString()}');
+        setState(
+          () => _error = 'Không thể mở thư viện/máy ảnh: ${e.toString()}',
+        );
       }
     }
   }
@@ -143,8 +169,12 @@ class _QRScanScreenState extends State<QRScanScreen> {
     return MuseumPage(
       back: true,
       title: l10n.isEn ? 'AI Visual Recognition' : 'Nhận diện thị giác AI',
-      eyebrow: l10n.isEn ? 'CLIP Artificial Intelligence' : 'Trí tuệ nhân tạo CLIP',
-      subtitle: l10n.isEn ? 'Photograph artifact for automatic recognition' : 'Chụp ảnh hiện vật để nhận diện tự động',
+      eyebrow: l10n.isEn
+          ? 'CLIP Artificial Intelligence'
+          : 'Trí tuệ nhân tạo CLIP',
+      subtitle: l10n.isEn
+          ? 'Photograph artifact for automatic recognition'
+          : 'Chụp ảnh hiện vật để nhận diện tự động',
       children: [
         // Khung hiển thị ảnh chụp hoặc hướng dẫn
         Container(
@@ -186,9 +216,13 @@ class _QRScanScreenState extends State<QRScanScreen> {
                           width: 64,
                           height: 64,
                           decoration: BoxDecoration(
-                            color: AppColors.antiqueIvory.withValues(alpha: 0.12),
+                            color: AppColors.antiqueIvory.withValues(
+                              alpha: 0.12,
+                            ),
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: AppColors.mutedGold.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: const Icon(
                             Icons.camera_alt_rounded,
@@ -198,7 +232,9 @@ class _QRScanScreenState extends State<QRScanScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          l10n.isEn ? 'Photograph exhibited artifact' : 'Chụp ảnh hiện vật trưng bày',
+                          l10n.isEn
+                              ? 'Photograph exhibited artifact'
+                              : 'Chụp ảnh hiện vật trưng bày',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.antiqueIvory,
@@ -207,10 +243,14 @@ class _QRScanScreenState extends State<QRScanScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          l10n.isEn ? 'AI extracts 512-D vector for matching' : 'AI sẽ trích xuất vector 512 chiều để đối chiếu',
+                          l10n.isEn
+                              ? 'AI extracts 512-D vector for matching'
+                              : 'AI sẽ trích xuất vector 512 chiều để đối chiếu',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.caption.copyWith(
-                            color: AppColors.antiqueIvory.withValues(alpha: 0.75),
+                            color: AppColors.antiqueIvory.withValues(
+                              alpha: 0.75,
+                            ),
                           ),
                         ),
                       ],
@@ -224,10 +264,14 @@ class _QRScanScreenState extends State<QRScanScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(color: AppColors.mutedGold),
+                      const CircularProgressIndicator(
+                        color: AppColors.mutedGold,
+                      ),
                       const SizedBox(height: 16),
                       Text(
-                        l10n.isEn ? 'Analyzing visual vector…' : 'Đang phân tích vector thị giác…',
+                        l10n.isEn
+                            ? 'Analyzing visual vector…'
+                            : 'Đang phân tích vector thị giác…',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.antiqueIvory,
                           fontWeight: FontWeight.w600,
@@ -235,7 +279,9 @@ class _QRScanScreenState extends State<QRScanScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        l10n.isEn ? 'Matching CLIP ViT-B/32 features with artifact database' : 'So khớp đặc trưng CLIP ViT-B/32 với kho hiện vật',
+                        l10n.isEn
+                            ? 'Matching CLIP ViT-B/32 features with artifact database'
+                            : 'So khớp đặc trưng CLIP ViT-B/32 với kho hiện vật',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.antiqueIvory.withValues(alpha: 0.8),
                         ),
@@ -259,13 +305,17 @@ class _QRScanScreenState extends State<QRScanScreen> {
           ),
           const SizedBox(height: 10),
           SecondaryButton(
-            label: l10n.isEn ? 'Choose photo from device gallery' : 'Chọn ảnh từ thư viện thiết bị',
+            label: l10n.isEn
+                ? 'Choose photo from device gallery'
+                : 'Chọn ảnh từ thư viện thiết bị',
             icon: Icons.photo_library_outlined,
             onPressed: () => _pickFromCameraOrGallery(useCamera: false),
           ),
           const SizedBox(height: 10),
           TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: AppColors.deepBurgundy),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.deepBurgundy,
+            ),
             onPressed: _testWithSampleImage,
             icon: const Icon(Icons.auto_awesome, size: 16),
             label: const Text(
@@ -304,7 +354,9 @@ class _QRScanScreenState extends State<QRScanScreen> {
                       const SizedBox(height: 4),
                       Text(
                         _error!,
-                        style: AppTextStyles.caption.copyWith(color: Colors.red.shade800),
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.red.shade800,
+                        ),
                       ),
                     ],
                   ),
@@ -316,7 +368,8 @@ class _QRScanScreenState extends State<QRScanScreen> {
           SecondaryButton(
             label: 'Chuyển sang Quét mã QR',
             icon: Icons.qr_code_scanner,
-            onPressed: () => openPage(context, const ArtifactQrScanner(direct: true)),
+            onPressed: () =>
+                openPage(context, const ArtifactQrScanner(direct: true)),
           ),
         ],
 
@@ -343,29 +396,40 @@ class _QRScanScreenState extends State<QRScanScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          color: Color(0xFF2E6B3E),
-                          size: 22,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'NHẬN DIỆN THÀNH CÔNG',
-                          style: AppTextStyles.caption.copyWith(
-                            color: const Color(0xFF2E6B3E),
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF2E6B3E),
+                            size: 22,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'NHẬN DIỆN THÀNH CÔNG',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption.copyWith(
+                                color: const Color(0xFF2E6B3E),
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     if (_visionResult != null && _visionResult!.similarity > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2E6B3E).withValues(alpha: 0.12),
+                          color: const Color(
+                            0xFF2E6B3E,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(VisitorRadius.xs),
                         ),
                         child: Text(
@@ -390,14 +454,18 @@ class _QRScanScreenState extends State<QRScanScreen> {
                   const SizedBox(height: 4),
                   Text(
                     _matchedMuseum,
-                    style: AppTextStyles.caption.copyWith(color: AppColors.secondaryText),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.secondaryText,
+                    ),
                   ),
                 ],
                 if (_matchedArtifact!.summary.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(
                     _matchedArtifact!.summary,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoalBrown),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.charcoalBrown,
+                    ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),

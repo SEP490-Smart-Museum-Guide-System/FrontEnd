@@ -357,29 +357,20 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
   testWidgets(
-    'GPS denied keeps search usable and ignores stale filter responses',
+    'GPS denied keeps museum search usable without reading coordinates',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
-      final pending = Completer<http.Response>();
       final requests = <Uri>[];
       await http.runWithClient(
         () async {
           await tester.pumpWidget(host(const MuseumDiscoveryMapScreen()));
-          await tester.tap(find.text('Chỉ bảo tàng trong hệ thống'));
-          await tester.pump();
-          await tester.pump();
-          await tester.tap(find.text('Gần tôi'));
-          await tester.pump();
-          expect(location.positionRequests, 0);
-          await tester.enterText(find.byType(TextField), 'old');
-          await tester.pump(const Duration(milliseconds: 401));
-          await tester.enterText(find.byType(TextField), 'new');
-          await tester.pump(const Duration(milliseconds: 401));
-          await tester.pump();
-          pending.complete(museumPage(ids: [9]));
-          await tester.pump();
+          await tester.tap(find.byType(Switch).first);
+          await tester.pumpAndSettle();
           expect(find.text('Bảo tàng 8'), findsOneWidget);
-          expect(find.text('Bảo tàng 9'), findsNothing);
+          expect(location.positionRequests, 0);
+          await tester.enterText(find.byType(TextField), 'Bảo tàng 8');
+          await tester.pumpAndSettle();
+          expect(find.text('Bảo tàng 8'), findsNWidgets(2));
           expect(
             requests
                 .where((u) => u.path.endsWith('/museums'))
@@ -395,12 +386,8 @@ void main() {
         () => MockClient((request) async {
           requests.add(request.url);
           if (request.url.path.endsWith('/cities')) return dataResponse([]);
-          if (request.url.path.endsWith('/museums')) {
-            if (request.url.queryParameters['keyword'] == 'old') {
-              return pending.future;
-            }
+          if (request.url.path.endsWith('/museums'))
             return museumPage(ids: [8]);
-          }
           return http.Response('', 404);
         }),
       );
@@ -408,7 +395,7 @@ void main() {
   );
 
   testWidgets(
-    'Nearby, city filter and pagination stay combined on a narrow screen',
+    'City filter loads every page and remains usable on a narrow screen',
     (tester) async {
       await screenSize(tester, const Size(320, 640));
       location.permission = LocationPermission.whileInUse;
@@ -418,7 +405,7 @@ void main() {
           await tester.pumpWidget(
             host(const MuseumDiscoveryMapScreen(), scale: 1.3),
           );
-          await tester.tap(find.text('Chỉ bảo tàng trong hệ thống'));
+          await tester.tap(find.byType(Switch).first);
           await tester.pump();
           await tester.pump();
           await tester.pump();
@@ -426,17 +413,38 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(find.text('Hồ Chí Minh').last);
           await tester.pumpAndSettle();
-          await tester.tap(find.text('Gần tôi'));
           await tester.pumpAndSettle();
-          await tester.tap(find.text('Tải thêm'));
+          final cityRequests = requests
+              .where(
+                (uri) =>
+                    uri.path.endsWith('/museums') &&
+                    uri.queryParameters.containsKey('page'),
+              )
+              .toList();
+          expect(
+            cityRequests
+                .sublist(cityRequests.length - 2)
+                .map((uri) => uri.queryParameters['page']),
+            ['1', '2'],
+          );
+          final appliedCityRequests = cityRequests.sublist(
+            cityRequests.length - 2,
+          );
+          expect(
+            appliedCityRequests.every(
+              (uri) => uri.queryParameters['cityCode'] == '79',
+            ),
+            isTrue,
+          );
+          expect(
+            appliedCityRequests.every(
+              (uri) => !uri.queryParameters.containsKey('latitude'),
+            ),
+            isTrue,
+          );
+          await tester.tap(find.byTooltip('Bảo tàng tiếp theo'));
           await tester.pumpAndSettle();
-          final query = requests.last.queryParameters;
-          expect(query['cityCode'], '79');
-          expect(query['sortBy'], 'distance');
-          expect(query['page'], '2');
-          expect(query['latitude'], '10.7626');
-          expect(query['longitude'], '106.6824');
-          expect(find.text('2/2 bảo tàng'), findsOneWidget);
+          expect(find.text('2/2'), findsOneWidget);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();

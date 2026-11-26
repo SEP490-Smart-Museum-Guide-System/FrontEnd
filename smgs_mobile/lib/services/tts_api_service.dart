@@ -66,13 +66,13 @@ class TtsApiService {
     final response = await http
         .post(
           url,
-          headers: {
-            ...TokenManager.authHeaders,
-            'Accept': 'audio/wav',
-          },
+          headers: {...TokenManager.authHeaders, 'Accept': 'audio/wav'},
           body: jsonEncode({
             'text': cleanText,
             'language': language.startsWith('vi') ? 'vi-VN' : 'en-US',
+            // Kept for API clients that synthesize at the selected speed.
+            // The playback UI still applies the rate locally as well.
+            'speed': clampedSpeed,
           }),
         )
         .timeout(const Duration(seconds: 25));
@@ -81,7 +81,8 @@ class TtsApiService {
       String detail = 'Lỗi tạo giọng đọc (${response.statusCode})';
       try {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map && (decoded.containsKey('detail') || decoded.containsKey('message'))) {
+        if (decoded is Map &&
+            (decoded.containsKey('detail') || decoded.containsKey('message'))) {
           detail = (decoded['detail'] ?? decoded['message']).toString();
         }
       } catch (_) {}

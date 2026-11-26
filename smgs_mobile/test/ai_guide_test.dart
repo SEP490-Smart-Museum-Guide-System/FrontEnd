@@ -161,19 +161,37 @@ void main() {
     (tester) async {
       await screenSize(tester, const Size(390, 844));
       var calls = 0;
-      await http.runWithClient(() async {
-        await tester.pumpWidget(host(AiGuideScreen(artifact: artifact)));
-        await tapText(tester, 'Hiện vật thuộc thời kỳ nào?');
-        await settle(tester);
-        expect(find.textContaining('Trợ lý chưa được kết nối'), findsOneWidget);
-        expect(find.text('Đọc và nghe câu trả lời'), findsNothing);
-        await tapText(tester, 'Thử lại câu hỏi');
-        await settle(tester);
-        // One suggestion plus one visitor bubble; retry does not add another bubble.
-        expect(find.text('Hiện vật thuộc thời kỳ nào?'), findsNWidgets(2));
-        expect(find.text('Bình gốm dùng để đựng nước.'), findsOneWidget);
-        expect(calls, 2);
-      }, () => MockClient((_) async => reply(status: ++calls == 1 ? 503 : 200)));
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(host(AiGuideScreen(artifact: artifact)));
+          await tapText(tester, 'Hiện vật thuộc thời kỳ nào?');
+          await settle(tester);
+          expect(
+            find.textContaining('Trợ lý chưa được kết nối'),
+            findsOneWidget,
+          );
+          expect(find.text('Đọc và nghe câu trả lời'), findsNothing);
+          await tapText(tester, 'Thử lại câu hỏi');
+          await settle(tester);
+          // One suggestion plus one visitor bubble; retry does not add another bubble.
+          expect(find.text('Hiện vật thuộc thời kỳ nào?'), findsNWidgets(2));
+          expect(find.text('Bình gốm dùng để đựng nước.'), findsOneWidget);
+          expect(calls, 2);
+        },
+        () => MockClient((request) async {
+          // The authenticated visitor first loads persisted chat history.
+          // Count only message submissions as provider retry attempts.
+          if (request.method == 'GET') {
+            return http.Response(
+              jsonEncode({'data': []}),
+              200,
+              headers: {'content-type': 'application/json; charset=utf-8'},
+            );
+          }
+          calls++;
+          return reply(status: calls == 1 ? 503 : 200);
+        }),
+      );
     },
   );
 

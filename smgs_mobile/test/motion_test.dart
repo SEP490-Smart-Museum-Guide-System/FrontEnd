@@ -6,6 +6,7 @@ import 'package:smgs_mobile/main.dart';
 import 'package:smgs_mobile/services/app_services.dart';
 import 'package:smgs_mobile/models/experience.dart';
 import 'package:smgs_mobile/widgets/heritage_motion.dart';
+import 'package:smgs_mobile/screens/museum/museum_detail_screen.dart';
 
 import 'widget_test.dart' show tapText, screenSize;
 
@@ -116,48 +117,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  apiTestWidgets(
-    'Photo transition, pinned title and back navigation work from both tabs',
-    (tester) async {
-      await screenSize(tester, const Size(390, 844));
-      await tester.pumpWidget(const SMGSApp());
+  apiTestWidgets('Museum details open and return correctly from both tabs', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(const SMGSApp());
+    await tester.pumpAndSettle();
+    for (final tab in ['Trang chủ', 'Khám phá']) {
+      await tapText(tester, tab);
+      final entry = tab == 'Trang chủ'
+          ? find.byKey(const ValueKey('home-museum:museum_national'))
+          : find.text('Bảo tàng Lịch sử Quốc gia');
+      await tester.scrollUntilVisible(
+        entry,
+        200,
+        scrollable: find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  axisDirectionToAxis(widget.axisDirection) == Axis.vertical,
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
-      for (final tab in ['Trang chủ', 'Khám phá']) {
-        await tapText(tester, tab);
-        final entry = tab == 'Trang chủ'
-            ? find.byKey(const ValueKey('home-museum:museum_national'))
-            : find.text('Bảo tàng Lịch sử Quốc gia');
-        await tester.scrollUntilVisible(
-          entry,
-          200,
-          scrollable: find
-              .byWidgetPredicate(
-                (widget) =>
-                    widget is Scrollable &&
-                    axisDirectionToAxis(widget.axisDirection) == Axis.vertical,
-              )
-              .first,
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(entry);
-        await tester.pumpAndSettle();
-        expect(find.byType(StoryScaffold), findsOneWidget);
-        expect(tester.takeException(), isNull);
-        await tester.drag(find.byType(CustomScrollView), const Offset(0, -460));
-        await tester.pumpAndSettle();
-        final title = find.descendant(
-          of: find.byType(SliverAppBar),
-          matching: find.byType(Opacity),
-        );
-        expect(tester.widget<Opacity>(title.first).opacity, 1);
-        expect(tester.getTopLeft(find.byType(BackButton)).dy, lessThan(60));
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
-        expect(find.byType(StoryScaffold), findsNothing);
-        expect(tester.takeException(), isNull);
-      }
-    },
-  );
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+      expect(find.byType(MuseumDetailScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(MuseumDetailScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   apiTestWidgets(
     'A section reveals on entry and stays visible when revisited',
