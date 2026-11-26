@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp, resolveSubmitterName, formatCurationDate } from '../../context/AppContext';
 import { getCurationContentByIdApi } from '../../services/curationApi';
+import { mediaApi } from '../../services/mediaApi';
 
 const statusLabel = {
   pending_review: 'Chờ thẩm định',
@@ -54,6 +55,8 @@ export default function CurationCenter() {
   const [filter, setFilter] = useState('pending_review');
   const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState(null);
+  const [reviewAudioUrl, setReviewAudioUrl] = useState('');
+  const [reviewAudioError, setReviewAudioError] = useState('');
   const [note, setNote] = useState('');
   const [decision, setDecision] = useState(''); // 'approve' | 'reject'
   const [checklist, setChecklist] = useState({
@@ -62,6 +65,46 @@ export default function CurationCenter() {
     ageAppropriate: true,
     sourceVerified: true
   });
+
+  useEffect(() => {
+    if (!selected?.audioUrl) {
+      setReviewAudioUrl('');
+      setReviewAudioError('');
+      return;
+    }
+
+    let objectUrl;
+    const controller = new AbortController();
+    let url;
+    try { url = new URL(selected.audioUrl, window.location.origin); }
+    catch { setReviewAudioUrl(''); setReviewAudioError('Đường dẫn audio không hợp lệ.'); return; }
+    const match = url.pathname.match(/^\/api\/artifacts\/(\d+)\/media\/(\d+)\/file$/);
+    if (!match) {
+      setReviewAudioError('');
+      setReviewAudioUrl(selected.audioUrl);
+      return () => controller.abort();
+    }
+
+    setReviewAudioUrl('');
+    setReviewAudioError('');
+    mediaApi(`artifacts/${match[1]}/media/${match[2]}/file`, { blob: true, signal: controller.signal })
+      .then(blob => {
+        if (!blob.type.startsWith('audio/')) throw new Error('Tệp audio không hợp lệ.');
+        objectUrl = URL.createObjectURL(blob);
+        setReviewAudioUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setReviewAudioUrl('');
+          setReviewAudioError('Không tải được audio của bản nháp.');
+        }
+      });
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selected?.audioUrl]);
 
   const museumArtifacts = useMemo(
     () => artifacts.filter(art => 
@@ -742,6 +785,12 @@ export default function CurationCenter() {
                           overflowY: 'auto'
                         }}>
                           {selected.proposedContent}
+                        </div>
+                      )}
+                      {selected.audioUrl && (
+                        <div style={{ marginTop: 12, padding: '10px 12px', background: '#FFF', border: '1px solid var(--color-gold-200)', borderRadius: 8 }}>
+                          <strong style={{ display: 'block', marginBottom: 8, fontSize: '.85rem' }}>Bản đọc đính kèm</strong>
+                          {reviewAudioUrl ? <audio aria-label="Nghe audio bản nháp" controls preload="metadata" src={reviewAudioUrl} style={{ width: '100%' }} /> : <p role={reviewAudioError ? 'alert' : 'status'} style={{ margin: 0, fontSize: '.8rem' }}>{reviewAudioError || 'Đang tải bản đọc…'}</p>}
                         </div>
                       )}
                     </article>

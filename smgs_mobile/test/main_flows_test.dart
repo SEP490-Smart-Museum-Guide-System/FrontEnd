@@ -9,6 +9,7 @@ import 'package:smgs_mobile/services/app_services.dart';
 import 'package:smgs_mobile/screens/auth/auth_screen.dart';
 import 'package:smgs_mobile/screens/artifact/qr_scan_screen.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_detail_screen.dart';
+import 'package:smgs_mobile/services/vision_api_service.dart';
 import 'package:smgs_mobile/screens/artifact/artifact_3d_screen.dart';
 import 'package:smgs_mobile/screens/profile/profile_screen.dart';
 import 'package:smgs_mobile/screens/profile/history_screen.dart';
@@ -101,26 +102,45 @@ void main() {
     'QR and recognition handle match, no match and museum context',
     (tester) async {
       await screenSize(tester, const Size(390, 844));
+      var recognitions = 0;
       await tester.pumpWidget(
         host(
-          const QRScanScreen(recognition: true, museumId: 'museum_ho_chi_minh'),
+          QRScanScreen(
+            recognition: true,
+            museumId: 'museum_ho_chi_minh',
+            recognizeArtifact:
+                (bytes, {filename = 'camera_capture.jpg', museumId}) async {
+                  recognitions++;
+                  return recognitions == 1
+                      ? const VisionMatchResult(
+                          matched: false,
+                          message: 'Chưa tìm thấy hiện vật',
+                        )
+                      : const VisionMatchResult(
+                          matched: true,
+                          artifactId: 17,
+                          similarity: 0.91,
+                        );
+                },
+            loadArtifact: (id) async => {
+              'id': int.parse(id),
+              'museumId': 'museum_ho_chi_minh',
+              'name': 'Trang báo cách mạng',
+              'description': 'Một hiện vật lịch sử.',
+            },
+          ),
         ),
       );
       await tester.pumpAndSettle();
-      await tapText(tester, 'Thử tình huống không tìm thấy');
-      await tapText(tester, 'Nhận diện mô phỏng');
+      await tapText(tester, 'Thử nghiệm với ảnh Trống đồng mẫu');
+      await tester.pumpAndSettle();
       expect(find.text('Chưa tìm thấy hiện vật'), findsOneWidget);
-      await tapText(tester, 'Thử lại');
-      await tapText(tester, 'Nhận diện mô phỏng');
+      await tapText(tester, 'Thử nghiệm với ảnh Trống đồng mẫu');
+      await tester.pumpAndSettle();
       expect(find.text('Trang báo cách mạng'), findsOneWidget);
-      await tapText(tester, 'Xem hiện vật');
-      expect(
-        tester
-            .widget<ArtifactDetailScreen>(find.byType(ArtifactDetailScreen))
-            .artifact
-            .museumId,
-        'museum_ho_chi_minh',
-      );
+      expect(find.text('Bảo tàng Hồ Chí Minh'), findsOneWidget);
+      expect(find.text('Xem hồ sơ hiện vật'), findsOneWidget);
+      expect(tester.takeException(), isNull);
       expect(VisitStore.instance.history, isEmpty);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpWidget(host(const QRScanScreen()));

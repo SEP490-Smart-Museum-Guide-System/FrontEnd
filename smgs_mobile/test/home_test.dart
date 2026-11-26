@@ -55,7 +55,9 @@ void homeTest(
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      GameTutorialOverlay.prefKeyFor('guest'): true,
+    });
     AppServices.catalog = HomeCatalog(mockMuseums);
     AppServices.auth = MockAuthService();
   });
@@ -283,6 +285,7 @@ void main() {
   homeTest(
     'first-time home tutorial fits 320px with large text through every step',
     (tester) async {
+      SharedPreferences.setMockInitialValues({});
       await screenSize(tester, const Size(320, 640));
       await tester.pumpWidget(
         MaterialApp(

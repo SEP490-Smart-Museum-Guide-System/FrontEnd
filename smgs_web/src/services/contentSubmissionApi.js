@@ -20,6 +20,7 @@ export async function submitArtifactContentApi(artifactId, contentData) {
       title: contentData.title,
       description: contentData.description,
       ...(contentData.narrationText != null ? { narrationText: contentData.narrationText } : {}),
+      ...(contentData.audioUrl ? { audioUrl: contentData.audioUrl } : {}),
       isAiGenerated: contentData.isAiGenerated ?? false
     })
   });

@@ -277,6 +277,8 @@ body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"
 .admin-studio .studio-modes .btn { border: 0; box-shadow: none; }
 .admin-studio .studio-modes [aria-pressed=true] { background: var(--rose); color: var(--wine); }
 .admin-studio .studio-modes svg { display: none; }
+.admin-studio .studio-language-options { margin: 0; gap: 8px; }
+.admin-studio .studio-language-options .btn { flex: 1; }
 .admin-studio .btn-gold { flex: 1; }
 .admin-studio .studio-warning { display: flex; align-items: center; gap: 8px; background: #f4ead8; padding: 10px 14px; border-radius: 12px; font-size: .8rem; }
 .admin-studio .studio-warning svg { flex-shrink: 0; }
