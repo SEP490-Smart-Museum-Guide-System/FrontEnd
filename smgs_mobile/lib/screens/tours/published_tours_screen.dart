@@ -76,12 +76,31 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
     }
   }
 
-  Future<void> _startRecommendedVisit(int tourId) async {
+  Future<void> _startRecommendedVisit(int tourId, {int? tourVersionId}) async {
     setState(() {
       _isRecommending = true;
       _recommendError = null;
     });
     try {
+      // Tự động lưu vào lộ trình cá nhân đã lưu khi khách bấm Bắt đầu chuyến tham quan
+      try {
+        int? resolvedVersionId = tourVersionId;
+        if (resolvedVersionId == null) {
+          final verRes = await BackendApi.request('tours/$tourId/public-version');
+          resolvedVersionId = verRes['id'] as int?;
+        }
+        if (resolvedVersionId != null) {
+          await VisitorExperienceApi.saveRoute(
+            tourVersionId: resolvedVersionId,
+            availableMinutes: _availableMinutes,
+            topicIds: _selectedTopicIds.toList(),
+          );
+          if (mounted) {
+            setState(() => _savedTourVersionId = resolvedVersionId);
+          }
+        }
+      } catch (_) {}
+
       final visit = await VisitorExperienceApi.startVisit(
         widget.museumId,
         tourId: tourId,
@@ -96,7 +115,9 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
         );
       }
     } catch (e) {
-      if (mounted) setState(() => _recommendError = e.toString());
+      if (mounted) {
+        setState(() => _recommendError = e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _isRecommending = false);
     }
@@ -191,8 +212,8 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
               Expanded(
                 child: Text(
                   l10n.isEn
-                      ? 'Curated Recommendation (WF-02): Select an officially approved tour matching your available time and favorite topics.'
-                      : 'Gợi ý Tour có sẵn (WF-02): Đánh giá và chọn 1 Tour chuẩn bảo tàng khớp với thời gian và sở thích của bạn.',
+                      ? 'Smart Match: Discover officially curated museum routes tailored to your schedule and favorite topics.'
+                      : 'Gợi ý thông minh: Tìm và xếp hạng các tuyến tham quan chuẩn của bảo tàng phù hợp nhất với quỹ thời gian và chủ đề bạn yêu thích.',
                   style: AppTextStyles.caption.copyWith(color: AppColors.darkBrown, height: 1.3),
                 ),
               ),
@@ -343,7 +364,7 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'WF-02 F05',
+                  l10n.isEn ? 'Recommended Route' : 'Đề xuất hàng đầu',
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.mutedGold,
                     fontWeight: FontWeight.bold,
@@ -421,42 +442,25 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
             PrimaryButton(
               label: l10n.isEn ? 'Start Curated Tour' : 'Bắt đầu chuyến tham quan',
               icon: Icons.play_arrow_rounded,
-              onPressed: _isRecommending ? null : () => _startRecommendedVisit(tourId),
+              onPressed: _isRecommending
+                  ? null
+                  : () => _startRecommendedVisit(
+                        tourId,
+                        tourVersionId: tourVersionId,
+                      ),
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: l10n.isEn ? 'Tour Details' : 'Xem chi tiết',
-                    icon: Icons.visibility_outlined,
-                    onPressed: () => openPage(context, PublishedTourDetailScreen(tourId: tourId)),
-                  ),
+            SecondaryButton(
+              label: l10n.isEn ? 'Tour Details' : 'Xem chi tiết',
+              icon: Icons.visibility_outlined,
+              onPressed: () => openPage(
+                context,
+                PublishedTourDetailScreen(
+                  tourId: tourId,
+                  selectedTopicIds: _selectedTopicIds.toList(),
+                  availableMinutes: _availableMinutes,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.deepBurgundy,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_outline, size: 18),
-                    label: Text(
-                      isSaved
-                          ? (l10n.isEn ? 'Saved' : 'Đã lưu')
-                          : (l10n.isEn ? 'Save Route' : 'Lưu lộ trình'),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: isSaved || _savingCurated
-                        ? null
-                        : () => _saveRecommendedRoute(
-                              tourVersionId,
-                              _availableMinutes,
-                              _selectedTopicIds.toList(),
-                            ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -886,8 +890,15 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
 }
 
 class PublishedTourDetailScreen extends StatefulWidget {
-  const PublishedTourDetailScreen({super.key, required this.tourId});
+  const PublishedTourDetailScreen({
+    super.key,
+    required this.tourId,
+    this.selectedTopicIds,
+    this.availableMinutes,
+  });
   final int tourId;
+  final List<int>? selectedTopicIds;
+  final int? availableMinutes;
   @override
   State<PublishedTourDetailScreen> createState() =>
       _PublishedTourDetailScreenState();
@@ -896,37 +907,108 @@ class PublishedTourDetailScreen extends StatefulWidget {
 class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
   bool _busy = false;
   String? _error;
-  bool _isSaved = false;
-  bool _savingRoute = false;
 
-  Future<void> _saveRoute(Map<String, dynamic> tour) async {
-    setState(() => _savingRoute = true);
+  Future<void> _autoSaveAndStartTour(Map<String, dynamic> tour) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final museumId = tour['museumId'] as int;
     try {
-      final versionRes = await BackendApi.request('tours/${widget.tourId}/public-version');
-      final versionId = versionRes['id'] as int;
-      final minutes = tour['estimatedMinutes'] is num ? (tour['estimatedMinutes'] as num).toInt() : 60;
-      await VisitorExperienceApi.saveRoute(tourVersionId: versionId, availableMinutes: minutes);
-      if (mounted) {
-        final isEn = AppPreferences.instance.language == 'en';
-        setState(() => _isSaved = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEn
-                ? 'Route saved to your personal list!'
-                : 'Đã lưu lộ trình này vào mục cá nhân của bạn!'),
-            backgroundColor: AppColors.deepBurgundy,
+      // Tự động lưu lộ trình vào Hành trình cá nhân đã lưu khi khách bấm Bắt đầu chuyến tham quan
+      try {
+        final versionRes = await BackendApi.request('tours/${widget.tourId}/public-version');
+        final versionId = versionRes['id'] as int?;
+        final minutes = widget.availableMinutes ??
+            (tour['estimatedMinutes'] is num ? (tour['estimatedMinutes'] as num).toInt() : 60);
+        if (versionId != null) {
+          await VisitorExperienceApi.saveRoute(
+            tourVersionId: versionId,
+            availableMinutes: minutes,
+            topicIds: widget.selectedTopicIds,
+          );
+        }
+      } catch (_) {}
+
+      final visit = await VisitorExperienceApi.startVisit(
+        museumId,
+        tourId: widget.tourId,
+      );
+      if (context.mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => VisitProgressScreen(
+              visitId: visit['id'] as int,
+            ),
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        final isEn = AppPreferences.instance.language == 'en';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEn ? 'Failed to save route: $e' : 'Lỗi khi lưu lộ trình: $e')),
-        );
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg.contains('đang có lượt tham quan') || msg.contains('409')) {
+        try {
+          final list = await BackendApi.list('visits/me?status=InProgress');
+          final active = list.firstWhere(
+            (v) => v['museumId'] == museumId,
+            orElse: () => list.isNotEmpty ? list.first : <String, dynamic>{},
+          );
+          if (active.isNotEmpty && mounted) {
+            final isEn = AppPreferences.instance.language == 'en';
+            final activeId = active['id'] as int;
+            final action = await showDialog<String>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.xl)),
+                title: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.deepBurgundy, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isEn ? 'Active Visit in Progress' : 'Chuyến đi đang diễn ra',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkBrown,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  isEn
+                      ? 'You already have an active visit #$activeId at this museum. This tour has been saved to your personal list. Would you like to view your current visit progress?'
+                      : 'Lộ trình này đã được tự động lưu vào Hành trình cá nhân của bạn! Hiện bạn đang có chuyến tham quan #$activeId chưa kết thúc, bạn có muốn mở tiến độ chuyến đi đó không?',
+                  style: AppTextStyles.bodyMedium,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, 'cancel'),
+                    child: Text(isEn ? 'Close' : 'Đóng'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
+                    onPressed: () => Navigator.pop(ctx, 'continue'),
+                    child: Text(isEn ? 'View Current Visit' : 'Xem tiến độ chuyến đang đi'),
+                  ),
+                ],
+              ),
+            );
+            if (mounted && action == 'continue') {
+              await Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => VisitProgressScreen(visitId: activeId),
+                ),
+              );
+            }
+            return;
+          }
+        } catch (_) {}
       }
+      if (mounted) setState(() => _error = msg);
     } finally {
-      if (mounted) setState(() => _savingRoute = false);
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -1228,43 +1310,7 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
               PrimaryButton(
                 label: _busy ? (l10n.isEn ? 'Starting…' : 'Đang bắt đầu…') : (l10n.isEn ? 'Start Museum Tour' : 'Bắt đầu chuyến tham quan'),
                 icon: Icons.play_arrow_rounded,
-                onPressed: _busy
-                    ? null
-                    : () async {
-                        setState(() {
-                          _busy = true;
-                          _error = null;
-                        });
-                        try {
-                          final visit = await VisitorExperienceApi.startVisit(
-                            tour['museumId'] as int,
-                            tourId: widget.tourId,
-                          );
-                          if (context.mounted) {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => VisitProgressScreen(
-                                  visitId: visit['id'] as int,
-                                ),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) setState(() => _error = e.toString());
-                        } finally {
-                          if (mounted) setState(() => _busy = false);
-                        }
-                      },
-              ),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                label: _isSaved
-                    ? (l10n.isEn ? 'Saved to Your List' : 'Đã lưu vào danh sách của bạn')
-                    : (_savingRoute
-                        ? (l10n.isEn ? 'Saving…' : 'Đang lưu…')
-                        : (l10n.isEn ? 'Save Route' : 'Lưu lộ trình này')),
-                icon: _isSaved ? Icons.bookmark : Icons.bookmark_outline,
-                onPressed: _isSaved || _savingRoute ? null : () => _saveRoute(tour),
+                onPressed: _busy ? null : () => _autoSaveAndStartTour(tour),
               ),
             ],
           );
