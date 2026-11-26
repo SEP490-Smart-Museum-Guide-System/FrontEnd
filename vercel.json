@@ -1,6 +1,12 @@
 {
   "buildCommand": "cd smgs_web && npm install && npm run build",
   "outputDirectory": "smgs_web/dist",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://smgs-52-62-165-39.sslip.io/api/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/models/(.*).glb",
