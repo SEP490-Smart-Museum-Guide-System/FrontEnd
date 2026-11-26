@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { backend, allPages } from '../../services/backend';
 import { alertAppDialog, confirmAppDialog } from '../common/appDialogs';
 import { Field, Modal, PageTitle, LoadState, ErrorNotice, Empty, useData, useAction, statusLabels } from '../common/BusinessUI';
+import { findContentWarnings, inappropriateContentWarning } from '../../utils/contentModeration';
 
 export default function QuestionBank({ imported, onOpenAI }) {
   const { artifacts, currentMuseum, currentRole, museums, setSelectedMuseumId } = useApp();
@@ -22,6 +23,10 @@ export default function QuestionBank({ imported, onOpenAI }) {
 
   async function handleSaveAllDrafts() {
     if (!unsavedDrafts.length || batchBusy) return;
+    if (unsavedDrafts.some(({ draft }) => findContentWarnings(draft.content, draft.explanation, ...(draft.options || []).map(o => o.content)).length)) {
+      alertAppDialog(inappropriateContentWarning, { title: 'Cần chỉnh sửa câu hỏi AI' });
+      return;
+    }
     setBatchBusy(true);
     try {
       for (const { draft, index } of unsavedDrafts) {
@@ -52,6 +57,10 @@ export default function QuestionBank({ imported, onOpenAI }) {
 
   async function handleApproveAllPending() {
     if (!pendingQuestions.length || batchBusy) return;
+    if (pendingQuestions.some(q => findContentWarnings(q.content, q.explanation, ...(q.options || []).map(o => o.content)).length)) {
+      alertAppDialog('Có câu hỏi chứa từ ngữ cần kiểm tra. Hãy mở từng câu, chỉnh sửa hoặc từ chối trước khi phê duyệt hàng loạt.', { title: 'Cần kiểm tra nội dung' });
+      return;
+    }
     if (!await confirmAppDialog(`Bạn có chắc muốn phê duyệt toàn bộ ${pendingQuestions.length} câu hỏi đang chờ?`, { title: 'Xác nhận phê duyệt', confirmText: 'Phê duyệt' })) return;
     setBatchBusy(true);
     try {
@@ -82,14 +91,14 @@ export default function QuestionBank({ imported, onOpenAI }) {
             </p>
           </div>
           {unsavedDrafts.length > 0 && (
-            <button className="btn btn-gold" disabled={batchBusy} onClick={handleSaveAllDrafts}>
+            <button className="btn btn-gold" disabled={batchBusy || unsavedDrafts.some(({ draft }) => findContentWarnings(draft.content, draft.explanation, ...(draft.options || []).map(o => o.content)).length)} onClick={handleSaveAllDrafts}>
               {batchBusy ? 'Đang lưu hàng loạt…' : `Lưu tất cả (${unsavedDrafts.length} câu) vào Ngân hàng`}
             </button>
           )}
         </div>
         {imported.drafts.map((draft, index) => (
           <div className="business-actions" key={index} style={{ marginBottom: 8, padding: '8px 12px', background: 'rgba(196,164,130,0.08)', borderRadius: 8 }}>
-            <span style={{ flex: 1 }}><strong>Câu {index + 1}:</strong> {draft.content}</span>
+            <span style={{ flex: 1 }}><strong>Câu {index + 1}:</strong> {draft.content}{findContentWarnings(draft.content, draft.explanation, ...(draft.options || []).map(o => o.content)).length > 0 && <span role="alert" style={{ display: 'block', color: '#9A3412', marginTop: 4 }}>⚠ {findContentWarnings(draft.content, draft.explanation, ...(draft.options || []).map(o => o.content)).join(' ')} Hãy chỉnh sửa trước khi lưu.</span>}</span>
             <button className="btn btn-secondary btn-sm" disabled={savedDrafts.includes(index) || batchBusy} onClick={() => setModal({ type: 'question', draft, draftIndex: index })}>
               {savedDrafts.includes(index) ? '✓ Đã lưu câu' : 'Chỉnh sửa & lưu'}
             </button>
@@ -122,8 +131,16 @@ function QuestionModal({ modal, artifactId, questions, onClose, onSaved }) {
   const [correct, setCorrect] = useState(seed ? seed.options.findIndex(o => o.isCorrect) : 0);
   const [note, setNote] = useState(''), [approve, setApprove] = useState(true), [title, setTitle] = useState(''), [count, setCount] = useState(1), [ids, setIds] = useState([]);
   const action = useAction('Đã lưu thay đổi vào ngân hàng câu hỏi.');
+  const contentWarnings = modal.type === 'review'
+    ? findContentWarnings(q?.content, q?.explanation, ...(q?.options || []).map(o => o.content))
+    : modal.type === 'quiz'
+      ? findContentWarnings(title)
+      : findContentWarnings(content, explanation, ...options);
   async function save(e) {
     e.preventDefault();
+    if ((modal.type === 'review' && approve || modal.type === 'question' || modal.type === 'quiz') && contentWarnings.length) {
+      return action.run(() => { throw new Error(inappropriateContentWarning); });
+    }
     if (modal.type === 'review') return action.run(() => backend(`question-bank/questions/${q.id}/review`, { method: 'POST', body: { approve, note: note.trim() || null } }), onSaved);
     if (modal.type === 'quiz') return action.run(() => backend(`question-bank/quizzes?artifactId=${artifactId}`, { method: 'POST', body: { title: title.trim(), questionIds: ids, questionsPerAttempt: Number(count) } }), onSaved);
     if (new Set(options.map(o => o.trim().toLocaleLowerCase('vi'))).size !== options.length) return action.run(() => { throw new Error('Các đáp án phải khác nhau.'); });
@@ -131,9 +148,10 @@ function QuestionModal({ modal, artifactId, questions, onClose, onSaved }) {
   }
   const approved = questions.filter(q => q.status === 'approved' && q.languageCode === languageCode);
   return <Modal title={modal.type === 'review' ? 'Thẩm định câu hỏi' : modal.type === 'quiz' ? 'Tạo bộ câu hỏi' : q ? 'Sửa câu hỏi' : 'Thêm câu hỏi'} onClose={onClose} busy={action.busy}><form onSubmit={save}><ErrorNotice>{action.error}</ErrorNotice>
+    {contentWarnings.length > 0 && <div role="alert" style={{ margin: '8px 0 12px', padding: '10px 12px', borderRadius: 8, border: '1px solid #F0B44D', background: '#FFF8E8', color: '#7A3E00' }}><strong>Phát hiện nội dung cần kiểm tra:</strong> {contentWarnings.join(' ')}<div style={{ marginTop: 4 }}>{inappropriateContentWarning}</div></div>}
     {modal.type !== 'review' && <Field label="Ngôn ngữ"><select className="form-select" value={languageCode} onChange={e => { setLanguageCode(e.target.value); setIds([]); }}><option value="vi">Tiếng Việt</option><option value="en">English</option></select></Field>}
     {modal.type === 'review' ? <><p>{q.content}</p><Field label="Quyết định"><select className="form-select" value={String(approve)} onChange={e => setApprove(e.target.value === 'true')}><option value="true">Phê duyệt</option><option value="false">Từ chối</option></select></Field><Field label="Nhận xét"><textarea className="form-input" required={!approve} maxLength={1000} value={note} onChange={e => setNote(e.target.value)} /></Field></> : modal.type === 'quiz' ? <><Field label="Tên bộ câu hỏi"><input className="form-input" required maxLength={200} value={title} onChange={e => setTitle(e.target.value)} /></Field><Field label="Số câu mỗi lượt"><input className="form-input" type="number" required min={1} max={Math.min(20, ids.length) || 1} value={count} onChange={e => setCount(e.target.value)} /></Field><p>Chọn câu hỏi đã duyệt:</p>{!approved.length && <Empty>Chưa có câu hỏi đã duyệt.</Empty>}{approved.map(q => <label key={q.id} className="business-check"><input type="checkbox" checked={ids.includes(q.id)} onChange={e => setIds(p => e.target.checked ? [...p, q.id] : p.filter(id => id !== q.id))} />{q.content}</label>)}</> : <>
       <Field label="Nội dung câu hỏi"><textarea className="form-input" required maxLength={4000} value={content} onChange={e => setContent(e.target.value)} /></Field><p>Chọn đúng một đáp án chính xác.</p>{options.map((o, i) => <div key={i} className="business-actions"><input aria-label={`Đáp án đúng ${i + 1}`} type="radio" name="correct" checked={correct === i} onChange={() => setCorrect(i)} /><input className="form-input" aria-label={`Nội dung đáp án ${i + 1}`} required maxLength={1000} value={o} onChange={e => setOptions(p => p.map((v, j) => j === i ? e.target.value : v))} />{options.length > 2 && <button type="button" onClick={() => { setOptions(p => p.filter((_, j) => i !== j)); setCorrect(p => p === i ? 0 : p > i ? p - 1 : p); }}>Bỏ đáp án</button>}</div>)}{options.length < 6 && <button type="button" className="btn btn-secondary" onClick={() => setOptions(p => [...p, ''])}>Thêm đáp án</button>}<Field label="Giải thích"><textarea className="form-input" maxLength={4000} value={explanation} onChange={e => setExplanation(e.target.value)} /></Field>
     </>}
-    <button className="btn btn-primary" disabled={action.busy || (modal.type === 'quiz' && !ids.length)}>{action.busy ? 'Đang lưu…' : 'Lưu'}</button></form></Modal>;
+    <button className="btn btn-primary" disabled={action.busy || (modal.type === 'quiz' && !ids.length) || (contentWarnings.length > 0 && (modal.type !== 'review' || approve))}>{action.busy ? 'Đang lưu…' : 'Lưu'}</button></form></Modal>;
 }

@@ -444,7 +444,8 @@ void main() {
           );
           await tester.tap(find.byTooltip('Bảo tàng tiếp theo'));
           await tester.pumpAndSettle();
-          expect(find.text('2/2'), findsOneWidget);
+          expect(find.byTooltip('Bảo tàng trước'), findsOneWidget);
+          expect(find.byTooltip('Bảo tàng tiếp theo'), findsOneWidget);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();

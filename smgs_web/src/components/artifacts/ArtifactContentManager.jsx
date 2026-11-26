@@ -3,6 +3,7 @@ import { backend } from '../../services/backend';
 import { useApp } from '../../context/AppContext';
 import { Field, LoadState, ErrorNotice, Empty, useData, useAction, statusLabels } from '../common/BusinessUI';
 import { FileText, Send, CheckCircle, Clock, Volume2, Sparkles, History } from 'lucide-react';
+import { findContentWarnings, inappropriateContentWarning } from '../../utils/contentModeration';
 
 export default function ArtifactContentManager({ artifactId, canWrite, canReadVersions }) {
   const { showToast, reload: appReload } = useApp();
@@ -14,6 +15,7 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
   const [form, setForm] = useState({ title: '', description: '', narrationText: '', audioUrl: '', languageCode: 'vi' });
   const [successMsg, setSuccessMsg] = useState('');
   const action = useAction(null);
+  const contentWarnings = findContentWarnings(form.title, form.description, form.narrationText);
 
   const change = e => {
     setSuccessMsg('');
@@ -23,6 +25,10 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSuccessMsg('');
+    if (contentWarnings.length) {
+      showToast(inappropriateContentWarning, 'error');
+      return;
+    }
     const ok = await action.run(
       () => backend(`artifacts/${artifactId}/contents/manual`, {
         method: 'POST',
@@ -268,6 +274,15 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
 
             {/* Error message banner */}
             <ErrorNotice>{action.error}</ErrorNotice>
+            {contentWarnings.length > 0 && (
+              <div role="alert" style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 8, border: '1px solid #F0B44D', background: '#FFF8E8', color: '#7A3E00', fontSize: '.84rem' }}>
+                <strong>Phát hiện nội dung cần chỉnh sửa:</strong>
+                <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
+                  {contentWarnings.map(warning => <li key={warning}>{warning}</li>)}
+                </ul>
+                <div style={{ marginTop: 6 }}>{inappropriateContentWarning}</div>
+              </div>
+            )}
 
             <Field label="Ngôn ngữ bài thuyết minh">
               <select
@@ -337,7 +352,7 @@ export default function ArtifactContentManager({ artifactId, canWrite, canReadVe
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={action.busy}
+                disabled={action.busy || contentWarnings.length > 0}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

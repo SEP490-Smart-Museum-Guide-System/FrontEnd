@@ -22,6 +22,7 @@ dependencies:
   latlong2: ^0.9.1
   shared_preferences: ^2.3.2
   mobile_scanner: ^7.4.2
+  image_picker: ^1.2.4
   audioplayers: ^6.8.1
   signalr_netcore: ^1.4.2
 dev_dependencies:

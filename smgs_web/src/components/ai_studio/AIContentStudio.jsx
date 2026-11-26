@@ -5,6 +5,7 @@ import { parseQuestionDrafts } from '../../services/questionDrafts';
 import { generateStaffDraft, staffDraftRetry } from '../../services/staffAiApi';
 import { getAuthToken } from '../../services/auth';
 import { mediaApi, uploadMedia } from '../../services/mediaApi';
+import { findContentWarnings, inappropriateContentWarning } from '../../utils/contentModeration';
 import NarrationPreview from './NarrationPreview';
 
 const ARTIFACT_IMAGE_PLACEHOLDER = '/assets/images/placeholder.svg';
@@ -82,6 +83,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   const [progress, setProgress] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const activeRequest = useRef(null);
+  const contentWarnings = findContentWarnings(title, output);
   useEffect(() => () => activeRequest.current?.abort(), []);
   const allowed = ['administrator', 'museumStaff'].includes(currentRole);
 
@@ -169,6 +171,10 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
 
   async function submit() {
     if (!output.trim() || !artifact || busy || saving || submitted) return;
+    if (contentWarnings.length) {
+      setError(inappropriateContentWarning);
+      return;
+    }
     if (mode === 'quiz') {
       try { onOpenQuestionBank?.({ artifactId: artifact.id, drafts: parseQuestionDrafts(output, languageCode) }); }
       catch (e) { setError(e.message); }
@@ -365,10 +371,11 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             {!output && <p>Nhập bản thuyết minh để nghe trực tiếp hoặc dùng AI soạn từ tư liệu. Nội dung chưa được lưu hay xuất bản.</p>}
             {mode === 'narration' && <div className="form-group"><label className="form-label" htmlFor="studio-title">Tiêu đề bản nháp</label><input id="studio-title" className="form-input" maxLength={200} value={title} disabled={busy || saving} onChange={e => { setTitle(e.target.value); setSubmitted(false); }} /></div>}
             <label className="form-label" htmlFor="studio-output">Nội dung bản nháp</label><textarea id="studio-output" className="form-input" rows={studioLayout ? 7 : 17} value={output} disabled={busy || saving} onChange={e => { setOutput(e.target.value); setNarrationAudio(null); setSubmitted(false); }} style={{ fontFamily: mode === 'quiz' ? 'monospace' : 'inherit', lineHeight: 1.65 }} />
+            {contentWarnings.length > 0 && <div role="alert" style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, border: '1px solid #F0B44D', background: '#FFF8E8', color: '#7A3E00', fontSize: '.84rem' }}><strong>Phát hiện nội dung cần chỉnh sửa:</strong><ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>{contentWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul><div style={{ marginTop: 6 }}>{inappropriateContentWarning}</div></div>}
             <p className="studio-warning">{studioLayout && <ShieldCheck size={16} />} AI có thể diễn giải sai. Hãy đối chiếu tên, niên đại, chất liệu và đáp án trước khi gửi.</p>
             {mode === 'narration' && <NarrationPreview key={`${artifactId}:${languageCode}:${output}`} languageCode={languageCode} artifactId={artifact.id} text={output} disabled={busy || saving} onAudioGenerated={setNarrationAudio} />}
             {(!studioLayout || source?.text || evidence.length > 0) && <details><summary>Tư liệu và đoạn trích AI tham khảo</summary>{source?.contentVersionId && <p>Nội dung đã xuất bản · Phiên bản {source.versionNo}</p>}<p style={{ whiteSpace: 'pre-wrap' }}>{source?.text}</p>{[...new Set(evidence)].map((q, i) => <blockquote key={i}>{q}</blockquote>)}</details>}
-            <div className="business-actions" style={{ marginTop: 16 }}><button className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(output)}><Copy size={16} />Sao chép</button><button className="btn btn-primary" disabled={busy || saving || submitted || !output.trim() || (mode === 'narration' && !title.trim())} onClick={submit}><Send size={16} />{submitted ? 'Đã gửi chờ thẩm định' : saving ? 'Đang gửi…' : mode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}</button></div>
+            <div className="business-actions" style={{ marginTop: 16 }}><button className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(output)}><Copy size={16} />Sao chép</button><button className="btn btn-primary" disabled={busy || saving || submitted || !output.trim() || contentWarnings.length > 0 || (mode === 'narration' && !title.trim())} onClick={submit}><Send size={16} />{submitted ? 'Đã gửi chờ thẩm định' : saving ? 'Đang gửi…' : mode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}</button></div>
           </>
         )}
       </section>

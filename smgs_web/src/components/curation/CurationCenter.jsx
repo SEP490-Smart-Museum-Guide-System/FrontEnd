@@ -18,6 +18,7 @@ import {
 import { useApp, resolveSubmitterName, formatCurationDate } from '../../context/AppContext';
 import { getCurationContentByIdApi } from '../../services/curationApi';
 import { mediaApi } from '../../services/mediaApi';
+import { findContentWarnings, inappropriateContentWarning } from '../../utils/contentModeration';
 
 const statusLabel = {
   pending_review: 'Chờ thẩm định',
@@ -63,8 +64,7 @@ export default function CurationCenter() {
   const [checklist, setChecklist] = useState({
     factualAccuracy: true,
     heritageTone: true,
-    ageAppropriate: true,
-    sourceVerified: true
+    ageAppropriate: true
   });
 
   useEffect(() => {
@@ -181,8 +181,7 @@ export default function CurationCenter() {
     setChecklist({
       factualAccuracy: true,
       heritageTone: true,
-      ageAppropriate: true,
-      sourceVerified: true
+      ageAppropriate: true
     });
 
     const backendId = typeof item.id === 'number' ? item.id : item.backendId;
@@ -211,6 +210,10 @@ export default function CurationCenter() {
 
   const submitDecision = async () => {
     if (!decision || !selected) return;
+    if (decision === 'approve' && selectedContentWarnings.length) {
+      alertAppDialog(inappropriateContentWarning, { title: 'Cần chỉnh sửa nội dung' });
+      return;
+    }
     if (decision !== 'approve' && !note.trim()) {
       alertAppDialog('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi từ chối.', { title: 'Cần ghi chú chuyên môn' });
       return;
@@ -237,6 +240,9 @@ export default function CurationCenter() {
 
   const isQuiz = selected?.type === 'quiz';
   const parsedProposedQuiz = isQuiz ? parseQuizContent(selected.proposedContent) : null;
+  const selectedContentWarnings = selected
+    ? findContentWarnings(selected.title, selected.proposedContent)
+    : [];
 
   return (
     <div className="curation-center-page">
@@ -548,14 +554,6 @@ export default function CurationCenter() {
                       />
                       <span>Phù hợp độ tuổi đối tượng</span>
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={checklist.sourceVerified}
-                        onChange={(e) => setChecklist(prev => ({ ...prev, sourceVerified: e.target.checked }))}
-                      />
-                      <span>Không có lỗi suy diễn AI</span>
-                    </label>
                   </div>
                 </div>
               )}
@@ -725,6 +723,15 @@ export default function CurationCenter() {
                           MỚI ĐỆ TRÌNH
                         </span>
                       </div>
+                    {selectedContentWarnings.length > 0 && (
+                      <div role="alert" style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, border: '1px solid #F0B44D', background: '#FFF8E8', color: '#7A3E00', fontSize: '.84rem' }}>
+                        <strong>Chưa thể phê duyệt: phát hiện nội dung cần chỉnh sửa.</strong>
+                        <ul style={{ margin: '6px 0 0', paddingLeft: 20 }}>
+                          {selectedContentWarnings.map(warning => <li key={warning}>{warning}</li>)}
+                        </ul>
+                        <div style={{ marginTop: 6 }}>{inappropriateContentWarning}</div>
+                      </div>
+                    )}
 
                       {/* Display as Quiz cards if JSON */}
                       {isQuiz && parsedProposedQuiz ? (
@@ -870,6 +877,7 @@ export default function CurationCenter() {
                     type="button"
                     className="btn btn-primary btn-sm"
                     style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+                    disabled={selectedContentWarnings.length > 0}
                     onClick={() => setDecision('approve')}
                   >
                     <Check size={14} /> Phê duyệt & Xuất bản ngay
@@ -913,6 +921,7 @@ export default function CurationCenter() {
                       background: decision === 'approve' ? 'var(--color-success)' : 'var(--color-danger)',
                       borderColor: 'transparent'
                     }}
+                    disabled={decision === 'approve' && selectedContentWarnings.length > 0}
                     onClick={submitDecision}
                   >
                     <CheckSquare size={14} /> Xác nhận thi hành
