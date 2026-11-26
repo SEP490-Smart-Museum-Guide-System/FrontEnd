@@ -568,53 +568,16 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
               {/* Right Column: Descriptions & Details */}
               <div>
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ fontSize: '0.9375rem', fontWeight: '700', marginBottom: '8px', color: 'var(--color-burgundy-800)' }}>
-                    Tóm tắt nội dung
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'var(--color-charcoal-800)', background: 'var(--admin-bg, #FAF7F2)', padding: '14px', borderRadius: '8px', borderLeft: '4px solid var(--color-gold-500)' }}>
-                    {artifact.shortDesc}
-                  </p>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <h4 style={{ fontSize: '0.9375rem', fontWeight: '700', color: 'var(--color-burgundy-800)', margin: 0 }}>
-                      Nội dung Thuyết minh Chi tiết
-                    </h4>
-                    {publishedContent && (
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: '600',
-                        color: '#166534',
-                        background: '#DCFCE7',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <Check size={12} /> Đã Giám tuyển duyệt (v{publishedContent.versionNo})
-                      </span>
-                    )}
-                  </div>
-                  {publishedContent && (
-                    <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--color-burgundy-900)', marginBottom: '6px' }}>
-                      {publishedContent.title}
-                    </div>
-                  )}
-                  <div style={{
-                    fontSize: '0.875rem',
-                    lineHeight: '1.7',
-                    color: 'var(--color-charcoal-800)',
-                    whiteSpace: 'pre-line',
-                    maxHeight: '260px',
-                    overflowY: 'auto',
-                    paddingRight: '8px'
-                  }}>
-                    {publishedContent?.description || artifact.fullDesc}
-                  </div>
-                </div>
+                {['administrator', 'museumStaff', 'curator'].includes(currentRole) ? (
+                  <ArtifactContentManager artifactId={artifact.backendId || artifact.id} />
+                ) : (
+                  <section>
+                    <h4>Nội dung thuyết minh</h4>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>
+                      {publishedContent?.description || artifact.fullDesc || 'Hiện vật chưa có nội dung.'}
+                    </p>
+                  </section>
+                )}
 
                 {!readOnly && <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                   <button
@@ -640,21 +603,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   </button>
                 </div>}
 
-                {!readOnly && ['administrator', 'museumStaff', 'curator'].includes(currentRole) && (
-                  <details style={{ marginTop: '20px', borderRadius: '10px', border: '1px solid var(--color-paper-border)', background: 'var(--admin-bg, #FAF7F2)', padding: '12px 16px' }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: '600', fontSize: '0.84rem', color: 'var(--color-burgundy-900)' }}>
-                      ⚙️ Lịch sử biên tập & Đệ trình bản thuyết minh mới
-                    </summary>
-                    <div style={{ marginTop: '14px' }}>
-                      <ArtifactContentManager
-                        key={`contents-${artifact.id}`}
-                        artifactId={artifact.backendId || artifact.id}
-                        canWrite={!readOnly && ['administrator', 'museumStaff'].includes(currentRole)}
-                        canReadVersions={['administrator', 'museumStaff', 'curator'].includes(currentRole)}
-                      />
-                    </div>
-                  </details>
-                )}
+
               </div>
             </div>
           )}
