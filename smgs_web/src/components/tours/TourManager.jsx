@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ActionGroup from '../common/ActionGroup';
 import { createPortal } from 'react-dom';
 import { alertAppDialog } from '../common/appDialogs';
-import { useApp } from '../../context/AppContext';
-import { allPages } from '../../services/backend';
+import { useApp, formatCurationDate } from '../../context/AppContext';
+import { allPages, backend } from '../../services/backend';
 import {
   getIndoorMapsApi,
   getIndoorMapDraftApi,
@@ -40,6 +40,12 @@ export default function TourManager() {
 
   // Topics for the current museum
   const [topicsList, setTopicsList] = useState([]);
+  const [statusSummary, setStatusSummary] = useState(null);
+  const [versionModalTour, setVersionModalTour] = useState(null);
+  const [compareFromId, setCompareFromId] = useState('');
+  const [compareToId, setCompareToId] = useState('');
+  const [versionDiff, setVersionDiff] = useState(null);
+  const [loadingDiff, setLoadingDiff] = useState(false);
 
   // Indoor Maps for visual preview
   const [indoorMaps, setIndoorMaps] = useState([]);
@@ -60,7 +66,7 @@ export default function TourManager() {
     selectedArtifacts: []
   });
 
-  // Load topics of current museum
+  // Load topics and version status summary of current museum
   useEffect(() => {
     if (!currentMuseum?.id) return;
     let cancelled = false;
@@ -71,8 +77,49 @@ export default function TourManager() {
         }
       })
       .catch(() => {});
+
+    backend(`tours/versions/status-summary?museumId=${currentMuseum.id}`)
+      .then(summary => {
+        if (!cancelled && summary) {
+          setStatusSummary(summary);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatusSummary(null);
+      });
+
     return () => { cancelled = true; };
-  }, [currentMuseum?.id]);
+  }, [currentMuseum?.id, tours]);
+
+  const openVersionHistory = (tour) => {
+    const sorted = (tour.versions || []).slice().sort((a, b) => (b.versionNo || 0) - (a.versionNo || 0));
+    setVersionModalTour(tour);
+    setVersionDiff(null);
+    if (sorted.length >= 2) {
+      setCompareToId(String(sorted[0].id));
+      setCompareFromId(String(sorted[1].id));
+      runCompareVersions(tour.id, sorted[1].id, sorted[0].id);
+    } else {
+      setCompareToId(sorted[0] ? String(sorted[0].id) : '');
+      setCompareFromId('');
+    }
+  };
+
+  const runCompareVersions = async (tourId, fromId, toId) => {
+    if (!tourId || !toId || !fromId || String(fromId) === String(toId)) {
+      setVersionDiff(null);
+      return;
+    }
+    setLoadingDiff(true);
+    try {
+      const diff = await backend(`tours/${tourId}/versions/compare?toVersionId=${toId}&fromVersionId=${fromId}`);
+      setVersionDiff(diff || null);
+    } catch (_) {
+      setVersionDiff(null);
+    } finally {
+      setLoadingDiff(false);
+    }
+  };
 
   // Load list of indoor maps when modal opens
   useEffect(() => {
@@ -289,7 +336,7 @@ export default function TourManager() {
       </div>
 
       {/* Tabs Switcher */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
         <button
           type="button"
           onClick={() => setActiveSection('tours')}
@@ -327,6 +374,50 @@ export default function TourManager() {
           Triển Lãm Chuyên Đề ({museumExhibitions.length})
         </button>
       </div>
+
+      {/* Version Status Summary Strip (WF-02 F04) */}
+      {activeSection === 'tours' && statusSummary && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))',
+            gap: '12px',
+            marginBottom: '22px'
+          }}
+        >
+          {[
+            { label: 'Tổng số tuyến', value: statusSummary.totalTours, sub: `${statusSummary.totalVersions} phiên bản`, color: 'var(--color-burgundy-900)', bg: '#FAF7F2' },
+            { label: 'Đang công khai', value: statusSummary.publicCount, sub: 'Khách đang xem', color: '#166534', bg: '#F0FDF4' },
+            { label: 'Chờ Giám tuyển', value: statusSummary.submittedCount, sub: 'Đợi phê duyệt', color: '#B45309', bg: '#FFFBEB' },
+            { label: 'Hẹn giờ công bố', value: statusSummary.scheduledApprovalCount, sub: 'Đã duyệt lịch', color: '#1D4ED8', bg: '#EFF6FF' },
+            { label: 'Bản nháp', value: statusSummary.draftCount, sub: 'Đang biên tập', color: '#475569', bg: '#F8FAFC' },
+            { label: 'Từ chối', value: statusSummary.rejectedCount, sub: 'Cần hiệu đính', color: '#991B1B', bg: '#FEF2F2' }
+          ].map((stat, idx) => (
+            <div
+              key={idx}
+              style={{
+                padding: '12px 14px',
+                borderRadius: '10px',
+                background: stat.bg,
+                border: '1px solid var(--color-paper-border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}
+            >
+              <span style={{ fontSize: '0.73rem', fontWeight: '600', color: 'var(--color-charcoal-600)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                {stat.label}
+              </span>
+              <span style={{ fontSize: '1.35rem', fontWeight: '800', color: stat.color, lineHeight: 1.2 }}>
+                {stat.value ?? 0}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-charcoal-500)' }}>
+                {stat.sub}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tour List View */}
       {activeSection === 'tours' && (
@@ -400,6 +491,14 @@ export default function TourManager() {
                     <ActionGroup visible={1}>
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => openTourEditor(tour)}>
                         Chỉnh sửa
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => openVersionHistory(tour)}
+                      >
+                        <Eye size={12} /> Lịch sử & So sánh ({(tour.versions || []).length})
                       </button>
                       <button
                         type="button"
@@ -985,6 +1084,236 @@ export default function TourManager() {
                 <button type="submit" className="btn btn-primary">{editingTour ? 'Lưu thay đổi' : 'Tạo hành trình'}</button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Version History & Diff Comparison Modal (WF-02 F04) */}
+      {versionModalTour && typeof document !== 'undefined' && createPortal(
+        <div className="modal-overlay" onClick={() => setVersionModalTour(null)}>
+          <div
+            className="modal-dialog"
+            style={{
+              maxWidth: '920px',
+              width: '94vw',
+              maxHeight: 'calc(100vh - 48px)',
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-burgundy-700)' }}>
+                  QUẢN TRỊ VÒNG ĐỜI PHIÊN BẢN · TUYẾN #{versionModalTour.id}
+                </span>
+                <h3 className="modal-title font-serif" style={{ marginTop: '2px' }}>
+                  {versionModalTour.title}
+                </h3>
+              </div>
+              <button aria-label="Đóng" type="button" onClick={() => setVersionModalTour(null)} className="dialog-icon-close btn btn-secondary btn-sm">✕</button>
+            </div>
+
+            <div className="modal-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* Khu vực 1: Đối chiếu 2 phiên bản (Version Diff) */}
+              {(versionModalTour.versions || []).length >= 2 && (
+                <div style={{ background: '#FFFDF8', border: '1.5px solid var(--color-gold-400)', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--color-burgundy-900)' }}>
+                      So sánh sự khác biệt giữa 2 Phiên bản (Version Diff)
+                    </strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <select
+                        className="form-select"
+                        style={{ width: 'auto', padding: '4px 10px', fontSize: '0.8rem', height: '32px' }}
+                        value={compareFromId}
+                        onChange={(e) => {
+                          const nextFrom = e.target.value;
+                          setCompareFromId(nextFrom);
+                          runCompareVersions(versionModalTour.id, nextFrom, compareToId);
+                        }}
+                      >
+                        {(versionModalTour.versions || []).map(v => (
+                          <option key={v.id} value={String(v.id)}>
+                            Gốc: v{v.versionNo} ({v.status})
+                          </option>
+                        ))}
+                      </select>
+                      <span style={{ fontWeight: '700', color: 'var(--color-charcoal-500)' }}>→</span>
+                      <select
+                        className="form-select"
+                        style={{ width: 'auto', padding: '4px 10px', fontSize: '0.8rem', height: '32px' }}
+                        value={compareToId}
+                        onChange={(e) => {
+                          const nextTo = e.target.value;
+                          setCompareToId(nextTo);
+                          runCompareVersions(versionModalTour.id, compareFromId, nextTo);
+                        }}
+                      >
+                        {(versionModalTour.versions || []).map(v => (
+                          <option key={v.id} value={String(v.id)}>
+                            Đích: v{v.versionNo} ({v.status})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {loadingDiff ? (
+                    <div style={{ fontSize: '0.82rem', color: 'var(--color-charcoal-500)' }}>Đang tính toán thay đổi giữa 2 phiên bản…</div>
+                  ) : versionDiff ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ padding: '8px 12px', background: '#FAF7F2', borderRadius: '6px', fontSize: '0.82rem', color: 'var(--color-charcoal-800)', fontWeight: '600' }}>
+                        {versionDiff.summary}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                        {(versionDiff.addedStops || []).length > 0 && (
+                          <div style={{ padding: '8px 10px', background: '#F0FDF4', borderRadius: '6px', border: '1px solid #BBF7D0', fontSize: '0.78rem' }}>
+                            <strong style={{ color: '#166534', display: 'block', marginBottom: '4px' }}>+ Trạm thêm mới ({versionDiff.addedStops.length}):</strong>
+                            {versionDiff.addedStops.map(s => (
+                              <div key={s.artifactId} style={{ color: '#14532D', fontWeight: '600' }}>• Trạm {s.orderNo}: {s.artifactName}</div>
+                            ))}
+                          </div>
+                        )}
+                        {(versionDiff.removedStops || []).length > 0 && (
+                          <div style={{ padding: '8px 10px', background: '#FEF2F2', borderRadius: '6px', border: '1px solid #FECACA', fontSize: '0.78rem' }}>
+                            <strong style={{ color: '#991B1B', display: 'block', marginBottom: '4px' }}>- Trạm đã xóa ({versionDiff.removedStops.length}):</strong>
+                            {versionDiff.removedStops.map(s => (
+                              <div key={s.artifactId} style={{ color: '#7F1D1D', fontWeight: '600' }}>• {s.artifactName}</div>
+                            ))}
+                          </div>
+                        )}
+                        {(versionDiff.reorderedStops || []).length > 0 && (
+                          <div style={{ padding: '8px 10px', background: '#FFFBEB', borderRadius: '6px', border: '1px solid #FDE68A', fontSize: '0.78rem' }}>
+                            <strong style={{ color: '#92400E', display: 'block', marginBottom: '4px' }}>⇄ Đổi thứ tự ({versionDiff.reorderedStops.length}):</strong>
+                            {versionDiff.reorderedStops.map(s => (
+                              <div key={s.artifactId} style={{ color: '#78350F', fontWeight: '600' }}>• {s.artifactName}: #{s.fromOrderNo} → #{s.toOrderNo}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-charcoal-500)' }}>Hãy chọn 2 phiên bản khác nhau để đối chiếu sự thay đổi.</div>
+                  )}
+                </div>
+              )}
+
+              {/* Khu vực 2: Danh sách toàn bộ lịch sử phiên bản */}
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--color-charcoal-900)', marginBottom: '10px' }}>
+                  Danh sách Lịch sử Phiên bản ({(versionModalTour.versions || []).length})
+                </strong>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {(versionModalTour.versions || [])
+                    .slice()
+                    .sort((a, b) => (b.versionNo || 0) - (a.versionNo || 0))
+                    .map(v => {
+                      const statusMap = {
+                        draft: { text: 'Bản nháp', bg: '#F1F5F9', color: '#475569' },
+                        submitted: { text: 'Chờ Giám tuyển duyệt', bg: '#FEF3C7', color: '#B45309' },
+                        approved: { text: 'Đã phê duyệt', bg: '#DCFCE7', color: '#166534' },
+                        rejected: { text: 'Bị từ chối', bg: '#FEE2E2', color: '#991B1B' }
+                      };
+                      const st = statusMap[v.status] || { text: v.status, bg: '#F1F5F9', color: '#475569' };
+                      const stopNames = (v.items || [])
+                        .slice()
+                        .sort((a, b) => a.orderNo - b.orderNo)
+                        .map(i => museumArtifacts.find(a => a.id === i.artifactId)?.name || `Hiện vật #${i.artifactId}`);
+
+                      return (
+                        <div
+                          key={v.id}
+                          style={{
+                            padding: '14px 16px',
+                            borderRadius: '10px',
+                            background: '#FFFFFF',
+                            border: '1px solid var(--color-paper-border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: '800', fontSize: '0.92rem', color: 'var(--color-burgundy-900)' }}>
+                                Phiên bản v{v.versionNo}
+                              </span>
+                              <span style={{ fontSize: '0.73rem', fontWeight: '700', padding: '2px 9px', borderRadius: '12px', background: st.bg, color: st.color }}>
+                                {st.text}
+                              </span>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--color-charcoal-600)' }}>
+                                {v.estimatedMinutes} phút · {(v.items || []).length} trạm dừng
+                              </span>
+                              {v.publicAt && (
+                                <span style={{ fontSize: '0.73rem', color: '#1D4ED8', fontWeight: '600' }}>
+                                  Công bố: {formatCurationDate(v.publicAt)}
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {v.status === 'draft' && (
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={async () => {
+                                    await submitTourVersion(v.id);
+                                    setVersionModalTour(null);
+                                  }}
+                                >
+                                  <Send size={12} /> Gửi duyệt v{v.versionNo}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                title="Nhân bản phiên bản này sang bản nháp mới để chỉnh sửa"
+                                onClick={async () => {
+                                  await createTourVersionDraft(versionModalTour.id, v.id);
+                                  setVersionModalTour(null);
+                                }}
+                              >
+                                <Copy size={12} /> Nhân bản sang bản nháp mới
+                              </button>
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '0.82rem', color: 'var(--color-charcoal-800)' }}>
+                            <strong>{v.title}</strong> — {v.description || 'Không có mô tả.'}
+                          </div>
+
+                          {stopNames.length > 0 && (
+                            <div style={{ fontSize: '0.76rem', color: 'var(--color-charcoal-600)' }}>
+                              <strong>Lộ trình:</strong> {stopNames.map((n, idx) => `${idx + 1}. ${n}`).join('  →  ')}
+                            </div>
+                          )}
+
+                          {v.reviewNote && (
+                            <div style={{
+                              marginTop: '4px',
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              background: v.status === 'rejected' ? '#FEF2F2' : '#F8FAFC',
+                              border: `1px solid ${v.status === 'rejected' ? '#FECACA' : 'var(--color-paper-border)'}`,
+                              fontSize: '0.78rem',
+                              color: v.status === 'rejected' ? '#991B1B' : 'var(--color-charcoal-700)'
+                            }}>
+                              <strong>Phản hồi Giám tuyển:</strong> {v.reviewNote}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setVersionModalTour(null)}>Đóng</button>
+            </div>
           </div>
         </div>,
         document.body
