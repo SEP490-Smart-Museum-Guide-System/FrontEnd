@@ -20,7 +20,20 @@ export async function generateStaffDraft(artifactId, options, signal) {
   if (options.mode === 'narration' && (typeof result.draft.title !== 'string' || typeof result.draft.narrationText !== 'string' || !result.draft.narrationText.trim())) {
     throw new Error('Bản thuyết minh AI không hợp lệ.');
   }
-  if (options.mode === 'quiz' && (typeof result.draft.question !== 'string' || !Array.isArray(result.draft.options) || !Number.isInteger(result.draft.correctIndex))) {
+  if (options.mode === 'quiz' && Number(options.count || 1) > 1) {
+    const set = result.draft;
+    const requested = Number(options.count);
+    if (set.requestedCount !== requested || !Array.isArray(set.questions) || set.generatedCount !== set.questions.length
+      || set.generatedCount < 1 || set.generatedCount > requested || set.complete !== (set.generatedCount === requested)
+      || set.isDraft !== true || set.reviewRequired !== true || !Array.isArray(set.warnings)
+      || set.questions.some(question => typeof question?.question !== 'string' || !question.question.trim()
+        || !Array.isArray(question.options) || question.options.length !== 4
+        || !Number.isInteger(question.correctIndex) || question.correctIndex < 0 || question.correctIndex > 3
+        || typeof question.explanation !== 'string' || !question.explanation.trim()
+        || typeof question.evidenceQuote !== 'string' || !question.evidenceQuote.trim())) {
+      throw new Error('Bộ câu hỏi AI trả về không hợp lệ.');
+    }
+  } else if (options.mode === 'quiz' && (typeof result.draft.question !== 'string' || !Array.isArray(result.draft.options) || !Number.isInteger(result.draft.correctIndex))) {
     throw new Error('Câu hỏi AI không hợp lệ.');
   }
   return result;
