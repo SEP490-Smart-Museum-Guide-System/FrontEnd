@@ -322,42 +322,19 @@ export default function Header({ setSearchHost, accountHost }) {
       {/* TopBar Left: Scope & Museum Indicator */}
       {['museumStaff', 'curator'].includes(currentRole) && (
       <div className="topbar-left">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: 'var(--color-paper-accent)',
-              border: '1px solid var(--color-paper-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--color-burgundy-700)'
-            }}
+        <label className="header-museum-picker">
+          <Landmark size={17} aria-hidden="true" />
+          <select
+            aria-label="Bảo tàng đang xem"
+            title={currentMuseum?.name || 'Chọn bảo tàng'}
+            value={selectedMuseumId ?? ''}
+            onChange={(e) => setSelectedMuseumId(Number(e.target.value))}
           >
-            <Landmark size={18} />
-          </div>
-
-          <div>
-            <span className="museum-select-badge" style={{ fontWeight: '600', color: 'var(--color-burgundy-900)' }}>
-              <select
-                aria-label="Bảo tàng đang xem"
-                value={selectedMuseumId ?? ''}
-                onChange={(e) => setSelectedMuseumId(Number(e.target.value))}
-              >
-                <option value="" disabled>
-                  Chọn bảo tàng
-                </option>
-                {museums.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-            </span>
-          </div>
-        </div>
+            <option value="" disabled>Chọn bảo tàng</option>
+            {museums.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <ChevronDown size={15} aria-hidden="true" />
+        </label>
       </div>
 
       )}

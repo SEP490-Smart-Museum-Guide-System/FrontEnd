@@ -212,17 +212,52 @@ button {
   gap: 16px;
 }
 
-.museum-select-badge {
+.header-museum-picker {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--color-paper-accent);
-  padding: 6px 14px;
-  border-radius: 9999px;
+  gap: 9px;
+  min-width: 0;
+  max-width: min(300px, 36vw);
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--color-paper-card);
   border: 1px solid var(--color-paper-border);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-charcoal-800);
+  color: var(--color-burgundy-700);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.header-museum-picker:hover {
+  border-color: var(--color-gold-500);
+  background: #fffdf9;
+}
+
+.header-museum-picker:focus-within {
+  border-color: var(--color-burgundy-600);
+  box-shadow: 0 0 0 3px rgba(126, 59, 59, .12);
+}
+
+.header-museum-picker select {
+  min-width: 0;
+  width: 100%;
+  padding: 0 2px;
+  border: 0;
+  outline: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--color-burgundy-900);
+  font: 600 .875rem/1.35 var(--font-sans);
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.header-museum-picker select:focus-visible {
+  outline: 0;
+}
+
+.header-museum-picker > svg:last-child {
+  flex: none;
+  color: var(--color-charcoal-500);
+  pointer-events: none;
 }
 
 /* Role Selector in TopBar */
