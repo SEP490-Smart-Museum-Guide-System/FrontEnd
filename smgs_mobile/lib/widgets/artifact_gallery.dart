@@ -207,6 +207,13 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
         ),
       );
     }
+    final galleryButtonStyle = FilledButton.styleFrom(
+      shape: const StadiumBorder(),
+      minimumSize: const Size(0, 34),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      tapTargetSize: MaterialTapTargetSize.padded,
+    );
+    const galleryIconSize = 15.0;
     final body = Stack(
       children: [
         Positioned.fill(
@@ -260,16 +267,14 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
             child: Row(
               children: [
                 FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(
-                    shape: const StadiumBorder(),
-                    backgroundColor: const Color(0xff6d3032),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    tapTargetSize: MaterialTapTargetSize.padded,
+                  style: galleryButtonStyle.copyWith(
+                    backgroundColor: const WidgetStatePropertyAll(
+                      Color(0xff6d3032),
+                    ),
+                    foregroundColor: const WidgetStatePropertyAll(Colors.white),
                   ),
                   onPressed: _open,
-                  icon: const Icon(Icons.image_outlined, size: 15),
+                  icon: const Icon(Icons.image_outlined, size: galleryIconSize),
                   label: Text(
                     widget.photos.length > 1
                         ? 'Ảnh ${_index + 1}/${widget.photos.length}'
@@ -278,17 +283,21 @@ class _ArtifactGalleryState extends State<ArtifactGallery> {
                 ),
                 if (widget.onModel != null) ...[
                   const SizedBox(width: 4),
-                  Flexible(
-                    child: FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xff292929),
+                  FilledButton.tonalIcon(
+                    style: galleryButtonStyle.copyWith(
+                      backgroundColor: const WidgetStatePropertyAll(
+                        Colors.white,
                       ),
-                      onPressed: widget.onModel,
-                      icon: const Icon(Icons.view_in_ar_outlined, size: 17),
-                      label: const Text('Xem 3D'),
+                      foregroundColor: const WidgetStatePropertyAll(
+                        Color(0xff292929),
+                      ),
                     ),
+                    onPressed: widget.onModel,
+                    icon: const Icon(
+                      Icons.view_in_ar_outlined,
+                      size: galleryIconSize,
+                    ),
+                    label: const Text('Xem 3D'),
                   ),
                 ],
                 const Spacer(),

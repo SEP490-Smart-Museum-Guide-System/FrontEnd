@@ -59,10 +59,24 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
       if (_error != null) Notice(_error!),
       BackendPanel(
         resourceKey: 'visit-progress:${widget.visitId}',
-        load: () => Future.wait([
-          VisitorExperienceApi.getVisit(widget.visitId).then((v) => v ?? {}),
-          VisitorExperienceApi.progress(widget.visitId),
-        ]),
+        load: () async {
+          final results = await Future.wait([
+            VisitorExperienceApi.getVisit(widget.visitId).then((v) => v ?? {}),
+            VisitorExperienceApi.progress(widget.visitId),
+          ]);
+          final visitMap = Map<String, dynamic>.from(results[0]);
+          final progressMap = Map<String, dynamic>.from(results[1]);
+          final tourId = (progressMap['tourId'] ?? visitMap['tourId']) as int?;
+          if (tourId != null) {
+            try {
+              final tour = await BackendApi.request('tours/$tourId');
+              if (tour is Map && tour['title'] != null) {
+                visitMap['_resolvedTourTitle'] = tour['title'].toString();
+              }
+            } catch (_) {}
+          }
+          return [visitMap, progressMap];
+        },
         builder: (data, reload) {
           final visit = Map<String, dynamic>.from(data[0]);
           final progress = data[1] as Map<String, dynamic>;
@@ -70,6 +84,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
               .cast<Map<String, dynamic>>();
           final active = visit['status'] == 'InProgress';
           final museumName = AppServices.catalog.museumName(visit['museumId'].toString());
+          final tourTitle = (visit['_resolvedTourTitle'] ?? visit['tourTitle'] ?? '').toString();
           final visitedCount = stops.where((s) => s['lastVisitedAt'] != null).length;
           final totalCount = stops.length;
           final progressRatio = totalCount > 0 ? (visitedCount / totalCount).clamp(0.0, 1.0) : 0.0;
@@ -138,15 +153,6 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '#${widget.visitId}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedGold,
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -157,6 +163,29 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                         color: AppColors.deepBurgundy,
                       ),
                     ),
+                    if (tourTitle.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.route_outlined,
+                            size: 15,
+                            color: AppColors.deepBurgundy,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              tourTitle,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryText,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     if (visit['personalizedTourId'] != null)
                       Padding(

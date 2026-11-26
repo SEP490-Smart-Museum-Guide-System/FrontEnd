@@ -198,6 +198,7 @@ class NarrationPlayer extends StatefulWidget {
     this.isDemo = false,
     this.compact = false,
     this.onStart,
+    this.presentation,
   });
   final String text;
   final String? audioUrl;
@@ -205,12 +206,13 @@ class NarrationPlayer extends StatefulWidget {
   final bool isDemo;
   final bool compact;
   final VoidCallback? onStart;
+  final Widget? presentation;
 
   @override
-  State<NarrationPlayer> createState() => _NarrationPlayerState();
+  NarrationPlayerState createState() => NarrationPlayerState();
 }
 
-class _NarrationPlayerState extends State<NarrationPlayer> {
+class NarrationPlayerState extends State<NarrationPlayer> {
   AudioPlayer? _player;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   SpeechResult? _audio;
@@ -228,6 +230,17 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
 
   bool _current(int request) => mounted && request == _request;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.presentation != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_toggle());
+      });
+    }
+  }
+
+  void stopPlayback() => _releasePlayer();
   AudioPlayer _ensurePlayer() {
     if (_player != null) return _player!;
     final player = AudioPlayer();
@@ -412,6 +425,89 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
     final total = _duration.inMilliseconds.toDouble();
     final progress = (_dragPosition ?? _position.inMilliseconds.toDouble())
         .clamp(0.0, total > 0 ? total : 1.0);
+    final presentation = widget.presentation;
+    if (presentation != null) {
+      const pale = Color(0xFFFFEEE0);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          presentation,
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: pale),
+              ),
+            ),
+          Slider(
+            value: progress,
+            max: total > 0 ? total : 1,
+            activeColor: pale,
+            inactiveColor: Colors.white38,
+            onChanged: total > 0 && !_busy
+                ? (value) => setState(() => _dragPosition = value)
+                : null,
+            onChangeEnd: _seek,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _time(Duration(milliseconds: progress.round())),
+                  style: const TextStyle(color: pale),
+                ),
+                Text(
+                  total > 0 ? _time(_duration) : '–:–',
+                  style: const TextStyle(color: pale),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Lùi 10 giây',
+                color: pale,
+                onPressed: _sourceReady && !_busy
+                    ? () => _seek((progress - 10000).clamp(0.0, total))
+                    : null,
+                icon: const Icon(Icons.replay_10),
+              ),
+              const SizedBox(width: 16),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: pale,
+                  foregroundColor: AppColors.deepBurgundy,
+                  minimumSize: const Size.square(58),
+                ),
+                tooltip: _playing ? 'Tạm dừng' : 'Phát thuyết minh',
+                onPressed: _busy ? null : _toggle,
+                icon: _busy
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(_playing ? Icons.pause : Icons.play_arrow),
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                tooltip: 'Tiến 10 giây',
+                color: pale,
+                onPressed: _sourceReady && !_busy
+                    ? () => _seek((progress + 10000).clamp(0.0, total))
+                    : null,
+                icon: const Icon(Icons.forward_10),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
     if (widget.compact) {
       final label = _busy
           ? 'Đang tải âm thanh…'
@@ -427,6 +523,7 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(VisitorRadius.full),
               ),
+              minimumSize: const Size(0, 56),
               backgroundColor: AppColors.deepBurgundy,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -448,7 +545,11 @@ class _NarrationPlayerState extends State<NarrationPlayer> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(label, maxLines: 1, softWrap: false),
+                      ),
                       if (total > 0) ...[
                         const SizedBox(height: 4),
                         LinearProgressIndicator(

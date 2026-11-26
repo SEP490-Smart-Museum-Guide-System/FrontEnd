@@ -190,6 +190,15 @@ void main() {
       await screenSize(tester, Size(width, 820));
       await tester.pumpAndSettle();
       expect(find.text('Xem 3D').hitTestable(), findsOneWidget);
+      final photo = find.ancestor(
+        of: find.byIcon(Icons.image_outlined),
+        matching: find.byType(FilledButton),
+      );
+      final model = find.ancestor(
+        of: find.text('Xem 3D'),
+        matching: find.byType(FilledButton),
+      );
+      expect(tester.getSize(photo).height, tester.getSize(model).height);
       expect(tester.takeException(), isNull);
     }
     await tester.tap(find.text('Xem 3D').hitTestable());

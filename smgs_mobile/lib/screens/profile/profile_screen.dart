@@ -346,6 +346,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildSectionLabel(l10n.isEn ? 'ORDERS & POINTS' : 'ĐƠN HÀNG & ĐIỂM'),
             const SizedBox(height: 8),
             _buildMenuTile(
+              icon: Icons.confirmation_number_outlined,
+              title: l10n.isEn ? 'Buy Passes & Services' : 'Mua vé & Dịch vụ số',
+              subtitle: l10n.isEn ? 'Explore passes and museum services' : 'Khám phá và đặt mua các gói dịch vụ bảo tàng',
+              onTap: () => openPage(context, const ServicesScreen()),
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
               icon: Icons.receipt_long_outlined,
               title: l10n.isEn ? 'Your Orders' : 'Đơn mua của bạn',
               subtitle: l10n.isEn ? 'E-tickets and purchased service packages' : 'Vé điện tử và các gói dịch vụ đã mua',

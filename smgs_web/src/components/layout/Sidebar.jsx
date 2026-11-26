@@ -34,7 +34,7 @@ export default function Sidebar({ searchHost, setAccountHost }) {
   const searchRef = useRef(null);
 
   const museumArtifactIds = new Set(artifacts.filter(item => item.museumId === currentMuseum?.id).map(item => item.id));
-  const pendingCuration = curationQueue.filter(c => c.status === 'pending_review' && museumArtifactIds.has(c.targetArtifactId)).length;
+  const pendingCuration = curationQueue.filter(c => c.status === 'pending_review' && (String(c.museumId) === String(currentMuseum?.id) || museumArtifactIds.has(c.targetArtifactId))).length;
   const pendingReviews = reviews.filter(r => r.status === 'pending_reply' && r.museumName === currentMuseum?.name).length;
 
   // Navigation schema per role
@@ -152,7 +152,7 @@ export default function Sidebar({ searchHost, setAccountHost }) {
   ];
   const navSections = groups.map(([title, ids]) => ({ title, items: ids.map(id => original.find(item => item.id === id)).filter(Boolean) }));
   const activeSection = navSections.find(section => section.items.some(item => item.id === activeTab))?.title;
-  const staticSidebar = ['administrator', 'museumStaff'].includes(currentRole);
+  const staticSidebar = ['administrator', 'museumStaff', 'curator'].includes(currentRole);
   const [expanded, setExpanded] = useState(() => new Set(staticSidebar ? navSections.map(section => section.title) : [navSections[0].title, activeSection]));
   useEffect(() => { setExpanded(previous => new Set([...previous, activeSection])); }, [activeSection]);
 

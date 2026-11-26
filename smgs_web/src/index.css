@@ -12,12 +12,14 @@
 
 @font-face {
   font-family: 'Noto Sans SMGS';
+  font-weight: 100 900;
   src: url('/fonts/NotoSans.ttf') format('truetype');
   font-display: swap;
 }
 
 @font-face {
   font-family: 'Noto Serif SMGS';
+  font-weight: 100 900;
   src: url('/fonts/NotoSerif.ttf') format('truetype');
   font-display: swap;
 }

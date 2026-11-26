@@ -1,3 +1,5 @@
+import 'package:smgs_mobile/screens/artifact/artifact_listening_screen.dart';
+import 'package:smgs_mobile/screens/artifact/artifact_detail_screen.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -300,6 +302,130 @@ void main() {
     },
   );
 
+  for (final action in ['Làm quiz', 'Hỏi']) {
+    testWidgets('Listening keeps playing for media and stops for $action', (
+      tester,
+    ) async {
+      await screenSize(tester, const Size(390, 844));
+      final artifact = Artifact.fromBackendJson({
+        'id': 17,
+        'name': 'Hiện vật thử',
+      });
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            host(
+              Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ArtifactListeningScreen(
+                        artifact: artifact,
+                        photos: const ['assets/images/ngoc-lu-web.jpg'],
+                        description: 'Chi tiết đã xuất bản',
+                        narration: 'Lời thuyết minh mẫu',
+                        modelUrl: 'assets/models/trong_dong_dong_son.glb',
+                      ),
+                    ),
+                  ),
+                  child: const Text('Mở trình nghe'),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text('Mở trình nghe'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 420));
+          await flush(tester);
+          expect(platform.calls, contains('resume'));
+          expect(find.text('Mô hình 3D Hiện vật thử'), findsOneWidget);
+          expect(find.text('Lời thuyết minh mẫu'), findsNothing);
+          await tester.tap(find.text('Xem ảnh'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 420));
+          await flush(tester);
+          await tester.tap(find.byTooltip('Đóng ảnh'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 420));
+          await flush(tester);
+          await tester.tap(find.text('Đọc lời'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 420));
+          await flush(tester);
+          expect(find.text('Chi tiết đã xuất bản'), findsOneWidget);
+          expect(platform.calls, isNot(contains('pause')));
+          expect(platform.calls, isNot(contains('stop')));
+          await tester.tapAt(const Offset(15, 30));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 420));
+          await flush(tester);
+          await tester.tap(find.text(action));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 420));
+          await flush(tester);
+          expect(platform.calls, contains('stop'));
+          expect(find.byType(ArtifactListeningScreen), findsNothing);
+        },
+        () => MockClient(
+          (_) async => http.Response.bytes(
+            wave(),
+            200,
+            headers: {'content-type': 'audio/wav'},
+          ),
+        ),
+      );
+    });
+  }
+  testWidgets('Artifact actions align and narration stays on one line', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(320, 800));
+    final artifact = Artifact.fromBackendJson({
+      'id': 17,
+      'name': 'Hiện vật thử',
+      'museumId': 1,
+    });
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          host(
+            ArtifactDetailScreen(artifact: artifact, museumName: 'Bảo tàng'),
+            scale: 1.3,
+          ),
+        );
+        await flush(tester);
+        final narration = find.text('Nghe thuyết minh');
+        final listen = find.ancestor(
+          of: narration,
+          matching: find.byType(FilledButton),
+        );
+        final ask = find.ancestor(
+          of: find.text('Hỏi'),
+          matching: find.byType(OutlinedButton),
+        );
+        expect(tester.widget<Text>(narration).maxLines, 1);
+        expect(tester.getSize(listen).height, tester.getSize(ask).height);
+        expect(
+          tester.getSize(listen).width,
+          greaterThan(tester.getSize(ask).width),
+        );
+        await tester.tap(narration);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 420));
+        await flush(tester);
+        expect(find.byType(ArtifactListeningScreen), findsOneWidget);
+      },
+      () => MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'data': {'narrationText': 'Kịch bản đã xuất bản'},
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
+    );
+  });
   testWidgets(
     'Narration screen uses published BE narration, not the catalog placeholder',
     (tester) async {

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:smgs_mobile/screens/museum/visitor_directory_screen.dart';
 import 'package:smgs_mobile/screens/museum/visitor_indoor_map_screen.dart';
+import 'package:smgs_mobile/widgets/artifact_photo.dart';
 import 'widget_test.dart' show host, screenSize;
 
 const nodeA = '11111111-1111-4111-8111-111111111111';
@@ -123,6 +124,77 @@ Finder get pageScroll => find
     .first;
 
 void main() {
+  testWidgets('fresh checkpoint on another floor routes without a prompt', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    var requests = 0;
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          host(const VisitorIndoorMapScreen(mapId: 6, targetArtifactId: 11)),
+        );
+        await frames(tester);
+        expect(find.text('Vị trí hiện tại của bạn'), findsOneWidget);
+        await tester.tap(find.text('Chỉ đường'));
+        await frames(tester);
+        expect(find.text('Kiểm tra điểm xuất phát'), findsNothing);
+        expect(requests, 1);
+        expect(find.text('Xem đoạn tiếp'), findsOneWidget);
+        expect(find.byIcon(Icons.my_location_rounded), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ClipOval),
+            matching: find.byType(ArtifactPhoto),
+          ),
+          findsWidgets,
+        );
+        await tester.tap(find.text('Xem đoạn tiếp'));
+        await frames(tester);
+        expect(find.text('Đi theo tuyến đến Trống đồng.'), findsOneWidget);
+      },
+      () => MockClient((req) async {
+        if (req.url.path.endsWith('/published')) {
+          final id = int.parse(req.url.pathSegments.reversed.elementAt(1));
+          return data({...mapJson(), 'id': id, 'imageKey': null});
+        }
+        if (req.url.path.endsWith('/presence')) {
+          return data({
+            'source': 'checkpoint_qr',
+            'mapId': 5,
+            'nodeId': nodeA,
+            'markerId': 'start',
+            'isFresh': true,
+            'label': 'Lối vào',
+            'confirmedAt': DateTime.now().toUtc().toIso8601String(),
+          });
+        }
+        if (req.url.path.endsWith('/presence/route')) {
+          requests++;
+          expect(jsonDecode(req.body)['mapId'], 6);
+          return data({
+            'segments': [
+              {
+                'mapId': 5,
+                'mapName': 'Tầng 1',
+                'revision': 3,
+                'nodeIds': [nodeA, nodeB],
+                'connectorLabel': 'Cầu thang A',
+              },
+              {
+                'mapId': 6,
+                'mapName': 'Tầng 2',
+                'revision': 3,
+                'nodeIds': [nodeA, nodeB],
+              },
+            ],
+          });
+        }
+        return data({});
+      }),
+    );
+  });
+
   testWidgets(
     'QR floor opens first; buildings scope floors and switching clears selection',
     (tester) async {

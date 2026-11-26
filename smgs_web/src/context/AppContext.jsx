@@ -248,13 +248,15 @@ function DataProvider({ children, session, login, endSession }) {
   const downloadArtifactQr = (id, name) => mutate(() => downloadArtifactQrImageApi(requireId(id), name), 'Đã tải mã QR.');
   const regenerateArtifactQr = id => mutate(() => regenerateArtifactQrApi(requireId(id)), 'Đã tạo lại mã QR.');
   const submitToCuration = item => mutate(() => submitArtifactContentApi(requireId(item.targetArtifactId), { languageCode: item.languageCode || 'vi', title: item.title, description: item.proposedContent || item.content || '', ...(item.narrationText ? { narrationText: item.narrationText } : {}), ...(item.audioUrl ? { audioUrl: item.audioUrl } : {}), isAiGenerated: item.isAiGenerated ?? true }), 'Đã gửi bản thảo lên máy chủ.');
-  const approveCurationItem = (id, note) => {
+  const approveCurationItem = (id, note, publicAt = null) => {
     const item = curationQueue.find(x => x.id === id || x.backendId === id);
     if (item && item.type === 'new_tour') {
+      const resolvedPublicAt = publicAt ? new Date(publicAt).toISOString() : new Date().toISOString();
+      const isFuture = publicAt && new Date(publicAt).getTime() > Date.now() + 30000;
       return mutate(() => backend(`tours/versions/${item.backendId}/approve`, {
         method: 'POST',
-        body: { note: note || 'Đã thẩm định phê duyệt hành trình tham quan.', publicAt: new Date().toISOString() }
-      }), 'Đã phê duyệt và xuất bản hành trình tham quan.');
+        body: { note: note || 'Đã thẩm định phê duyệt hành trình tham quan.', publicAt: resolvedPublicAt }
+      }), isFuture ? 'Đã phê duyệt và lên lịch công bố hành trình tham quan.' : 'Đã phê duyệt và xuất bản hành trình tham quan.');
     }
     return mutate(() => approveCurationContentApi(requireId(id), note), 'Đã xuất bản nội dung.');
   };
