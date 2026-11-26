@@ -59,6 +59,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
   const [ttsError, setTtsError] = useState(null);
   const storedAudioUrl = publishedContent?.audioUrl || artifact?.audioUrl || '';
+  const [confirmClearReferences, setConfirmClearReferences] = useState(false);
+  const [isClearingReferences, setIsClearingReferences] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -233,17 +235,18 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   };
 
   const handleClearAllReferences = async () => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa tất cả vector ảnh tham chiếu của hiện vật "${artifact.name}" trên AI Vision?`)) {
-      return;
-    }
     const targetArtifactId = typeof artifact?.id === 'number' ? artifact.id : (artifact?.backendId || artifact?.id);
+    setIsClearingReferences(true);
     try {
       await deleteReferenceImagesApi({ artifactId: targetArtifactId });
       setReferenceImages(prev => prev.map(img => ({ ...img, status: 'Đã gỡ bỏ khỏi AI Vision' })));
       showToast('Đã gỡ bỏ toàn bộ vector tham chiếu trên AI Vision.', 'success');
+      setConfirmClearReferences(false);
       checkVisionHealthApi().then(setVisionHealth).catch(() => {});
     } catch (err) {
       showToast('Lỗi khi gỡ vector: ' + err.message, 'error');
+    } finally {
+      setIsClearingReferences(false);
     }
   };
 
@@ -821,10 +824,11 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                     {referenceImages.length > 0 && (
                       <button
                         type="button"
-                        onClick={handleClearAllReferences}
+                        onClick={() => setConfirmClearReferences(true)}
                         className="btn btn-secondary btn-sm"
                         style={{ color: '#991B1B' }}
                         title="Xóa toàn bộ vector tham chiếu của hiện vật này trên AI Vision"
+                        disabled={isClearingReferences}
                       >
                         Xóa vector
                       </button>
@@ -1041,5 +1045,61 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
     </div>
   );
 
-  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
+  return typeof document !== 'undefined' ? <>
+    {createPortal(modalContent, document.body)}
+    {confirmClearReferences && createPortal(
+      <div className="modal-overlay" onClick={() => !isClearingReferences && setConfirmClearReferences(false)}>
+        <section
+          className="modal-dialog"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="clear-vision-confirm-title"
+          aria-describedby="clear-vision-confirm-description"
+          style={{ maxWidth: '480px', width: '95vw' }}
+          onClick={event => event.stopPropagation()}
+        >
+          <div className="modal-header">
+            <h3 id="clear-vision-confirm-title" className="modal-title font-serif" style={{ color: '#991B1B' }}>
+              Xác nhận xóa vector ảnh
+            </h3>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              aria-label="Đóng"
+              disabled={isClearingReferences}
+              onClick={() => setConfirmClearReferences(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="modal-body" style={{ padding: '20px 24px' }}>
+            <p id="clear-vision-confirm-description" style={{ lineHeight: '1.6' }}>
+              Xóa toàn bộ vector ảnh tham chiếu của <strong>{artifact?.name}</strong> khỏi AI Vision?
+              Ảnh nguồn vẫn được giữ trong danh sách và có thể đồng bộ lại sau.
+            </p>
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={isClearingReferences}
+              onClick={() => setConfirmClearReferences(false)}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ background: '#B91C1C', borderColor: '#B91C1C' }}
+              disabled={isClearingReferences}
+              onClick={handleClearAllReferences}
+            >
+              {isClearingReferences ? 'Đang xóa…' : 'Xóa vector'}
+            </button>
+          </div>
+        </section>
+      </div>,
+      document.body
+    )}
+  </> : modalContent;
 }
