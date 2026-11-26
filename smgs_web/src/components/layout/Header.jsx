@@ -141,7 +141,7 @@ export default function Header({ setSearchHost, accountHost }) {
 
   const currentRoleInfo = roleMeta[currentRole] || roleMeta.administrator;
 
-  const sidebarAccount = ['administrator', 'museumStaff'].includes(currentRole);
+  const sidebarAccount = ['administrator', 'museumStaff', 'curator'].includes(currentRole);
   const accountMenu = (
         <div ref={switchRef} style={{ position: 'relative' }}>
           <button

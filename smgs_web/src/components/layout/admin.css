@@ -1,4 +1,4 @@
-.app-container:is([data-role="administrator"], [data-role="museumStaff"]) {
+.app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"]) {
   --rose: #f5e9e6;
   --wine: var(--color-burgundy-700, #6b2d2f);
   --ink: #2b2220;
@@ -108,7 +108,7 @@
   margin-top: 12px;
 }
 .cover-controls:not(:has(> button)) { grid-template-columns: 1fr; }
-.app-container:is([data-role="administrator"], [data-role="museumStaff"]) .cover-controls .btn {
+.app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"]) .cover-controls .btn {
   background: white;
   min-height: 44px;
 }
@@ -117,7 +117,7 @@
 .cover-controls > small { grid-column: 1 / -1; text-align: center; color: var(--muted); }
 
 @media (min-width: 861px) {
-  .app-container:is([data-role="administrator"], [data-role="museumStaff"]) :is(.sidebar-header, .topbar) {
+  .app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"]) :is(.sidebar-header, .topbar) {
     box-sizing: border-box;
     height: 72px;
     min-height: 72px;
@@ -185,7 +185,7 @@
 }
 
 /* Portals mount beside the application, so their palette follows the active role. */
-body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"])) {
+body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"])) {
   --admin-bg: #fff;
   --admin-border: #ebe3d8;
   --admin-control: #dccfc0;
@@ -223,7 +223,7 @@ body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"
   }
 }
 
-.app-container:is([data-role="administrator"], [data-role="museumStaff"]) .indoor-page {
+.app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"]) .indoor-page {
   & .map-admin-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
   & .map-admin-heading small { color: var(--wine); font-size: .72rem; letter-spacing: .1em; }
   & .map-admin-heading h1 { margin: 4px 0; }
@@ -305,7 +305,7 @@ body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"
 .artifact-create .artifact-upload-note { display: flex; align-items: start; gap: 8px; font-style: normal !important; }
 .artifact-upload-note svg { flex-shrink: 0; }
 
-body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"])) {
+body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"])) {
   & .modal-header { align-items: center; gap: 12px; }
   & .modal-header > :first-child { min-width: 0; overflow-wrap: anywhere; }
   & :is(.dialog-icon-close, .admin-form-dialog .modal-header > button,
@@ -334,7 +334,7 @@ body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"
   & .studio-museum svg { flex-shrink: 0; }
 }
 
-body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"])) .dialog-icon-close {
+body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"], [data-role="curator"])) .dialog-icon-close {
   border-radius: 50% !important;
   padding: 0 !important;
 }
