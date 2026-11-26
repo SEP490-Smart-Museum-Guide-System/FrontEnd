@@ -196,12 +196,12 @@ export default function TourManager() {
       stopsCount: tourForm.selectedArtifacts.length,
       artifacts: tourForm.selectedArtifacts
     };
-    const draftVer = editingTour ? ((editingTour.versions || []).find(v => v.status === 'draft') || (editingTour.status === 'draft' && editingTour.versions?.[0] ? editingTour.versions[0] : null)) : null;
+    const draftVer = editingTour ? (editingTour.versions || []).find(v => v.status === 'draft') : null;
     let result;
     if (draftVer?.id) {
       result = await updateTourVersionDraft(draftVer.id, data);
     } else if (editingTour) {
-      result = await updateTour({ ...data, id: editingTour.id, revision: editingTour.revision });
+      result = await createTourVersionDraft(editingTour.id, null, data);
     } else {
       result = await addTour(data);
     }
@@ -332,8 +332,9 @@ export default function TourManager() {
       {activeSection === 'tours' && (
         <div className="business-grid">
           {museumTours.map(tour => {
-            const draftVersion = (tour.versions || []).find(v => v.status === 'draft') || (tour.status === 'draft' && tour.versions?.[0] ? tour.versions[0] : null);
+            const draftVersion = (tour.versions || []).find(v => v.status === 'draft');
             const hasSubmittedVersion = (tour.versions || []).some(v => v.status === 'submitted');
+            const copySourceVersion = draftVersion || (tour.versions || [])[0] || null;
             return (
               <div key={tour.id} className="card business-card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '8px' }}>
@@ -389,7 +390,7 @@ export default function TourManager() {
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         title="Tạo bản sao phiên bản mới (Draft) để chỉnh sửa"
-                        onClick={() => createTourVersionDraft(tour.id, draftVersion?.id || tour.activeVersionId)}
+                        onClick={() => createTourVersionDraft(tour.id, copySourceVersion?.id || null)}
                       >
                         <Copy size={12} /> Tạo bản nháp mới
                       </button>
