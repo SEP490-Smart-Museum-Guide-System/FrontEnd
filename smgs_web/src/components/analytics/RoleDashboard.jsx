@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { backend } from '../../services/backend';
 import { useData } from '../common/BusinessUI';
-import { useApp } from '../../context/AppContext';
+import { useApp, formatCurationDate } from '../../context/AppContext';
 import {
   FileText, ArrowRight, Building2, CheckSquare, ClipboardCheck, CreditCard,
   Layers, MessageSquare, QrCode, ShieldCheck, Sparkles, Users
@@ -16,7 +16,7 @@ export default function RoleDashboard({ onNavigate }) {
     curationQueue, transactions, users, reviews, systemCases
   } = useApp();
 
-  const museumQueue = curationQueue.filter(item => artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId === currentMuseum?.id);
+  const museumQueue = curationQueue.filter(item => String(item.museumId ?? artifacts.find(artifact => artifact.id === item.targetArtifactId)?.museumId) === String(currentMuseum?.id));
   const pending = curationQueue.filter(item => item.status === 'pending_review');
   const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum?.id);
   const museumTours = tours.filter(item => item.museumId === currentMuseum?.id);
@@ -110,7 +110,7 @@ export default function RoleDashboard({ onNavigate }) {
     secondary: ['Tra cứu hiện vật', 'artifacts'],
     metrics: [
       [ClipboardCheck, formatNumber(d?.curationPipeline?.pendingArtifactContentsCount ?? museumQueue.filter(item => item.status === 'pending_review').length), 'Nội dung chờ duyệt', `${d?.curationPipeline?.publishedArtifactContentsCount || 0} đã duyệt`, 'burgundy'],
-      [MessageSquare, formatNumber(d?.curationPipeline?.submittedTourVersionsCount ?? 0), 'Tour chờ thẩm định', `${d?.curationPipeline?.approvedTourVersionsCount || 0} tour đã xuất bản`, 'gold'],
+      [MessageSquare, formatNumber(d?.curationPipeline?.submittedTourVersionsCount ?? museumQueue.filter(item => item.type === 'new_tour' && item.status === 'pending_review').length), 'Tour chờ thẩm định', `${d?.curationPipeline?.approvedTourVersionsCount || 0} tour đã xuất bản`, 'gold'],
       [CheckSquare, formatNumber(d?.curationPipeline?.publishedQuizzesCount ?? 0), 'Quiz đã xuất bản', `${d?.curationPipeline?.draftQuestionsCount || 0} câu hỏi nháp`, 'green'],
       [Layers, formatNumber(d?.catalog?.totalArtifacts ?? museumArtifacts.length), 'Hiện vật bảo tàng', `${d?.catalog?.artifactsWith3DModel || 0} hiện vật có 3D`, 'blue']
     ],
@@ -118,7 +118,7 @@ export default function RoleDashboard({ onNavigate }) {
     listAction: ['Mở hàng đợi', 'curation_queue'],
     rows: museumQueue.slice(0, 5).map(item => ({
       title: item.title,
-      subtitle: `${item.targetArtifactName} · ${item.submittedDate}`,
+      subtitle: `${item.type === 'new_tour' ? `Tuyến tham quan · v${item.versionNo} · ${item.items?.length || 0} trạm` : item.targetArtifactName} · ${formatCurationDate(item.submittedDate)}`,
       badge: item.status === 'pending_review' ? 'Chờ thẩm định' : item.status === 'published' ? 'Đã xuất bản' : item.status === 'draft' ? 'Chờ hiệu đính' : 'Từ chối',
       status: item.status
     })),

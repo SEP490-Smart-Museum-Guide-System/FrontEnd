@@ -16,8 +16,14 @@ import {
   Search
 } from 'lucide-react';
 import { useApp, resolveSubmitterName, formatCurationDate } from '../../context/AppContext';
+import { backend } from '../../services/backend';
 import { getCurationContentByIdApi } from '../../services/curationApi';
 import { mediaApi } from '../../services/mediaApi';
+import './curation.css';
+
+const itemMeta = (item) => item.type === 'new_tour'
+  ? `Tuyến tham quan · v${item.versionNo || 1} · ${(item.items || []).length} trạm · ${item.estimatedMinutes || 0} phút`
+  : `Hiện vật: ${item.targetArtifactName || item.artifactName || 'Chưa xác định'}`;
 
 const statusLabel = {
   pending_review: 'Chờ thẩm định',
@@ -60,6 +66,11 @@ export default function CurationCenter() {
   const [reviewAudioError, setReviewAudioError] = useState('');
   const [note, setNote] = useState('');
   const [decision, setDecision] = useState(''); // 'approve' | 'reject'
+  const [publishMode, setPublishMode] = useState('immediate'); // 'immediate' | 'scheduled'
+  const [scheduledPublicAt, setScheduledPublicAt] = useState('');
+  const [tourDiff, setTourDiff] = useState(null);
+  const [loadingDiff, setLoadingDiff] = useState(false);
+  const [tourVersionDetail, setTourVersionDetail] = useState(null);
   const [checklist, setChecklist] = useState({
     factualAccuracy: true,
     heritageTone: true,
@@ -178,6 +189,10 @@ export default function CurationCenter() {
     setSelected(item);
     setNote(item.feedback || '');
     setDecision('');
+    setPublishMode('immediate');
+    setScheduledPublicAt('');
+    setTourDiff(null);
+    setTourVersionDetail(null);
     setChecklist({
       factualAccuracy: true,
       heritageTone: true,
@@ -186,6 +201,28 @@ export default function CurationCenter() {
     });
 
     const backendId = typeof item.id === 'number' ? item.id : item.backendId;
+    if (backendId && item.type === 'new_tour') {
+      try {
+        const detail = await backend(`tours/versions/${backendId}`);
+        if (detail) {
+          setTourVersionDetail(detail);
+        }
+      } catch (_) {}
+
+      if (item.tourId && (item.versionNo || 1) > 1) {
+        setLoadingDiff(true);
+        try {
+          const diff = await backend(`tours/${item.tourId}/versions/compare?toVersionId=${backendId}`);
+          if (diff) setTourDiff(diff);
+        } catch (_) {
+          setTourDiff(null);
+        } finally {
+          setLoadingDiff(false);
+        }
+      }
+      return;
+    }
+
     if (backendId && item.type !== 'new_tour') {
       try {
         const res = await getCurationContentByIdApi(backendId);
@@ -207,6 +244,10 @@ export default function CurationCenter() {
     setSelected(null);
     setNote('');
     setDecision('');
+    setPublishMode('immediate');
+    setScheduledPublicAt('');
+    setTourDiff(null);
+    setTourVersionDetail(null);
   };
 
   const submitDecision = async () => {
@@ -215,10 +256,23 @@ export default function CurationCenter() {
       alertAppDialog('Vui lòng nhập ghi chú chuyên môn cho Nhân viên bảo tàng khi từ chối.', { title: 'Cần ghi chú chuyên môn' });
       return;
     }
+    if (decision === 'approve' && selected.type === 'new_tour' && publishMode === 'scheduled') {
+      if (!scheduledPublicAt) {
+        alertAppDialog('Vui lòng chọn ngày và giờ công bố cho phiên bản hành trình này.', { title: 'Thiếu thời điểm công bố' });
+        return;
+      }
+    }
 
     let result;
     if (decision === 'approve') {
-      result = await approveCurationItem(selected.id, note || 'Đã thẩm định phê duyệt theo quy chuẩn lưu trữ và truyền thông di sản bảo tàng.');
+      const targetPublicAt = (selected.type === 'new_tour' && publishMode === 'scheduled' && scheduledPublicAt)
+        ? scheduledPublicAt
+        : null;
+      result = await approveCurationItem(
+        selected.id,
+        note || 'Đã thẩm định phê duyệt theo quy chuẩn lưu trữ và truyền thông di sản bảo tàng.',
+        targetPublicAt
+      );
     } else if (decision === 'reject') {
       result = await rejectCurationItem(selected.id, note);
     }
@@ -250,6 +304,21 @@ export default function CurationCenter() {
           Thẩm tra độc lập thông tin hiện vật, bản dịch thuật ngữ, kịch bản thuyết minh và ngân hàng câu hỏi tương tác AI do Nhân viên bảo tàng đệ trình trước khi công bố cho Khách tham quan.
         </p>
       </section>
+
+      <div className="cc-kpis">
+        {[
+          ['pending_review', 'Chờ thẩm định', 'warn'],
+          ['draft', 'Yêu cầu hiệu đính', 'gold'],
+          ['published', 'Đã xuất bản', 'ok'],
+          ['rejected', 'Đã từ chối', 'bad'],
+        ].map(([value, label, tone]) => (
+          <button type="button" key={value} className={`cc-kpi cc-kpi-${tone} ${filter === value ? 'is-active' : ''}`} onClick={() => setFilter(value)}>
+            <strong>{countByStatus(value)}</strong>
+            <span>{label}</span>
+          </button>
+        ))}
+        <div className="cc-kpi cc-kpi-total"><strong>{queue.length}</strong><span>Tổng hồ sơ</span></div>
+      </div>
 
       {/* Filter and Search Bar */}
       <div style={{
@@ -380,7 +449,7 @@ export default function CurationCenter() {
                             {item.languageCode?.toUpperCase()}
                           </span>
                         )}
-                        {item.priority === 'high' && (
+                        {false && (
                           <span style={{
                             fontSize: '0.68rem',
                             fontWeight: '700',
@@ -395,7 +464,7 @@ export default function CurationCenter() {
                         )}
                       </div>
                       <small style={{ color: 'var(--color-charcoal-500)', display: 'block', marginTop: '2px' }}>
-                        Hiện vật: <strong style={{ color: 'var(--color-burgundy-700)' }}>{item.targetArtifactName || item.artifactName || `Hiện vật #${item.targetArtifactId}`}</strong> · Người nộp: {submitterDisplay} · {dateDisplay}
+                        <strong style={{ color: 'var(--color-burgundy-700)' }}>{itemMeta(item)}</strong> · Người nộp: {submitterDisplay} · {dateDisplay}
                       </small>
                       <p style={{ margin: '6px 0 0', color: 'var(--color-charcoal-700)', fontSize: '.82rem', lineHeight: 1.4 }}>
                         {item.changesSummary}
@@ -476,7 +545,7 @@ export default function CurationCenter() {
                   {selected.title}
                 </h2>
                 <p style={{ color: 'var(--color-charcoal-500)', fontSize: '.8rem', marginTop: '2px' }}>
-                  Hiện vật tham chiếu: <strong>{selected.targetArtifactName || selected.artifactName || `Hiện vật #${selected.targetArtifactId}`}</strong> (ID: {selected.targetArtifactId}) · Đệ trình bởi: {resolveSubmitterName(selected.submittedBy, selected.isAiGenerated, users, currentUser)} ({formatCurationDate(selected.submittedDate)})
+                  <strong>{itemMeta(selected)}</strong> · Đệ trình bởi: {resolveSubmitterName(selected.submittedBy, selected.isAiGenerated, users, currentUser)} ({formatCurationDate(selected.submittedDate)})
                 </p>
               </div>
 
@@ -564,75 +633,228 @@ export default function CurationCenter() {
               {selected.type === 'new_tour' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ background: '#FAF7F2', padding: '14px 18px', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                       <strong style={{ color: 'var(--color-burgundy-900)', fontSize: '0.95rem' }}>
                         Thông tin Lộ trình Tham quan (Phiên bản v{selected.versionNo})
                       </strong>
-                      <span className="badge-status badge-active" style={{ fontSize: '0.72rem' }}>
-                        {selected.estimatedMinutes} phút
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {tourVersionDetail?.publicAt && (
+                          <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '12px', background: '#EFF6FF', color: '#1D4ED8', fontWeight: '600', border: '1px solid #BFDBFE' }}>
+                            Công bố: {formatCurationDate(tourVersionDetail.publicAt)}
+                          </span>
+                        )}
+                        <span className="badge-status badge-active" style={{ fontSize: '0.72rem' }}>
+                          {selected.estimatedMinutes} phút
+                        </span>
+                      </div>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-charcoal-700)', lineHeight: '1.5' }}>
                       {selected.proposedContent || 'Hành trình chưa có mô tả chi tiết.'}
                     </p>
                   </div>
 
+                  {/* KHUNG SO SÁNH SỰ KHÁC BIỆT GIỮA 2 PHIÊN BẢN (VERSION DIFF) */}
+                  {loadingDiff ? (
+                    <div style={{ padding: '12px', background: '#FFFDF8', borderRadius: '8px', border: '1px solid var(--color-gold-300)', fontSize: '0.8rem', color: 'var(--color-charcoal-600)' }}>
+                      Đang phân tích so sánh thay đổi so với phiên bản trước…
+                    </div>
+                  ) : tourDiff && (
+                    <div style={{ background: '#FFFDF8', padding: '14px 16px', borderRadius: '8px', border: '1.5px solid var(--color-gold-400)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                        <strong style={{ fontSize: '0.85rem', color: 'var(--color-burgundy-900)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Sparkles size={15} color="var(--color-gold-600)" />
+                          Đối chiếu Thay đổi Phiên bản (v{tourDiff.fromVersionNo} → v{tourDiff.toVersionNo})
+                        </strong>
+                        <span style={{
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          background: tourDiff.estimatedMinutesDelta > 0 ? '#FEF3C7' : tourDiff.estimatedMinutesDelta < 0 ? '#DBEAFE' : '#F1F5F9',
+                          color: tourDiff.estimatedMinutesDelta > 0 ? '#B45309' : tourDiff.estimatedMinutesDelta < 0 ? '#1D4ED8' : '#475569'
+                        }}>
+                          Thời lượng: {tourDiff.fromEstimatedMinutes}p → {tourDiff.toEstimatedMinutes}p ({tourDiff.estimatedMinutesDelta >= 0 ? `+${tourDiff.estimatedMinutesDelta}` : tourDiff.estimatedMinutesDelta} phút)
+                        </span>
+                      </div>
+
+                      <p style={{ margin: '0 0 10px', fontSize: '0.8rem', color: 'var(--color-charcoal-700)' }}>
+                        {tourDiff.summary}
+                      </p>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                        {tourDiff.titleChanged && (
+                          <div style={{ padding: '8px 10px', background: '#FFF', borderRadius: '6px', border: '1px solid var(--color-paper-border)', fontSize: '0.78rem' }}>
+                            <strong style={{ color: 'var(--color-burgundy-800)', display: 'block', marginBottom: '2px' }}>Đổi tên hành trình:</strong>
+                            <div style={{ color: 'var(--color-charcoal-500)', textDecoration: 'line-through' }}>{tourDiff.fromTitle}</div>
+                            <div style={{ color: 'var(--color-charcoal-900)', fontWeight: '600' }}>{tourDiff.toTitle}</div>
+                          </div>
+                        )}
+                        {(tourDiff.addedStops || []).length > 0 && (
+                          <div style={{ padding: '8px 10px', background: '#F0FDF4', borderRadius: '6px', border: '1px solid #BBF7D0', fontSize: '0.78rem' }}>
+                            <strong style={{ color: '#166534', display: 'block', marginBottom: '4px' }}>
+                              + Thêm {tourDiff.addedStops.length} trạm dừng mới:
+                            </strong>
+                            {tourDiff.addedStops.map(s => (
+                              <div key={s.artifactId} style={{ color: '#14532D', fontWeight: '600' }}>
+                                • Trạm {s.orderNo}: {s.artifactName}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {(tourDiff.removedStops || []).length > 0 && (
+                          <div style={{ padding: '8px 10px', background: '#FEF2F2', borderRadius: '6px', border: '1px solid #FECACA', fontSize: '0.78rem' }}>
+                            <strong style={{ color: '#991B1B', display: 'block', marginBottom: '4px' }}>
+                              - Lược bỏ {tourDiff.removedStops.length} trạm dừng:
+                            </strong>
+                            {tourDiff.removedStops.map(s => (
+                              <div key={s.artifactId} style={{ color: '#7F1D1D', fontWeight: '600' }}>
+                                • {s.artifactName}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {(tourDiff.reorderedStops || []).length > 0 && (
+                          <div style={{ padding: '8px 10px', background: '#FFFBEB', borderRadius: '6px', border: '1px solid #FDE68A', fontSize: '0.78rem' }}>
+                            <strong style={{ color: '#92400E', display: 'block', marginBottom: '4px' }}>
+                              ⇄ Đổi thứ tự {tourDiff.reorderedStops.length} trạm:
+                            </strong>
+                            {tourDiff.reorderedStops.map(s => (
+                              <div key={s.artifactId} style={{ color: '#78350F', fontWeight: '600' }}>
+                                • {s.artifactName}: Trạm {s.fromOrderNo} → Trạm {s.toOrderNo}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <strong style={{ display: 'block', marginBottom: '8px', fontSize: '0.825rem', color: 'var(--color-charcoal-900)' }}>
-                      Danh sách trạm dừng hiện vật theo thứ tự ({ (selected.items || []).length } trạm):
+                      Danh sách trạm dừng hiện vật theo thứ tự ({ (tourVersionDetail?.stops || selected.items || []).length } trạm):
                     </strong>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto' }}>
-                      {(selected.items || []).length === 0 ? (
+                      {(tourVersionDetail?.stops || selected.items || []).length === 0 ? (
                         <div style={{ padding: '12px', background: '#FFF', borderRadius: '6px', border: '1px dashed var(--color-paper-border)', fontSize: '0.825rem', color: 'var(--color-charcoal-500)', textAlign: 'center' }}>
                           Lộ trình này chưa gắn trạm dừng hiện vật nào.
                         </div>
                       ) : (
-                        (selected.items || []).map((stop, idx) => {
+                        (tourVersionDetail?.stops || selected.items || []).map((stop, idx) => {
                           const art = museumArtifacts.find(a => a.id === stop.artifactId);
+                          const stopTopics = stop.topicNames?.length
+                            ? stop.topicNames
+                            : (art?.topics?.map(t => typeof t === 'string' ? t : t?.name).filter(Boolean) || []);
+                          const isNewlyAdded = (tourDiff?.addedStops || []).some(a => a.artifactId === stop.artifactId);
                           return (
                             <div
                               key={stop.artifactId || idx}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
+                                justifyContent: 'space-between',
                                 gap: '12px',
                                 padding: '10px 14px',
-                                background: '#FFFFFF',
-                                border: '1px solid var(--color-paper-border)',
+                                background: isNewlyAdded ? '#F0FDF4' : '#FFFFFF',
+                                border: isNewlyAdded ? '1px solid #86EFAC' : '1px solid var(--color-paper-border)',
                                 borderRadius: '6px'
                               }}
                             >
-                              <div style={{
-                                width: '26px',
-                                height: '26px',
-                                borderRadius: '50%',
-                                background: 'var(--color-burgundy-700)',
-                                color: '#FFFFFF',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
-                                flexShrink: 0
-                              }}>
-                                {stop.orderNo || idx + 1}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--color-charcoal-900)' }}>
-                                  {art ? art.name : `Hiện vật #${stop.artifactId}`}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                                <div style={{
+                                  width: '26px',
+                                  height: '26px',
+                                  borderRadius: '50%',
+                                  background: isNewlyAdded ? '#16A34A' : 'var(--color-burgundy-700)',
+                                  color: '#FFFFFF',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '700',
+                                  flexShrink: 0
+                                }}>
+                                  {stop.orderNo || idx + 1}
                                 </div>
-                                {art && (
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
-                                    Mã: {art.code || `#${art.id}`} {art.galleryName ? `• Phòng: ${art.galleryName}` : ''}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--color-charcoal-900)' }}>
+                                      {stop.artifactName || (art ? art.name : `Hiện vật #${stop.artifactId}`)}
+                                    </span>
+                                    {isNewlyAdded && (
+                                      <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '1px 6px', borderRadius: '8px', background: '#DCFCE7', color: '#15803D' }}>
+                                        + MỚI
+                                      </span>
+                                    )}
                                   </div>
-                                )}
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>
+                                    Mã: {stop.artifactCode || art?.code || `#${stop.artifactId}`} {(stop.galleryName || art?.galleryName) ? `• Phòng: ${stop.galleryName || art?.galleryName}` : ''}
+                                  </div>
+                                </div>
                               </div>
+                              {stopTopics.length > 0 && (
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                  {stopTopics.map(tName => (
+                                    <span
+                                      key={tName}
+                                      style={{
+                                        fontSize: '0.68rem',
+                                        fontWeight: '600',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        background: '#F1ECE1',
+                                        color: 'var(--color-burgundy-800)',
+                                        border: '1px solid var(--color-paper-border)'
+                                      }}
+                                    >
+                                      {tName}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })
                       )}
                     </div>
                   </div>
+
+                  {/* TÙY CHỌN THỜI ĐIỂM CÔNG BỐ (PUBLIC_AT) CHO GIÁM TUYỂN */}
+                  {selected.status === 'pending_review' && (
+                    <div style={{ padding: '12px 14px', background: '#FAF7F2', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
+                      <strong style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--color-burgundy-900)', marginBottom: '8px' }}>
+                        Chế độ Công bố Phiên bản Lộ trình (PublicAt):
+                      </strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer', fontWeight: publishMode === 'immediate' ? '600' : 'normal' }}>
+                          <input
+                            type="radio"
+                            name="tourPublishMode"
+                            checked={publishMode === 'immediate'}
+                            onChange={() => setPublishMode('immediate')}
+                          />
+                          <span>Xuất bản ngay sau khi duyệt</span>
+                        </label>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', cursor: 'pointer', fontWeight: publishMode === 'scheduled' ? '600' : 'normal' }}>
+                          <input
+                            type="radio"
+                            name="tourPublishMode"
+                            checked={publishMode === 'scheduled'}
+                            onChange={() => setPublishMode('scheduled')}
+                          />
+                          <span>Hẹn giờ công bố trong tương lai</span>
+                        </label>
+                        {publishMode === 'scheduled' && (
+                          <input
+                            type="datetime-local"
+                            className="form-input"
+                            style={{ width: 'auto', height: '34px', fontSize: '0.82rem', padding: '4px 10px' }}
+                            value={scheduledPublicAt}
+                            onChange={(e) => setScheduledPublicAt(e.target.value)}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -872,7 +1094,7 @@ export default function CurationCenter() {
                     style={{ background: 'var(--color-success)', borderColor: 'var(--color-success)' }}
                     onClick={() => setDecision('approve')}
                   >
-                    <Check size={14} /> Phê duyệt & Xuất bản ngay
+                    <Check size={14} /> {selected.type === 'new_tour' && publishMode === 'scheduled' ? 'Phê duyệt & Hẹn giờ công bố' : 'Phê duyệt & Xuất bản ngay'}
                   </button>
                 </div>
               )}
@@ -893,7 +1115,9 @@ export default function CurationCenter() {
                 <div style={{ fontSize: '0.85rem', color: 'var(--color-charcoal-900)' }}>
                   Xác nhận hành động: <strong>
                     {decision === 'approve'
-                      ? 'PHÊ DUYỆT & XUẤT BẢN NGAY CHO KHÁCH THAM QUAN'
+                      ? (selected.type === 'new_tour' && publishMode === 'scheduled' && scheduledPublicAt
+                          ? `PHÊ DUYỆT & HẸN GIỜ CÔNG BỐ (${formatCurationDate(scheduledPublicAt)})`
+                          : 'PHÊ DUYỆT & XUẤT BẢN NGAY CHO KHÁCH THAM QUAN')
                       : 'TỪ CHỐI HỒ SƠ ĐỆ TRÌNH NÀY'}
                   </strong>
                 </div>
