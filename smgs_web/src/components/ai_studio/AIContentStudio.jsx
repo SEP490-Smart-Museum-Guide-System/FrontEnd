@@ -3,7 +3,62 @@ import { Landmark, ChevronDown, ShieldCheck, Sparkles, Volume2, HelpCircle, Refr
 import { useApp } from '../../context/AppContext';
 import { parseQuestionDrafts } from '../../services/questionDrafts';
 import { generateStaffDraft, staffDraftRetry } from '../../services/staffAiApi';
+import { getAuthToken } from '../../services/auth';
 import NarrationPreview from './NarrationPreview';
+
+const ARTIFACT_IMAGE_PLACEHOLDER = '/assets/images/placeholder.svg';
+const ARTIFACT_MEDIA_FILE_PATH = /^\/api\/artifacts\/\d+\/media\/\d+\/file$/;
+
+function ArtifactThumbnail({ src, alt, style }) {
+  const [displaySrc, setDisplaySrc] = useState(ARTIFACT_IMAGE_PLACEHOLDER);
+
+  useEffect(() => {
+    if (!src) {
+      setDisplaySrc(ARTIFACT_IMAGE_PLACEHOLDER);
+      return;
+    }
+
+    let objectUrl;
+    const controller = new AbortController();
+    const imageUrl = new URL(src, window.location.origin);
+    const requiresApiAuth = ARTIFACT_MEDIA_FILE_PATH.test(imageUrl.pathname) && imageUrl.origin === window.location.origin;
+
+    if (!requiresApiAuth) {
+      setDisplaySrc(src);
+      return () => controller.abort();
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setDisplaySrc(ARTIFACT_IMAGE_PLACEHOLDER);
+      return () => controller.abort();
+    }
+
+    fetch(imageUrl.href, {
+      headers: { Accept: 'image/*', Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    })
+      .then(response => {
+        if (!response.ok) throw new Error(`Ảnh hiện vật không tải được (${response.status}).`);
+        return response.blob();
+      })
+      .then(blob => {
+        if (!blob.type.startsWith('image/')) throw new Error('Phản hồi ảnh hiện vật không hợp lệ.');
+        objectUrl = URL.createObjectURL(blob);
+        setDisplaySrc(objectUrl);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setDisplaySrc(ARTIFACT_IMAGE_PLACEHOLDER);
+      });
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src]);
+
+  return <img src={displaySrc} alt={alt} style={style} onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = ARTIFACT_IMAGE_PLACEHOLDER; }} />;
+}
 
 export default function AIContentStudio(props) {
   const app = useApp();
@@ -155,9 +210,9 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
             ))}
           </div>
         </div>
-        <div className="form-group"><label className="form-label" htmlFor="studio-artifact">Hiện vật</label>{studioLayout && (artifact?.image || artifact?.imageUrl) && <img src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
+        <div className="form-group"><label className="form-label" htmlFor="studio-artifact">Hiện vật</label>{studioLayout && (artifact?.image || artifact?.imageUrl) && <ArtifactThumbnail src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
           <select id="studio-artifact" className="form-select" value={artifactId} disabled={busy || saving} onChange={e => { setArtifactId(e.target.value); setSourceText(''); invalidate(); }}>{available.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
-        {!studioLayout && (artifact?.image || artifact?.imageUrl) && <img src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
+        {!studioLayout && (artifact?.image || artifact?.imageUrl) && <ArtifactThumbnail src={artifact.image || artifact.imageUrl} alt={`Ảnh đối chiếu ${artifact.name}`} style={{ maxWidth: '100%', height: 170, objectFit: 'contain', borderRadius: 10, marginBottom: 12 }} />}
 
         {studioLayout && <span className="studio-mode-label">Loại nội dung</span>}
         <div className="business-actions studio-modes" style={{ marginBottom: 16 }}>{[{ id: 'narration', label: 'Thuyết minh âm thanh', Icon: Volume2 }, { id: 'quiz', label: 'Bộ câu hỏi trắc nghiệm', Icon: HelpCircle }].map(({ id, label, Icon }) => <button key={id} className={`btn ${mode === id ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={mode === id} disabled={busy || saving} onClick={() => { setMode(id); invalidate(); }}><Icon size={16} />{label}</button>)}</div>
