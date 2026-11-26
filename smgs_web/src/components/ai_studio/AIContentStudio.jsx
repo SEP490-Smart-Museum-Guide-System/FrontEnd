@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { parseQuestionDrafts } from '../../services/questionDrafts';
 import { generateStaffDraft, staffDraftRetry } from '../../services/staffAiApi';
 import { getAuthToken } from '../../services/auth';
+import { mediaApi, uploadMedia } from '../../services/mediaApi';
 import NarrationPreview from './NarrationPreview';
 
 const ARTIFACT_IMAGE_PLACEHOLDER = '/assets/images/placeholder.svg';
@@ -76,6 +77,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   const [count, setCount] = useState(5), [difficulty, setDifficulty] = useState('medium');
   const [output, setOutput] = useState(''), [title, setTitle] = useState('');
   const [source, setSource] = useState(null), [evidence, setEvidence] = useState([]);
+  const [narrationAudio, setNarrationAudio] = useState(null);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [submitted, setSubmitted] = useState(false);
   const [progress, setProgress] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -83,7 +85,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   useEffect(() => () => activeRequest.current?.abort(), []);
   const allowed = ['administrator', 'museumStaff'].includes(currentRole);
 
-  function invalidate() { setOutput(''); setTitle(''); setSource(null); setEvidence([]); setError(''); setSubmitted(false); setProgress(''); setCurrentStep(1); }
+  function invalidate() { setOutput(''); setTitle(''); setSource(null); setEvidence([]); setNarrationAudio(null); setError(''); setSubmitted(false); setProgress(''); setCurrentStep(1); }
 
   async function generate() {
     if (!artifact || busy || !allowed) return;
@@ -173,9 +175,27 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
       return;
     }
     setSaving(true); setError('');
+    let uploadedAudio;
     try {
-      const result = await submitToCuration({ targetArtifactId: artifact.id, title: title.trim(), proposedContent: output, narrationText: output, languageCode, isAiGenerated: true });
-      if (result.success) setSubmitted(true); else setError(result.error);
+      if (narrationAudio) {
+        const form = new FormData();
+        form.append('file', narrationAudio, `artifact-${artifact.id}-narration-${languageCode}.wav`);
+        form.append('title', title.trim());
+        form.append('mediaType', 'audio');
+        form.append('languageCode', languageCode);
+        form.append('sortOrder', '0');
+        uploadedAudio = await uploadMedia(`artifacts/${artifact.id}/media`, form);
+        if (!uploadedAudio?.fileUrl) throw new Error('Đã tải audio nhưng máy chủ không trả về đường dẫn tệp.');
+      }
+      const result = await submitToCuration({ targetArtifactId: artifact.id, title: title.trim(), proposedContent: output, narrationText: output, audioUrl: uploadedAudio?.fileUrl, languageCode, isAiGenerated: true });
+      if (result.success) setSubmitted(true);
+      else {
+        if (uploadedAudio?.id) await mediaApi(`artifacts/${artifact.id}/media/${uploadedAudio.id}`, { method: 'DELETE' }).catch(() => {});
+        setError(result.error);
+      }
+    } catch (e) {
+      if (uploadedAudio?.id) await mediaApi(`artifacts/${artifact.id}/media/${uploadedAudio.id}`, { method: 'DELETE' }).catch(() => {});
+      setError(e.message || 'Không gửi được bản nháp.');
     } finally { setSaving(false); }
   }
 
@@ -344,9 +364,9 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
           <>
             {!output && <p>Nhập bản thuyết minh để nghe trực tiếp hoặc dùng AI soạn từ tư liệu. Nội dung chưa được lưu hay xuất bản.</p>}
             {mode === 'narration' && <div className="form-group"><label className="form-label" htmlFor="studio-title">Tiêu đề bản nháp</label><input id="studio-title" className="form-input" maxLength={200} value={title} disabled={busy || saving} onChange={e => { setTitle(e.target.value); setSubmitted(false); }} /></div>}
-            <label className="form-label" htmlFor="studio-output">Nội dung bản nháp</label><textarea id="studio-output" className="form-input" rows={studioLayout ? 7 : 17} value={output} disabled={busy || saving} onChange={e => { setOutput(e.target.value); setSubmitted(false); }} style={{ fontFamily: mode === 'quiz' ? 'monospace' : 'inherit', lineHeight: 1.65 }} />
+            <label className="form-label" htmlFor="studio-output">Nội dung bản nháp</label><textarea id="studio-output" className="form-input" rows={studioLayout ? 7 : 17} value={output} disabled={busy || saving} onChange={e => { setOutput(e.target.value); setNarrationAudio(null); setSubmitted(false); }} style={{ fontFamily: mode === 'quiz' ? 'monospace' : 'inherit', lineHeight: 1.65 }} />
             <p className="studio-warning">{studioLayout && <ShieldCheck size={16} />} AI có thể diễn giải sai. Hãy đối chiếu tên, niên đại, chất liệu và đáp án trước khi gửi.</p>
-            {mode === 'narration' && <NarrationPreview key={`${artifactId}:${languageCode}:${output}`} languageCode={languageCode} artifactId={artifact.id} text={output} disabled={busy || saving} />}
+            {mode === 'narration' && <NarrationPreview key={`${artifactId}:${languageCode}:${output}`} languageCode={languageCode} artifactId={artifact.id} text={output} disabled={busy || saving} onAudioGenerated={setNarrationAudio} />}
             {(!studioLayout || source?.text || evidence.length > 0) && <details><summary>Tư liệu và đoạn trích AI tham khảo</summary>{source?.contentVersionId && <p>Nội dung đã xuất bản · Phiên bản {source.versionNo}</p>}<p style={{ whiteSpace: 'pre-wrap' }}>{source?.text}</p>{[...new Set(evidence)].map((q, i) => <blockquote key={i}>{q}</blockquote>)}</details>}
             <div className="business-actions" style={{ marginTop: 16 }}><button className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(output)}><Copy size={16} />Sao chép</button><button className="btn btn-primary" disabled={busy || saving || submitted || !output.trim() || (mode === 'narration' && !title.trim())} onClick={submit}><Send size={16} />{submitted ? 'Đã gửi chờ thẩm định' : saving ? 'Đang gửi…' : mode === 'quiz' ? 'Chỉnh sửa & lưu vào Ngân hàng câu hỏi' : 'Gửi sang Hàng đợi Kiểm duyệt'}</button></div>
           </>
