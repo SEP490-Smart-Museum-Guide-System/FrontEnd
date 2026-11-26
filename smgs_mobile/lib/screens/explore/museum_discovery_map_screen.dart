@@ -268,32 +268,42 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: pill(
-                          keywordMode
-                              ? TextField(
-                                  key: ValueKey((province, supportedOnly)),
-                                  onChanged: (v) => setState(() {
-                                    search = v;
-                                    selected =
-                                        (supportedOnly || province != null) &&
-                                            place == null
-                                        ? visible.firstOrNull
-                                        : null;
-                                    place = null;
-                                    route = [];
-                                  }),
-                                  decoration: const InputDecoration(
-                                    prefixIcon: Icon(Icons.search),
-                                    hintText: 'Tìm bảo tàng, địa chỉ…',
-                                    border: InputBorder.none,
+                          InputDecorationTheme(
+                            data: const InputDecorationThemeData(
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 12,
+                              ),
+                            ),
+                            child: keywordMode
+                                ? TextField(
+                                    key: ValueKey((province, supportedOnly)),
+                                    onChanged: (v) => setState(() {
+                                      search = v;
+                                      selected =
+                                          (supportedOnly || province != null) &&
+                                              place == null
+                                          ? visible.firstOrNull
+                                          : null;
+                                      place = null;
+                                      route = [];
+                                    }),
+                                    decoration: const InputDecoration(
+                                      prefixIcon: Icon(Icons.search),
+                                      hintText: 'Tìm bảo tàng, địa chỉ…',
+                                    ),
+                                  )
+                                : PlaceSearchField(
+                                    onSelected: (p) => setState(() {
+                                      place = p;
+                                      selected = null;
+                                      route = [];
+                                    }),
                                   ),
-                                )
-                              : PlaceSearchField(
-                                  onSelected: (p) => setState(() {
-                                    place = p;
-                                    selected = null;
-                                    route = [];
-                                  }),
-                                ),
+                          ),
                         ),
                       ),
                     ],
@@ -541,4 +551,3 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
     );
   }
 }
-
