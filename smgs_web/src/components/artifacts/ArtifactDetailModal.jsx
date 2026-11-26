@@ -7,7 +7,6 @@ import '@google/model-viewer';
 import { useApp } from '../../context/AppContext';
 import { getArtifactQrImageUrl } from '../../services/artifactApi';
 import { getPublishedArtifactContentApi } from '../../services/contentSubmissionApi';
-import { generateSpeechApi } from '../../services/ttsApi';
 import { uploadReferenceImageApi, deleteReferenceImagesApi, checkVisionHealthApi } from '../../services/visionApi';
 import Artifact3DPanel from './Artifact3DPanel';
 import {
@@ -52,8 +51,6 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
   const [ttsCurrentTime, setTtsCurrentTime] = useState('00:00');
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
   const [ttsError, setTtsError] = useState(null);
-  const [ttsVoice, setTtsVoice] = useState('');
-  const [ttsCacheHit, setTtsCacheHit] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -86,34 +83,23 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
       return;
     }
 
-    const narrationScript = (
-      publishedContent?.narration ||
-      publishedContent?.description ||
-      artifact?.audioNarration ||
-      artifact?.description ||
-      artifact?.historicalContext ||
-      `Hiện vật ${artifact?.name || ''}. Niên đại ${artifact?.period || 'chưa rõ'}. ${artifact?.historicalSignificance || ''}`
-    ).trim();
+    const storedAudioUrl = publishedContent?.audioUrl || artifact?.audioUrl || '';
+    if (!storedAudioUrl) {
+      setTtsError('Phiên bản đã xuất bản chưa có tệp audio lưu trữ.');
+      return;
+    }
 
     setTtsLoading(true);
     setTtsError(null);
     try {
-      const res = await generateSpeechApi({
-        text: narrationScript,
-        speed: ttsSpeed,
-        language: 'vi-VN'
-      });
-      setTtsAudioUrl(res.audioUrl);
-      setTtsVoice(res.voice);
-      setTtsCacheHit(res.cacheHit);
-
       if (audioRef.current) {
         audioRef.current.pause();
       }
 
-      const audio = new Audio(res.audioUrl);
+      const audio = new Audio(storedAudioUrl);
       audio.playbackRate = ttsSpeed;
       audioRef.current = audio;
+      setTtsAudioUrl(storedAudioUrl);
 
       audio.ontimeupdate = () => {
         if (audio.duration) {
@@ -131,7 +117,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
       audio.onerror = () => {
         setIsPlayingAudio(false);
-        setTtsError('Lỗi khi phát tệp âm thanh WAV từ microservice');
+        setTtsError('Không tải được tệp audio đã lưu của phiên bản đã xuất bản.');
       };
 
       await audio.play();
@@ -418,25 +404,13 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   />
                 </div>
 
-                {/* Audio Guide Player Preview (Connected to TTS AI Service) */}
+                {/* Audio Guide Player for the published, stored narration */}
                 <div className="card" style={{ padding: '16px', background: '#F8F5EE', border: '1px solid #EADCC8' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Volume2 size={16} color="var(--color-burgundy-700)" />
-                      <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Thuyết minh AI (TTS)</span>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: '600' }}>Audio thuyết minh đã lưu</span>
                     </div>
-                    {ttsVoice && (
-                      <span style={{
-                        fontSize: '0.675rem',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        background: ttsCacheHit ? '#DCFCE7' : '#FEF3C7',
-                        color: ttsCacheHit ? '#166534' : '#92400E',
-                        fontWeight: '600'
-                      }}>
-                        {ttsCacheHit ? 'Cache HIT' : 'AI Speech'}
-                      </span>
-                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -507,7 +481,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
 
                   {ttsLoading && (
                     <p style={{ fontSize: '0.7rem', color: 'var(--color-burgundy-700)', marginTop: '6px', fontStyle: 'italic' }}>
-                      Đang kết nối microservice TTS AI (Port 8000) để tổng hợp giọng đọc...
+                      Đang mở audio đã lưu...
                     </p>
                   )}
 
