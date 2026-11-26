@@ -118,6 +118,10 @@ void main() {
           expect(tester.takeException(), isNull);
         },
         () => MockClient((request) async {
+          if (request.url.path == '/api/commerce/wallet/me') {
+            expect(request.method, 'GET');
+            return reply({'balances': []});
+          }
           expect(request.method, 'POST');
           if (request.url.path.endsWith('/orders')) {
             orders++;
@@ -131,7 +135,7 @@ void main() {
           }
           expect(
             request.url.path,
-            '/api/commerce/orders/order-server/payments',
+            '/api/commerce/orders/order-server/payments/sepay',
           );
           payments++;
           return payments == 1

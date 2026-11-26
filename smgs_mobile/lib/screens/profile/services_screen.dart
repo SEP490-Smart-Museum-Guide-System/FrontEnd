@@ -1005,16 +1005,6 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       title: 'Xác nhận đơn hàng',
       eyebrow: 'Bước 1/2',
       children: [
-        if (_error != null) ...[
-          Notice(_error!),
-          const SizedBox(height: 12),
-        ],
-        if (_payment != null) ...[
-          Notice(
-            'Yêu cầu thanh toán: ${_payment!['status']}. Chờ xác nhận từ hệ thống; ứng dụng chưa kích hoạt dịch vụ.',
-          ),
-          const SizedBox(height: 12),
-        ],
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1059,19 +1049,23 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
                     children: [
                       const Icon(Icons.calendar_month_outlined, size: 20, color: AppColors.deepBurgundy),
                       const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Ngày tham quan:', style: TextStyle(fontSize: 11, color: AppColors.secondaryText)),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${_visitDate.day.toString().padLeft(2, '0')}/${_visitDate.month.toString().padLeft(2, '0')}/${_visitDate.year}',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkBrown),
-                          ),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Ngày tham quan:', style: TextStyle(fontSize: 11, color: AppColors.secondaryText)),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${_visitDate.day.toString().padLeft(2, '0')}/${_visitDate.month.toString().padLeft(2, '0')}/${_visitDate.year}',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkBrown),
+                            ),
+                          ],
+                        ),
                       ),
-                      const Spacer(),
-                      const Text('Đổi ngày', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.deepBurgundy)),
+                      const SizedBox(width: 8),
+                      const Flexible(
+                        child: Text('Đổi ngày', textAlign: TextAlign.end, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.deepBurgundy)),
+                      ),
                       const SizedBox(width: 4),
                       const Icon(Icons.chevron_right, size: 16, color: AppColors.deepBurgundy),
                     ],
@@ -1120,8 +1114,10 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
                                 const Text('Số dư ví khả dụng:', style: TextStyle(fontSize: 12, color: Color(0xFF33691E))),
                                 Text(
