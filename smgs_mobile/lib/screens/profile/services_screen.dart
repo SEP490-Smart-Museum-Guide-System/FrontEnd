@@ -340,8 +340,31 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       if (!mounted) return;
       setState(() => _payment = payment);
 
-      // 3. Điều hướng sang màn hình thanh toán VietQR chuyên biệt nếu có qrUrl
-      if (payment['qrUrl'] != null || payment['qrCodeUrl'] != null) {
+      // 3. Xử lý trường hợp đã thanh toán xong bằng ví (paidFromWallet: true hoặc status: 'succeeded')
+      final isPaidFromWallet = payment['paidFromWallet'] == true ||
+          (payment['status'] == 'succeeded' &&
+              (payment['qrUrl'] == null || payment['qrUrl'].toString().isEmpty));
+
+      if (isPaidFromWallet) {
+        if (!mounted) return;
+        HapticFeedback.mediumImpact();
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => PaymentSuccessScreen(
+              order: {
+                ...order,
+                'status': 'paid',
+              },
+              museumId: widget.museumId,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // 4. Điều hướng sang màn hình thanh toán VietQR chuyên biệt nếu có qrUrl
+      final qr = (payment['qrUrl'] ?? payment['qrCodeUrl'] ?? '').toString();
+      if (qr.isNotEmpty) {
         await Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
             builder: (_) => VietQRPaymentScreen(
@@ -634,6 +657,11 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
     final accountNumber = widget.payment['accountNumber'] ?? '11140845389';
     final transferContent = widget.payment['transferContent'] ?? 'SMGS';
 
+    final orderAmount = (widget.order['amount'] as num?)?.toDouble() ?? 0.0;
+    final dueAmount = (widget.payment['amount'] as num?)?.toDouble() ?? orderAmount;
+    final currency = widget.payment['currency']?.toString() ?? widget.order['currency']?.toString() ?? 'VND';
+    final walletPaid = orderAmount > dueAmount ? (orderAmount - dueAmount) : 0.0;
+
     return MuseumPage(
       back: true,
       title: 'Cổng thanh toán VietQR',
@@ -677,6 +705,45 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        if (walletPaid > 0) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.5)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Tổng đơn hàng:', style: TextStyle(fontSize: 12.5, color: AppColors.secondaryText)),
+                    Text('${orderAmount.toStringAsFixed(0)} $currency', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Đã khấu trừ từ ví:', style: TextStyle(fontSize: 12.5, color: Color(0xFF2E7D32))),
+                    Text('-${walletPaid.toStringAsFixed(0)} $currency', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32))),
+                  ],
+                ),
+                const Divider(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Cần chuyển khoản VietQR:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.deepBurgundy)),
+                    Text('${dueAmount.toStringAsFixed(0)} $currency', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: AppColors.deepBurgundy)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
 
         // Thẻ chứa mã QR SePay (Phương án 1: Giữ Poster VietQR + 2 nút Quick-Copy 1 chạm)
         Container(
@@ -757,6 +824,14 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Quick-Copy Pill: Số tiền
+              _buildQuickCopyPill(
+                icon: Icons.payments_outlined,
+                label: 'Số tiền chuyển khoản',
+                value: '${dueAmount.toStringAsFixed(0)} $currency',
+                onCopy: () => _copy(dueAmount.toStringAsFixed(0), 'số tiền chuyển khoản'),
+              ),
 
               // Quick-Copy Pill: STK
               _buildQuickCopyPill(
@@ -1348,7 +1423,7 @@ class _PurchasedServicesScreenState extends State<PurchasedServicesScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  p['isValid'] == true ? 'Đang có hiệu lực' : 'Đã hết hạn/Thu hồi',
+                                  p['isValid'] == true ? 'Đang có hiệu lực' : 'Hết hiệu lực',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
