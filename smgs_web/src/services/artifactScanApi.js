@@ -56,14 +56,17 @@ export function prepareScanDataset(files, mode = 'auto', { quality = 'balanced',
   if (mode !== 'photos' && (objects.length > 1 || metadataFiles.length > 1)) throw new Error('Folder chứa nhiều hiện vật hoặc nhiều file tham chiếu.');
   const metadata = mode === 'photos' ? null : metadataFiles[0];
   const referenceObj = mode === 'photos' ? null : objects[0];
-  if (Boolean(metadata) !== Boolean(referenceObj)) throw new Error('Cần cả metadata.json và OBJ, hoặc chọn chế độ chỉ ảnh.');
+  // Auto mode only enables benchmark when the complete reference pair exists.
+  // An incomplete optional pair falls back to ordinary photo reconstruction.
   const selected = metadata && referenceObj ? 'benchmark' : 'photos';
   if (mode === 'benchmark' && selected !== 'benchmark') throw new Error('Thiếu metadata.json hoặc OBJ tham chiếu.');
+  const selectedMetadata = selected === 'benchmark' ? metadata : null;
+  const selectedReferenceObj = selected === 'benchmark' ? referenceObj : null;
   if (images.some(f => f.size <= 0 || f.size > 20 * 1024 * 1024)) throw new Error('Mỗi ảnh phải lớn hơn 0 và không quá 20 MiB.');
-  if (metadata?.size > 2 * 1024 * 1024 || referenceObj?.size > 64 * 1024 * 1024) throw new Error('Metadata tối đa 2 MiB; OBJ tối đa 64 MiB.');
-  const bytes = images.reduce((sum, f) => sum + f.size, 0) + (metadata?.size || 0) + (referenceObj?.size || 0);
+  if (selectedMetadata?.size > 2 * 1024 * 1024 || selectedReferenceObj?.size > 64 * 1024 * 1024) throw new Error('Metadata tối đa 2 MiB; OBJ tối đa 64 MiB.');
+  const bytes = images.reduce((sum, f) => sum + f.size, 0) + (selectedMetadata?.size || 0) + (selectedReferenceObj?.size || 0);
   if (bytes > 500 * 1024 * 1024) throw new Error('Bộ dữ liệu tối đa 500 MiB.');
-  return { images, metadata, referenceObj, mode: selected, bytes, quality, captureOrder };
+  return { images, metadata: selectedMetadata, referenceObj: selectedReferenceObj, mode: selected, bytes, quality, captureOrder };
 }
 
 export function startArtifactScan(id, dataset, progress, signal) {
