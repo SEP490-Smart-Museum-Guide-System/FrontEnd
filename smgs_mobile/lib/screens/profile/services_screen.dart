@@ -57,6 +57,7 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
   bool _loadingMuseums = true;
   Future<dynamic>? _products;
   Future<List<List<Map<String, dynamic>>>>? _passesOrdersData;
+  Future<Map<String, dynamic>?>? _walletData;
 
   @override
   void initState() {
@@ -124,6 +125,9 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
         BackendApi.list('commerce/orders/me'),
         BackendApi.list('commerce/passes/me'),
       ]);
+      _walletData = BackendApi.request('commerce/wallet/me')
+          .then((v) => v is Map<String, dynamic> ? v : Map<String, dynamic>.from(v as Map))
+          .catchError((_) => <String, dynamic>{});
     });
   }
 
@@ -326,12 +330,9 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
               }
               return Column(
                 children: products.map((p) {
-                  final kindLabel = switch (p['kind']) {
-                    'admission' => 'Vé vào cổng',
-                    'digital' => 'Tư liệu số & Thuyết minh',
-                    'combo' => 'Gói Trọn gói (Vé + Thuyết minh)',
-                    _ => p['kind'].toString(),
-                  };
+                  final kindLabel = p['kind'] == 'digital'
+                      ? 'Tư liệu số & Thuyết minh'
+                      : (p['kind']?.toString() ?? 'Dịch vụ số');
                   final seats = p['seats'] ?? 1;
                   final validityHours = p['validityHours'] ?? 24;
 
@@ -432,6 +433,84 @@ class _ServicesHubScreenState extends State<ServicesHubScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Thẻ hiển thị số dư Ví điện tử SMGS
+            FutureBuilder<Map<String, dynamic>?>(
+              future: _walletData,
+              builder: (ctx, snap) {
+                final wallet = snap.data;
+                final balances = wallet?['balances'] as List?;
+                final vnd = balances?.firstWhere((b) => b['currency'] == 'VND', orElse: () => null);
+                final amount = (vnd?['amount'] as num?)?.toDouble() ?? 0.0;
+                final amountStr = amount.toStringAsFixed(0).replaceAllMapped(
+                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                      (m) => '${m[1]}.',
+                    );
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                    border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.6)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.mutedGold.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          color: AppColors.deepBurgundy,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ví điện tử của tôi',
+                              style: TextStyle(fontSize: 12.5, color: AppColors.secondaryText),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$amountStr VND',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.deepBurgundy,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFA5D6A7)),
+                        ),
+                        child: const Text(
+                          'Ưu tiên trừ trước',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
             // Header Thẻ tham quan & Nút Nhập mã nhóm tinh gọn
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -761,9 +840,35 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
   );
   late final TextEditingController _phoneController = TextEditingController();
 
+  DateTime _visitDate = DateTime.now();
+  double _walletBalance = 0.0;
+  bool _loadingWallet = true;
   bool _busy = false;
   String? _error;
   Map<String, dynamic>? _order, _payment;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWallet();
+  }
+
+  Future<void> _loadWallet() async {
+    try {
+      final res = await BackendApi.request('commerce/wallet/me');
+      if (!mounted || res is! Map) return;
+      final balances = res['balances'] as List?;
+      final vnd = balances?.firstWhere((b) => b['currency'] == 'VND', orElse: () => null);
+      if (vnd != null && mounted) {
+        setState(() {
+          _walletBalance = (vnd['amount'] as num?)?.toDouble() ?? 0.0;
+          _loadingWallet = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingWallet = false);
+    }
+  }
 
   Map<String, dynamic> get _effectiveProduct {
     if (widget.product.isNotEmpty) return widget.product;
@@ -777,7 +882,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
         'description': item.description,
         'price': item.price,
         'currency': 'VND',
-        'kind': item.kind.name,
+        'kind': 'digital',
       };
     }
     return const {};
@@ -809,8 +914,7 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       final p = _effectiveProduct;
       final rawId = p['id'];
       final productId = rawId is int ? rawId : int.tryParse(rawId.toString()) ?? rawId;
-      final now = DateTime.now();
-      final visitDateStr = "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final visitDateStr = "${_visitDate.year.toString().padLeft(4, '0')}-${_visitDate.month.toString().padLeft(2, '0')}-${_visitDate.day.toString().padLeft(2, '0')}";
 
       // 1. Tạo đơn hàng mới (hoặc tái sử dụng đơn chưa hoàn tất thanh toán)
       final order = _order ??
@@ -833,12 +937,9 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
       if (!mounted) return;
       setState(() => _order = order);
 
-      // 2. Khởi tạo thanh toán (Dùng cổng SePay cho sản phẩm thông thường, hoặc fallback tương thích với offer legacy)
-      final endpoint = widget.offer != null
-          ? 'commerce/orders/${order['id']}/payments'
-          : 'commerce/orders/${order['id']}/payments/sepay';
+      // 2. Khởi tạo thanh toán ưu tiên ví SePay
       final paymentData = await BackendApi.request(
-        endpoint,
+        'commerce/orders/${order['id']}/payments/sepay',
         method: 'POST',
         body: {},
       );
@@ -927,9 +1028,61 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
               const Divider(height: 24),
               _buildDetailRow('Số người sử dụng:', '$seats người'),
               _buildDetailRow('Thời hạn dịch vụ:', '$validityHours giờ sau thanh toán'),
+              const SizedBox(height: 10),
+
+              // Bộ chọn ngày tham quan
+              InkWell(
+                onTap: () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _visitDate.isBefore(now) ? now : _visitDate,
+                    firstDate: DateTime(now.year, now.month, now.day),
+                    lastDate: now.add(const Duration(days: 365)),
+                    helpText: 'CHỌN NGÀY THAM QUAN',
+                    cancelText: 'HỦY',
+                    confirmText: 'CHỌN NGÀY',
+                  );
+                  if (picked != null && mounted) {
+                    setState(() => _visitDate = picked);
+                  }
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.antiqueIvory,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.mutedGold),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_outlined, size: 20, color: AppColors.deepBurgundy),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Ngày tham quan:', style: TextStyle(fontSize: 11, color: AppColors.secondaryText)),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_visitDate.day.toString().padLeft(2, '0')}/${_visitDate.month.toString().padLeft(2, '0')}/${_visitDate.year}',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkBrown),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      const Text('Đổi ngày', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.deepBurgundy)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, size: 16, color: AppColors.deepBurgundy),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
               _buildDetailRow(
                 'Hình thức thanh toán:',
-                'Chuyển khoản VietQR tự động (SePay)',
+                'Ưu tiên Ví · VietQR tự động (SePay)',
               ),
               const Divider(height: 24),
               Wrap(
@@ -948,6 +1101,48 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
                   ),
                 ],
               ),
+
+              // Banner thông tin Ví nếu có số dư
+              if (_walletBalance > 0)
+                Container(
+                  margin: const EdgeInsets.only(top: 14),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F8E9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFAED581)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.account_balance_wallet_outlined, size: 22, color: Color(0xFF2E7D32)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Số dư ví khả dụng:', style: TextStyle(fontSize: 12, color: Color(0xFF33691E))),
+                                Text(
+                                  '${_walletBalance.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} VND',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2E7D32)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _walletBalance >= (p['price'] ?? 0)
+                                  ? '✓ Ví của bạn đủ để thanh toán 100% đơn hàng ngay lập tức!'
+                                  : '✓ Hệ thống sẽ tự động trừ ví trước, chỉ cần quét mã QR cho số tiền còn thiếu.',
+                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF2E7D32)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -991,10 +1186,12 @@ class _ServiceCheckoutScreenState extends State<ServiceCheckoutScreen> {
         PrimaryButton(
           label: _busy
               ? 'Đang gửi…'
-              : _order == null
-                  ? 'Tạo đơn và yêu cầu thanh toán'
-                  : 'Thử lại yêu cầu thanh toán',
-          icon: Icons.qr_code_2,
+              : _walletBalance >= (p['price'] ?? 0)
+                  ? 'Thanh toán ngay bằng ví'
+                  : _order == null
+                      ? 'Tạo đơn và yêu cầu thanh toán'
+                      : 'Thử lại yêu cầu thanh toán',
+          icon: _walletBalance >= (p['price'] ?? 0) ? Icons.account_balance_wallet_outlined : Icons.qr_code_2,
           onPressed: _busy ? null : _proceedToPayment,
         ),
       ],
@@ -1385,11 +1582,14 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
           label: 'Hủy đơn hàng này',
           onPressed: () {
             final nav = Navigator.of(context);
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
             showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('Hủy thanh toán?'),
-                content: const Text('Bạn có chắc chắn muốn hủy lượt thanh toán này không?'),
+                title: const Text('Hủy đơn hàng?'),
+                content: const Text(
+                  'Bạn có chắc chắn muốn hủy đơn hàng này không? Bất kỳ khoản tiền nào đã cấn trừ từ ví cho đơn hàng này sẽ được hoàn trả lại vào ví của bạn.',
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(false),
@@ -1397,12 +1597,23 @@ class _VietQRPaymentScreenState extends State<VietQRPaymentScreen> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(true),
-                    child: const Text('Hủy', style: TextStyle(color: Colors.red)),
+                    child: const Text('Hủy đơn', style: TextStyle(color: Colors.red)),
                   ),
                 ],
               ),
-            ).then((confirmed) {
+            ).then((confirmed) async {
               if (confirmed == true && mounted) {
+                final orderId = widget.order['id'].toString();
+                try {
+                  final res = await BackendApi.request(
+                    'commerce/orders/$orderId/cancel',
+                    method: 'POST',
+                  );
+                  final msg = res is Map ? res['message']?.toString() ?? 'Đã hủy đơn hàng.' : 'Đã hủy đơn hàng.';
+                  scaffoldMessenger.showSnackBar(SnackBar(content: Text(msg)));
+                } catch (e) {
+                  scaffoldMessenger.showSnackBar(SnackBar(content: Text('Không thể hủy đơn: $e')));
+                }
                 nav.pop();
               }
             });

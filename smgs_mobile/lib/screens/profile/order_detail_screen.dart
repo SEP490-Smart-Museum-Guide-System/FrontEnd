@@ -307,13 +307,72 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   ),
                                 ],
                               ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'NGÀY THAM QUAN',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.darkBrown.withOpacity(
+                                        0.6,
+                                      ),
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.calendar_month_outlined,
+                                        size: 16,
+                                        color: AppColors.darkBrown,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        order['visitDate'] != null ? order['visitDate'].toString() : 'Trong ngày',
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
+                          if (order['status'] == 'cancelled') ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFEBEE),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFEF9A9A)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline, size: 16, color: Color(0xFFC62828)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      (order['refundedAmount'] != null && (order['refundedAmount'] as num) > 0)
+                                          ? 'Đơn hàng đã được hủy. Đã hoàn ${_formatAmount(order['refundedAmount'], order['currency'])} vào ví của bạn.'
+                                          : 'Đơn hàng đã được hủy (không có khoản hoàn vào ví theo chính sách thời hạn).',
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFFC62828), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
 
-                    // Reload action
+                    // Reload & Cancel action
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -329,28 +388,66 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           top: BorderSide(color: AppColors.border),
                         ),
                       ),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: reload,
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                          ),
-                          icon: const Icon(
-                            Icons.sync_rounded,
-                            size: 15,
-                            color: AppColors.deepBurgundy,
-                          ),
-                          label: const Text(
-                            'Cập nhật',
-                            style: TextStyle(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (order['status'] == 'pending')
+                            TextButton.icon(
+                              onPressed: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Hủy đơn hàng?'),
+                                    content: const Text('Bạn có chắc muốn hủy đơn hàng này không? Tiền đã trừ từ ví (nếu có) sẽ được hoàn lại.'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Không')),
+                                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Hủy đơn', style: TextStyle(color: Colors.red))),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true && mounted) {
+                                  try {
+                                    final res = await BackendApi.request('commerce/orders/${widget.orderId}/cancel', method: 'POST');
+                                    final msg = res is Map ? res['message']?.toString() ?? 'Đã hủy đơn hàng.' : 'Đã hủy đơn.';
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                                      reload();
+                                    }
+                                  } catch (e) {
+                                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                                  }
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                              ),
+                              icon: const Icon(Icons.cancel_outlined, size: 15, color: Colors.red),
+                              label: const Text('Hủy đơn', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 12)),
+                            )
+                          else
+                            const SizedBox.shrink(),
+                          TextButton.icon(
+                            onPressed: reload,
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                            ),
+                            icon: const Icon(
+                              Icons.sync_rounded,
+                              size: 15,
                               color: AppColors.deepBurgundy,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                            ),
+                            label: const Text(
+                              'Cập nhật',
+                              style: TextStyle(
+                                color: AppColors.deepBurgundy,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
