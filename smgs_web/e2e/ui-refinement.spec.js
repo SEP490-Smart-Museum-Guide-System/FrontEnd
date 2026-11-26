@@ -14,7 +14,10 @@ for (const [role,label,section,target] of [
   await page.goto('/');
   await expect(page.locator('.sidebar-menu').getByRole('button',{name:new RegExp('^'+label)})).toBeVisible();
   const toggle=page.getByRole('button',{name:section,exact:false});
-  if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
+  if(['Admin','Museum Staff'].includes(role)){
+    await expect(page.getByRole('heading',{name:section})).toBeVisible();
+    await expect(toggle).toHaveCount(0);
+  } else if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
   await expect(page.locator('.sidebar-menu').getByRole('button',{name:new RegExp('^'+target)})).toBeVisible();
   await page.locator('.sidebar-menu').getByRole('button',{name:new RegExp('^'+target)}).click();
   await expect(page.locator('.sidebar-menu').getByRole('button',{name:new RegExp('^'+target)})).toHaveAttribute('aria-current','page');

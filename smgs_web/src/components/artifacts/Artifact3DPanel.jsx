@@ -741,7 +741,7 @@ export default function Artifact3DPanel({ artifactId, name, canManage = false, o
             /* =========================================================
                VIEW B: INPUT & UPLOAD FORM (When no scan active)
                ========================================================= */
-            <div style={{ padding: '16px 18px', borderRadius: '12px', background: '#FAF7F2', border: '1px solid var(--color-paper-border)' }}>
+            <div style={{ padding: '16px 18px', borderRadius: '12px', background: 'var(--admin-bg, #FAF7F2)', border: '1px solid var(--color-paper-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Sparkles size={16} color="var(--color-gold-600)" />

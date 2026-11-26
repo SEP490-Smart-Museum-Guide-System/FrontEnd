@@ -227,6 +227,42 @@ export default function MuseumManager() {
 
 
 
+  const compactCover = ['administrator', 'museumStaff'].includes(currentRole);
+  const coverControls = (
+    ['administrator', 'museumStaff'].includes(currentRole) && Number(activeMuseum?.backendId || activeMuseum?.id) > 0 && (
+              <div className={compactCover ? 'cover-controls' : undefined} style={compactCover ? undefined : { marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <MediaUpload key={activeMuseum?.id} path={`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`} compact={compactCover} label={compactCover ? 'Đổi ảnh' : 'Tải ảnh bảo tàng mới'}
+                    onSaved={data => setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: data.coverImageUrl, coverImageUrl: data.coverImageUrl } : m))} />
+                </div>
+                {(activeMuseum?.image || activeMuseum?.coverImageUrl) && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--color-danger)' }}
+                    aria-label="Gỡ ảnh bảo tàng" title="Gỡ ảnh bảo tàng"
+                    disabled={isSubmitting}
+                    onClick={async () => {
+                      setIsSubmitting(true);
+                      try {
+                        await mediaApi(`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`, { method: 'DELETE' });
+                        setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: '', coverImageUrl: '' } : m));
+                        showToast('Đã gỡ ảnh bảo tàng.');
+                      } catch (e) {
+                        showToast(e.message, 'error');
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    <Trash2 size={15} /> {!compactCover && 'Gỡ ảnh'}
+                  </button>
+                )}
+                {compactCover && <small>PNG, JPEG, WebP · tối đa 15 MB</small>}
+              </div>
+            )
+  );
+
   return (
     <div>
       {/* Header */}
@@ -309,13 +345,13 @@ export default function MuseumManager() {
       {/* Museum Information Banner */}
       <div className="card" style={{ padding: '24px', marginBottom: '28px', background: 'linear-gradient(135deg, var(--color-paper-card), var(--color-paper-bg))' }}>
         <div className="museum-intro-grid" style={{ display: 'grid', gridTemplateColumns: '220px minmax(0, 1fr)', gap: '24px', alignItems: 'center' }}>
-          <div style={{ height: '140px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-paper-border)' }}>
+          <div className="museum-cover-column"><div style={{ height: '140px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--color-paper-border)' }}>
             {activeMuseum.image || activeMuseum.coverImageUrl ? <img
               src={activeMuseum.image || activeMuseum.coverImageUrl}
               alt={activeMuseum.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             /> : <div style={{ padding: 28 }}><Landmark size={32} /><p>Chưa có ảnh bảo tàng</p></div>}
-          </div>
+          </div>{compactCover && coverControls}</div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-burgundy-900)' }}>
@@ -345,46 +381,22 @@ export default function MuseumManager() {
                   <Navigation size={12} /> Chỉ đường <ExternalLink size={11} />
                 </a>
               )}
-              {activeMuseum?.openingHours && (
+              {!compactCover && activeMuseum?.openingHours && (
                 <span style={{ marginLeft: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <Clock size={13} color="var(--color-gold-600)" /> {activeMuseum?.openingHours}
                 </span>
               )}
             </p>
+            {compactCover && <dl className="admin-museum-facts">
+              <div><dt>Giờ mở cửa</dt><dd>{activeMuseum.openingHours || 'Chưa cập nhật'}</dd></div>
+              <div><dt>Hiện vật</dt><dd>{artifacts.filter(a => Number(a.museumId) === Number(activeMuseum.id)).length} hiện vật</dd></div>
+              <div><dt>Nhân viên</dt><dd>{assignedStaff.length} người</dd></div>
+            </dl>}
             <p style={{ fontSize: '0.8125rem', color: 'var(--color-charcoal-700)', lineHeight: '1.5' }}>
               {activeMuseum?.description}
             </p>
 
-            {['administrator', 'museumStaff'].includes(currentRole) && Number(activeMuseum?.backendId || activeMuseum?.id) > 0 && (
-              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '220px' }}>
-                  <MediaUpload key={activeMuseum?.id} path={`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`} label="Tải ảnh bảo tàng mới"
-                    onSaved={data => setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: data.coverImageUrl, coverImageUrl: data.coverImageUrl } : m))} />
-                </div>
-                {(activeMuseum?.image || activeMuseum?.coverImageUrl) && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    style={{ color: 'var(--color-danger)' }}
-                    disabled={isSubmitting}
-                    onClick={async () => {
-                      setIsSubmitting(true);
-                      try {
-                        await mediaApi(`museums/${activeMuseum?.backendId || activeMuseum?.id}/image`, { method: 'DELETE' });
-                        setMuseums(prev => prev.map(m => m.id === activeMuseum?.id ? { ...m, image: '', coverImageUrl: '' } : m));
-                        showToast('Đã gỡ ảnh bảo tàng.');
-                      } catch (e) {
-                        showToast(e.message, 'error');
-                      } finally {
-                        setIsSubmitting(false);
-                      }
-                    }}
-                  >
-                    <Trash2 size={13} /> Gỡ ảnh
-                  </button>
-                )}
-              </div>
-            )}
+            {!compactCover && coverControls}
             {/* Hiển thị nhân viên phụ trách */}
             <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
               <div style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-charcoal-800)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -404,9 +416,9 @@ export default function MuseumManager() {
                         fontSize: '0.75rem',
                         padding: '3px 8px',
                         borderRadius: '4px',
-                        background: '#F1F5F9',
+                        background: 'var(--admin-bg, #F1F5F9)',
                         color: 'var(--color-charcoal-700)',
-                        border: '1px solid #E2E8F0',
+                        border: '1px solid var(--admin-border, #E2E8F0)',
                         fontWeight: '500'
                       }}
                     >
@@ -580,13 +592,15 @@ export default function MuseumManager() {
       {/* Add Museum Modal (Admin only) */}
       {isAddingMuseum && typeof document !== 'undefined' && createPortal(
         <div className="modal-overlay" onClick={() => { if (!submitLock.current) setIsAddingMuseum(false); }}>
-          <div className="modal-dialog" style={{ maxWidth: '640px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={e => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Thêm bảo tàng mới" className="modal-dialog admin-form-dialog admin-museum-dialog" style={{ maxWidth: '720px', width: '95vw', maxHeight: 'calc(100vh - 40px)', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title font-serif">Thêm Bảo Tàng Mới Vào Hệ Thống</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => { if (!submitLock.current) setIsAddingMuseum(false); }}>✕</button>
+              <h3 className="modal-title font-serif">Thêm bảo tàng mới</h3>
+              <button type="button" className="btn btn-secondary btn-sm" aria-label="Đóng" onClick={() => { if (!submitLock.current) setIsAddingMuseum(false); }}>✕</button>
             </div>
             <form onSubmit={handleCreateMuseum} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div className="modal-body" style={{ display: 'grid', gap: '14px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                <h4>Thông tin chung</h4>
+                <div className="admin-form-pair">
                 <label className="form-group" style={{ marginBottom: 0 }}>
                   <span className="form-label">Tên bảo tàng *</span>
                   <input
@@ -598,12 +612,10 @@ export default function MuseumManager() {
                   />
                 </label>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                   <MuseumCityPicker value={newMuseumData.cityCode || ''} disabled={isSubmitting}
                     onChange={cityCode => setNewMuseumData(prev => ({ ...prev, cityCode }))} />
 
-                  <OpeningHoursPicker value={newMuseumData.openingHours || ''} disabled={isSubmitting}
-                    onChange={openingHours => setNewMuseumData(prev => ({ ...prev, openingHours }))} />
+
                 </div>
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
@@ -617,9 +629,13 @@ export default function MuseumManager() {
                   />
                 </label>
 
+                <div className="admin-form-pair admin-museum-sections">
+                  <OpeningHoursPicker compact value={newMuseumData.openingHours || ''} disabled={isSubmitting}
+                    onChange={openingHours => setNewMuseumData(prev => ({ ...prev, openingHours }))} />
+                  <section><h4>Vị trí & ảnh</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <label className="form-group" style={{ marginBottom: 0 }}>
-                    <span className="form-label">Vĩ độ (Latitude)</span>
+                    <span className="form-label">Vĩ độ</span>
                     <input
                       type="number"
                       step="any"
@@ -633,7 +649,7 @@ export default function MuseumManager() {
                   </label>
 
                   <label className="form-group" style={{ marginBottom: 0 }}>
-                    <span className="form-label">Kinh độ (Longitude)</span>
+                    <span className="form-label">Kinh độ</span>
                     <input
                       type="number"
                       step="any"
@@ -648,6 +664,8 @@ export default function MuseumManager() {
                 </div>
 
                 <MuseumCoverPicker file={newCoverFile} onChange={setNewCoverFile} disabled={isSubmitting} />
+                  </section>
+                </div>
 
                 <label className="form-group" style={{ marginBottom: 0 }}>
                   <span className="form-label">Giới thiệu bảo tàng</span>

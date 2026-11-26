@@ -67,7 +67,7 @@ export default function NarrationPreview({ artifactId, text, languageCode = 'vi'
           style={{
             borderRadius: 10,
             padding: '14px 16px',
-            background: 'linear-gradient(135deg, #FAF7F2 0%, #F5EFEB 100%)',
+            background: 'var(--admin-bg, linear-gradient(135deg, #FAF7F2 0%, #F5EFEB 100%))',
             border: '1px solid var(--color-gold-500, #C4A482)',
             display: 'flex',
             flexDirection: 'column',

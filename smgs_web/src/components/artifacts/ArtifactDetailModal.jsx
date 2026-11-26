@@ -262,8 +262,8 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
             .brand { font-size: 11px; text-transform: uppercase; color: #C5A059; font-weight: bold; letter-spacing: 2px; }
             h2 { color: #800020; margin: 8px 0 4px; font-size: 22px; }
             p { color: #555; margin: 0 0 16px; font-size: 13px; font-style: italic; }
-            .code { font-family: monospace; font-size: 16px; font-weight: bold; background: #FAF7F2; padding: 6px 14px; border-radius: 6px; display: inline-block; margin: 12px 0; border: 1px solid #E8E2D8; color: #800020; }
-            .qr-box { margin: 16px auto; width: 210px; height: 210px; border: 1px solid #E8E2D8; display: flex; align-items: center; justify-content: center; background: #FAF7F2; border-radius: 8px; }
+            .code { font-family: monospace; font-size: 16px; font-weight: bold; background: var(--admin-bg, #faf7f2); padding: 6px 14px; border-radius: 6px; display: inline-block; margin: 12px 0; border: 1px solid #E8E2D8; color: #800020; }
+            .qr-box { margin: 16px auto; width: 210px; height: 210px; border: 1px solid #E8E2D8; display: flex; align-items: center; justify-content: center; background: var(--admin-bg, #faf7f2); border-radius: 8px; }
             .qr-box img { max-width: 190px; max-height: 190px; }
             .footer { font-size: 11px; color: #777; margin-top: 16px; line-height: 1.5; }
           </style>
@@ -545,7 +545,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                   <h4 style={{ fontSize: '0.9375rem', fontWeight: '700', marginBottom: '8px', color: 'var(--color-burgundy-800)' }}>
                     Tóm tắt nội dung
                   </h4>
-                  <p style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'var(--color-charcoal-800)', background: '#FAF7F2', padding: '14px', borderRadius: '8px', borderLeft: '4px solid var(--color-gold-500)' }}>
+                  <p style={{ fontSize: '0.875rem', lineHeight: '1.6', color: 'var(--color-charcoal-800)', background: 'var(--admin-bg, #FAF7F2)', padding: '14px', borderRadius: '8px', borderLeft: '4px solid var(--color-gold-500)' }}>
                     {artifact.shortDesc}
                   </p>
                 </div>
@@ -614,7 +614,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 </div>}
 
                 {!readOnly && ['administrator', 'museumStaff', 'curator'].includes(currentRole) && (
-                  <details style={{ marginTop: '20px', borderRadius: '10px', border: '1px solid var(--color-paper-border)', background: '#FAF7F2', padding: '12px 16px' }}>
+                  <details style={{ marginTop: '20px', borderRadius: '10px', border: '1px solid var(--color-paper-border)', background: 'var(--admin-bg, #FAF7F2)', padding: '12px 16px' }}>
                     <summary style={{ cursor: 'pointer', fontWeight: '600', fontSize: '0.84rem', color: 'var(--color-burgundy-900)' }}>
                       ⚙️ Lịch sử biên tập & Đệ trình bản thuyết minh mới
                     </summary>
@@ -651,7 +651,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 textAlign: 'center',
                 boxShadow: 'var(--shadow-md)'
               }}>
-                <div style={{ width: '200px', height: '200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF7F2', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ width: '200px', height: '200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--admin-bg, #FAF7F2)', borderRadius: '8px', overflow: 'hidden' }}>
                   {!qrImgError ? (
                     <img
                       src={getArtifactQrImageUrl(artifact.id)}
@@ -729,7 +729,7 @@ export default function ArtifactDetailModal({ artifact, onClose, onOpenAIStudio,
                 </div>
               </div>
             </div>
-            <section className="card" style={{ marginTop: '24px', padding: '20px', background: '#FAF7F2', border: '1px solid #EADCC8' }}>
+            <section className="card" style={{ marginTop: '24px', padding: '20px', background: 'var(--admin-bg, #FAF7F2)', border: '1px solid #EADCC8' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>

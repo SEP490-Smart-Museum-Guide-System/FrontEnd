@@ -36,9 +36,9 @@ export function LoadState({ resource, children }) {
   return children;
 }
 export function Field({ label, children }) { return <label className="form-group"><span>{label}</span>{React.isValidElement(children) ? React.cloneElement(children, { 'aria-label': children.props['aria-label'] || label }) : children}</label>; }
-export function Modal({ title, onClose, busy = false, children }) {
-  return createPortal(<div className="modal-overlay" onClick={() => !busy && onClose()}><section className="modal-dialog business-modal" role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
-    <div className="modal-header"><h3>{title}</h3><button type="button" disabled={busy} onClick={onClose}>Đóng</button></div><div className="modal-body">{children}</div>
+export function Modal({ className = '', title, onClose, busy = false, children }) {
+  return createPortal(<div className="modal-overlay" onClick={() => !busy && onClose()}><section className={`modal-dialog business-modal ${className}`} role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()}>
+    <div className="modal-header"><h3>{title}</h3><button type="button" disabled={busy} aria-label="Đóng" onClick={onClose}>{className.includes('admin-form-dialog') ? '×' : 'Đóng'}</button></div><div className="modal-body">{children}</div>
   </section></div>, document.body);
 }
 export function ErrorNotice({ children }) { return children ? <p role="alert" className="business-error">{children}</p> : null; }

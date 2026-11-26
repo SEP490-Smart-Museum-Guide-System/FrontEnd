@@ -46,9 +46,15 @@ export default function UserManager() {
 
   return (
     <div>
-      <PageTitle description="Tài khoản, vai trò và phạm vi phụ trách được quản lý tại một nơi.">
+      <div className="admin-users-heading"><PageTitle description="Tài khoản, vai trò và phạm vi phụ trách được quản lý tại một nơi.">
         Người dùng & phân quyền
-      </PageTitle>
+      </PageTitle><div className="admin-users-actions">          <button className="btn btn-primary" disabled={roles.busy || !!roles.error} onClick={() => setEditing('new')}>
+            + Thêm tài khoản
+          </button>
+          <button className="btn btn-secondary" onClick={() => setAllScopes(true)}>
+            Danh sách phân công
+          </button>
+</div></div>
 
       <div className="business-toolbar" style={{ justifyContent: 'space-between', gap: '12px' }}>
         <div style={{ display: 'flex', gap: '10px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
@@ -73,12 +79,6 @@ export default function UserManager() {
           </select>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" disabled={roles.busy || !!roles.error} onClick={() => setEditing('new')}>
-            + Thêm tài khoản
-          </button>
-          <button className="btn btn-secondary" onClick={() => setAllScopes(true)}>
-            Danh sách phân công
-          </button>
           <button className="btn btn-secondary" onClick={list.reload} title="Tải lại dữ liệu">
             ↻
           </button>
@@ -216,7 +216,7 @@ function AccountEditor({ id, roles, onClose, onSaved }) {
   );
 
   return (
-    <Modal title={id === 'new' ? 'Tạo tài khoản mới' : 'Chi tiết & Quản lý tài khoản'} onClose={onClose}>
+    <Modal className="admin-form-dialog" title={id === 'new' ? 'Tạo tài khoản mới' : 'Chi tiết & quản lý tài khoản'} onClose={onClose}>
       <LoadState resource={detail}>
         {detail.data && (
           <AccountForms
@@ -303,7 +303,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <ErrorNotice>{action.error}</ErrorNotice>
         <form onSubmit={saveInfo} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+          <div className="admin-form-pair">
             <Field label="Họ và tên *">
               <input
                 className="form-input"
@@ -329,7 +329,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
             </Field>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+          <div className="admin-form-pair">
             <Field label="Số điện thoại">
               <input
                 className="form-input"
@@ -371,20 +371,10 @@ function AccountForms({ account, roles, onClose, onSaved }) {
             </select>
           </Field>
 
-          <div
-            style={{
-              padding: '12px 14px',
-              borderRadius: '8px',
-              background: selectedRoleMeta.bg,
-              color: selectedRoleMeta.text,
-              fontSize: '0.8rem',
-              lineHeight: 1.5
-            }}
-          >
-            <strong>{selectedRoleMeta.label}:</strong> {selectedRoleMeta.desc}
+          <div className="admin-role-note"><Shield size={16} /><span><strong>{selectedRoleMeta.label}:</strong> {selectedRoleMeta.desc}</span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+          <div className="admin-form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Hủy
             </button>
@@ -408,7 +398,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
           gap: '14px',
           padding: '16px',
           borderRadius: '12px',
-          background: 'linear-gradient(135deg, #FAF6F0, #F3ECE1)',
+          background: 'var(--admin-bg, #FAF7F2)',
           border: '1px solid var(--color-paper-border)'
         }}
       >
@@ -417,9 +407,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
             width: '48px',
             height: '48px',
             borderRadius: '50%',
-            background: isVisitor
-              ? '#CBD5E1'
-              : 'linear-gradient(135deg, var(--color-burgundy-700), var(--color-gold-600))',
+            background: isVisitor ? '#f5e9e6' : 'var(--color-burgundy-700)',
             color: isVisitor ? '#334155' : '#FFF',
             display: 'flex',
             alignItems: 'center',
@@ -539,7 +527,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
         <form onSubmit={saveInfo} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <ErrorNotice>{action.error}</ErrorNotice>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+          <div className="admin-form-pair">
             <Field label="Họ và tên">
               <input
                 className="form-input"
@@ -563,7 +551,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
             </Field>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+          <div className="admin-form-pair">
             <Field label="Số điện thoại">
               <input
                 className="form-input"
@@ -589,7 +577,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
             </Field>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+          <div className="admin-form-actions">
             <button className="btn btn-primary" disabled={action.busy}>
               {action.busy ? 'Đang lưu…' : 'Lưu thông tin'}
             </button>
@@ -602,7 +590,7 @@ function AccountForms({ account, roles, onClose, onSaved }) {
         <form onSubmit={saveRole} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <ErrorNotice>{roleAction.error}</ErrorNotice>
 
-          <div style={{ background: '#FAF7F2', padding: '14px', borderRadius: '10px', border: '1px solid var(--color-paper-border)' }}>
+          <div style={{ background: 'var(--admin-bg, #FAF7F2)', padding: '14px', borderRadius: '10px', border: '1px solid var(--color-paper-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--color-charcoal-800)', marginBottom: '8px' }}>
               <Shield size={16} color="var(--color-gold-600)" />
               Thay đổi vai trò tài khoản
@@ -693,7 +681,7 @@ function Assignments({ id, eligible, onSaved }) {
 
         <LoadState resource={list}>
           {!list.data.length ? (
-            <div style={{ padding: '16px', background: '#FAF7F2', borderRadius: '8px', border: '1px dashed var(--color-paper-border)', textAlign: 'center', color: 'var(--color-charcoal-500)', fontSize: '0.82rem' }}>
+            <div style={{ padding: '16px', background: 'var(--admin-bg, #FAF7F2)', borderRadius: '8px', border: '1px dashed var(--color-paper-border)', textAlign: 'center', color: 'var(--color-charcoal-500)', fontSize: '0.82rem' }}>
               Tài khoản này chưa được gán bảo tàng cụ thể. Hãy thêm phân công ở khung bên dưới.
             </div>
           ) : (
@@ -772,7 +760,7 @@ function Assignments({ id, eligible, onSaved }) {
           style={{
             padding: '16px',
             borderRadius: '10px',
-            background: '#FAF7F2',
+            background: 'var(--admin-bg, #FAF7F2)',
             border: '1px solid var(--color-paper-border)',
             display: 'flex',
             flexDirection: 'column',
