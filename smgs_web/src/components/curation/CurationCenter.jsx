@@ -294,7 +294,7 @@ export default function CurationCenter() {
 
   const isQuiz = selected?.type === 'quiz';
   const parsedProposedQuiz = isQuiz ? parseQuizContent(selected.proposedContent) : null;
-  const selectedContentWarnings = selected
+  const selectedContentWarnings = selected && selected.type !== 'audio_narration'
     ? findContentWarnings(selected.title, selected.proposedContent)
     : [];
 

@@ -83,7 +83,7 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
   const [progress, setProgress] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const activeRequest = useRef(null);
-  const contentWarnings = findContentWarnings(title, output);
+  const contentWarnings = mode === 'quiz' ? findContentWarnings(title, output) : [];
   useEffect(() => () => activeRequest.current?.abort(), []);
   const allowed = ['administrator', 'museumStaff'].includes(currentRole);
 
