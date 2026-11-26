@@ -151,7 +151,7 @@ class TtsApiService {
   /// Resolve a BE-protected media URL to a short-lived storage URL. The native
   /// player can then stream/range-read audio without downloading the whole WAV
   /// into memory first. The signed URL is created only after BE access checks.
-  static Future<String> resolvePublishedPlaybackUrl(String url) async {
+  static Future<String?> resolvePublishedPlaybackUrl(String url) async {
     final source = Uri.parse(url);
     if (!source.isAbsolute || !['https', 'http'].contains(source.scheme)) {
       throw const FormatException('Địa chỉ bản thu âm không hợp lệ.');
@@ -168,6 +168,8 @@ class TtsApiService {
     final response = await http
         .get(endpoint, headers: TokenManager.authHeaders)
         .timeout(const Duration(seconds: 10));
+    // Keep the app compatible while an older BE instance is still rolling out.
+    if (response.statusCode == 404) return null;
     if (response.statusCode != 200) {
       String detail = 'Chưa lấy được đường dẫn phát audio.';
       try {

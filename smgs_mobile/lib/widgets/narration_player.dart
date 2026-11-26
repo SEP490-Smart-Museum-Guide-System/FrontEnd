@@ -305,7 +305,15 @@ class NarrationPlayerState extends State<NarrationPlayer> {
             widget.audioUrl!,
           );
           if (!_current(request)) return;
-          await player.setSource(UrlSource(playbackUrl));
+          if (playbackUrl != null) {
+            await player.setSource(UrlSource(playbackUrl));
+          } else {
+            _audio = await TtsApiService.fetchPublishedAudio(widget.audioUrl!);
+            if (!_current(request)) return;
+            await player.setSource(
+              BytesSource(_audio!.audioBytes, mimeType: _audio!.mimeType),
+            );
+          }
         } else {
           _audio ??= await TtsApiService.synthesizeSpeech(widget.text);
           if (!_current(request)) return;
