@@ -65,9 +65,31 @@ export function artifactView(a) {
     shortDesc: '', fullDesc: '', quizzes: [], multilingual: {}, approvedAiContent: [] };
 }
 export function tourView(t) {
-  const ids = (t.items || []).slice().sort((a, b) => a.orderNo - b.orderNo).map(i => i.artifactId);
-  return { ...t, code: String(t.id), duration: `${t.estimatedMinutes} phút`, artifacts: ids,
-    stopsCount: ids.length, theme: '', rating: null, reviewsCount: null };
+  const sortedVersions = (t.versions || []).slice().sort((a, b) => (b.versionNo || 0) - (a.versionNo || 0));
+  const activeVersion =
+    sortedVersions.find(v => v.status === 'draft') ||
+    sortedVersions.find(v => v.status === 'submitted') ||
+    sortedVersions.find(v => v.status === 'approved') ||
+    sortedVersions[0] ||
+    null;
+  const sourceItems = (activeVersion?.items?.length ? activeVersion.items : (t.items || []));
+  const ids = sourceItems.slice().sort((a, b) => a.orderNo - b.orderNo).map(i => i.artifactId);
+  const estMinutes = activeVersion?.estimatedMinutes ?? t.estimatedMinutes;
+  return {
+    ...t,
+    code: String(t.id),
+    title: activeVersion?.title || t.title,
+    description: activeVersion?.description ?? t.description,
+    estimatedMinutes: estMinutes,
+    duration: `${estMinutes} phút`,
+    artifacts: ids,
+    stopsCount: ids.length,
+    latestVersionNo: activeVersion?.versionNo || 1,
+    latestVersionStatus: activeVersion?.status || t.status,
+    theme: '',
+    rating: null,
+    reviewsCount: null
+  };
 }
 export function accountView(a) {
   return { ...a, name: a.fullName, phone: a.phoneNumber || '',

@@ -333,8 +333,11 @@ export default function TourManager() {
         <div className="business-grid">
           {museumTours.map(tour => {
             const draftVersion = (tour.versions || []).find(v => v.status === 'draft');
-            const hasSubmittedVersion = (tour.versions || []).some(v => v.status === 'submitted');
-            const copySourceVersion = draftVersion || (tour.versions || [])[0] || null;
+            const submittedVersion = (tour.versions || []).find(v => v.status === 'submitted');
+            const approvedVersion = (tour.versions || []).find(v => v.status === 'approved');
+            const latestVersion = (tour.versions || [])[0] || null;
+            const hasSubmittedVersion = !!submittedVersion;
+            const copySourceVersion = draftVersion || approvedVersion || latestVersion || null;
             return (
               <div key={tour.id} className="card business-card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '8px' }}>
@@ -344,13 +347,26 @@ export default function TourManager() {
                       {getTourTopicNames(tour).join(' • ') || 'Tuyến tổng quát'}
                     </span>
                   </div>
-                  {hasSubmittedVersion ? (
-                    <span className="badge-status badge-gold">Chờ Giám tuyển duyệt</span>
-                  ) : (
-                    <span className={`badge-status ${tour.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
-                      {tour.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    {draftVersion ? (
+                      <span className="badge-status badge-draft">
+                        Bản nháp (v{draftVersion.versionNo})
+                      </span>
+                    ) : hasSubmittedVersion ? (
+                      <span className="badge-status badge-gold">
+                        Chờ Giám tuyển duyệt (v{submittedVersion.versionNo})
+                      </span>
+                    ) : (
+                      <span className={`badge-status ${tour.status === 'published' ? 'badge-published' : 'badge-draft'}`}>
+                        {tour.status === 'published' ? `Đã xuất bản${approvedVersion ? ` (v${approvedVersion.versionNo})` : ''}` : 'Bản nháp'}
+                      </span>
+                    )}
+                    {draftVersion && approvedVersion && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-charcoal-500)' }}>
+                        Đang công khai: v{approvedVersion.versionNo}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
