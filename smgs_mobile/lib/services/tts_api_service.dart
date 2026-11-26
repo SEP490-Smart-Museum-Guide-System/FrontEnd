@@ -160,7 +160,7 @@ class TtsApiService {
     final backend = Uri.parse(ApiConfig.baseUrl);
     final match = RegExp(r'/api/artifacts/(\d+)/media/(\d+)/file/?$')
         .firstMatch(source.path);
-    if (source.origin != backend.origin || match == null) return url;
+    if (source.origin != backend.origin || match == null) return null;
 
     final endpoint = Uri.parse(
       '${ApiConfig.baseUrl}/artifacts/${match.group(1)}/media/${match.group(2)}/playback-url',
