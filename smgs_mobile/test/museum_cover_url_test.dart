@@ -2,6 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smgs_mobile/core/network/api_config.dart';
 
 void main() {
+  test('uploaded GLB links use the configured API host', () {
+    final previousHost = ApiConfig.customHost;
+    addTearDown(() => ApiConfig.customHost = previousHost);
+    ApiConfig.customHost = 'https://museum.example';
+    const path = '/api/artifacts/2/model-3d/file';
+    expect(
+      ApiConfig.mediaUrl('http://localhost:5169$path'),
+      'https://museum.example$path',
+    );
+  });
+
   test('museum uploads use the API host configured on the phone', () {
     final previousHost = ApiConfig.customHost;
     addTearDown(() => ApiConfig.customHost = previousHost);

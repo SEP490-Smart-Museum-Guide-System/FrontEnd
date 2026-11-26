@@ -7,6 +7,7 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 import '../../models/artifact.dart';
 import '../../widgets/artifact_gallery.dart';
+import '../../widgets/artifact_model_source.dart';
 import '../../widgets/narration_player.dart';
 import '../../widgets/sketchfab_viewer.dart';
 
@@ -80,14 +81,17 @@ class _ArtifactListeningScreenState extends State<ArtifactListeningScreen> {
             .toString(),
       );
     }
-    return ModelViewer(
-      src: model,
-      alt: 'Mô hình 3D ${widget.artifact.name}',
-      autoRotate: true,
-      autoRotateDelay: 0,
-      rotationPerSecond: '25deg',
-      cameraControls: true,
-      backgroundColor: Colors.transparent,
+    return ArtifactModelSource(
+      url: model,
+      viewer: (src) => ModelViewer(
+        src: src,
+        alt: 'Mô hình 3D ${widget.artifact.name}',
+        autoRotate: true,
+        autoRotateDelay: 0,
+        rotationPerSecond: '25deg',
+        cameraControls: true,
+        backgroundColor: Colors.transparent,
+      ),
     );
   }
 

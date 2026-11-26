@@ -26,13 +26,15 @@ class ApiConfig {
   static String mediaUrl(String? value) {
     if (value == null || value.isEmpty) return '';
     final uri = Uri.tryParse(value);
-    final museumCover = uri == null
+    final upload = uri == null
         ? null
-        : RegExp(r'/api(/museums/\d+/image/[^/]+)$').firstMatch(uri.path);
-    if (museumCover != null) {
-      // Older cover URLs may contain the host used by the admin during upload.
+        : RegExp(
+            r'^/api(/museums/\d+/image/[^/]+|/artifacts/\d+/model-3d/file)$',
+          ).firstMatch(uri.path);
+    if (upload != null) {
+      // Uploaded files are served by the API configured on this device.
       return Uri.parse(
-        '$baseUrl${museumCover.group(1)}',
+        '$baseUrl${upload.group(1)}',
       ).replace(query: uri!.hasQuery ? uri.query : null).toString();
     }
     if (value.startsWith('/')) {

@@ -556,7 +556,7 @@ export default function CurationCenter() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button type="button" className="btn btn-secondary btn-sm" onClick={closeItem}>
+                <button type="button" className="dialog-icon-close btn btn-secondary btn-sm" aria-label="Đóng" onClick={closeItem}>
                   <X size={16} />
                 </button>
               </div>
@@ -587,7 +587,7 @@ export default function CurationCenter() {
               {/* CURATOR QUALITY GATE (Checklist tiêu chuẩn) */}
               {selected.status === 'pending_review' && (
                 <div style={{
-                  background: '#FFFDF9',
+                  background: 'var(--admin-bg, #FFFDF9)',
                   border: '1px dashed var(--color-gold-400)',
                   borderRadius: '8px',
                   padding: '10px 14px'
@@ -630,7 +630,7 @@ export default function CurationCenter() {
               {/* VIEW: SIDE-BY-SIDE DIFF VIEW OR TOUR STOP INSPECTION */}
               {selected.type === 'new_tour' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#FAF7F2', padding: '14px 18px', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
+                  <div style={{ background: 'var(--admin-bg, #FAF7F2)', padding: '14px 18px', borderRadius: '8px', border: '1px solid var(--color-paper-border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                       <strong style={{ color: 'var(--color-burgundy-900)', fontSize: '0.95rem' }}>
                         Thông tin Lộ trình Tham quan (Phiên bản v{selected.versionNo})
@@ -653,7 +653,7 @@ export default function CurationCenter() {
 
                   {/* KHUNG SO SÁNH SỰ KHÁC BIỆT GIỮA 2 PHIÊN BẢN (VERSION DIFF) */}
                   {loadingDiff ? (
-                    <div style={{ padding: '12px', background: '#FFFDF8', borderRadius: '8px', border: '1px solid var(--color-gold-300)', fontSize: '0.8rem', color: 'var(--color-charcoal-600)' }}>
+                    <div style={{ padding: '12px', background: 'var(--admin-bg, #FFFDF8)', borderRadius: '8px', border: '1px solid var(--color-gold-300)', fontSize: '0.8rem', color: 'var(--color-charcoal-600)' }}>
                       Đang phân tích so sánh thay đổi so với phiên bản trước…
                     </div>
                   ) : tourDiff && (

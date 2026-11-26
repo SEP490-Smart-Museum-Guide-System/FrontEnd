@@ -338,3 +338,25 @@ body:has(.app-container:is([data-role="administrator"], [data-role="museumStaff"
   border-radius: 50% !important;
   padding: 0 !important;
 }
+
+.app-container[data-role="curator"] {
+  & .cc-kpi { background: white; border: 1px solid var(--admin-border); box-shadow: none; }
+  & .cc-kpi.is-active { border-color: var(--wine); background: var(--rose); }
+  & .role-dashboard-row { border-radius: 0; border-width: 0 0 1px; border-color: var(--admin-divider); }
+  & .role-dashboard-row:last-child { border-bottom: 0; }
+  & .cc-kpi, & .cc-kpi span { min-width: 0; overflow-wrap: anywhere; }
+}
+@media(max-width: 600px) {
+  .app-container[data-role="curator"] .cc-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+.question-bank-columns { align-items: start; }
+.question-bank-column-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  margin-bottom: 10px;
+}
+.question-bank-column-heading h3 { margin: 0; }

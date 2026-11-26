@@ -6,6 +6,7 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 import '../../core/localization/app_localizations.dart';
 import '../../models/artifact.dart';
+import '../../widgets/artifact_model_source.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/sketchfab_viewer.dart';
 
@@ -95,19 +96,22 @@ class _Artifact3DScreenState extends State<Artifact3DScreen> {
                           )
                         : _isSketchfab
                             ? SketchfabViewer(url: widget.artifact.modelUrl!.trim())
-                            : ModelViewer(
-                            key: ValueKey('model_viewer_$_resetKey'),
-                            src: widget.artifact.modelUrl!.trim(),
-                            alt: 'Mô hình 3D ${widget.artifact.name}',
-                            ar: true,
-                            autoRotate: _autoRotate,
-                            autoRotateDelay: 1000,
-                            rotationPerSecond: '25deg',
-                            cameraControls: true,
-                            backgroundColor: Colors.transparent,
-                            shadowIntensity: 1.0,
-                            shadowSoftness: 0.8,
-                            exposure: 1.05,
+                            : ArtifactModelSource(
+                            url: widget.artifact.modelUrl!.trim(),
+                            viewer: (src) => ModelViewer(
+                              key: ValueKey('model_viewer_$_resetKey'),
+                              src: src,
+                              alt: 'Mô hình 3D ${widget.artifact.name}',
+                              ar: true,
+                              autoRotate: _autoRotate,
+                              autoRotateDelay: 1000,
+                              rotationPerSecond: '25deg',
+                              cameraControls: true,
+                              backgroundColor: Colors.transparent,
+                              shadowIntensity: 1.0,
+                              shadowSoftness: 0.8,
+                              exposure: 1.05,
+                            ),
                           ),
                   ),
                 ),

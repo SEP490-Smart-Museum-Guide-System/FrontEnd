@@ -364,6 +364,14 @@ void main() {
       await http.runWithClient(
         () async {
           await tester.pumpWidget(host(const MuseumDiscoveryMapScreen()));
+          await tester.tap(find.byType(TextField));
+          await tester.pumpAndSettle();
+          expect(find.text('Nhập ít nhất 3 ký tự'), findsOneWidget);
+          final searchDecoration = tester
+              .widget<InputDecorator>(find.byType(InputDecorator))
+              .decoration;
+          expect(searchDecoration.filled, isFalse);
+          expect(searchDecoration.focusedBorder, InputBorder.none);
           await tester.tap(find.byType(Switch).first);
           await tester.pumpAndSettle();
           expect(find.text('Bảo tàng 8'), findsOneWidget);

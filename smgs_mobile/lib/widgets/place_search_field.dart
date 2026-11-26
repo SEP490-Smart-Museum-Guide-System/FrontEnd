@@ -18,15 +18,6 @@ class PlaceSearchField extends StatefulWidget {
 
 class _PlaceSearchFieldState extends State<PlaceSearchField> {
   final _text = TextEditingController();
-  final _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_focusChanged);
-  }
-
-  void _focusChanged() => setState(() {});
 
   Timer? _timer;
   int _generation = 0;
@@ -74,7 +65,6 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
   @override
   void dispose() {
     _timer?.cancel();
-    _focus.dispose();
     _text.dispose();
     super.dispose();
   }
@@ -83,13 +73,11 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
   Widget build(BuildContext context) => Column(
     children: [
       TextField(
-        focusNode: _focus,
         controller: _text,
         maxLength: 200,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: _focus.hasFocus ? null : 'Nhập ít nhất 3 ký tự',
-
+          hintText: 'Nhập ít nhất 3 ký tự',
           counterText: '',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: IconButton(

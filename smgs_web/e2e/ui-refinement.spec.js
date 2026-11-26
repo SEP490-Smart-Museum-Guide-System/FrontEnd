@@ -14,7 +14,7 @@ for (const [role,label,section,target] of [
   await page.goto('/');
   await expect(page.locator('.sidebar-menu').getByRole('button',{name:new RegExp('^'+label)})).toBeVisible();
   const toggle=page.getByRole('button',{name:section,exact:false});
-  if(['Admin','Museum Staff'].includes(role)){
+  if(['Admin','Museum Staff','Curator'].includes(role)){
     await expect(page.getByRole('heading',{name:section})).toBeVisible();
     await expect(toggle).toHaveCount(0);
   } else if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
