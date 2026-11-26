@@ -35,10 +35,26 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
   }, [form.museumId]);
 
   useEffect(() => {
-    if (artifact?.id || !form.museumId) return;
+    if (!form.museumId) return;
     const controller = new AbortController();
-    allPages(`museums/${form.museumId}/topics?isActive=true`, { signal: controller.signal })
-      .then(rows => { if (!controller.signal.aborted) setTopics(rows); })
+    Promise.all([
+      allPages(`museums/${form.museumId}/topics?isActive=true`, { signal: controller.signal }),
+      artifact?.id ? backend(`artifacts/${artifact.id}/topics`, { signal: controller.signal }).catch(() => []) : Promise.resolve([])
+    ])
+      .then(([rows, assigned]) => {
+        if (controller.signal.aborted) return;
+        const assignedIds = Array.isArray(assigned) ? assigned.map(t => t.id) : [];
+        const mergedTopics = Array.isArray(rows) ? [...rows] : [];
+        if (Array.isArray(assigned)) {
+          assigned.forEach(t => {
+            if (!mergedTopics.some(r => r.id === t.id)) mergedTopics.push(t);
+          });
+        }
+        setTopics(mergedTopics);
+        if (artifact?.id) {
+          setForm(prev => ({ ...prev, topicIds: assignedIds }));
+        }
+      })
       .catch(e => { if (!controller.signal.aborted) setTopicError(e.message); });
     return () => controller.abort();
   }, [artifact?.id, form.museumId]);
@@ -103,6 +119,11 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
           ...previous, id: targetId, code: result.data.code || '', qrCode: result.data.qrCode || '',
         }));
         savedId.current = targetId;
+      } else if (Array.isArray(form.topicIds) && topics !== null) {
+        await backend(`artifacts/${targetId}/topics`, {
+          method: 'PUT',
+          body: { topicIds: form.topicIds }
+        });
       }
       const batch = await uploadBatch(selectedFiles, {
         upload: async (file, progress) => {
@@ -173,31 +194,29 @@ export default function ArtifactEditModal({ artifact, onClose, onSave }) {
 
           </div>
           {error && <p role="alert" style={{ color: '#b91c1c', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}><AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />{error}</p>}
-          {!artifact?.id && (
-            <fieldset className="form-group" disabled={busy || !!form.id}>
-              <legend>Chủ đề</legend>
-              {!form.museumId && <p>Chọn bảo tàng để xem danh sách chủ đề.</p>}
-              {topicError && <p role="alert">Không thể tải chủ đề. {topicError}</p>}
-              {form.museumId && !topics && !topicError && <p role="status">Đang tải chủ đề…</p>}
-              {topics?.length === 0 && <p>Bảo tàng chưa có chủ đề đang hoạt động.</p>}
-              {topics?.length > 0 && (
-                <div className="artifact-topic-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
-                  {topics.map(topic => (
-                    <label key={topic.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input type="checkbox" checked={form.topicIds.includes(topic.id)} onChange={e => {
-                        const checked = e.target.checked;
-                        setForm(prev => ({
-                          ...prev,
-                          topicIds: checked ? [...prev.topicIds, topic.id] : prev.topicIds.filter(id => id !== topic.id),
-                        }));
-                      }} />
-                      {topic.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </fieldset>
-          )}
+          <fieldset className="form-group" disabled={busy}>
+            <legend>Chủ đề (có thể chọn nhiều)</legend>
+            {!form.museumId && <p>Chọn bảo tàng để xem danh sách chủ đề.</p>}
+            {topicError && <p role="alert">Không thể tải chủ đề. {topicError}</p>}
+            {form.museumId && !topics && !topicError && <p role="status">Đang tải chủ đề…</p>}
+            {topics?.length === 0 && <p>Bảo tàng chưa có chủ đề đang hoạt động.</p>}
+            {topics?.length > 0 && (
+              <div className="artifact-topic-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                {topics.map(topic => (
+                  <label key={topic.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.topicIds.includes(topic.id)} onChange={e => {
+                      const checked = e.target.checked;
+                      setForm(prev => ({
+                        ...prev,
+                        topicIds: checked ? [...prev.topicIds, topic.id] : prev.topicIds.filter(id => id !== topic.id),
+                      }));
+                    }} />
+                    {topic.name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </fieldset>
 
           {/* Khu vực chọn hình ảnh hiện vật (Hỗ trợ tải nhiều ảnh) */}
           <div className="form-group">

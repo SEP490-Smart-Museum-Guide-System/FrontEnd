@@ -266,7 +266,7 @@ export default function ArtifactList({ onOpenAIStudio }) {
                   <th style={{ width: '80px' }}>Ảnh</th>
                   <th>Tên hiện vật & Mã định danh</th>
                   <th>Vị trí trưng bày</th>
-                  <th>Niên đại & Chất liệu</th>
+                  <th>Chủ đề hiện vật</th>
                   <th style={{ textAlign: 'center' }}>Tính năng số</th>
                   <th style={{ minWidth: '205px', whiteSpace: 'nowrap' }}>Kiểm duyệt nội dung</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
@@ -352,10 +352,32 @@ export default function ArtifactList({ onOpenAIStudio }) {
                         </div>
                       </td>
 
-                      {/* Period & Material */}
+                      {/* Period & Material & Topics */}
                       <td>
-                        <div style={{ fontSize: '0.8125rem' }}>{art.period}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>{art.material}</div>
+                        {art.category ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: (art.period || art.material) ? '4px' : 0 }}>
+                            {art.category.split(',').map(t => t.trim()).filter(Boolean).map(topicName => (
+                              <span
+                                key={topicName}
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: '600',
+                                  padding: '2px 8px',
+                                  borderRadius: '10px',
+                                  background: '#F8F1E7',
+                                  color: 'var(--color-burgundy-800)',
+                                  border: '1px solid var(--color-paper-border)'
+                                }}
+                              >
+                                {topicName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-400)', fontStyle: 'italic' }}>Chưa gán chủ đề</div>
+                        )}
+                        {art.period && <div style={{ fontSize: '0.8125rem' }}>{art.period}</div>}
+                        {art.material && <div style={{ fontSize: '0.75rem', color: 'var(--color-charcoal-500)' }}>{art.material}</div>}
                       </td>
 
                       {/* Digital Features */}
