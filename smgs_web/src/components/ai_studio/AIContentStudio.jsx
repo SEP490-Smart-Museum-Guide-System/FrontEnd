@@ -208,7 +208,13 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
           <div className="form-group"><label className="form-label" htmlFor="studio-count">Số lượng câu hỏi</label><select id="studio-count" className="form-select" value={count} disabled={busy || saving} onChange={e => { setCount(Number(e.target.value)); invalidate(); }}><option value={1}>1 câu hỏi</option><option value={3}>3 câu hỏi</option><option value={5}>5 câu hỏi</option></select><small>Model tạo từng câu; nếu tư liệu ít hoặc trùng câu hỏi, hệ thống giữ các câu đã tạo để bạn kiểm tra.</small></div>
           <div className="form-group"><label className="form-label" htmlFor="studio-difficulty">Độ khó</label><select id="studio-difficulty" className="form-select" value={difficulty} disabled={busy || saving} onChange={e => { setDifficulty(e.target.value); invalidate(); }}><option value="easy">Dễ</option><option value="medium">Trung bình</option><option value="hard">Thử thách</option></select></div>
         </>}
-        <div className="form-group"><label className="form-label" htmlFor="studio-source">Tư liệu nguồn bổ sung</label><textarea id="studio-source" className="form-input" rows={studioLayout ? 3 : 6} maxLength={6000} disabled={busy || saving} value={sourceText} onChange={e => { setSourceText(e.target.value); invalidate(); }} placeholder="Chép nội dung bảng tên, tài liệu hoặc thông tin đã kiểm chứng về hiện vật…" /><small>Để trống để dùng nội dung tiếng Việt đã xuất bản nếu có. Nếu chưa có nội dung, cần nhập ít nhất 20 ký tự tư liệu. Ảnh dùng để đối chiếu; model hiện tại nhận chữ, chưa phân tích ảnh.</small></div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="studio-source">Tư liệu nguồn bổ sung</label>
+          <textarea id="studio-source" className="form-input" rows={studioLayout ? 3 : 6} maxLength={6000} disabled={busy || saving} value={sourceText} onChange={e => { setSourceText(e.target.value); invalidate(); }} placeholder="Chép nội dung bảng tên, tài liệu hoặc thông tin đã kiểm chứng về hiện vật…" />
+          <small>
+            Tối đa 6.000 ký tự ở ô này ({sourceText.length.toLocaleString('vi-VN')}/6.000). Model giới hạn 4.096 token cho toàn yêu cầu, gồm cả chỉ dẫn và tư liệu đã xuất bản; nếu gặp lỗi giới hạn, hãy rút gọn nội dung. Để trống để dùng nội dung tiếng Việt đã xuất bản nếu có; nếu chưa có, nhập ít nhất 20 ký tự. Ảnh chỉ dùng đối chiếu, model hiện tại chưa phân tích ảnh.
+          </small>
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button className="btn btn-gold" disabled={busy || saving || !artifact} onClick={generate}>
             {busy ? <Loader2 size={16} className="spin-animation" /> : <Sparkles size={16} />}
