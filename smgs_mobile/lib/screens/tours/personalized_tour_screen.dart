@@ -11,7 +11,6 @@ import '../../widgets/museum_ui.dart';
 import '../museum/visit_progress_screen.dart';
 import '../artifact/artifact_detail_screen.dart';
 import 'published_tours_screen.dart';
-import '../../widgets/earned_badges.dart';
 
 String tourMinutes(num value) =>
     value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1);
@@ -56,6 +55,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
   String? _curatedError;
   bool _savingCurated = false;
   int? _savedTourVersionId;
+  int _visitBannerTick = 0;
 
   Future<List<Map<String, dynamic>>?> _loadSaved() async {
     var curatedFailed = false;
@@ -236,6 +236,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         if (mounted) {
           final nextSaved = _loadSaved();
           setState(() {
+            _visitBannerTick++;
             _saved = nextSaved;
           });
         }
@@ -315,12 +316,18 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         builder: (_) => VisitProgressScreen(visitId: activeId),
       ),
     );
+    if (mounted) {
+      final nextSaved = _loadSaved();
+      setState(() {
+        _visitBannerTick++;
+        _saved = nextSaved;
+      });
+    }
   }
 
   Future<void> _openOrStartSavedCuratedRoute(Map<String, dynamic> savedRoute) async {
     final museumId = (savedRoute['museumId'] as int?) ?? int.tryParse(_museumId);
     final tourId = savedRoute['tourId'] as int?;
-    final savedRouteId = savedRoute['id'] as int?;
     if (museumId == null || tourId == null) return;
 
     setState(() {
@@ -330,7 +337,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
     try {
       final activeVisits = await BackendApi.list('visits/me?status=InProgress');
       final active = activeVisits.cast<Map<String, dynamic>>().firstWhere(
-        (v) => v['museumId'] == museumId,
+        (v) => v['museumId'] == museumId && v['tourId'] == tourId,
         orElse: () => <String, dynamic>{},
       );
 
@@ -345,6 +352,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           if (mounted) {
             final nextSaved = _loadSaved();
             setState(() {
+              _visitBannerTick++;
               _saved = nextSaved;
             });
           }
@@ -352,25 +360,19 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         return;
       }
 
-      final visit = await BackendApi.request(
-        'visits',
-        method: 'POST',
-        body: {
-          'museumId': museumId,
-          if (savedRouteId != null) 'savedRouteId': savedRouteId else 'tourId': tourId,
-        },
-      );
-      final visitMap = Map<String, dynamic>.from(visit);
-      VisitorSession.activeVisit = visitMap;
       if (mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => VisitProgressScreen(visitId: visitMap['id'] as int),
+            builder: (_) => PublishedTourDetailScreen(
+              tourId: tourId,
+              savedRoute: savedRoute,
+            ),
           ),
         );
         if (mounted) {
           final nextSaved = _loadSaved();
           setState(() {
+            _visitBannerTick++;
             _saved = nextSaved;
           });
         }
@@ -440,7 +442,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           : 'Chọn tour có sẵn, khám phá tự do hoặc thử một gợi ý cá nhân.',
       children: [
         BackendPanel(
-          resourceKey: 'active-visit-banner',
+          resourceKey: 'active-visit-banner:$_visitBannerTick',
           load: () async {
             try {
               final list = (await BackendApi.list('visits/me?status=InProgress')).cast<Map<String, dynamic>>();
@@ -529,12 +531,21 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                           label: l10n.isEn ? 'View Trip Progress' : 'Xem tiến độ chuyến đi',
                           icon: Icons.map_outlined,
                           height: 42,
-                          onPressed: () {
-                            openPage(
-                              context,
-                              VisitProgressScreen(visitId: v['id'] as int),
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => VisitProgressScreen(visitId: v['id'] as int),
+                              ),
                             );
-                            reload();
+                            if (mounted) {
+                              final nextSaved = _loadSaved();
+                              setState(() {
+                                _visitBannerTick++;
+                                _saved = nextSaved;
+                              });
+                            } else {
+                              reload();
+                            }
                           },
                         ),
                       ),
@@ -662,10 +673,20 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                       ),
                       if (tours.isNotEmpty)
                         InkWell(
-                          onTap: () => openPage(
-                            context,
-                            PublishedToursScreen(museumId: id),
-                          ),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => PublishedToursScreen(museumId: id),
+                              ),
+                            );
+                            if (mounted) {
+                              final nextSaved = _loadSaved();
+                              setState(() {
+                                _visitBannerTick++;
+                                _saved = nextSaved;
+                              });
+                            }
+                          },
                           borderRadius: BorderRadius.circular(VisitorRadius.md),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -717,10 +738,20 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                         itemBuilder: (context, index) {
                           if (index == 6 && tours.length > 6) {
                             return InkWell(
-                              onTap: () => openPage(
-                                context,
-                                PublishedToursScreen(museumId: id),
-                              ),
+                              onTap: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PublishedToursScreen(museumId: id),
+                                  ),
+                                );
+                                if (mounted) {
+                                  final nextSaved = _loadSaved();
+                                  setState(() {
+                                    _visitBannerTick++;
+                                    _saved = nextSaved;
+                                  });
+                                }
+                              },
                               borderRadius: BorderRadius.circular(VisitorRadius.xl),
                               child: Container(
                                 width: 150,
@@ -771,10 +802,20 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                           final stopCount = (tour['items'] as List?)?.length ?? 0;
 
                           return InkWell(
-                            onTap: () => openPage(
-                              context,
-                              PublishedTourDetailScreen(tourId: tourId),
-                            ),
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => PublishedTourDetailScreen(tourId: tourId),
+                                ),
+                              );
+                              if (mounted) {
+                                final nextSaved = _loadSaved();
+                                setState(() {
+                                  _visitBannerTick++;
+                                  _saved = nextSaved;
+                                });
+                              }
+                            },
                             borderRadius: BorderRadius.circular(VisitorRadius.xl),
                             child: Container(
                               width: 248,

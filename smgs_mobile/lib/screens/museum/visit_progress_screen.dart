@@ -67,16 +67,40 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
           final visitMap = Map<String, dynamic>.from(results[0]);
           final progressMap = Map<String, dynamic>.from(results[1]);
           final tourId = (progressMap['tourId'] ?? visitMap['tourId']) as int?;
+          final pinnedVersionId = (progressMap['tourVersionId'] ?? visitMap['tourVersionId']) as int?;
           if (tourId != null) {
-            try {
-              final tour = await BackendApi.request('tours/$tourId');
-              if (tour is Map && tour['title'] != null) {
-                visitMap['_resolvedTourTitle'] = tour['title'].toString();
-                if (tour['description'] != null) {
-                  visitMap['_resolvedTourDesc'] = tour['description'].toString();
+            var resolvedFromSaved = false;
+            if (pinnedVersionId != null) {
+              try {
+                final savedList = await VisitorExperienceApi.getSavedRoutes(
+                  museumId: visitMap['museumId'] as int?,
+                );
+                final matchedSaved = savedList.firstWhere(
+                  (s) => s['tourVersionId'] == pinnedVersionId,
+                  orElse: () => <String, dynamic>{},
+                );
+                if (matchedSaved.isNotEmpty) {
+                  if (matchedSaved['title'] != null) {
+                    visitMap['_resolvedTourTitle'] = matchedSaved['title'].toString();
+                  }
+                  if (matchedSaved['description'] != null) {
+                    visitMap['_resolvedTourDesc'] = matchedSaved['description'].toString();
+                  }
+                  resolvedFromSaved = true;
                 }
-              }
-            } catch (_) {}
+              } catch (_) {}
+            }
+            if (!resolvedFromSaved) {
+              try {
+                final tour = await BackendApi.request('tours/$tourId');
+                if (tour is Map && tour['title'] != null) {
+                  visitMap['_resolvedTourTitle'] = tour['title'].toString();
+                  if (tour['description'] != null) {
+                    visitMap['_resolvedTourDesc'] = tour['description'].toString();
+                  }
+                }
+              } catch (_) {}
+            }
           }
           return [visitMap, progressMap];
         },
@@ -491,56 +515,126 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                   onPressed: () => _openMap(visit),
                 ),
                 const SizedBox(height: 10),
-                SecondaryButton(
-                  label: _busy ? (l10n.isEn ? 'Ending…' : 'Đang hoàn tất…') : (l10n.isEn ? 'End Visit' : 'Kết thúc chuyến tham quan'),
-                  onPressed: _busy
-                      ? null
-                      : () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(l10n.isEn ? 'End this visit?' : 'Kết thúc chuyến tham quan?'),
-                              content: Text(
-                                l10n.isEn
-                                    ? 'The system will check tour completion conditions.'
-                                    : 'Hệ thống sẽ kiểm tra điều kiện hoàn thành của tuyến tham quan.',
+                if (totalCount == 0 || visitedCount >= totalCount)
+                  PrimaryButton(
+                    label: _busy
+                        ? (l10n.isEn ? 'Completing…' : 'Đang hoàn tất…')
+                        : (l10n.isEn ? 'Complete Tour & Claim Rewards' : 'Hoàn thành hành trình & Nhận thưởng'),
+                    icon: Icons.emoji_events_outlined,
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(l10n.isEn ? 'Complete this tour?' : 'Hoàn thành chuyến tham quan?'),
+                                content: Text(
+                                  l10n.isEn
+                                      ? 'You have explored all stops! Confirm to complete your journey and claim your +30 bonus points and heritage badge.'
+                                      : 'Bạn đã khám phá đủ các điểm dừng! Xác nhận hoàn tất để nhận +30 điểm thưởng hành trình và xét cấp Huy hiệu Di sản.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: Text(l10n.isEn ? 'Back' : 'Quay lại'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(l10n.isEn ? 'Complete' : 'Hoàn thành'),
+                                  ),
+                                ],
                               ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text(l10n.isEn ? 'Continue Visit' : 'Tiếp tục tham quan'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text(l10n.isEn ? 'End Visit' : 'Kết thúc'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (confirm != true || !mounted) return;
-                          setState(() {
-                            _busy = true;
-                            _error = null;
-                          });
-                          try {
-                            final rewards = await BackendApi.request(
-                              'visits/${widget.visitId}/complete',
-                              method: 'POST',
-                              body: {},
                             );
-                            if (mounted) showExplorationRewards(context, rewards);
-                            if (VisitorSession.activeVisit?['id'] ==
-                                widget.visitId) {
-                              VisitorSession.clear();
+                            if (confirm != true || !mounted) return;
+                            setState(() {
+                              _busy = true;
+                              _error = null;
+                            });
+                            try {
+                              final rewards = await BackendApi.request(
+                                'visits/${widget.visitId}/complete',
+                                method: 'POST',
+                                body: {},
+                              );
+                              if (mounted) showExplorationRewards(context, rewards);
+                              if (VisitorSession.activeVisit?['id'] == widget.visitId) {
+                                VisitorSession.clear();
+                              }
+                              reload();
+                            } catch (e) {
+                              if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+                            } finally {
+                              if (mounted) setState(() => _busy = false);
                             }
-                            reload();
-                          } catch (e) {
-                            if (mounted) setState(() => _error = e.toString());
-                          } finally {
-                            if (mounted) setState(() => _busy = false);
-                          }
-                        },
-                ),
+                          },
+                  )
+                else
+                  SecondaryButton(
+                    label: _busy
+                        ? (l10n.isEn ? 'Canceling…' : 'Đang hủy hành trình…')
+                        : (l10n.isEn ? 'Cancel / Stop Tour Early' : 'Bận việc / Hủy hành trình đang đi'),
+                    icon: Icons.cancel_outlined,
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(l10n.isEn ? 'Stop tour early?' : 'Dừng / Hủy hành trình sớm?'),
+                                content: Text(
+                                  l10n.isEn
+                                      ? 'You have explored $visitedCount/$totalCount stops. If you cancel now:\n• Points from already scanned stops are kept.\n• You will not receive the +30 completion bonus.\n• This route stays in your Saved list to revisit later.'
+                                      : 'Bạn mới khám phá $visitedCount/$totalCount điểm dừng. Nếu bạn bận việc và dừng hành trình lúc này:\n• Điểm tại các trạm đã quét vẫn được giữ nguyên.\n• Không nhận được +30 điểm thưởng hoàn thành tour.\n• Lộ trình vẫn nằm trong mục "Đã lưu" để bạn đi lại vào dịp khác.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: Text(l10n.isEn ? 'Continue Tour' : 'Tiếp tục đi tour'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(
+                                      l10n.isEn ? 'Confirm Stop' : 'Xác nhận hủy tour',
+                                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm != true || !mounted) return;
+                            setState(() {
+                              _busy = true;
+                              _error = null;
+                            });
+                            try {
+                              await BackendApi.request(
+                                'visits/${widget.visitId}/abandon',
+                                method: 'POST',
+                                body: {},
+                              );
+                              if (VisitorSession.activeVisit?['id'] == widget.visitId) {
+                                VisitorSession.clear();
+                              }
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppColors.deepBurgundy,
+                                    content: Text(
+                                      l10n.isEn
+                                          ? 'Tour canceled. You can start another tour anytime.'
+                                          : 'Đã hủy hành trình tham quan.',
+                                    ),
+                                  ),
+                                );
+                                Navigator.of(context).pop(true);
+                              }
+                            } catch (e) {
+                              if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+                            } finally {
+                              if (mounted) setState(() => _busy = false);
+                            }
+                          },
+                  ),
               ],
               if (visit['status'] == 'Completed')
                 Padding(

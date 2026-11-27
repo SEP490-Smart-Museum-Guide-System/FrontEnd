@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { alertAppDialog } from '../common/appDialogs';
+import { alertAppDialog, confirmAppDialog } from '../common/appDialogs';
 import {
   Check,
   CheckSquare,
@@ -13,6 +13,7 @@ import {
   Sparkles,
   AlertCircle,
   ShieldCheck,
+  Trash2,
   Search
 } from 'lucide-react';
 import { useApp, resolveSubmitterName, formatCurationDate } from '../../context/AppContext';
@@ -56,6 +57,7 @@ export default function CurationCenter() {
     currentUser,
     approveCurationItem,
     rejectCurationItem,
+    deleteTour,
     pendingNotificationTarget,
     setPendingNotificationTarget
   } = useApp();
@@ -1080,9 +1082,26 @@ export default function CurationCenter() {
               background: 'var(--color-paper-card)',
               flexShrink: 0
             }}>
-              <button type="button" className="btn btn-secondary" onClick={closeItem}>
-                Đóng
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={closeItem}>
+                  Đóng
+                </button>
+                {selected.type === 'new_tour' && selected.tourId && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={async () => {
+                      if (await confirmAppDialog(`Với quyền Giám tuyển, bạn có chắc chắn muốn gỡ bỏ và xóa toàn bộ hành trình "${selected.title}" khỏi bảo tàng không?`, { title: 'Giám tuyển gỡ bỏ hành trình', destructive: true, confirmText: 'Gỡ bỏ hành trình' })) {
+                        const res = await deleteTour(selected.tourId);
+                        if (res?.success) closeItem();
+                      }
+                    }}
+                  >
+                    <Trash2 size={14} /> Gỡ bỏ hành trình
+                  </button>
+                )}
+              </div>
 
               {selected.status === 'pending_review' && (
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ActionGroup from '../common/ActionGroup';
 import { createPortal } from 'react-dom';
-import { alertAppDialog } from '../common/appDialogs';
+import { alertAppDialog, confirmAppDialog } from '../common/appDialogs';
 import { useApp, formatCurationDate } from '../../context/AppContext';
 import { allPages, backend } from '../../services/backend';
 import {
@@ -26,11 +26,12 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Trash2,
   Map as MapIcon
 } from 'lucide-react';
 
 export default function TourManager() {
-  const { tours, addTour, updateTour, publishTour, submitTourVersion, createTourVersionDraft, updateTourVersionDraft, exhibitions, artifacts, currentMuseum } = useApp();
+  const { tours, addTour, updateTour, publishTour, deleteTour, deleteTourVersionDraft, submitTourVersion, createTourVersionDraft, updateTourVersionDraft, exhibitions, artifacts, currentMuseum, currentRole } = useApp();
   const museumTours = tours.filter(item => item.museumId === currentMuseum?.id);
   const museumExhibitions = exhibitions.filter(item => item.museumId === currentMuseum?.id);
   const museumArtifacts = artifacts.filter(item => item.museumId === currentMuseum?.id);
@@ -524,6 +525,40 @@ export default function TourManager() {
                           Xuất bản hành trình
                         </button>
                       )}
+                      {draftVersion && (tour.versions || []).length > 1 && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-danger)' }}
+                          onClick={async () => {
+                            if (await confirmAppDialog(`Bạn có chắc muốn hủy bản nháp v${draftVersion.versionNo} của hành trình "${tour.title}"?`, { title: 'Hủy bản nháp', destructive: true, confirmText: 'Xóa bản nháp' })) {
+                              deleteTourVersionDraft(draftVersion.id);
+                            }
+                          }}
+                        >
+                          <Trash2 size={12} /> Hủy bản nháp (v{draftVersion.versionNo})
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-danger)' }}
+                        onClick={async () => {
+                          const isPublishedOrApproved = tour.status === 'published' || !!approvedVersion;
+                          if (isPublishedOrApproved && currentRole !== 'curator') {
+                            alertAppDialog(
+                              'Hành trình này đã được Giám tuyển phê duyệt công bố cho khách tham quan. Theo quy chế phân quyền, Nhân viên bảo tàng chỉ được xóa các hành trình nháp chưa công bố hoặc hủy bản nháp mới; việc gỡ bỏ hành trình đã xuất bản thuộc thẩm quyền của Giám tuyển (Curator).',
+                              { title: 'Cần quyền Giám tuyển để gỡ hành trình đã công bố' }
+                            );
+                            return;
+                          }
+                          if (await confirmAppDialog(`Bạn có chắc chắn muốn xóa toàn bộ hành trình "${tour.title}" không? Thao tác này không thể hoàn tác.`, { title: 'Xác nhận xóa hành trình', destructive: true, confirmText: 'Xóa hành trình' })) {
+                            deleteTour(tour.id);
+                          }
+                        }}
+                      >
+                        <Trash2 size={12} /> Xóa hành trình
+                      </button>
                     </ActionGroup>
                   </div>
                 </div>

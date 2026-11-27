@@ -802,7 +802,13 @@ class _PublishedToursScreenState extends State<PublishedToursScreen> {
                         onTap: () {
                           final tourId = item['tourId'] as int?;
                           if (tourId != null) {
-                            openPage(context, PublishedTourDetailScreen(tourId: tourId));
+                            openPage(
+                              context,
+                              PublishedTourDetailScreen(
+                                tourId: tourId,
+                                savedRoute: item,
+                              ),
+                            );
                           }
                         },
                         borderRadius: BorderRadius.circular(VisitorRadius.xl),
@@ -895,10 +901,12 @@ class PublishedTourDetailScreen extends StatefulWidget {
     required this.tourId,
     this.selectedTopicIds,
     this.availableMinutes,
+    this.savedRoute,
   });
   final int tourId;
   final List<int>? selectedTopicIds;
   final int? availableMinutes;
+  final Map<String, dynamic>? savedRoute;
   @override
   State<PublishedTourDetailScreen> createState() =>
       _PublishedTourDetailScreenState();
@@ -915,25 +923,41 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
     });
     final museumId = tour['museumId'] as int;
     try {
-      // Tự động lưu lộ trình vào Hành trình cá nhân đã lưu khi khách bấm Bắt đầu chuyến tham quan
-      try {
-        final versionRes = await BackendApi.request('tours/${widget.tourId}/public-version');
-        final versionId = versionRes['id'] as int?;
-        final minutes = widget.availableMinutes ??
-            (tour['estimatedMinutes'] is num ? (tour['estimatedMinutes'] as num).toInt() : 60);
-        if (versionId != null) {
-          await VisitorExperienceApi.saveRoute(
-            tourVersionId: versionId,
-            availableMinutes: minutes,
-            topicIds: widget.selectedTopicIds,
-          );
-        }
-      } catch (_) {}
+      final savedRouteId = widget.savedRoute?['id'] as int?;
+      final Map<String, dynamic> visit;
+      if (savedRouteId != null) {
+        // Nếu mở từ Hành trình cá nhân đã lưu (đang ghim phiên bản cũ như v1),
+        // bắt đầu chuyến tham quan theo đúng savedRouteId để giữ nguyên phiên bản v1 đã lưu!
+        final res = await BackendApi.request(
+          'visits',
+          method: 'POST',
+          body: {
+            'museumId': museumId,
+            'savedRouteId': savedRouteId,
+          },
+        );
+        visit = Map<String, dynamic>.from(res as Map);
+      } else {
+        // Tự động lưu lộ trình vào Hành trình cá nhân đã lưu khi khách bấm Bắt đầu chuyến tham quan mới
+        try {
+          final versionRes = await BackendApi.request('tours/${widget.tourId}/public-version');
+          final versionId = versionRes['id'] as int?;
+          final minutes = widget.availableMinutes ??
+              (tour['estimatedMinutes'] is num ? (tour['estimatedMinutes'] as num).toInt() : 60);
+          if (versionId != null) {
+            await VisitorExperienceApi.saveRoute(
+              tourVersionId: versionId,
+              availableMinutes: minutes,
+              topicIds: widget.selectedTopicIds,
+            );
+          }
+        } catch (_) {}
 
-      final visit = await VisitorExperienceApi.startVisit(
-        museumId,
-        tourId: widget.tourId,
-      );
+        visit = await VisitorExperienceApi.startVisit(
+          museumId,
+          tourId: widget.tourId,
+        );
+      }
       if (context.mounted) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -1021,18 +1045,38 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
     children: [
       if (_error != null) Notice(_error!),
       BackendPanel(
-        resourceKey: 'tour:${widget.tourId}',
+        resourceKey: 'tour:${widget.tourId}:${widget.savedRoute?['tourVersionId'] ?? 'latest'}',
         load: () => BackendApi.request('tours/${widget.tourId}'),
         builder: (data, reload) {
-          final tour = data as Map<String, dynamic>;
+          final rawTour = Map<String, dynamic>.from(data as Map);
+          final saved = widget.savedRoute;
+          final Map<String, dynamic> tour;
+          final List<Map<String, dynamic>> items;
+          if (saved != null) {
+            final savedArtIds = (saved['artifactIds'] as List?) ?? const [];
+            items = [
+              for (var i = 0; i < savedArtIds.length; i++)
+                <String, dynamic>{
+                  'artifactId': savedArtIds[i],
+                  'orderNo': i + 1,
+                },
+            ];
+            tour = {
+              ...rawTour,
+              if (saved['title'] != null) 'title': saved['title'],
+              if (saved['description'] != null) 'description': saved['description'],
+              if (saved['estimatedMinutes'] != null) 'estimatedMinutes': saved['estimatedMinutes'],
+              'items': items,
+            };
+          } else {
+            tour = rawTour;
+            items = (tour['items'] as List).cast<Map<String, dynamic>>().toList()
+              ..sort(
+                (a, b) => (a['orderNo'] as int).compareTo(b['orderNo'] as int),
+              );
+          }
           final museumName =
               AppServices.catalog.museumName(tour['museumId'].toString());
-          final items =
-              (tour['items'] as List).cast<Map<String, dynamic>>().toList()
-                ..sort(
-                  (a, b) =>
-                      (a['orderNo'] as int).compareTo(b['orderNo'] as int),
-                );
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -285,6 +285,8 @@ function DataProvider({ children, session, login, endSession }) {
   const addTour = t => mutate(() => backend(`tours?museumId=${requireId(t.museumId)}`, { method: 'POST', body: tourPayload(t) }), 'Đã tạo bản nháp hành trình.');
   const updateTour = t => mutate(() => backend(`tours/${requireId(t.id)}`, { method: 'PUT', body: { revision: t.revision, tour: tourPayload(t) } }), 'Đã lưu bản nháp hành trình.');
   const publishTour = t => mutate(() => backend(`tours/${requireId(t.id)}/publish`, { method: 'POST', body: { revision: t.revision } }), 'Đã xuất bản hành trình.');
+  const deleteTour = id => mutate(() => backend(`tours/${requireId(id)}`, { method: 'DELETE' }), 'Đã xóa hành trình tham quan.');
+  const deleteTourVersionDraft = versionId => mutate(() => backend(`tours/versions/${requireId(versionId)}`, { method: 'DELETE' }), 'Đã xóa bản nháp phiên bản hành trình.');
   const replyToReview = (id, text) => mutate(() => backend(`feedbacks/${id}/response`, { method: 'PUT', body: { content: text } }), 'Đã gửi phản hồi.');
   const moderateReview = (id, hidden) => mutate(() => backend(`feedbacks/${id}/moderation`, { method: 'PATCH', body: { moderationStatus: hidden ? 'Hidden' : 'Visible' } }), 'Đã cập nhật kiểm duyệt phản hồi.');
   const updateSystemCase = (id, status, note = '') => mutate(async () => {
@@ -307,6 +309,6 @@ function DataProvider({ children, session, login, endSession }) {
     isLoadingMuseums: !!loading.museums, isLoadingArtifacts: !!loading.artifacts, isLoadingCuration: !!loading.curationQueue,
     loadCities: reload, loadMuseums: reload, loadArtifacts: reload, loadCurationQueue: reload,
     createMuseum, updateMuseum, deleteMuseum, addArtifact, updateArtifact, deleteArtifact, downloadArtifactQr, regenerateArtifactQr, submitToCuration, approveCurationItem, rejectCurationItem,
-    submitTourVersion, createTourVersionDraft, updateTourVersionDraft, addTour, updateTour, publishTour, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast, dismissToast }}>{children}</AppContext.Provider>;
+    submitTourVersion, createTourVersionDraft, updateTourVersionDraft, addTour, updateTour, publishTour, deleteTour, deleteTourVersionDraft, replyToReview, moderateReview, updateSystemCase, addUser, toggleUserStatus, refundTransaction, toggleMuseumGoogleMapsVisibility, logAction, toasts, showToast, dismissToast }}>{children}</AppContext.Provider>;
 }
 export function useApp() { const context = useContext(AppContext); if (!context) throw new Error('useApp must be used within AppProvider'); return context; }
