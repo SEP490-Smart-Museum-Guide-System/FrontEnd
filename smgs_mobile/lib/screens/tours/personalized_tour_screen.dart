@@ -1593,7 +1593,8 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text.rich(
+            Expanded(
+              child: Text.rich(
               TextSpan(
                 text: l10n.isEn ? 'Interested Topics' : 'Chủ đề quan tâm',
                 style: AppTextStyles.cardTitle,
@@ -1604,6 +1605,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                   ),
                 ],
               ),
+            ),
             ),
             if (_selected.isNotEmpty)
               Container(
@@ -2399,6 +2401,17 @@ class _PersonalizedTourDetailScreenState
         final saved = await PersonalizedTourApi.save(_plan['id'] as String);
         if (!mounted) return;
         setState(() => _plan = saved);
+        if (!start) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppPreferences.instance.language == 'en'
+                    ? 'Saved to your personal journeys'
+                    : 'Đã lưu vào hành trình của bạn',
+              ),
+            ),
+          );
+        }
       }
       if (start) {
         Map<String, dynamic>? visit;
@@ -2601,7 +2614,7 @@ class _PersonalizedTourDetailScreenState
                           Text(
                             _plan['isSaved'] == true
                                 ? (l10n.isEn ? 'Saved' : 'Đã lưu')
-                                : (l10n.isEn ? 'Save' : 'Lưu'),
+                                : (l10n.isEn ? 'Save for later' : 'Lưu để đi sau'),
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                         ],

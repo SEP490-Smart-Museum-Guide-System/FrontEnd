@@ -318,12 +318,15 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
                             color: AppColors.deepBurgundy,
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            l10n.isEn ? 'Read full artifact story' : 'Xem câu chuyện & thuyết minh',
-                            style: const TextStyle(
-                              color: AppColors.deepBurgundy,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+                          Flexible(
+                            child: Text(
+                              l10n.isEn ? 'Read full artifact story' : 'Xem câu chuyện & thuyết minh',
+                              style: const TextStyle(
+                                color: AppColors.deepBurgundy,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 3),
