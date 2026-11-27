@@ -607,8 +607,77 @@ export default function TourManager() {
               >
                 {/* CỘT TRÁI: FORM NHẬP LIỆU */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', paddingRight: '6px' }}>
+                  {/* Mẫu kịch bản cốt truyện & Dịp lễ văn hóa */}
+                  <div style={{ background: '#FFFDF8', border: '1px solid var(--color-gold-300)', borderRadius: '10px', padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '0.78rem', color: 'var(--color-burgundy-900)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calendar size={14} color="var(--color-gold-600)" />
+                        Gợi ý kịch bản theo Dịp lễ & Câu chuyện văn hóa:
+                      </strong>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-charcoal-500)' }}>Bấm để điền nhanh</span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {[
+                        {
+                          label: '🏮 Giỗ Tổ Hùng Vương',
+                          title: 'Chuyên đề Giỗ Tổ Hùng Vương: Tiếng vọng Đông Sơn',
+                          duration: '45 phút',
+                          topicHint: 'Đông Sơn',
+                          desc: 'Hành trình ngược dòng 2.500 năm về buổi bình minh dựng nước Văn Lang – Âu Lạc nhân dịp Giỗ Tổ Hùng Vương (10/3 ÂL), kết nối mạch chuyện từ công cụ, nhạc khí đến đỉnh cao nghệ thuật đúc Trống đồng Ngọc Lũ.'
+                        },
+                        {
+                          label: '🏛️ Ngày Di sản VN 23/11',
+                          title: 'Ký ức Hoàng cung Lý – Trần (Đặc san Ngày Di sản 23/11)',
+                          duration: '30 phút',
+                          topicHint: 'Gốm',
+                          desc: 'Chuyên đề kỷ niệm Ngày Di sản Văn hóa Việt Nam (23/11): Dạo bước qua không gian Hoàng thành Thăng Long, khám phá kiến trúc Đầu rồng đất nung thời Lý và nghệ thuật gốm hoa nâu thời Trần.'
+                        },
+                        {
+                          label: '🌸 Tết Nguyên Đán',
+                          title: 'Sắc Xuân Cổ Truyền: Lễ nhạc & Bảo vật Quốc gia',
+                          duration: '60 phút',
+                          topicHint: 'Bảo vật',
+                          desc: 'Hành trình du xuân đầu năm khám phá các nhạc khí lễ hội cầu mùa, chuông đồng và ấn báu cung đình, tái hiện không khí lễ hội mùa xuân của người Việt qua các thời kỳ lịch sử.'
+                        },
+                        {
+                          label: '🌕 Tết Trung Thu',
+                          title: 'Đêm Hội Trăng Rằm: Ánh sáng Cổ vật & Đèn đồng',
+                          duration: '45 phút',
+                          topicHint: 'Đông Sơn',
+                          desc: 'Chuyên đề Tết Trung Thu dành cho gia đình và học sinh: Tìm hiểu nghệ thuật tạo hình đèn đồng cổ, tượng người thổi khèn và đời sống văn hóa lễ hội đêm rằm của cư dân cổ đại.'
+                        }
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '4px 10px', fontSize: '0.74rem', borderRadius: '14px', background: '#FFF' }}
+                          onClick={() => {
+                            const matchedTopics = topicsList
+                              .filter(t => t.name.toLowerCase().includes(preset.topicHint.toLowerCase()))
+                              .map(t => t.name);
+                            const matchedArtifacts = museumArtifacts
+                              .filter(a => getArtifactTopicNames(a).some(tn => tn.toLowerCase().includes(preset.topicHint.toLowerCase())))
+                              .slice(0, 3)
+                              .map(a => a.id);
+                            setTourForm(prev => ({
+                              ...prev,
+                              title: preset.title,
+                              duration: preset.duration,
+                              description: preset.desc,
+                              selectedTopics: matchedTopics.length > 0 ? matchedTopics : prev.selectedTopics,
+                              selectedArtifacts: prev.selectedArtifacts.length > 0 ? prev.selectedArtifacts : matchedArtifacts
+                            }));
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Tên hành trình *</label>
+                    <label className="form-label">Tên hành trình / Chuyên đề văn hóa *</label>
                     <input
                       type="text"
                       className="form-input"
@@ -772,14 +841,17 @@ export default function TourManager() {
 
                   {/* Description */}
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Mô tả lộ trình</label>
+                    <label className="form-label">Cốt truyện & Mô tả lộ trình văn hóa</label>
                     <textarea
                       className="form-textarea"
                       rows={3}
                       value={tourForm.description}
                       onChange={(e) => setTourForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Mô tả ý nghĩa và điểm nhấn của tour này..."
+                      placeholder="Nhập mạch câu chuyện xuyên suốt các trạm dừng hoặc ý nghĩa gắn với dịp lễ văn hóa..."
                     />
+                    <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '8px', background: '#F0FDF4', border: '1px solid #BBF7D0', fontSize: '0.74rem', color: '#166534', lineHeight: 1.45 }}>
+                      <strong>🎁 Cơ chế khuyến khích khách đi theo Tour (Gamification):</strong> Khách tham gia hành trình khi quét QR từng trạm sẽ được <strong>tích điểm trạm + mở khóa Quiz hiện vật</strong>, và nhận <strong>+30 điểm thưởng lớn + Huy hiệu</strong> khi hoàn thành đủ lộ trình để đổi Voucher hoặc Quà lưu niệm tại quầy.
+                    </div>
                   </div>
                 </div>
 

@@ -72,6 +72,9 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
               final tour = await BackendApi.request('tours/$tourId');
               if (tour is Map && tour['title'] != null) {
                 visitMap['_resolvedTourTitle'] = tour['title'].toString();
+                if (tour['description'] != null) {
+                  visitMap['_resolvedTourDesc'] = tour['description'].toString();
+                }
               }
             } catch (_) {}
           }
@@ -85,6 +88,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
           final active = visit['status'] == 'InProgress';
           final museumName = AppServices.catalog.museumName(visit['museumId'].toString());
           final tourTitle = (visit['_resolvedTourTitle'] ?? visit['tourTitle'] ?? '').toString();
+          final tourDesc = (visit['_resolvedTourDesc'] ?? '').toString();
           final visitedCount = stops.where((s) => s['lastVisitedAt'] != null).length;
           final totalCount = stops.length;
           final progressRatio = totalCount > 0 ? (visitedCount / totalCount).clamp(0.0, 1.0) : 0.0;
@@ -185,6 +189,24 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                           ),
                         ],
                       ),
+                      if (tourDesc.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: VisitorColors.surface2,
+                            borderRadius: BorderRadius.circular(VisitorRadius.md),
+                          ),
+                          child: Text(
+                            tourDesc,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              color: AppColors.secondaryText,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                     const SizedBox(height: 4),
                     if (visit['personalizedTourId'] != null)
@@ -275,7 +297,69 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
+              // Thẻ Đặc quyền Hành trình & Đổi quà lưu niệm tại quầy
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.card_giftcard_rounded, size: 18, color: Color(0xFFB45309)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.isEn
+                                ? 'Tour Rewards & Souvenir Redemption'
+                                : 'Đặc quyền Hành trình & Đổi quà lưu niệm',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.isEn
+                          ? 'Scan each tour stop QR to earn points & unlock Quizzes. Complete 100% of stops to earn +30 bonus points & a Heritage Badge for vouchers or counter souvenirs.'
+                          : 'Quét QR từng trạm trong tour để tích điểm & mở khóa Quiz. Hoàn thành đủ các trạm nhận ngay +30 điểm thưởng & Huy hiệu để đổi Voucher hoặc Quà lưu niệm tại quầy.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: Color(0xFF78350F),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.deepBurgundy,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () => showCounterSouvenirPass(context),
+                        icon: const Icon(Icons.redeem_rounded, size: 15),
+                        label: Text(
+                          l10n.isEn ? 'View Counter Souvenir Pass' : 'Xem phiếu đổi quà tại quầy',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
               SectionHeading(l10n.isEn ? 'Itinerary Stops' : 'Danh sách điểm dừng'),
               const SizedBox(height: 8),
 

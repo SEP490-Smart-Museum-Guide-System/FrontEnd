@@ -85,7 +85,18 @@ class DiscoveryApiService {
         .toList();
   }
 
+  static Future<List<MuseumCategory>> fetchMuseumCategories() async {
+    final response = await http
+        .get(Uri.parse('${ApiConfig.baseUrl}/museum-categories'))
+        .timeout(const Duration(seconds: 10));
+    return (decodeResponse(response)['data'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(museumCategoryFromJson)
+        .toList();
+  }
+
   static Future<MuseumDiscoveryPage> fetchMuseumPage({
+    int? categoryId,
     String? keyword,
     String? cityCode,
     double? latitude,
@@ -105,6 +116,7 @@ class DiscoveryApiService {
           'latitude': '$latitude',
           'longitude': '$longitude',
         },
+        if (categoryId != null) 'categoryId': categoryId.toString(),
         'sortBy': ?sortBy,
       },
     );

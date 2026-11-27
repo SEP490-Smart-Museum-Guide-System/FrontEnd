@@ -11,6 +11,7 @@ import '../../widgets/museum_ui.dart';
 import '../museum/visit_progress_screen.dart';
 import '../artifact/artifact_detail_screen.dart';
 import 'published_tours_screen.dart';
+import '../../widgets/earned_badges.dart';
 
 String tourMinutes(num value) =>
     value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1);
@@ -577,10 +578,62 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                 : 'Chưa có bảo tàng. Hãy tải lại danh mục hoặc liên hệ nhân viên.',
           ),
         const SizedBox(height: 16),
-        Notice(
-          l10n.isEn
-              ? 'Personalization is an optional add-on. Personal journey does not replace admission tickets or purchased tours.'
-              : 'Cá nhân hóa là lựa chọn thêm. Hành trình cá nhân không thay thế vé vào cửa hoặc tour bạn đã mua.',
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: VisitorColors.surface1,
+            borderRadius: BorderRadius.circular(VisitorRadius.xl),
+            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.45)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.card_giftcard_rounded, size: 18, color: AppColors.deepBurgundy),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.isEn
+                          ? 'Why Join a Curated Cultural Tour?'
+                          : 'Đặc quyền khi đi theo Hành trình Văn hóa',
+                      style: AppTextStyles.cardTitle.copyWith(
+                        fontSize: 14,
+                        color: AppColors.deepBurgundy,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.isEn
+                    ? '• Follow thematic cultural stories & holiday routes.\n• Scan stops to earn points, unlock artifact Quizzes, and receive +30 bonus points & Badges upon tour completion to redeem vouchers or museum souvenirs.'
+                    : '• Khám phá mạch câu chuyện lịch sử & chuyên đề dịp lễ văn hóa.\n• Quét QR từng trạm để tích điểm, mở khóa Quiz và nhận +30 điểm thưởng & Huy hiệu khi hoàn thành Tour để đổi Voucher hoặc Quà lưu niệm tại quầy.',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.darkBrown,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.deepBurgundy,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => showCounterSouvenirPass(context),
+                  icon: const Icon(Icons.redeem_rounded, size: 15),
+                  label: Text(
+                    l10n.isEn ? 'Counter Souvenir Pass' : 'Xem phiếu đổi quà tại quầy',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         // ===== TẦNG 1: TOUR HIỆN CÓ (CAROUSEL VUỐT NGANG + XEM TẤT CẢ) =====
