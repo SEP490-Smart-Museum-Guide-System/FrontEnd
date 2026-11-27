@@ -18,10 +18,9 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
-  bool _scanPressed = false;
   final _pages = PageController();
   late final List<Widget> _screens = [
-    HomeScreen(onExplore: () => _select(1), onScan: () => _select(2)),
+    HomeScreen(onExplore: () => _select(1)),
     const ExploreScreen(),
     const ScanScreen(),
     const ToursScreen(),
@@ -37,6 +36,7 @@ class _MainNavigationState extends State<MainNavigation> {
       (label: l10n.tabProfile, icon: Icons.person_outline),
     ];
   }
+
   @override
   void dispose() {
     _pages.dispose();
@@ -62,147 +62,80 @@ class _MainNavigationState extends State<MainNavigation> {
     final items = _items(context);
     return NotificationBannerListener(
       child: Scaffold(
-    body: PageView(
-      controller: _pages,
-      physics: const NeverScrollableScrollPhysics(),
-      onPageChanged: (index) {
-        if (index != _selectedIndex) setState(() => _selectedIndex = index);
-      },
-      children: List.generate(
-        _screens.length,
-        (index) =>
-            HeroMode(enabled: _selectedIndex == index, child: _screens[index]),
-      ),
-    ),
-    bottomNavigationBar: ColoredBox(
-      color: _selectedIndex == 0
-          ? VisitorColors.background
-          : Theme.of(context).scaffoldBackgroundColor,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            top: 19,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 4)],
-              ),
+        extendBody: _selectedIndex == 0,
+        body: PageView(
+          controller: _pages,
+          physics: const NeverScrollableScrollPhysics(),
+          onPageChanged: (index) {
+            if (index != _selectedIndex) setState(() => _selectedIndex = index);
+          },
+          children: List.generate(
+            _screens.length,
+            (index) => HeroMode(
+              enabled: _selectedIndex == index,
+              child: _screens[index],
             ),
           ),
-          SafeArea(
+        ),
+        bottomNavigationBar: Material(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          clipBehavior: Clip.antiAlias,
+          child: SafeArea(
             top: false,
-            child: Material(
+            child: Row(
               key: const ValueKey('visitor-bottom-nav'),
-              color: Colors.transparent,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: List.generate(items.length, (i) {
-                  final item = items[i];
-                  final active = _selectedIndex == i;
-                  final scan = i == 2;
-                  return Expanded(
-                    child: Semantics(
-                      key: ValueKey('visitor-tab:$i'),
-                      selected: active,
-                      button: true,
-                      label: item.label,
-                      child: ExcludeSemantics(
-                        child: InkWell(
-                          onTap: () => _select(i),
-                          onHighlightChanged: scan
-                              ? (pressed) =>
-                                    setState(() => _scanPressed = pressed)
-                              : null,
-                          splashColor: VisitorColors.burgundy.withValues(
-                            alpha: .06,
-                          ),
-                          highlightColor: VisitorColors.burgundy.withValues(
-                            alpha: .04,
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              top: scan ? 3 : 36,
-                              bottom: 4,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  height: scan ? 54 : 24,
-                                  child: Center(
-                                    child: scan
-                                        ? AnimatedScale(
-                                            key: const ValueKey(
-                                              'visitor-scan-press',
-                                            ),
-                                            scale: _scanPressed ? .96 : 1,
-                                            duration:
-                                                reduceHeritageMotion(context)
-                                                ? Duration.zero
-                                                : HeritageMotion.fast,
-                                            curve: HeritageMotion.curve,
-                                            child: Container(
-                                              width: 54,
-                                              height: 54,
-                                              decoration: BoxDecoration(
-                                                color: VisitorColors.burgundy,
-                                                borderRadius:
-                                                    BorderRadius.circular(18),
-                                                boxShadow: const [
-                                                  BoxShadow(
-                                                    color: Color(0x16000000),
-                                                    blurRadius: 6,
-                                                    offset: Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: const Icon(
-                                                Icons.qr_code_scanner,
-                                                size: 24,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          )
-                                        : Icon(
-                                            item.icon,
-                                            size: 22,
-                                            color: active
-                                                ? VisitorColors.text
-                                                : VisitorColors.secondaryText,
-                                          ),
-                                  ),
+              children: List.generate(items.length, (index) {
+                final item = items[index];
+                final active = _selectedIndex == index;
+                return Expanded(
+                  child: Semantics(
+                    key: ValueKey('visitor-tab:$index'),
+                    selected: active,
+                    button: true,
+                    label: item.label,
+                    child: ExcludeSemantics(
+                      child: InkWell(
+                        onTap: () => _select(index),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(2, 10, 2, 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                item.icon,
+                                size: 22,
+                                color: VisitorColors.burgundy,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 11,
+                                  letterSpacing: 0,
+                                  fontWeight: active
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                  color: active
+                                      ? VisitorColors.text
+                                      : VisitorColors.secondaryText,
                                 ),
-                                SizedBox(height: scan ? 10 : 2),
-                                Text(
-                                  item.label,
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.caption.copyWith(
-                                    fontSize: 12,
-                                    letterSpacing: 0,
-                                    fontWeight: active
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    color: active
-                                        ? VisitorColors.text
-                                        : VisitorColors.secondaryText,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  );
-                }),
-              ),
+                  ),
+                );
+              }),
             ),
           ),
-        ],
+        ),
       ),
-    ),
-    ),
     );
   }
 }

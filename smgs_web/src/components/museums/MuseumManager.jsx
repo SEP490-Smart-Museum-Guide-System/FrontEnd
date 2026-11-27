@@ -4,6 +4,7 @@ import MediaUpload from '../common/MediaUpload';
 import { mediaApi } from '../../services/mediaApi';
 import React, { useState, useEffect, useRef } from 'react';
 import MuseumCoverPicker from './MuseumCoverPicker';
+import VisitorHomeEditor from './VisitorHomeEditor';
 import MuseumCityPicker from './MuseumCityPicker';
 import OpeningHoursPicker from './OpeningHoursPicker';
 import { createPortal } from 'react-dom';
@@ -48,6 +49,7 @@ export default function MuseumManager() {
   } = useApp();
 
   const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || null);
+  const [isEditingVisitorHome, setIsEditingVisitorHome] = useState(false);
   const [isEditingMuseum, setIsEditingMuseum] = useState(false);
   const [isTranslatingMuseum, setIsTranslatingMuseum] = useState(false);
   const [isAddingMuseum, setIsAddingMuseum] = useState(false);
@@ -287,6 +289,11 @@ export default function MuseumManager() {
             </button>
           )}
 
+          {currentRole === 'administrator' && (
+            <button type="button" className="btn btn-secondary" onClick={() => setIsEditingVisitorHome(true)}>
+              <Eye size={16} /> Trang chủ khách
+            </button>
+          )}
           <button
             type="button"
             disabled={!activeMuseum}
@@ -298,6 +305,11 @@ export default function MuseumManager() {
           </button>
         </div>
       </div>
+
+      {isEditingVisitorHome && currentRole === 'administrator' && (
+        <VisitorHomeEditor fallbackMuseum={museums.find(museum => museum.status !== 'inactive')}
+          onClose={() => setIsEditingVisitorHome(false)} showToast={showToast} />
+      )}
 
       {/* Museum Selector Tab Strip */}
       {currentRole !== 'museumStaff' && (
