@@ -304,12 +304,16 @@ class NarrationPlayerState extends State<NarrationPlayer> {
           );
           if (!_current(request)) return;
           if (playbackUrl == null) {
-            _audio = await TtsApiService.fetchPublishedAudio(widget.audioUrl!);
+            final audio = await TtsApiService.fetchPublishedAudio(
+              widget.audioUrl!,
+            );
             if (!_current(request)) return;
+            _audio = audio;
           }
-        } else {
-          _audio ??= await TtsApiService.synthesizeSpeech(widget.text);
+        } else if (_audio == null) {
+          final audio = await TtsApiService.synthesizeSpeech(widget.text);
           if (!_current(request)) return;
+          _audio = audio;
         }
 
         // Don't create a native player until synthesis/download has succeeded.
@@ -405,7 +409,10 @@ class NarrationPlayerState extends State<NarrationPlayer> {
       unawaited(subscription.cancel());
     }
     _subscriptions.clear();
-    if (player != null) unawaited(player.dispose().catchError((Object _) {}));
+    if (player != null) {
+      player.positionUpdater = null;
+      unawaited(player.dispose().catchError((Object _) {}));
+    }
   }
 
   @override

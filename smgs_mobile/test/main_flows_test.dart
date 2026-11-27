@@ -46,7 +46,7 @@ void main() {
       await tester.enterText(field('Email'), 'khach@smgs.vn');
       await tester.enterText(field('Mật khẩu'), 'smgs123');
       await tapText(tester, 'Đăng nhập');
-      expect(find.text('Mỗi hiện vật,\nmột câu chuyện'), findsOneWidget);
+      expect(find.text('Khám phá thêm'), findsOneWidget);
       expect(AppServices.auth.user!.name, 'Minh An');
       await tapText(tester, 'Cá nhân');
       expect(find.byType(ProfileScreen), findsOneWidget);
@@ -75,7 +75,7 @@ void main() {
       await tester.enterText(field('Nhập lại mật khẩu'), 'demo123');
       await tapText(tester, 'Đăng ký tài khoản');
       expect(AppServices.auth.user!.name, 'Ngọc An');
-      expect(find.text('Mỗi hiện vật,\nmột câu chuyện'), findsOneWidget);
+      expect(find.text('Khám phá thêm'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -96,7 +96,7 @@ void main() {
     );
     await tester.enterText(field('Email'), 'khach@smgs.vn');
     await tapText(tester, 'Đăng nhập');
-    expect(find.text('Mỗi hiện vật,\nmột câu chuyện'), findsOneWidget);
+    expect(find.text('Khám phá thêm'), findsOneWidget);
   });
   apiTestWidgets(
     'QR and recognition handle match, no match and museum context',
