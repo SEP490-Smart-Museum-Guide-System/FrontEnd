@@ -1,3 +1,5 @@
+import MuseumCategories, { MuseumCategoryPicker } from './MuseumCategories';
+import './museumCategories.css';
 import ActionGroup from '../common/ActionGroup';
 import { backend } from '../../services/backend';
 import MediaUpload from '../common/MediaUpload';
@@ -47,6 +49,17 @@ export default function MuseumManager() {
     deleteMuseum,
     reload
   } = useApp();
+
+  const [categories, setCategories] = useState([]);
+  const [showCategories, setShowCategories] = useState(false);
+  const loadCategories = () => backend('museum-categories').then(setCategories)
+    .catch(error => showToast(error.message, 'warning'));
+  useEffect(() => {
+    const controller = new AbortController();
+    backend('museum-categories', { signal: controller.signal }).then(setCategories)
+      .catch(error => { if (!controller.signal.aborted) showToast(error.message, 'warning'); });
+    return () => controller.abort();
+  }, []);
 
   const [selectedMuseumId, setSelectedMuseumId] = useState(museums[0]?.id || null);
   const [isEditingVisitorHome, setIsEditingVisitorHome] = useState(false);
@@ -113,6 +126,7 @@ export default function MuseumManager() {
     setEditCoverFile(null);
     setMuseumForm({
       name: activeMuseum?.name || '',
+      categoryIds: (activeMuseum?.categories ?? []).map(category => category.id),
       cityCode: activeMuseum?.cityCode || '',
       address: activeMuseum?.address || '',
       latitude: activeMuseum?.latitude ?? '',
@@ -140,6 +154,7 @@ export default function MuseumManager() {
   const saveMuseumInfo = async (event) => {
     event.preventDefault();
     if (submitLock.current) return;
+    if (activeMuseum?.categories?.length && !museumForm.categoryIds?.length) { showToast('Hãy chọn ít nhất một danh mục.', 'warning'); return; }
     if (!/^(?!00)\d{2}$/.test(museumForm.cityCode || '')) { showToast('Hãy chọn tỉnh / thành phố hợp lệ.', 'warning'); return; }
     if (museumForm.latitude !== '' && museumForm.latitude !== null && museumForm.latitude !== undefined) {
       const lat = Number(museumForm.latitude);
@@ -165,6 +180,7 @@ export default function MuseumManager() {
   const handleCreateMuseum = async (e) => {
     e.preventDefault();
     if (submitLock.current) return;
+    if (!newMuseumData.categoryIds?.length) { showToast('Hãy chọn ít nhất một danh mục.', 'warning'); return; }
     if (!/^(?!00)\d{2}$/.test(newMuseumData.cityCode || '')) { showToast('Hãy chọn tỉnh / thành phố hợp lệ.', 'warning'); return; }
     if (!newMuseumData.name.trim()) {
       showToast('Vui lòng nhập tên bảo tàng.', 'warning');
@@ -182,6 +198,7 @@ export default function MuseumManager() {
     setIsSubmitting(true);
     try {
       const res = await createMuseum({
+        categoryIds: newMuseumData.categoryIds,
         name: newMuseumData.name.trim(),
         cityCode: newMuseumData.cityCode,
         address: newMuseumData.address.trim(),
@@ -279,6 +296,9 @@ export default function MuseumManager() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {currentRole === 'administrator' && <button type="button" className="btn btn-secondary"
+            onClick={() => setShowCategories(value => !value)}>Danh mục bảo tàng</button>}
+
           {currentRole === 'administrator' && (
             <button
               type="button"
@@ -310,6 +330,9 @@ export default function MuseumManager() {
         <VisitorHomeEditor fallbackMuseum={museums.find(museum => museum.status !== 'inactive')}
           onClose={() => setIsEditingVisitorHome(false)} showToast={showToast} />
       )}
+
+      {showCategories && currentRole === 'administrator' &&
+        <MuseumCategories onClose={() => setShowCategories(false)} onChanged={() => { loadCategories(); reload(); }} />}
 
       {/* Museum Selector Tab Strip */}
       {currentRole !== 'museumStaff' && (
@@ -526,6 +549,8 @@ export default function MuseumManager() {
                   />
                 </label>
 
+                <MuseumCategoryPicker categories={categories} selected={museumForm.categoryIds} disabled={isSubmitting}
+                  onChange={categoryIds => setMuseumForm(prev => ({ ...prev, categoryIds }))} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                   <MuseumCityPicker value={museumForm.cityCode || ''} disabled={isSubmitting}
                     onChange={cityCode => setMuseumForm(prev => ({ ...prev, cityCode }))} />
@@ -641,6 +666,8 @@ export default function MuseumManager() {
                   />
                 </label>
 
+                <MuseumCategoryPicker categories={categories} selected={newMuseumData.categoryIds} disabled={isSubmitting}
+                  onChange={categoryIds => setNewMuseumData(prev => ({ ...prev, categoryIds }))} />
                 <div className="admin-form-pair admin-museum-sections">
                   <OpeningHoursPicker compact value={newMuseumData.openingHours || ''} disabled={isSubmitting}
                     onChange={openingHours => setNewMuseumData(prev => ({ ...prev, openingHours }))} />

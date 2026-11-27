@@ -1,4 +1,13 @@
 import '../core/network/api_config.dart';
+
+typedef MuseumCategory = ({int id, String code, String name});
+
+MuseumCategory museumCategoryFromJson(Map<String, dynamic> json) => (
+  id: json['id'] as int,
+  code: json['code'] as String,
+  name: json['name'] as String,
+);
+
 class Museum {
   const Museum({
     required this.id,
@@ -12,6 +21,7 @@ class Museum {
     required this.googleMapsVisible,
     required this.latitude,
     required this.longitude,
+    this.categories = const [],
     this.cityCode = '',
     this.distanceKm,
     this.languageCode,
@@ -29,6 +39,7 @@ class Museum {
   final double? latitude;
   final double? longitude;
   final String cityCode;
+  final List<MuseumCategory> categories;
   final double? distanceKm;
   final String? languageCode;
 
@@ -61,6 +72,10 @@ class Museum {
       googleMapsVisible: json['isActive'] as bool? ?? true,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      categories: (json['categories'] as List? ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(museumCategoryFromJson)
+          .toList(),
       cityCode: json['cityCode'] as String? ?? '',
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       languageCode: json['languageCode'] as String?,
@@ -95,6 +110,7 @@ class Museum {
       googleMapsVisible: googleMapsVisible ?? this.googleMapsVisible,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      categories: categories,
       cityCode: cityCode ?? this.cityCode,
       distanceKm: distanceKm ?? this.distanceKm,
       languageCode: languageCode ?? this.languageCode,

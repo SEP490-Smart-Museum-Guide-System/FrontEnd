@@ -1,0 +1,14 @@
+.museum-category-manager { padding: 20px; margin-bottom: 24px; }
+.museum-category-manager header, .museum-category-actions, .museum-category-manager li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.museum-category-actions { margin-block: 12px; }
+.museum-category-manager form { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--color-paper-border); border-radius: 10px; }
+.museum-category-manager label:not(:has(input[type=checkbox])) { display: grid; gap: 4px; }
+.museum-category-manager input:not([type=checkbox]), .museum-category-manager textarea, .museum-category-picker > input { padding: 8px 10px; border: 1px solid var(--color-paper-border); border-radius: 8px; }
+.museum-category-manager li { padding: 10px 0; border-top: 1px solid var(--color-paper-border); }
+.museum-category-manager small { display: block; color: var(--color-charcoal-500); }
+.museum-category-picker { min-width: 0; padding: 10px 0; border: 0; }
+.museum-category-picker legend { font-weight: 600; }
+.category-chips, .category-options { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 8px; }
+.category-chips button { padding: 4px 9px; border-radius: 16px; background-color: var(--color-paper-accent); }
+.category-options { overflow: auto; max-height: 126px; }
+.category-options label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }

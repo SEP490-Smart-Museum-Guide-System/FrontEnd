@@ -5,7 +5,7 @@ import '../widgets/museum_ui.dart';
 import '../widgets/in_app_notification_banner.dart';
 
 import '../screens/home/home_screen.dart';
-import '../screens/explore/explore_screen.dart';
+import '../screens/explore/museum_explore_screen.dart';
 import '../screens/scan/scan_screen.dart';
 import '../screens/tours/tours_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -21,7 +21,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final _pages = PageController();
   late final List<Widget> _screens = [
     HomeScreen(onExplore: () => _select(1)),
-    const ExploreScreen(),
+    const MuseumExploreScreen(),
     const ScanScreen(),
     const ToursScreen(),
     const ProfileScreen(),

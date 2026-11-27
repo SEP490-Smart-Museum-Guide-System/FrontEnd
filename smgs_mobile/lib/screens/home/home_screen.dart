@@ -252,7 +252,7 @@ class _VisitorHomeCarouselState extends State<VisitorHomeCarousel> {
         ),
         if (slides.length > 1)
           Positioned(
-            left: insets.left + 14,
+            left: insets.left + 23,
             bottom: insets.bottom + 4,
             child: Row(
               children: [
@@ -266,7 +266,7 @@ class _VisitorHomeCarouselState extends State<VisitorHomeCarousel> {
                       onPressed: () => _pages.jumpToPage(page),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints.tightFor(
-                        width: 26,
+                        width: 22,
                         height: 44,
                       ),
                       icon: Container(

@@ -16,7 +16,13 @@ import '../../widgets/route_preview_sheet.dart';
 import '../museum/museum_detail_screen.dart';
 
 class MuseumDiscoveryMapScreen extends StatefulWidget {
-  const MuseumDiscoveryMapScreen({super.key});
+  const MuseumDiscoveryMapScreen({
+    super.key,
+    this.categoryId,
+    this.keyword = '',
+  });
+  final int? categoryId;
+  final String keyword;
   @override
   State<MuseumDiscoveryMapScreen> createState() =>
       _MuseumDiscoveryMapScreenState();
@@ -100,7 +106,11 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
   Future<void> load() async {
     final current = ++generation;
     final code = province;
-    final includeExternal = !supportedOnly && code != null;
+    final includeExternal =
+        !supportedOnly &&
+        code != null &&
+        widget.categoryId == null &&
+        widget.keyword.isEmpty;
     setState(() {
       loading = true;
       error = null;
@@ -116,6 +126,8 @@ class _MuseumDiscoveryMapScreenState extends State<MuseumDiscoveryMapScreen> {
       while (true) {
         final data = await DiscoveryApiService.fetchMuseumPage(
           cityCode: code,
+          categoryId: widget.categoryId,
+          keyword: widget.keyword,
           page: page,
         );
         if (!mounted || generation != current) return;

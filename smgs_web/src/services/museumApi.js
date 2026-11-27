@@ -69,6 +69,7 @@ function museumFormData(data, file) {
   for (const [name, value] of Object.entries(values)) {
     if (value !== '' && value != null) form.append(name, String(value));
   }
+  for (const id of data.categoryIds ?? []) form.append('categoryIds', String(id));
   if (file) form.append('file', file);
   return form;
 }

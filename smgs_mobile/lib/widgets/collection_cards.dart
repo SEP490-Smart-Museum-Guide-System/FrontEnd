@@ -9,9 +9,15 @@ import '../screens/artifact/artifact_detail_screen.dart';
 import 'museum_ui.dart';
 
 class MuseumCard extends StatelessWidget {
-  const MuseumCard({super.key, required this.museum, this.featured = false});
+  const MuseumCard({
+    super.key,
+    required this.museum,
+    this.featured = false,
+    this.compact = false,
+  });
   final Museum museum;
   final bool featured;
+  final bool compact;
   String get _heroTag =>
       'museum-photo:${featured ? 'home' : 'collection'}:${museum.id}';
 
@@ -73,14 +79,22 @@ class MuseumCard extends StatelessWidget {
                               imageUrl: museum.imageUrl,
                               height: 300,
                             ),
-                    child: ParallaxPhoto(
-                      height: featured ? 238 : 200,
-                      child: MuseumPhoto(
-                        museumId: museum.id,
-                        imageUrl: museum.imageUrl,
-                        height: featured ? 238 : 200,
-                      ),
-                    ),
+                    child: compact
+                        ? AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: MuseumPhoto(
+                              museumId: museum.id,
+                              imageUrl: museum.imageUrl,
+                            ),
+                          )
+                        : ParallaxPhoto(
+                            height: featured ? 238 : 200,
+                            child: MuseumPhoto(
+                              museumId: museum.id,
+                              imageUrl: museum.imageUrl,
+                              height: featured ? 238 : 200,
+                            ),
+                          ),
                   ),
                 ),
                 Positioned(
@@ -121,7 +135,9 @@ class MuseumCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: VisitorColors.surface2,
-                              borderRadius: BorderRadius.circular(VisitorRadius.xs),
+                              borderRadius: BorderRadius.circular(
+                                VisitorRadius.xs,
+                              ),
                             ),
                             child: Text(
                               museum.formattedDistance,
@@ -156,20 +172,22 @@ class MuseumCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 1,
-                        color: AppColors.mutedGold,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Eyebrow('${museum.category} · Di sản Việt'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
+                  if (!compact) ...[
+                    Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 1,
+                          color: AppColors.mutedGold,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Eyebrow('${museum.category} · Di sản Việt'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   Text(
                     museum.name,
                     style: AppTextStyles.cardTitle.copyWith(
@@ -178,7 +196,26 @@ class MuseumCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(museum.shortIntro, style: AppTextStyles.bodyMedium),
+                  if (compact && museum.categories.isNotEmpty) ...[
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final category in museum.categories.take(3))
+                          _CategoryTag(category.name),
+                        if (museum.categories.length > 3)
+                          _CategoryTag('+${museum.categories.length - 3}'),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (museum.shortIntro.isNotEmpty)
+                    Text(
+                      museum.shortIntro,
+                      maxLines: compact ? 3 : null,
+                      overflow: compact ? TextOverflow.ellipsis : null,
+                      style: AppTextStyles.bodyMedium,
+                    ),
                   const SizedBox(height: 18),
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 13),
@@ -288,6 +325,23 @@ class ArtifactCard extends StatelessWidget {
           ),
         ),
       ),
+    ),
+  );
+}
+
+class _CategoryTag extends StatelessWidget {
+  const _CategoryTag(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: VisitorColors.surface2,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Text(label, style: AppTextStyles.caption),
     ),
   );
 }
