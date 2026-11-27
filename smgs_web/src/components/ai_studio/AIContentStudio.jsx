@@ -210,9 +210,10 @@ function Studio({ app, initialArtifact, initialMode = 'narration', onOpenQuestio
         </>}
         <div className="form-group">
           <label className="form-label" htmlFor="studio-source">Tư liệu nguồn bổ sung</label>
-          <textarea id="studio-source" className="form-input" rows={studioLayout ? 3 : 6} maxLength={6000} disabled={busy || saving} value={sourceText} onChange={e => { setSourceText(e.target.value); invalidate(); }} placeholder="Chép nội dung bảng tên, tài liệu hoặc thông tin đã kiểm chứng về hiện vật…" />
-          <small>
-            Tối đa 6.000 ký tự ở ô này ({sourceText.length.toLocaleString('vi-VN')}/6.000). Model giới hạn 4.096 token cho toàn yêu cầu, gồm cả chỉ dẫn và tư liệu đã xuất bản; nếu gặp lỗi giới hạn, hãy rút gọn nội dung. Để trống để dùng nội dung tiếng Việt đã xuất bản nếu có; nếu chưa có, nhập ít nhất 20 ký tự. Ảnh chỉ dùng đối chiếu, model hiện tại chưa phân tích ảnh.
+          <textarea id="studio-source" className="form-input" aria-describedby="studio-source-limit studio-source-help" rows={studioLayout ? 3 : 6} maxLength={6000} disabled={busy || saving} value={sourceText} onChange={e => { setSourceText(e.target.value); invalidate(); }} placeholder="Chép nội dung bảng tên, tài liệu hoặc thông tin đã kiểm chứng về hiện vật…" />
+          <small id="studio-source-limit">{sourceText.length.toLocaleString('vi-VN')}/6.000 ký tự bổ sung</small>
+          <small id="studio-source-help">
+            Hệ thống ghép phần này với nội dung tiếng Việt đã xuất bản. Tổng tư liệu cần từ 20 đến 12.000 ký tự. AI xử lý tối đa 4.096 token mỗi lượt, tính cả chỉ dẫn và dữ liệu đi kèm. Ảnh chỉ dùng để đối chiếu.
           </small>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
