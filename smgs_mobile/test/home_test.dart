@@ -10,9 +10,6 @@ import 'package:smgs_mobile/navigation/main_navigation.dart';
 import 'package:smgs_mobile/core/theme/app_theme.dart';
 import 'package:smgs_mobile/services/app_services.dart';
 import 'package:smgs_mobile/screens/home/home_screen.dart';
-import 'package:smgs_mobile/screens/museum/museum_detail_screen.dart';
-import 'package:smgs_mobile/screens/museum/visit_progress_screen.dart';
-import 'package:smgs_mobile/screens/profile/my_museum_screen.dart';
 import 'package:smgs_mobile/widgets/game_tutorial_overlay.dart';
 import 'support/fake_services.dart';
 import 'support/mock_museums.dart';
@@ -30,15 +27,6 @@ http.Response response(Object data, [int status = 200]) => http.Response(
   status,
   headers: {'content-type': 'application/json; charset=utf-8'},
 );
-Future<void> reveal(WidgetTester tester, Finder target) async {
-  await tester.scrollUntilVisible(
-    target,
-    200,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.pumpAndSettle();
-}
-
 void homeTest(
   String name,
   Future<void> Function(WidgetTester) body, {
@@ -66,178 +54,63 @@ void main() {
       tester,
     ) async {
       await screenSize(tester, Size(width, 844));
-      await tester.pumpWidget(
-        host(HomeScreen(onExplore: () {}, onScan: () {}), scale: 1.3),
-      );
+      await tester.pumpWidget(host(HomeScreen(onExplore: () {}), scale: 1.3));
       await tester.pumpAndSettle();
-      expect(find.text('Mỗi hiện vật,\nmột câu chuyện'), findsOneWidget);
-      for (final title in [
-        'Bảo tàng nổi bật',
-        'Bắt đầu hành trình khám phá',
-        'Bảo tàng cá nhân',
-      ]) {
-        await reveal(tester, find.text(title));
-        expect(tester.takeException(), isNull);
-      }
-      expect(find.text('Về đầu trang'), findsNothing);
-      expect(find.text('Thử tài cùng trống đồng'), findsNothing);
-      expect(find.text('Chuyện chốn cung đình'), findsNothing);
-      expect(find.byType(TextField), findsNothing);
-      expect(
-        tester
-            .state<ScrollableState>(find.byType(Scrollable).first)
-            .position
-            .maxScrollExtent,
-        lessThan(2300),
-      );
+      expect(find.text(mockMuseums.first.name), findsOneWidget);
+      expect(find.text('Khám phá thêm'), findsOneWidget);
+      expect(find.byType(CustomScrollView), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   }
-  homeTest('scan and discovery keep navigation callbacks', (tester) async {
-    var scans = 0, explores = 0;
-    await screenSize(tester, const Size(390, 844));
-    await tester.pumpWidget(
-      host(HomeScreen(onExplore: () => explores++, onScan: () => scans++)),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Giải mã một hiện vật'));
-    expect(scans, 1);
-    await reveal(tester, find.text('Xem tất cả'));
-    await tester.tap(find.text('Xem tất cả'));
-    expect(explores, 1);
-    await reveal(tester, find.text('Khám phá bảo tàng'));
-    await tester.tap(find.text('Khám phá bảo tàng'));
-    expect(explores, 2);
-  });
+
   homeTest(
-    'one museum is not duplicated and opens its existing detail screen',
+    'published title and slides replace the default cover',
     (tester) async {
-      AppServices.catalog = HomeCatalog([mockMuseums.first]);
-      await tester.pumpWidget(
-        host(HomeScreen(onExplore: () {}, onScan: () {})),
-      );
+      var explores = 0;
+      await tester.pumpWidget(host(HomeScreen(onExplore: () => explores++)));
       await tester.pumpAndSettle();
-      final card = find.byKey(ValueKey('home-museum:${mockMuseums.first.id}'));
-      await reveal(tester, card);
-      expect(find.text(mockMuseums.first.name), findsOneWidget);
-      expect(find.text(mockMuseums.first.description), findsNothing);
-      await tester.tap(card);
+      expect(find.text('Bảo tàng của chúng ta'), findsOneWidget);
+      expect(find.text('Mặt tiền'), findsOneWidget);
+      await tester.tap(find.byTooltip('Ảnh 2'));
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<MuseumDetailScreen>(find.byType(MuseumDetailScreen))
-            .museum
-            .id,
-        mockMuseums.first.id,
-      );
-      expect(tester.takeException(), isNull);
+      expect(find.text('Sảnh chính'), findsOneWidget);
+      await tester.tap(find.text('Khám phá thêm'));
+      expect(explores, 1);
     },
-  );
-  var museumVisitRequests = 0;
-  homeTest(
-    'returning from museum details refreshes the current visit',
-    (tester) async {
-      AppServices.catalog = HomeCatalog([mockMuseums.first]);
-      await tester.pumpWidget(
-        host(HomeScreen(onExplore: () {}, onScan: () {})),
-      );
-      await tester.pumpAndSettle();
-      final card = find.byKey(ValueKey('home-museum:${mockMuseums.first.id}'));
-      await reveal(tester, card);
-      await tester.tap(card);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
-      expect(museumVisitRequests, 2);
-      expect(find.text('Tiếp tục hành trình'), findsOneWidget);
-    },
-    request: (r) async => r.url.path == '/api/visits/me'
-        ? response(
-            museumVisitRequests++ == 0
-                ? []
-                : [
-                    {'id': 42, 'museumId': mockMuseums.first.id},
-                  ],
-          )
-        : response({}, 503),
+    request: (_) async => response({
+      'title': 'Bảo tàng của chúng ta',
+      'slides': [
+        {'name': 'front.jpg', 'caption': 'Mặt tiền'},
+        {'name': 'hall.jpg', 'caption': 'Sảnh chính'},
+      ],
+    }),
   );
 
-  homeTest('empty catalog does not invent museum cards', (tester) async {
-    AppServices.catalog = HomeCatalog([]);
-    await tester.pumpWidget(host(HomeScreen(onExplore: () {}, onScan: () {})));
+  late Completer<http.Response> coverResponse;
+  homeTest('pending configuration does not display a fallback photo', (
+    tester,
+  ) async {
+    coverResponse = Completer<http.Response>();
+    await tester.pumpWidget(host(HomeScreen(onExplore: () {})));
+    await tester.pump();
+    expect(find.byType(Image), findsNothing);
+    coverResponse.complete(response({'title': '', 'slides': []}));
+    await tester.pump();
     await tester.pumpAndSettle();
-    expect(find.text('Bảo tàng nổi bật'), findsNothing);
-    await reveal(tester, find.text('Bắt đầu hành trình khám phá'));
-    expect(find.text('Tiếp tục hành trình'), findsNothing);
-  });
-  homeTest(
-    'active visit opens API visit id without invented progress',
-    (tester) async {
-      await tester.pumpWidget(
-        host(HomeScreen(onExplore: () {}, onScan: () {})),
-      );
-      await tester.pumpAndSettle();
-      await reveal(tester, find.text('Tiếp tục hành trình'));
-      expect(find.text('Bắt đầu hành trình khám phá'), findsNothing);
-      expect(find.textContaining('%'), findsNothing);
-      expect(find.text('Đã khám phá 1 / 2 hiện vật'), findsOneWidget);
-      await reveal(tester, find.text('Xem tiến độ'));
-      await tester.tap(find.text('Xem tiến độ'));
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<VisitProgressScreen>(find.byType(VisitProgressScreen))
-            .visitId,
-        42,
-      );
-    },
-    request: (r) async => r.url.path == '/api/visits/me'
-        ? response([
-            {
-              'id': 42,
-              'museumId': mockMuseums.first.id,
-              'status': 'InProgress',
-            },
-          ])
-        : r.url.path == '/api/visits/42/progress'
-        ? response({
-            'stops': [
-              {'artifactId': 1, 'lastVisitedAt': '2026-11-19T01:00:00Z'},
-              {'artifactId': 2, 'lastVisitedAt': null},
-            ],
-          })
-        : response({}, 503),
-  );
-  var retryRequests = 0;
-  homeTest(
-    'visit API errors can retry without a false empty state',
-    (tester) async {
-      await tester.pumpWidget(
-        host(HomeScreen(onExplore: () {}, onScan: () {})),
-      );
-      await tester.pumpAndSettle();
-      await reveal(tester, find.text('Chưa tải được hành trình'));
-      expect(find.text('Tiếp tục hành trình'), findsNothing);
-      expect(find.text('Bắt đầu hành trình khám phá'), findsNothing);
-      await reveal(tester, find.text('Thử lại'));
-      await tester.tap(find.text('Thử lại'));
-      await tester.pumpAndSettle();
-      expect(find.text('Chưa tải được hành trình'), findsNothing);
-      expect(find.text('Bắt đầu hành trình khám phá'), findsOneWidget);
-    },
-    request: (_) async =>
-        retryRequests++ == 0 ? response({}, 503) : response([]),
-  );
-  homeTest('personal collection opens its existing screen', (tester) async {
-    await tester.pumpWidget(host(HomeScreen(onExplore: () {}, onScan: () {})));
+    expect(find.byType(Image), findsOneWidget);
+  }, request: (_) => coverResponse.future);
+
+  homeTest('unavailable configuration falls back to the museum cover', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(HomeScreen(onExplore: () {})));
     await tester.pumpAndSettle();
-    await reveal(tester, find.text('Bảo tàng cá nhân'));
-    await tester.tap(find.text('Bảo tàng cá nhân'));
-    await tester.pumpAndSettle();
-    expect(find.byType(MyMuseumScreen), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+    expect(find.text(mockMuseums.first.name), findsOneWidget);
+    expect(find.byTooltip('Ảnh 1'), findsNothing);
+  }, request: (_) async => response({}, 503));
+
   homeTest('every first-time tutorial target still exists', (tester) async {
-    await tester.pumpWidget(host(HomeScreen(onExplore: () {}, onScan: () {})));
+    await tester.pumpWidget(host(HomeScreen(onExplore: () {})));
     await tester.pumpAndSettle();
     for (final step in HomeScreenTour.getSteps()) {
       expect(step.targetKey.currentContext, isNotNull, reason: step.title);
@@ -273,11 +146,11 @@ void main() {
         tester.getBottomRight(tab).dy,
         lessThanOrEqualTo(size.height - 34),
       );
-      await reveal(tester, find.text('Bảo tàng cá nhân'));
       expect(
-        tester.getBottomRight(find.text('Bảo tàng cá nhân')).dy,
+        tester.getBottomRight(find.text('Khám phá thêm')).dy,
         lessThan(tester.getTopLeft(tab).dy),
       );
+
       expect(tester.takeException(), isNull);
     });
   }
@@ -297,9 +170,7 @@ void main() {
             ),
             child: child!,
           ),
-          home: Scaffold(
-            body: HomeScreen(onExplore: () {}, onScan: () {}),
-          ),
+          home: Scaffold(body: HomeScreen(onExplore: () {})),
         ),
       );
       await tester.pumpAndSettle();
@@ -356,17 +227,4 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-
-  late Completer<http.Response> waiting;
-  homeTest('loading does not fabricate visit state', (tester) async {
-    waiting = Completer<http.Response>();
-    await tester.pumpWidget(host(HomeScreen(onExplore: () {}, onScan: () {})));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('home-visit-loading')), findsOneWidget);
-    expect(find.text('Bắt đầu hành trình khám phá'), findsNothing);
-    waiting.complete(response([]));
-    await tester.pump();
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('home-visit-loading')), findsNothing);
-  }, request: (_) => waiting.future);
 }

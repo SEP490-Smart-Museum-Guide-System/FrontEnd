@@ -579,45 +579,23 @@ class _SpotlightPainter extends CustomPainter {
 class HomeScreenTour {
   HomeScreenTour._();
 
-  static final GlobalKey scanCardKey = GlobalKey();
   static final GlobalKey museumSectionKey = GlobalKey();
-  static final GlobalKey collectionKey = GlobalKey();
   static final GlobalKey handbookBtnKey = GlobalKey();
 
   static List<TutorialQuestStep> getSteps([BuildContext? context]) {
     final isEn = AppPreferences.instance.language == 'en';
     return [
       TutorialQuestStep(
-        targetKey: scanCardKey,
-        questBadge: isEn ? 'QUEST · SCAN ARTIFACT' : 'Quét hiện vật',
-        title: isEn ? 'Discover an artifact' : 'Khám phá một hiện vật',
+        targetKey: museumSectionKey,
+        questBadge: isEn ? 'EXPLORE MUSEUMS' : 'Khám phá bảo tàng',
+        title: isEn ? 'Find a museum to visit' : 'Tìm bảo tàng muốn đến',
         description: isEn
-            ? 'Tap here to open the QR camera scanner for museum exhibits.'
-            : 'Chạm vào đây để mở chức năng quét QR hiện vật.',
-        icon: Icons.qr_code_scanner,
+            ? 'Explore tab provides museum search and details.'
+            : 'Mục Khám phá có tìm kiếm và thông tin chi tiết về bảo tàng.',
+        icon: Icons.museum_outlined,
         borderRadius: 16,
       ),
-      if (AppServices.catalog.museums.isNotEmpty)
-        TutorialQuestStep(
-          targetKey: museumSectionKey,
-          questBadge: isEn ? 'QUEST · EXPLORE MUSEUMS' : 'Khám phá bảo tàng',
-          title: isEn ? 'Find a museum to visit' : 'Tìm bảo tàng muốn đến',
-          description: isEn
-              ? 'Browse open museums. Explore tab provides live search and details.'
-              : 'Xem các bảo tàng đang công khai. Mục Khám phá có tìm kiếm và thông tin chi tiết.',
-          icon: Icons.museum_outlined,
-          borderRadius: 16,
-        ),
-      TutorialQuestStep(
-        targetKey: collectionKey,
-        questBadge: isEn ? 'QUEST · COLLECTION' : 'Bộ sưu tập',
-        title: isEn ? 'Personal Museum' : 'Bảo tàng cá nhân',
-        description: isEn
-            ? 'Open your saved collection of artifacts you have explored.'
-            : 'Mở bộ sưu tập những hiện vật bạn đã khám phá.',
-        icon: Icons.collections_bookmark_outlined,
-        borderRadius: 16,
-      ),
+
       TutorialQuestStep(
         targetKey: handbookBtnKey,
         questBadge: isEn ? 'QUEST · HANDBOOK' : 'Cẩm nang',

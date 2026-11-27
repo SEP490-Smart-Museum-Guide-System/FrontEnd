@@ -117,17 +117,17 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  apiTestWidgets('Museum details open and return correctly from both tabs', (
+  apiTestWidgets('Museum details open from Explore via the home link or tab', (
     tester,
   ) async {
     await screenSize(tester, const Size(390, 844));
     await tester.pumpWidget(const SMGSApp());
     await tester.pumpAndSettle();
-    for (final tab in ['Trang chủ', 'Khám phá']) {
-      await tapText(tester, tab);
-      final entry = tab == 'Trang chủ'
-          ? find.byKey(const ValueKey('home-museum:museum_national'))
-          : find.text('Bảo tàng Lịch sử Quốc gia');
+    for (final entryPoint in ['Khám phá thêm', 'Khám phá']) {
+      await tapText(tester, 'Trang chủ');
+      await tapText(tester, entryPoint);
+      final entry = find.text('Bảo tàng Lịch sử Quốc gia');
+
       await tester.scrollUntilVisible(
         entry,
         200,

@@ -7,7 +7,6 @@ import 'package:smgs_mobile/models/museum.dart';
 import 'package:smgs_mobile/navigation/main_navigation.dart';
 import 'package:smgs_mobile/screens/home/home_screen.dart';
 import 'package:smgs_mobile/screens/scan/scan_screen.dart';
-import 'package:smgs_mobile/widgets/heritage_decoration.dart';
 import 'package:smgs_mobile/services/app_services.dart';
 import 'support/api_widgets.dart';
 import 'support/fake_services.dart';
@@ -35,7 +34,7 @@ void main() {
   });
   for (final width in [360.0, 390.0, 430.0]) {
     apiTestWidgets(
-      'white home and bottom navigation preserve 5 tabs at $width',
+      'photo home and bottom navigation preserve 5 tabs at $width',
       (tester) async {
         await screenSize(tester, Size(width, 844));
         await tester.pumpWidget(
@@ -49,29 +48,15 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final surface = find.byKey(const ValueKey('home-white-surface'));
+        expect(find.byType(VisitorHomeCarousel), findsOneWidget);
         expect(
-          tester.widget<ColoredBox>(surface).color,
-          VisitorColors.background,
+          tester.getRect(find.byType(VisitorHomeCarousel)),
+          Rect.fromLTWH(0, 0, width, 844),
         );
-        expect(
-          tester
-              .widget<Text>(find.text('Mỗi hiện vật,\nmột câu chuyện'))
-              .style!
-              .color,
-          VisitorColors.text,
-        );
-        for (final photo in tester.widgetList<MuseumPhoto>(
-          find.descendant(of: surface, matching: find.byType(MuseumPhoto)),
-        )) {
-          expect(photo.placeholderColor, VisitorColors.secondaryBackground);
-        }
         final rail = find.byKey(const ValueKey('visitor-bottom-nav'));
         expect(tester.getTopLeft(rail).dx, 0);
         expect(tester.getBottomRight(rail).dx, width);
         final initialSize = tester.getSize(rail);
-        final scanButton = find.byKey(const ValueKey('visitor-scan-press'));
-        expect(tester.getSize(scanButton), const Size(54, 54));
         double? labelTop;
         for (var index = 0; index < 5; index++) {
           final tab = find.byKey(ValueKey('visitor-tab:$index'));
@@ -81,24 +66,9 @@ void main() {
           );
           final label = find.descendant(of: tab, matching: find.byType(Text));
           labelTop ??= tester.getTopLeft(label).dy;
-          expect(
-            tester.getTopLeft(label).dy,
-            index == 2 ? greaterThan(labelTop) : closeTo(labelTop, .01),
-          );
+          expect(tester.getTopLeft(label).dy, closeTo(labelTop, .01));
           final icon = find.descendant(of: tab, matching: find.byType(Icon));
-          final boxes = find.ancestor(
-            of: icon,
-            matching: find.byType(SizedBox),
-          );
-          expect(
-            tester
-                .widgetList<SizedBox>(boxes)
-                .any((box) => box.height == (index == 2 ? 54 : 24)),
-            isTrue,
-          );
-          if (index != 2) {
-            expect(tester.widget<Icon>(icon).size, inInclusiveRange(21, 23));
-          }
+          expect(tester.widget<Icon>(icon).size, 22);
         }
         for (var i = 0; i < 5; i++) {
           final item = find.byKey(ValueKey('visitor-tab:$i'));
@@ -116,67 +86,42 @@ void main() {
           VisitorColors.background,
         );
         await tapText(tester, 'Trang chủ');
-        final scroll = find
-            .byWidgetPredicate(
-              (w) =>
-                  w is Scrollable &&
-                  axisDirectionToAxis(w.axisDirection) == Axis.vertical,
-            )
-            .first;
-        await tester.scrollUntilVisible(
-          find.text('Bảo tàng cá nhân'),
-          240,
-          scrollable: scroll,
-        );
-        await tester.pumpAndSettle();
         expect(
-          tester.getBottomRight(find.text('Bảo tàng cá nhân')).dy,
+          tester.getBottomRight(find.text('Khám phá thêm')).dy,
           lessThan(tester.getTopLeft(rail).dy),
         );
+
         expect(find.byType(HomeScreen), findsOneWidget);
+        await tester.tap(find.text('Khám phá thêm'));
+        await tester.pumpAndSettle();
+        final explore = find.byKey(const ValueKey('visitor-tab:1'));
+        expect(tester.widget<Semantics>(explore).properties.selected, isTrue);
       },
     );
   }
-  apiTestWidgets(
-    'scan press and cancellation restore feedback without selecting another tab',
-    (tester) async {
-      await screenSize(tester, const Size(390, 844));
-      await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.lightTheme, home: const MainNavigation()),
-      );
-      await tester.pumpAndSettle();
-      final rail = find.byKey(const ValueKey('visitor-bottom-nav'));
-      final size = tester.getSize(rail);
-      final scan = find.byKey(const ValueKey('visitor-tab:2'));
-      final gesture = await tester.startGesture(tester.getCenter(scan));
-      await tester.pump(const Duration(milliseconds: 120));
-      expect(
-        tester
-            .widget<AnimatedScale>(
-              find.byKey(const ValueKey('visitor-scan-press')),
-            )
-            .scale,
-        .96,
-      );
-      expect(tester.getSize(rail), size);
-      await gesture.cancel();
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<AnimatedScale>(
-              find.byKey(const ValueKey('visitor-scan-press')),
-            )
-            .scale,
-        1,
-      );
-      expect(
-        tester
-            .widget<Semantics>(find.byKey(const ValueKey('visitor-tab:0')))
-            .properties
-            .selected,
-        isTrue,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  apiTestWidgets('cancelling a scan press leaves the current tab selected', (
+    tester,
+  ) async {
+    await screenSize(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.lightTheme, home: const MainNavigation()),
+    );
+    await tester.pumpAndSettle();
+    final rail = find.byKey(const ValueKey('visitor-bottom-nav'));
+    final size = tester.getSize(rail);
+    final scan = find.byKey(const ValueKey('visitor-tab:2'));
+    final gesture = await tester.startGesture(tester.getCenter(scan));
+    await tester.pump();
+    expect(tester.getSize(rail), size);
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Semantics>(find.byKey(const ValueKey('visitor-tab:0')))
+          .properties
+          .selected,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

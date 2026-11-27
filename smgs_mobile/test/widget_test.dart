@@ -85,7 +85,7 @@ void main() {
       await screenSize(tester, const Size(360, 800));
       await tester.pumpWidget(const SMGSApp());
       await tester.pumpAndSettle();
-      expect(find.text('Mỗi hiện vật,\nmột câu chuyện'), findsOneWidget);
+      expect(find.text('Khám phá thêm'), findsOneWidget);
       expect(find.text('Home'), findsNothing);
       for (final label in [
         'Khám phá',
@@ -228,7 +228,7 @@ void main() {
     (tester) async {
       await screenSize(tester, const Size(320, 640));
       for (final screen in <Widget>[
-        HomeScreen(onExplore: () {}, onScan: () {}),
+        HomeScreen(onExplore: () {}),
         const ExploreScreen(),
         const QRScanScreen(),
         const ToursScreen(),
