@@ -917,6 +917,7 @@ class PublishedTourDetailScreen extends StatefulWidget {
 class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
   bool _busy = false;
   String? _error;
+  bool _isDescriptionExpanded = false;
 
   Future<void> _autoSaveAndStartTour(Map<String, dynamic> tour) async {
     setState(() {
@@ -1174,12 +1175,42 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                     if (tour['description'] != null &&
                         (tour['description'] as String).isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        tour['description'],
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.antiqueIvory.withOpacity(0.9),
-                          height: 1.4,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tour['description'],
+                            maxLines: _isDescriptionExpanded ? null : 3,
+                            overflow: _isDescriptionExpanded
+                                ? TextOverflow.visible
+                                : TextOverflow.ellipsis,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.antiqueIvory.withOpacity(0.9),
+                              height: 1.4,
+                            ),
+                          ),
+                          if ((tour['description'] as String).length > 90) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _isDescriptionExpanded = !_isDescriptionExpanded;
+                              }),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: Text(
+                                  _isDescriptionExpanded
+                                      ? (l10n.isEn ? 'Collapse' : 'Thu gọn')
+                                      : (l10n.isEn ? '...Read more' : '...Xem thêm'),
+                                  style: const TextStyle(
+                                    color: AppColors.mutedGold,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -1274,39 +1305,23 @@ class _PublishedTourDetailScreenState extends State<PublishedTourDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    l10n.isEn ? 'Indoor Map Navigation' : 'Sơ đồ bảo tàng số',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13.5,
-                                      color: AppColors.darkBrown,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      l10n.isEn ? 'Staff Verified' : 'Chuẩn Giám tuyển',
-                                      style: const TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2E7D32),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                l10n.isEn ? 'Indoor Map Navigation' : 'Sơ đồ bảo tàng số',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                  color: AppColors.darkBrown,
+                                ),
                               ),
                               const SizedBox(height: 3),
                               Text(
                                 l10n.isEn
                                     ? 'Check floors and galleries on the certified indoor map.'
                                     : 'Xem các tầng và phòng trưng bày trên sơ đồ mặt bằng chuẩn.',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: AppTextStyles.caption.copyWith(
                                   color: AppColors.darkBrown.withValues(alpha: 0.7),
                                   fontSize: 11,

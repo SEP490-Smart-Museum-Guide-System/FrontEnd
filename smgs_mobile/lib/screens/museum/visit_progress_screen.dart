@@ -6,6 +6,7 @@ import '../../widgets/backend_panel.dart';
 import '../../services/backend_api.dart';
 import '../../services/visitor_experience_api.dart';
 import '../../services/app_services.dart';
+import '../artifact/artifact_detail_screen.dart';
 import '../artifact/artifact_qr_scanner.dart';
 import 'visitor_directory_screen.dart';
 import '../profile/profile_screen.dart';
@@ -112,7 +113,6 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
           final active = visit['status'] == 'InProgress';
           final museumName = AppServices.catalog.museumName(visit['museumId'].toString());
           final tourTitle = (visit['_resolvedTourTitle'] ?? visit['tourTitle'] ?? '').toString();
-          final tourDesc = (visit['_resolvedTourDesc'] ?? '').toString();
           final visitedCount = stops.where((s) => s['lastVisitedAt'] != null).length;
           final totalCount = stops.length;
           final progressRatio = totalCount > 0 ? (visitedCount / totalCount).clamp(0.0, 1.0) : 0.0;
@@ -214,24 +214,6 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                           ),
                         ],
                       ),
-                      if (tourDesc.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: VisitorColors.surface2,
-                            borderRadius: BorderRadius.circular(VisitorRadius.md),
-                          ),
-                          child: Text(
-                            tourDesc,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              height: 1.4,
-                              color: AppColors.secondaryText,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                     const SizedBox(height: 4),
                     if (visit['personalizedTourId'] != null)
@@ -400,94 +382,225 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                     final stop = stops[i];
                     final isVisited = stop['lastVisitedAt'] != null;
                     final isNextTarget = active && !isVisited && (i == 0 || stops[i - 1]['lastVisitedAt'] != null);
-                    final artifactName = AppServices.catalog.artifacts
-                            .where((a) => a.id == stop['artifactId'].toString())
-                            .firstOrNull
-                            ?.name ??
+                    final artifact = AppServices.catalog.artifacts
+                        .where((a) => a.id == stop['artifactId'].toString())
+                        .firstOrNull;
+                    final artifactName = artifact?.name ??
                         (l10n.isEn ? 'Artifact #${stop['artifactId']}' : 'Hiện vật #${stop['artifactId']}');
+                    final location = artifact?.location ?? '';
+                    final isLast = i == stops.length - 1;
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: VisitorColors.surface1,
-                        borderRadius: BorderRadius.circular(VisitorRadius.lg),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isVisited
-                                  ? const Color(0xFFE8F5E9)
-                                  : (isNextTarget
-                                      ? AppColors.deepBurgundy
-                                      : VisitorColors.surface2),
-                            ),
-                            child: Center(
-                              child: isVisited
-                                  ? Icon(Icons.check, size: 18, color: Colors.green.shade800)
-                                  : Text(
-                                      '${i + 1}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: isNextTarget
-                                            ? Colors.white
-                                            : AppColors.darkBrown,
+                    return Column(
+                      children: [
+                        InkWell(
+                          onTap: artifact != null
+                              ? () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ArtifactDetailScreen(
+                                        artifact: artifact,
+                                        museumName: museumName,
+                                        visitId: widget.visitId,
+                                        isVisited: isVisited,
                                       ),
                                     ),
+                                  ).then((_) => reload())
+                              : null,
+                          borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: VisitorColors.surface1,
+                              borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                              border: Border.all(
+                                color: isNextTarget
+                                    ? AppColors.deepBurgundy.withValues(alpha: 0.5)
+                                    : AppColors.mutedGold.withValues(alpha: 0.3),
+                                width: isNextTarget ? 1.5 : 1.0,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.deepBurgundy.withValues(alpha: 0.04),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  artifactName,
-                                  style: AppTextStyles.cardTitle.copyWith(
-                                    fontSize: 15,
-                                    color: isVisited ? AppColors.darkBrown : null,
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: isVisited
+                                        ? const Color(0xFF2E7D32)
+                                        : (isNextTarget
+                                            ? AppColors.deepBurgundy
+                                            : VisitorColors.surface2),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isVisited
+                                          ? const Color(0xFF81C784)
+                                          : AppColors.mutedGold,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: isVisited
+                                        ? const Icon(Icons.check, size: 18, color: Colors.white)
+                                        : Text(
+                                            '${stop['orderNo'] ?? (i + 1)}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: isNextTarget
+                                                  ? AppColors.antiqueIvory
+                                                  : AppColors.darkBrown,
+                                            ),
+                                          ),
                                   ),
                                 ),
-                                const SizedBox(height: 3),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      isVisited ? Icons.access_time_filled : Icons.access_time,
-                                      size: 13,
-                                      color: isVisited ? Colors.green.shade700 : AppColors.secondaryText,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Expanded(
-                                      child: Text(
-                                        isVisited
-                                            ? (l10n.isEn ? 'Explored · ${_formatDate(stop['lastVisitedAt'])}' : 'Đã khám phá · ${_formatDate(stop['lastVisitedAt'])}')
-                                            : (isNextTarget
-                                                ? (l10n.isEn ? 'Next suggested stop' : 'Điểm dừng kế tiếp theo gợi ý')
-                                                : (l10n.isEn ? 'Not scanned yet' : 'Chưa ghi nhận quét')),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: isVisited || isNextTarget ? FontWeight.w600 : FontWeight.normal,
-                                          color: isVisited
-                                              ? Colors.green.shade800
-                                              : (isNextTarget
-                                                  ? AppColors.deepBurgundy
-                                                  : AppColors.secondaryText),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        artifactName,
+                                        style: AppTextStyles.cardTitle.copyWith(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
                                         ),
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
+                                      if (location.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.room_outlined,
+                                              size: 13,
+                                              color: AppColors.deepBurgundy.withValues(alpha: 0.7),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                location,
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: AppColors.darkBrown.withValues(alpha: 0.75),
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            isVisited ? Icons.access_time_filled : Icons.access_time,
+                                            size: 12,
+                                            color: isVisited
+                                                ? Colors.green.shade700
+                                                : (isNextTarget
+                                                    ? AppColors.deepBurgundy
+                                                    : AppColors.secondaryText),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              isVisited
+                                                  ? (l10n.isEn ? 'Explored · ${_formatDate(stop['lastVisitedAt'])}' : 'Đã khám phá · ${_formatDate(stop['lastVisitedAt'])}')
+                                                  : (isNextTarget
+                                                      ? (l10n.isEn ? 'Next suggested stop' : 'Điểm dừng kế tiếp theo gợi ý')
+                                                      : (l10n.isEn ? 'Not scanned yet' : 'Chưa ghi nhận quét')),
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: isVisited || isNextTarget ? FontWeight.w600 : FontWeight.normal,
+                                                color: isVisited
+                                                    ? Colors.green.shade800
+                                                    : (isNextTarget
+                                                        ? AppColors.deepBurgundy
+                                                        : AppColors.secondaryText),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            l10n.isEn ? 'View detail' : 'Xem chi tiết',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.deepBurgundy,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          const Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 13,
+                                            color: AppColors.deepBurgundy,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (artifact?.imageUrl.isNotEmpty == true) ...[
+                                  const SizedBox(width: 10),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(VisitorRadius.md),
+                                    child: Container(
+                                      width: 58,
+                                      height: 58,
+                                      color: AppColors.antiqueIvory,
+                                      child: Image.network(
+                                        artifact!.imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => const Icon(
+                                          Icons.museum_outlined,
+                                          size: 24,
+                                          color: AppColors.deepBurgundy,
+                                        ),
+                                      ),
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (!isLast)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(left: 31),
+                                  width: 2,
+                                  height: 24,
+                                  color: AppColors.mutedGold.withValues(alpha: 0.5),
+                                ),
+                                const SizedBox(width: 14),
+                                Text(
+                                  l10n.isEn ? 'Proceed to next stop' : 'Di chuyển sang điểm tiếp theo',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.darkBrown.withValues(alpha: 0.5),
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     );
                   }(),
                 ],

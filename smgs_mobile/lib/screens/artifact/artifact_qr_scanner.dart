@@ -11,7 +11,6 @@ import '../../widgets/backend_panel.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/utils/image_picker_helper.dart';
 import '../../services/artifact_scan_service.dart';
@@ -27,10 +26,12 @@ class ArtifactQrScanner extends StatefulWidget {
     this.visitId,
     this.direct = false,
     this.standalone = false,
+    this.popOnSuccess = false,
   });
   final int? visitId;
   final bool direct;
   final bool standalone;
+  final bool popOnSuccess;
   @override
   State<ArtifactQrScanner> createState() => _ArtifactQrScannerState();
 }
@@ -141,6 +142,10 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       _scanRequest = null;
       if (mounted) showExplorationRewards(context, recognition);
       if (!mounted) return;
+      if (widget.popOnSuccess) {
+        Navigator.of(context).pop(true);
+        return;
+      }
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => ArtifactDetailScreen(

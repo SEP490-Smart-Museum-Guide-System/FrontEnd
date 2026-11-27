@@ -9,9 +9,7 @@ import '../../services/visitor_experience_api.dart';
 import '../../widgets/backend_panel.dart';
 import '../../widgets/museum_ui.dart';
 import '../museum/visit_progress_screen.dart';
-import '../museum/visitor_directory_screen.dart';
 import '../artifact/artifact_detail_screen.dart';
-import '../artifact/artifact_qr_scanner.dart';
 import 'published_tours_screen.dart';
 
 String _formatTime(dynamic val) {
@@ -431,79 +429,6 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
     });
   }
 
-  Future<void> _abandonActiveVisit(
-    BuildContext context,
-    AppLocalizations l10n,
-    int visitId,
-    VoidCallback onDone,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(VisitorRadius.xl)),
-        title: Row(
-          children: [
-            const Icon(Icons.flag_outlined, color: AppColors.deepBurgundy, size: 24),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                l10n.isEn ? 'Abandon Visit Early?' : 'Rời tour / Kết thúc sớm?',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkBrown,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          l10n.isEn
-              ? 'You have not completed all stops in this tour. Ending early will not award tour completion points. Do you want to abandon this tour to select another route?'
-              : 'Bạn chưa hoàn thành tất cả các trạm trong tour này. Kết thúc sớm sẽ không nhận được điểm thưởng hoàn thành tour. Bạn có chắc chắn muốn rời tour để chọn lộ trình khác không?',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.isEn ? 'Continue Visit' : 'Tiếp tục đi'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.deepBurgundy),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.isEn ? 'Abandon Tour' : 'Rời tour'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true || !context.mounted) return;
-
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-
-    try {
-      await VisitorExperienceApi.abandonVisit(visitId);
-      if (mounted) {
-        final nextSaved = _loadSaved();
-        setState(() {
-          _saved = nextSaved;
-          _activeVisitRefreshKey++;
-        });
-      }
-      onDone();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _completeActiveVisit(
     BuildContext context,
     AppLocalizations l10n,
@@ -914,7 +839,7 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                   label: Text(
                     isAllCompleted
                         ? (l10n.isEn ? 'Complete Tour & Get Rewards' : 'Hoàn tất chuyến đi & Nhận quà')
-                        : (l10n.isEn ? 'Continue Journey Guidance' : 'Tiếp tục dẫn đường'),
+                        : (l10n.isEn ? 'View Journey' : 'Xem hành trình'),
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -930,136 +855,6 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
                           );
                           reload();
                         },
-                ),
-              ),
-
-              // Quick Actions Row
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.darkBrown,
-                        side: BorderSide(
-                          color: AppColors.mutedGold.withValues(alpha: 0.4),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(VisitorRadius.md),
-                        ),
-                      ),
-                      icon: const Icon(Icons.map_outlined, size: 16, color: Color(0xFF2E7D32)),
-                      label: Text(
-                        l10n.isEn ? 'Floor Map' : 'Sơ đồ tầng',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: () => openPage(
-                        context,
-                        VisitorDirectoryScreen(
-                          museumId: museumId,
-                          museumName: museumName,
-                          visitId: visitId,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.darkBrown,
-                        side: BorderSide(
-                          color: AppColors.mutedGold.withValues(alpha: 0.4),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(VisitorRadius.md),
-                        ),
-                      ),
-                      icon: const Icon(Icons.qr_code_scanner_rounded, size: 16, color: AppColors.deepBurgundy),
-                      label: Text(
-                        l10n.isEn ? 'Scan Station' : 'Quét QR trạm',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ArtifactQrScanner(visitId: visitId),
-                          ),
-                        );
-                        reload();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (!isAllCompleted)
-                Center(
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red.shade700,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    icon: const Icon(Icons.flag_outlined, size: 15),
-                    label: Text(
-                      l10n.isEn ? 'Abandon Visit Early' : 'Rời tour / Kết thúc sớm',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    onPressed: () => _abandonActiveVisit(context, l10n, visitId, reload),
-                  ),
-                ),
-              if (isAllCompleted)
-                Center(
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.deepBurgundy,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    icon: const Icon(Icons.map_outlined, size: 15),
-                    label: Text(
-                      l10n.isEn ? 'View Journey Progress' : 'Xem lại tiến độ chuyến đi',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    onPressed: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => VisitProgressScreen(visitId: visitId),
-                        ),
-                      );
-                      reload();
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // Subtle Notice Banner for Previewing Other Routes
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFFBEB),
-            borderRadius: BorderRadius.circular(VisitorRadius.lg),
-            border: Border.all(color: const Color(0xFFFDE68A)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline, size: 18, color: Color(0xFFB45309)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.isEn
-                      ? 'You are currently on a visit at $museumName. You can preview other routes below for your next visit.'
-                      : 'Bạn đang trong chuyến tham quan tại $museumName. Bạn có thể tham khảo trước các lộ trình tiêu biểu bên dưới cho lần ghé thăm sau.',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF92400E),
-                    height: 1.35,
-                  ),
                 ),
               ),
             ],
@@ -1586,7 +1381,63 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
     );
   }
 
+  Widget _buildTopicChip(String topic, AppLocalizations l10n) {
+    final isSelected = _selected.contains(topic);
+    final matchedMap = _topicsMap.firstWhere(
+      (m) => (m['name'] ?? '').toString() == topic,
+      orElse: () => <String, dynamic>{},
+    );
+    final topicId = matchedMap['id'] as int?;
+
+    return FilterChip(
+      label: Text(topic),
+      labelStyle: AppTextStyles.bodySmall.copyWith(
+        color: isSelected ? AppColors.antiqueIvory : AppColors.darkBrown,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      checkmarkColor: AppColors.antiqueIvory,
+      selected: isSelected,
+      selectedColor: AppColors.deepBurgundy,
+      backgroundColor: VisitorColors.surface2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(VisitorRadius.full),
+        side: BorderSide(
+          color: isSelected
+              ? AppColors.deepBurgundy
+              : AppColors.mutedGold.withValues(alpha: 0.35),
+        ),
+      ),
+      onSelected: _busy || _isRecommendingCurated
+          ? null
+          : (selected) => setState(() {
+              _validationError = null;
+              if (!selected) {
+                _selected.remove(topic);
+                if (topicId != null) _selectedTopicIds.remove(topicId);
+              } else if (_selected.length < 8) {
+                _selected.add(topic);
+                if (topicId != null) _selectedTopicIds.add(topicId);
+              } else {
+                _error = l10n.isEn
+                    ? 'You can select up to 8 interests.'
+                    : 'Bạn có thể chọn tối đa 8 sở thích.';
+              }
+            }),
+    );
+  }
+
   Widget _buildTopicSelector(AppLocalizations l10n, Set<String> chips) {
+    final chipList = chips.toList();
+    final row1 = <String>[];
+    final row2 = <String>[];
+    for (var i = 0; i < chipList.length; i++) {
+      if (i.isEven) {
+        row1.add(chipList[i]);
+      } else {
+        row2.add(chipList[i]);
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1595,17 +1446,17 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           children: [
             Expanded(
               child: Text.rich(
-              TextSpan(
-                text: l10n.isEn ? 'Interested Topics' : 'Chủ đề quan tâm',
-                style: AppTextStyles.cardTitle,
-                children: const [
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                  ),
-                ],
+                TextSpan(
+                  text: l10n.isEn ? 'Interested Topics' : 'Chủ đề quan tâm',
+                  style: AppTextStyles.cardTitle,
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ),
-            ),
             ),
             if (_selected.isNotEmpty)
               Container(
@@ -1626,55 +1477,36 @@ class _PersonalizedTourBuilderState extends State<PersonalizedTourBuilder> {
           ],
         ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: chips.map(
-            (topic) {
-              final isSelected = _selected.contains(topic);
-              final matchedMap = _topicsMap.firstWhere(
-                (m) => (m['name'] ?? '').toString() == topic,
-                orElse: () => <String, dynamic>{},
-              );
-              final topicId = matchedMap['id'] as int?;
-
-              return FilterChip(
-                label: Text(topic),
-                labelStyle: AppTextStyles.bodySmall.copyWith(
-                  color: isSelected ? AppColors.antiqueIvory : AppColors.darkBrown,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          clipBehavior: Clip.none,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < row1.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    _buildTopicChip(row1[i], l10n),
+                  ],
+                ],
+              ),
+              if (row2.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < row2.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      _buildTopicChip(row2[i], l10n),
+                    ],
+                  ],
                 ),
-                checkmarkColor: AppColors.antiqueIvory,
-                selected: isSelected,
-                selectedColor: AppColors.deepBurgundy,
-                backgroundColor: VisitorColors.surface2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(VisitorRadius.full),
-                  side: BorderSide(
-                    color: isSelected
-                        ? AppColors.deepBurgundy
-                        : AppColors.mutedGold.withValues(alpha: 0.35),
-                  ),
-                ),
-                onSelected: _busy || _isRecommendingCurated
-                    ? null
-                    : (selected) => setState(() {
-                        _validationError = null;
-                        if (!selected) {
-                          _selected.remove(topic);
-                          if (topicId != null) _selectedTopicIds.remove(topicId);
-                        } else if (_selected.length < 8) {
-                          _selected.add(topic);
-                          if (topicId != null) _selectedTopicIds.add(topicId);
-                        } else {
-                          _error = l10n.isEn
-                              ? 'You can select up to 8 interests.'
-                              : 'Bạn có thể chọn tối đa 8 sở thích.';
-                        }
-                      }),
-              );
-            },
-          ).toList(),
+              ],
+            ],
+          ),
         ),
       ],
     );

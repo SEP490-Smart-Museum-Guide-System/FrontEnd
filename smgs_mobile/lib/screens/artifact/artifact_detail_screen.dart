@@ -15,15 +15,20 @@ import 'artifact_listening_screen.dart';
 import '../profile/profile_screen.dart';
 import 'artifact_3d_screen.dart';
 import 'daily_quiz_screen.dart';
+import 'artifact_qr_scanner.dart';
 
 class ArtifactDetailScreen extends StatefulWidget {
   const ArtifactDetailScreen({
     super.key,
     required this.artifact,
     required this.museumName,
+    this.visitId,
+    this.isVisited = false,
   });
   final Artifact artifact;
   final String museumName;
+  final int? visitId;
+  final bool isVisited;
   @override
   State<ArtifactDetailScreen> createState() => _ArtifactDetailScreenState();
 }
@@ -36,6 +41,33 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
   Artifact? _detail;
   bool _photoError = false;
   bool _loadingPhotos = false;
+  late bool _isStopVisited = widget.isVisited;
+
+  Future<void> _scanThisStop(BuildContext context, int visitId) async {
+    final scanned = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ArtifactQrScanner(
+          visitId: visitId,
+          direct: true,
+          popOnSuccess: true,
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    if (scanned == true) {
+      setState(() => _isStopVisited = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppPreferences.instance.language == 'en'
+                ? 'Stop confirmed in your visit!'
+                : 'Đã xác nhận điểm dừng trong hành trình!',
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -340,6 +372,13 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         ),
       ),
     ];
+    final activeVisitId = widget.visitId ?? (VisitorSession.activeVisit?['id'] as int?);
+    final isCurrentMuseum = VisitorSession.activeVisit == null ||
+        VisitorSession.activeVisit?['museumId'] == null ||
+        widget.artifact.museumId.isEmpty ||
+        VisitorSession.activeVisit?['museumId']?.toString() == widget.artifact.museumId;
+    final effectiveVisitId = isCurrentMuseum ? activeVisitId : null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
@@ -489,66 +528,127 @@ class _ArtifactDetailScreenState extends State<ArtifactDetailScreen> {
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Padding(
           padding: const EdgeInsets.all(6),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (hasNarration) ...[
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 56),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      shape: const StadiumBorder(),
-                    ),
-                    icon: const Icon(Icons.play_circle_fill),
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(l10n.playAudio, maxLines: 1),
-                    ),
-                    onPressed: () async {
-                      final action = await Navigator.of(context)
-                          .push<ListeningAction>(
-                            MaterialPageRoute(
-                              builder: (_) => ArtifactListeningScreen(
-                                artifact: a,
-                                photos: photos,
-                                modelUrl: hasModel ? modelUrl : null,
-                                description: story.trim().isEmpty
-                                    ? summary
-                                    : story,
-                                narration: script,
-                                audioUrl: audio.isEmpty ? null : audio,
+              if (effectiveVisitId != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: _isStopVisited
+                        ? Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(VisitorRadius.full),
+                              border: Border.all(
+                                color: const Color(0xFF81C784).withValues(alpha: 0.6),
                               ),
                             ),
-                          );
-                      if (!context.mounted) return;
-                      if (action == ListeningAction.quiz) {
-                        openPage(context, DailyQuizScreen(artifactId: a.id));
-                      } else if (action == ListeningAction.ask) {
-                        ask();
-                      }
-                    },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFF2E7D32),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  l10n.isEn ? 'Stop Confirmed in Visit' : 'Đã xác nhận điểm dừng này',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2E7D32),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.deepBurgundy,
+                              foregroundColor: AppColors.antiqueIvory,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(VisitorRadius.full),
+                              ),
+                            ),
+                            icon: const Icon(Icons.qr_code_scanner, size: 20),
+                            label: Text(
+                              l10n.isEn ? 'Scan QR at this Stop' : 'Quét QR xác nhận trạm này',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () => _scanThisStop(context, effectiveVisitId),
+                          ),
                   ),
                 ),
-                const SizedBox(width: 8),
               ],
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 56),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
+              Row(
+                children: [
+                  if (hasNarration) ...[
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 56),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          shape: const StadiumBorder(),
+                        ),
+                        icon: const Icon(Icons.play_circle_fill),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(l10n.playAudio, maxLines: 1),
+                        ),
+                        onPressed: () async {
+                          final action = await Navigator.of(context)
+                              .push<ListeningAction>(
+                                MaterialPageRoute(
+                                  builder: (_) => ArtifactListeningScreen(
+                                    artifact: a,
+                                    photos: photos,
+                                    modelUrl: hasModel ? modelUrl : null,
+                                    description: story.trim().isEmpty
+                                        ? summary
+                                        : story,
+                                    narration: script,
+                                    audioUrl: audio.isEmpty ? null : audio,
+                                  ),
+                                ),
+                              );
+                          if (!context.mounted) return;
+                          if (action == ListeningAction.quiz) {
+                            openPage(context, DailyQuizScreen(artifactId: a.id));
+                          } else if (action == ListeningAction.ask) {
+                            ask();
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                      ),
+                      onPressed: ask,
+                      icon: const Icon(Icons.chat_bubble_outline, size: 17),
+                      label: Text(
+                        l10n.isEn ? 'Ask AI' : 'Hỏi',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                  onPressed: ask,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 17),
-                  label: Text(
-                    l10n.isEn ? 'Ask AI' : 'Hỏi',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                ],
               ),
             ],
           ),
