@@ -12,28 +12,37 @@ void showExplorationRewards(BuildContext context, dynamic result) {
   final badges = result['newBadges'];
   final hasBadges = badges is List && badges.isNotEmpty;
   final awardedPoints = points is int ? points : 0;
+  final isQrScan = result.containsKey('recognitionId');
 
-  if (awardedPoints > 0 && !hasBadges) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => _TourRewardSuccessSheet(
-          pointsAwarded: awardedPoints,
-          badges: const [],
+  if (isQrScan) {
+    if (awardedPoints > 0) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.deepBurgundy,
+          content: Text('🎉 Đã ghi nhận trạm dừng trong Tour! Bạn nhận được +$awardedPoints điểm.'),
         ),
       );
-    });
+    } else {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('Đã mở thông tin hiện vật. (Chỉ cộng điểm khi quét hiện vật thuộc Tour đang đi)'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+    if (hasBadges) {
+      showEarnedBadges(context, badges);
+    }
     return;
   }
 
-  if (hasBadges) {
-    final badgeList = badges.map((b) {
-      if (b is Map) return Map<String, dynamic>.from(b);
-      return {'name': b.toString()};
-    }).toList();
+  if (awardedPoints > 0 || hasBadges) {
+    final badgeList = hasBadges
+        ? badges.map((b) {
+            if (b is Map) return Map<String, dynamic>.from(b);
+            return {'name': b.toString()};
+          }).toList()
+        : const <Map<String, dynamic>>[];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
       showModalBottomSheet<void>(
