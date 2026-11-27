@@ -116,6 +116,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
           final visitedCount = stops.where((s) => s['lastVisitedAt'] != null).length;
           final totalCount = stops.length;
           final progressRatio = totalCount > 0 ? (visitedCount / totalCount).clamp(0.0, 1.0) : 0.0;
+          final isAllCompleted = totalCount > 0 && visitedCount == totalCount;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -515,7 +516,7 @@ class _VisitProgressScreenState extends State<VisitProgressScreen> {
                   onPressed: () => _openMap(visit),
                 ),
                 const SizedBox(height: 10),
-                if (totalCount == 0 || visitedCount >= totalCount)
+                if (totalCount == 0 || isAllCompleted)
                   PrimaryButton(
                     label: _busy
                         ? (l10n.isEn ? 'Completing…' : 'Đang hoàn tất…')

@@ -99,6 +99,17 @@ class VisitorExperienceApi {
     return Map<String, dynamic>.from(result);
   }
 
+  static Future<Map<String, dynamic>> abandonVisit(int visitId) async {
+    final result = await BackendApi.request(
+      'visit-progress/abandon?visitId=$visitId',
+      method: 'POST',
+    );
+    if (VisitorSession.activeVisit?['id'] == visitId) {
+      VisitorSession.clear();
+    }
+    return Map<String, dynamic>.from(result);
+  }
+
   static Future<List<Map<String, dynamic>>> getMyVisits({
     String? status,
     int page = 1,

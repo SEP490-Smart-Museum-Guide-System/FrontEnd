@@ -6,6 +6,7 @@ import '../../widgets/museum_ui.dart';
 import '../../models/artifact.dart';
 import '../../data/visit_store.dart';
 import '../artifact/artifact_detail_screen.dart';
+import '../museum/visitor_indoor_map_screen.dart';
 import '../../services/app_services.dart';
 import '../../widgets/museum_route_map.dart';
 
@@ -215,68 +216,270 @@ class _TourRouteScreenState extends State<TourRouteScreen> {
               visited: _visited,
               skipped: _skipped,
             ),
-            const SizedBox(height: 24),
-            Text(a.name, style: AppTextStyles.pageTitle),
-            const SizedBox(height: 12),
-            Text(
-              a.location,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.deepBurgundy,
+            const SizedBox(height: 20),
+            // Stop details card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: VisitorColors.surface1,
+                borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                border: Border.all(
+                  color: AppColors.mutedGold.withValues(alpha: 0.35),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.deepBurgundy.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.deepBurgundy,
+                          borderRadius: BorderRadius.circular(VisitorRadius.full),
+                        ),
+                        child: Text(
+                          l10n.isEn
+                              ? 'Stop ${_stop + 1}/${widget.stops.length}'
+                              : 'Trạm ${_stop + 1}/${widget.stops.length}',
+                          style: const TextStyle(
+                            color: AppColors.antiqueIvory,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.room_outlined,
+                              size: 13,
+                              color: AppColors.deepBurgundy,
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                a.location,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.deepBurgundy,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    a.name,
+                    style: AppTextStyles.cardTitle.copyWith(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    a.summary,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.darkBrown.withValues(alpha: 0.85),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  InkWell(
+                    onTap: () => openPage(
+                      context,
+                      ArtifactDetailScreen(
+                        artifact: a,
+                        museumName: (museum?.name ?? (l10n.isEn ? 'Museum' : 'Bảo tàng')),
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(VisitorRadius.md),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.auto_stories_outlined,
+                            size: 15,
+                            color: AppColors.deepBurgundy,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            l10n.isEn ? 'Read full artifact story' : 'Xem câu chuyện & thuyết minh',
+                            style: const TextStyle(
+                              color: AppColors.deepBurgundy,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            size: 15,
+                            color: AppColors.deepBurgundy,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-            Text(a.summary, style: AppTextStyles.bodyLarge),
-            const SizedBox(height: 22),
-            Notice(
-              l10n.isEn
-                  ? 'The list indicates tour order, not a physical floor route. Progress is kept in the current session.'
-                  : 'Danh sách thể hiện thứ tự tham quan, không phải sơ đồ đường đi. Tiến độ được giữ trong phiên hiện tại.',
-            ),
-            const SizedBox(height: 14),
-            Text(
-              _stop < widget.stops.length - 1
-                  ? (l10n.isEn
-                      ? 'Next: ${widget.stops[_stop + 1].name} · ${widget.stops[_stop + 1].location}'
-                      : 'Tiếp theo: ${widget.stops[_stop + 1].name} · ${widget.stops[_stop + 1].location}')
-                  : (l10n.isEn
-                      ? 'This is the final stop of the journey.'
-                      : 'Đây là điểm dừng cuối của hành trình.'),
-              style: AppTextStyles.bodyMedium,
-            ),
-            const SizedBox(height: 22),
-            SecondaryButton(
-              label: l10n.isEn ? 'Learn about artifact' : 'Tìm hiểu hiện vật',
-              icon: Icons.menu_book_outlined,
-              onPressed: () => openPage(
-                context,
-                ArtifactDetailScreen(
-                  artifact: a,
-                  museumName: (museum?.name ?? (l10n.isEn ? 'Museum' : 'Bảo tàng')),
+
+            if (_stop < widget.stops.length - 1) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: VisitorColors.surface2,
+                  borderRadius: BorderRadius.circular(VisitorRadius.lg),
+                  border: Border.all(
+                    color: AppColors.mutedGold.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.directions_walk_rounded,
+                      size: 16,
+                      color: AppColors.deepBurgundy,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          text: l10n.isEn ? 'Next stop: ' : 'Điểm tiếp theo: ',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            color: AppColors.darkBrown,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: '${widget.stops[_stop + 1].name} (${widget.stops[_stop + 1].location})',
+                              style: const TextStyle(fontWeight: FontWeight.normal),
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Primary Navigation Button
             PrimaryButton(
               label: _stop == widget.stops.length - 1
                   ? (l10n.isEn ? 'Complete Journey' : 'Hoàn thành hành trình')
-                  : (l10n.isEn ? 'Next Stop' : 'Đến điểm tiếp theo'),
-              icon: Icons.arrow_forward,
+                  : (l10n.isEn ? 'Proceed to Next Stop' : 'Đến điểm tiếp theo'),
+              icon: Icons.arrow_forward_rounded,
               onPressed: () => _advance(),
             ),
-            const SizedBox(height: 12),
-            SecondaryButton(
-              label: l10n.isEn ? 'Skip this stop' : 'Bỏ qua điểm này',
-              icon: Icons.skip_next_outlined,
-              onPressed: () => _advance(skip: true),
-            ),
-            TextButton(
-              onPressed: () {
-                _record(false);
-                Navigator.pop(context);
-              },
-              child: Text(
-                l10n.isEn ? 'End journey early' : 'Kết thúc sớm hành trình',
-              ),
+
+            const SizedBox(height: 10),
+
+            // Ergonomic Quick Utility Bar
+            Row(
+              children: [
+                // Open Indoor Map
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.darkBrown,
+                      side: BorderSide(color: AppColors.mutedGold.withValues(alpha: 0.4)),
+                      backgroundColor: VisitorColors.surface2,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.md),
+                      ),
+                    ),
+                    onPressed: () {
+                      final parsedMuseumId = int.tryParse(a.museumId) ?? 1;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => VisitorIndoorMapScreen(
+                            mapId: parsedMuseumId,
+                            museumName: museum?.name ?? (l10n.isEn ? 'Museum' : 'Bảo tàng'),
+                            targetArtifactId: int.tryParse(a.id),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.map_outlined, size: 16, color: Color(0xFF2E7D32)),
+                    label: Text(
+                      l10n.isEn ? 'Floor Map' : 'Sơ đồ tầng',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Skip stop
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.darkBrown,
+                      side: BorderSide(color: AppColors.mutedGold.withValues(alpha: 0.4)),
+                      backgroundColor: VisitorColors.surface2,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.md),
+                      ),
+                    ),
+                    onPressed: () => _advance(skip: true),
+                    icon: const Icon(Icons.skip_next_outlined, size: 16, color: AppColors.deepBurgundy),
+                    label: Text(
+                      l10n.isEn ? 'Skip' : 'Bỏ qua',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // End early
+                InkWell(
+                  onTap: () {
+                    _record(false);
+                    Navigator.pop(context);
+                  },
+                  borderRadius: BorderRadius.circular(VisitorRadius.md),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: VisitorColors.surface2,
+                      borderRadius: BorderRadius.circular(VisitorRadius.md),
+                      border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      l10n.isEn ? 'Exit' : 'Dừng',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
