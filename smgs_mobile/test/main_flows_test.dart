@@ -226,11 +226,13 @@ void main() {
       await screenSize(tester, const Size(390, 844));
       await tester.pumpWidget(host(const ToursScreen()));
       await tester.pumpAndSettle();
-      expect(
-        find.textContaining('Cá nhân hóa là lựa chọn thêm.'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Chưa có bảo tàng.'), findsOneWidget);
       await tapText(tester, 'Tour AI hóa');
+      final generate = find.ancestor(
+        of: find.text('Tour AI hóa'),
+        matching: find.byType(OutlinedButton),
+      );
+      expect(tester.widget<OutlinedButton>(generate).onPressed, isNull);
       expect(find.byType(TourRouteScreen), findsNothing);
       expect(VisitStore.instance.history, isEmpty);
       expect(tester.takeException(), isNull);

@@ -38,13 +38,14 @@ void main() {
           await screenSize(tester, const Size(390, 844));
           await tester.pumpWidget(host(const PersonalizedTourBuilder()));
           await tester.pumpAndSettle();
-          expect(
-            find.textContaining('Cá nhân hóa là lựa chọn thêm.'),
-            findsOneWidget,
-          );
+          expect(find.byType(PersonalizedTourDetailScreen), findsNothing);
           expect(writes, isEmpty);
           await tapText(tester, 'Tour AI hóa');
           expect(writes, isEmpty);
+          expect(
+            find.text('Vui lòng chọn ít nhất một chủ đề bạn quan tâm.'),
+            findsOneWidget,
+          );
           await tapText(tester, 'Gốm sứ');
           await tapText(tester, 'Tour AI hóa');
           expect(find.byType(PersonalizedTourDetailScreen), findsOneWidget);
