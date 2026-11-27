@@ -296,27 +296,30 @@ class NarrationPlayerState extends State<NarrationPlayer> {
         await _player!.pause();
         return;
       }
-      final player = _ensurePlayer();
       if (!_sourceReady) {
-        await player.setReleaseMode(ReleaseMode.stop);
-        if (!_current(request)) return;
+        String? playbackUrl;
         if (_recorded) {
-          final playbackUrl = await TtsApiService.resolvePublishedPlaybackUrl(
+          playbackUrl = await TtsApiService.resolvePublishedPlaybackUrl(
             widget.audioUrl!,
           );
           if (!_current(request)) return;
-          if (playbackUrl != null) {
-            await player.setSource(UrlSource(playbackUrl));
-          } else {
+          if (playbackUrl == null) {
             _audio = await TtsApiService.fetchPublishedAudio(widget.audioUrl!);
             if (!_current(request)) return;
-            await player.setSource(
-              BytesSource(_audio!.audioBytes, mimeType: _audio!.mimeType),
-            );
           }
         } else {
           _audio ??= await TtsApiService.synthesizeSpeech(widget.text);
           if (!_current(request)) return;
+        }
+
+        // Don't create a native player until synthesis/download has succeeded.
+        // Failed TTS requests and stale responses should have no audio side effects.
+        final player = _ensurePlayer();
+        await player.setReleaseMode(ReleaseMode.stop);
+        if (!_current(request)) return;
+        if (playbackUrl != null) {
+          await player.setSource(UrlSource(playbackUrl));
+        } else {
           await player.setSource(
             BytesSource(_audio!.audioBytes, mimeType: _audio!.mimeType),
           );
@@ -324,6 +327,7 @@ class NarrationPlayerState extends State<NarrationPlayer> {
         if (!_current(request)) return;
         _sourceReady = true;
       }
+      final player = _ensurePlayer();
       await player.setPlaybackRate(_speed);
       if (!_current(request)) return;
       if (_state == PlayerState.completed) {
