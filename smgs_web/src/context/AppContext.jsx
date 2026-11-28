@@ -167,8 +167,9 @@ function DataProvider({ children, session, login, endSession }) {
         try {
           return await allPages(`tours/manage?museumId=${id}`, options);
         } catch (error) {
-          // Curators assigned to individual artifacts can review content but cannot manage museum-wide tours.
-          if (currentRole === 'curator' && error.status === 403) return [];
+          if (currentRole === 'curator' && error.status === 403) {
+            try { return await allPages(`tours?museumId=${id}`, options); } catch { return []; }
+          }
           throw error;
         }
       })).then(groups => groups.flat());
@@ -189,7 +190,20 @@ function DataProvider({ children, session, login, endSession }) {
         const tourData = await managedTours;
         const tourItems = [];
         tourData.forEach(t => {
-          (t.versions || []).forEach(v => {
+          const versions = (t.versions && t.versions.length > 0)
+            ? t.versions
+            : [{
+                id: t.id,
+                versionNo: 1,
+                title: t.title,
+                description: t.description,
+                estimatedMinutes: t.estimatedMinutes,
+                status: t.status === 'published' ? 'approved' : (t.status || 'draft'),
+                items: t.items || [],
+                createdAt: t.createdAt,
+                createdBy: t.createdBy
+              }];
+          versions.forEach(v => {
             tourItems.push({
               id: `tour_version_${v.id}`,
               backendId: v.id,

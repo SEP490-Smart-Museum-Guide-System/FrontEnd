@@ -63,6 +63,7 @@ export default function CurationCenter() {
   } = useApp();
 
   const [filter, setFilter] = useState('pending_review');
+  const [categoryFilter, setCategoryFilter] = useState('all'); // 'all' | 'tour' | 'artifact'
   const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState(null);
   const [reviewAudioUrl, setReviewAudioUrl] = useState('');
@@ -145,8 +146,14 @@ export default function CurationCenter() {
     [curationQueue, currentMuseum, museumArtifactIds]
   );
 
+  const categoryScopedQueue = useMemo(() => {
+    if (categoryFilter === 'tour') return queue.filter(item => item.type === 'new_tour');
+    if (categoryFilter === 'artifact') return queue.filter(item => item.type !== 'new_tour');
+    return queue;
+  }, [queue, categoryFilter]);
+
   const filteredItems = useMemo(() => {
-    return queue.filter(item => {
+    return categoryScopedQueue.filter(item => {
       const matchStatus = filter === 'all' || item.status === filter;
       const artName = (item.targetArtifactName || item.artifactName || '').toLowerCase();
       const title = (item.title || '').toLowerCase();
@@ -155,9 +162,11 @@ export default function CurationCenter() {
       const matchSearch = term === '' || title.includes(term) || artName.includes(term) || submitter.includes(term);
       return matchStatus && matchSearch;
     });
-  }, [queue, filter, searchTerm]);
+  }, [categoryScopedQueue, filter, searchTerm]);
 
-  const countByStatus = (status) => queue.filter(item => item.status === status).length;
+  const countByStatus = (status) => categoryScopedQueue.filter(item => item.status === status).length;
+  const totalTourItems = useMemo(() => queue.filter(item => item.type === 'new_tour').length, [queue]);
+  const totalArtifactItems = useMemo(() => queue.filter(item => item.type !== 'new_tour').length, [queue]);
 
   // Tự động mở hồ sơ thẩm định khi điều hướng từ thông báo (Deep-Link)
   useEffect(() => {
@@ -313,6 +322,48 @@ export default function CurationCenter() {
         </p>
       </section>
 
+      {/* Bộ lọc Phân loại Hồ sơ: Tất cả | Tuyến tham quan (Tour) | Nội dung hiện vật */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--color-charcoal-600)', marginRight: '4px' }}>
+          Phân loại hồ sơ:
+        </span>
+        {[
+          ['all', 'Tất cả hồ sơ', queue.length],
+          ['tour', 'Tuyến tham quan (Tour)', totalTourItems],
+          ['artifact', 'Nội dung hiện vật', totalArtifactItems],
+        ].map(([key, label, count]) => {
+          const active = categoryFilter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setCategoryFilter(key)}
+              className={`btn btn-sm ${active ? 'btn-primary' : 'btn-secondary'}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                borderRadius: '10px',
+                padding: '6px 14px',
+                fontWeight: active ? '700' : '600'
+              }}
+            >
+              <span>{label}</span>
+              <span style={{
+                padding: '1px 7px',
+                borderRadius: '8px',
+                fontSize: '0.72rem',
+                fontWeight: '700',
+                background: active ? 'rgba(255,255,255,0.22)' : 'var(--color-paper-accent)',
+                color: active ? '#FFF' : 'var(--color-burgundy-800)'
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="cc-kpis">
         {[
           ['pending_review', 'Chờ thẩm định', 'warn'],
@@ -325,7 +376,7 @@ export default function CurationCenter() {
             <span>{label}</span>
           </button>
         ))}
-        <div className="cc-kpi cc-kpi-total"><strong>{queue.length}</strong><span>Tổng hồ sơ</span></div>
+        <div className="cc-kpi cc-kpi-total"><strong>{categoryScopedQueue.length}</strong><span>Tổng hồ sơ</span></div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -346,7 +397,7 @@ export default function CurationCenter() {
             ['all', 'Tất cả', 'var(--color-charcoal-700)'],
           ].map(([value, label, color]) => {
             const isActive = filter === value;
-            const count = value === 'all' ? queue.length : countByStatus(value);
+            const count = value === 'all' ? categoryScopedQueue.length : countByStatus(value);
             return (
               <button
                 key={value}
@@ -480,7 +531,7 @@ export default function CurationCenter() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                     <span className={`badge-status badge-${item.status}`}>
                       {statusLabel[item.status]}
                     </span>
@@ -495,6 +546,22 @@ export default function CurationCenter() {
                     >
                       <Eye size={14} /> Thẩm định
                     </button>
+                    {item.type === 'new_tour' && item.tourId && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        title="Giám tuyển gỡ bỏ hành trình này"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (await confirmAppDialog(`Với quyền Giám tuyển, bạn có chắc chắn muốn gỡ bỏ và xóa toàn bộ hành trình "${item.title}" khỏi bảo tàng không?`, { title: 'Giám tuyển gỡ bỏ hành trình', destructive: true, confirmText: 'Gỡ bỏ hành trình' })) {
+                            await deleteTour(item.tourId);
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                      >
+                        <Trash2 size={14} /> Gỡ tour
+                      </button>
+                    )}
                   </div>
                 </article>
               );

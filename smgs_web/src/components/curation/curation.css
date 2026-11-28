@@ -14,4 +14,5 @@ div.cc-kpi { cursor: default; }
 .curation-center-page .role-dashboard-hero p { font-size: .85rem; max-width: 720px; }
 .curation-center-page .role-dashboard-row { padding: 12px 20px !important; }
 .curation-center-page .role-dashboard-row p { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.tour-card-footer .action-group { width: 100%; flex-wrap: nowrap; margin: 0; gap: 10px; }
 @media (max-width: 900px) { .cc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
