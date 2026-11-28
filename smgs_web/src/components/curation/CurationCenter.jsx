@@ -522,8 +522,27 @@ export default function CurationCenter() {
                           </span>
                         )}
                       </div>
-                      <small style={{ color: 'var(--color-charcoal-500)', display: 'block', marginTop: '2px' }}>
-                        <strong style={{ color: 'var(--color-burgundy-700)' }}>{itemMeta(item)}</strong> · Người nộp: {submitterDisplay} · {dateDisplay}
+                      <small style={{ color: 'var(--color-charcoal-500)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <strong style={{ color: 'var(--color-burgundy-700)' }}>{itemMeta(item)}</strong>
+                        {item.type === 'new_tour' && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '1px 8px',
+                            borderRadius: '10px',
+                            fontSize: '0.72rem',
+                            fontWeight: '700',
+                            background: (item.activeVisitorCount || 0) > 0 ? '#FEF3C7' : '#F0FDF4',
+                            color: (item.activeVisitorCount || 0) > 0 ? '#B45309' : '#15803D',
+                            border: `1px solid ${(item.activeVisitorCount || 0) > 0 ? '#FDE68A' : '#BBF7D0'}`
+                          }}>
+                            {(item.activeVisitorCount || 0) > 0
+                              ? `🟢 ${item.activeVisitorCount} khách đang đi`
+                              : '⚪ 0 khách đang đi (Có thể gỡ)'}
+                          </span>
+                        )}
+                        <span>· Người nộp: {submitterDisplay} · {dateDisplay}</span>
                       </small>
                       <p style={{ margin: '6px 0 0', color: 'var(--color-charcoal-700)', fontSize: '.82rem', lineHeight: 1.4 }}>
                         {item.changesSummary}
@@ -550,16 +569,32 @@ export default function CurationCenter() {
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
-                        title="Giám tuyển gỡ bỏ hành trình này"
+                        title={(item.activeVisitorCount || 0) > 0
+                          ? `Đang có ${item.activeVisitorCount} khách tham quan trên tuyến này`
+                          : 'Giám tuyển gỡ bỏ hành trình này'}
                         onClick={async (e) => {
                           e.stopPropagation();
-                          if (await confirmAppDialog(`Với quyền Giám tuyển, bạn có chắc chắn muốn gỡ bỏ và xóa toàn bộ hành trình "${item.title}" khỏi bảo tàng không?`, { title: 'Giám tuyển gỡ bỏ hành trình', destructive: true, confirmText: 'Gỡ bỏ hành trình' })) {
+                          if ((item.activeVisitorCount || 0) > 0) {
+                            alertAppDialog(
+                              `Hiện đang có ${item.activeVisitorCount} khách tham quan trực tiếp trên hành trình "${item.title}". Vui lòng đợi khách hoàn thành hoặc dừng chuyến tham quan trước khi gỡ bỏ hành trình này.`,
+                              { title: 'Đang có khách tham quan trực tiếp' }
+                            );
+                            return;
+                          }
+                          if (await confirmAppDialog(`Hiện không có khách nào đang đi trên tuyến này. Với quyền Giám tuyển, bạn có chắc chắn muốn gỡ bỏ và xóa toàn bộ hành trình "${item.title}" khỏi bảo tàng không?`, { title: 'Giám tuyển gỡ bỏ hành trình', destructive: true, confirmText: 'Gỡ bỏ hành trình' })) {
                             await deleteTour(item.tourId);
                           }
                         }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          color: (item.activeVisitorCount || 0) > 0 ? 'var(--color-charcoal-400)' : 'var(--color-danger)',
+                          borderColor: (item.activeVisitorCount || 0) > 0 ? 'var(--color-paper-border)' : 'var(--color-danger)',
+                          opacity: (item.activeVisitorCount || 0) > 0 ? 0.75 : 1
+                        }}
                       >
-                        <Trash2 size={14} /> Gỡ tour
+                        <Trash2 size={14} /> {(item.activeVisitorCount || 0) > 0 ? `Đang có ${item.activeVisitorCount} khách` : 'Gỡ tour'}
                       </button>
                     )}
                   </div>
@@ -704,7 +739,26 @@ export default function CurationCenter() {
                       <strong style={{ color: 'var(--color-burgundy-900)', fontSize: '0.95rem' }}>
                         Thông tin Lộ trình Tham quan (Phiên bản v{selected.versionNo})
                       </strong>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {(() => {
+                          const activeVisitors = tourVersionDetail?.activeVisitorCount ?? selected.activeVisitorCount ?? 0;
+                          const completedVisits = tourVersionDetail?.completedVisitCount ?? selected.completedVisitCount ?? 0;
+                          return (
+                            <span style={{
+                              fontSize: '0.72rem',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              background: activeVisitors > 0 ? '#FEF3C7' : '#F0FDF4',
+                              color: activeVisitors > 0 ? '#B45309' : '#15803D',
+                              fontWeight: '700',
+                              border: `1px solid ${activeVisitors > 0 ? '#FDE68A' : '#BBF7D0'}`
+                            }}>
+                              {activeVisitors > 0
+                                ? `🟢 ${activeVisitors} khách đang đi`
+                                : `⚪ 0 khách đang đi (${completedVisits} lượt hoàn thành)`}
+                            </span>
+                          );
+                        })()}
                         {tourVersionDetail?.publicAt && (
                           <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '12px', background: '#EFF6FF', color: '#1D4ED8', fontWeight: '600', border: '1px solid #BFDBFE' }}>
                             Công bố: {formatCurationDate(tourVersionDetail.publicAt)}
@@ -1153,21 +1207,37 @@ export default function CurationCenter() {
                 <button type="button" className="btn btn-secondary" onClick={closeItem}>
                   Đóng
                 </button>
-                {selected.type === 'new_tour' && selected.tourId && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                    onClick={async () => {
-                      if (await confirmAppDialog(`Với quyền Giám tuyển, bạn có chắc chắn muốn gỡ bỏ và xóa toàn bộ hành trình "${selected.title}" khỏi bảo tàng không?`, { title: 'Giám tuyển gỡ bỏ hành trình', destructive: true, confirmText: 'Gỡ bỏ hành trình' })) {
-                        const res = await deleteTour(selected.tourId);
-                        if (res?.success) closeItem();
-                      }
-                    }}
-                  >
-                    <Trash2 size={14} /> Gỡ bỏ hành trình
-                  </button>
-                )}
+                {selected.type === 'new_tour' && selected.tourId && (() => {
+                  const activeVisitors = tourVersionDetail?.activeVisitorCount ?? selected.activeVisitorCount ?? 0;
+                  return (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        color: activeVisitors > 0 ? 'var(--color-charcoal-400)' : 'var(--color-danger)',
+                        borderColor: activeVisitors > 0 ? 'var(--color-paper-border)' : 'var(--color-danger)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      onClick={async () => {
+                        if (activeVisitors > 0) {
+                          alertAppDialog(
+                            `Hiện đang có ${activeVisitors} khách tham quan trực tiếp trên hành trình "${selected.title}". Vui lòng đợi khách hoàn thành hoặc dừng chuyến tham quan trước khi gỡ bỏ hành trình này.`,
+                            { title: 'Đang có khách tham quan trực tiếp' }
+                          );
+                          return;
+                        }
+                        if (await confirmAppDialog(`Hiện không có khách nào đang đi trên tuyến này. Với quyền Giám tuyển, bạn có chắc chắn muốn gỡ bỏ và xóa toàn bộ hành trình "${selected.title}" khỏi bảo tàng không?`, { title: 'Giám tuyển gỡ bỏ hành trình', destructive: true, confirmText: 'Gỡ bỏ hành trình' })) {
+                          const res = await deleteTour(selected.tourId);
+                          if (res?.success) closeItem();
+                        }
+                      }}
+                    >
+                      <Trash2 size={14} /> {activeVisitors > 0 ? `${activeVisitors} khách đang đi` : 'Gỡ bỏ hành trình'}
+                    </button>
+                  );
+                })()}
               </div>
 
               {selected.status === 'pending_review' && (

@@ -15,7 +15,7 @@ import {
   Clock,
   MapPin,
   Plus,
-  Star,
+  Users,
   Layers,
   Award,
   CheckCircle,
@@ -77,7 +77,7 @@ export default function TourManager() {
           setTopicsList(data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     backend(`tours/versions/status-summary?museumId=${currentMuseum.id}`)
       .then(summary => {
@@ -142,7 +142,7 @@ export default function TourManager() {
           setIndoorMapImageUrl(null);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [isCreatingTour, currentMuseum?.id]);
 
@@ -460,9 +460,11 @@ export default function TourManager() {
                       <Layers size={14} color="var(--color-burgundy-700)" />
                       <span>{tour.stopsCount} Trạm dừng</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Star size={14} color="#EAB308" fill="#EAB308" />
-                      <span>Chưa có thống kê đánh giá</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
+                      <Users size={14} color={(tour.activeVisitorCount || 0) > 0 ? '#16A34A' : 'var(--color-burgundy-700)'} style={{ flexShrink: 0 }} />
+                      <span style={{ fontWeight: (tour.activeVisitorCount || 0) > 0 ? '700' : 'normal', color: (tour.activeVisitorCount || 0) > 0 ? '#15803D' : 'inherit' }}>
+                        {`${tour.completedVisitCount || 0} lượt hoàn thành · ${tour.activeVisitorCount || 0} khách đang đi`}
+                      </span>
                     </div>
                   </div>
 

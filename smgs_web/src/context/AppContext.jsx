@@ -224,6 +224,8 @@ function DataProvider({ children, session, login, endSession }) {
               items: v.items || [],
               estimatedMinutes: v.estimatedMinutes || t.estimatedMinutes || 60,
               versionNo: v.versionNo || 1,
+              activeVisitorCount: t.activeVisitorCount ?? v.activeVisitorCount ?? 0,
+              completedVisitCount: t.completedVisitCount ?? v.completedVisitCount ?? 0,
             });
           });
         });
