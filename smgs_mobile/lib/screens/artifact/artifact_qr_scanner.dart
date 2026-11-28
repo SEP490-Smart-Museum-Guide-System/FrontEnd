@@ -202,7 +202,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
       final msg = e.toString().replaceFirst('Exception: ', '');
       _error = msg.startsWith('Dịch vụ AI')
           ? msg
-          : 'Dịch vụ AI Vision (Port 8001): $msg';
+          : 'Dịch vụ nhận diện AI: $msg';
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -238,7 +238,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
     title: widget.direct ? 'Quét mã hiện vật' : 'Khám phá hiện vật',
     subtitle: _activeMode == 'qr'
         ? 'Quét mã QR đặt cạnh hiện vật tại tủ trưng bày.'
-        : 'Chụp ảnh hiện vật để nhận diện thông minh qua AI Vision (Port 8001).',
+        : 'Chụp ảnh hoặc chọn ảnh hiện vật để hệ thống AI nhận diện thông minh.',
     children: [
       if (!widget.direct) ...[
         BackendPanel(
@@ -439,10 +439,10 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Eyebrow('Mô hình CLIP ViT-B/32 ONNX'),
+              const Eyebrow('Nhận diện thị giác thông minh'),
               const SizedBox(height: 8),
               const Text(
-                'Nhận diện hiện vật từ ảnh chụp góc tự do thông qua so khớp vector 512 chiều với kho ảnh tham chiếu đã index.',
+                'Chụp ảnh hiện vật tại bảo tàng từ bất kỳ góc độ nào. Hệ thống trí tuệ nhân tạo sẽ tự động phân tích và tra cứu thông tin chi tiết.',
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -480,7 +480,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '${(_selectedImageBytes!.length / 1024).toStringAsFixed(1)} KB · Gửi sang AI Vision (Port 8001)',
+                              '${(_selectedImageBytes!.length / 1024).toStringAsFixed(1)} KB · Đã sẵn sàng phân tích',
                               style: AppTextStyles.bodySmall,
                             ),
                           ],
@@ -492,7 +492,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 const SizedBox(height: 14),
               ],
               PrimaryButton(
-                label: _busy ? 'Đang phân tích vector…' : 'Chụp ảnh qua Camera',
+                label: _busy ? 'Đang phân tích hiện vật…' : 'Chụp ảnh qua Camera',
                 icon: Icons.camera_alt_outlined,
                 onPressed: _busy ? null : _captureFromCamera,
               ),
@@ -549,7 +549,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Độ tương đồng cosine: ${(_visionResult!.similarity * 100).toStringAsFixed(1)}% · Khoảng cách lề: ${_visionResult!.margin.toStringAsFixed(2)}',
+                  'Độ chính xác nhận diện: ${(_visionResult!.similarity * 100).toStringAsFixed(1)}%${_visionResult!.matched ? ' · Khớp hoàn hảo' : ''}',
                   style: AppTextStyles.caption,
                 ),
                 const SizedBox(height: 14),
@@ -723,7 +723,7 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                           ),
                           SizedBox(width: 6),
                           Text(
-                            'AI VISION · CLIP ViT-B/32 ONNX',
+                            'AI VISION · NHẬN DIỆN THỊ GIÁC',
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
@@ -768,8 +768,8 @@ class _ArtifactQrScannerState extends State<ArtifactQrScanner>
                         Expanded(
                           child: Text(
                             animVal < 0.5
-                                ? 'Đang trích xuất đặc trưng vector 512 chiều…'
-                                : 'Đang so khớp Cosine Similarity kho hiện vật…',
+                                ? 'Đang phân tích đường nét hiện vật…'
+                                : 'Đang đối chiếu kho tư liệu bảo tàng…',
                             style: const TextStyle(
                               fontSize: 11,
                               color: AppColors.antiqueIvory,

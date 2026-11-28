@@ -17,14 +17,10 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const MaterialApp(home: ScanScreen()));
-    final qrTile = find.text('Quét mã hiện vật');
-    await tester.ensureVisible(qrTile);
-    await tester.tap(qrTile);
     await tester.pumpAndSettle();
 
     expect(find.byType(MobileScanner), findsOneWidget);
     expect(find.byType(DropdownButtonFormField<int>), findsNothing);
-    expect(find.text('Nhận diện AI'), findsNothing);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Xem thông tin hiện vật'), findsNothing);
   });

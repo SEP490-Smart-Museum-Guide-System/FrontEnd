@@ -170,8 +170,8 @@ class _QRScanScreenState extends State<QRScanScreen> {
       back: true,
       title: l10n.isEn ? 'AI Visual Recognition' : 'Nhận diện thị giác AI',
       eyebrow: l10n.isEn
-          ? 'CLIP Artificial Intelligence'
-          : 'Trí tuệ nhân tạo CLIP',
+          ? 'AI Visual Recognition'
+          : 'Nhận diện thị giác thông minh',
       subtitle: l10n.isEn
           ? 'Photograph artifact for automatic recognition'
           : 'Chụp ảnh hiện vật để nhận diện tự động',

@@ -226,62 +226,59 @@ class _AiGuideScreenState extends State<AiGuideScreen> {
                 ),
                 const SectionHeading('Bạn có thể hỏi'),
                 const SizedBox(height: 8),
-                ..._questions.map(
-                  (q) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: InkWell(
-                      onTap: _busy ? null : () => _ask(q),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.card,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  clipBehavior: Clip.none,
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < _questions.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _busy ? null : () => _ask(_questions[i]),
+                          borderRadius: BorderRadius.circular(VisitorRadius.full),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.mutedGold.withOpacity(0.15),
-                                shape: BoxShape.circle,
+                            decoration: BoxDecoration(
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(VisitorRadius.full),
+                              border: Border.all(
+                                color: AppColors.mutedGold.withValues(alpha: 0.4),
                               ),
-                              child: const Icon(
-                                Icons.lightbulb_outline_rounded,
-                                size: 16,
-                                color: AppColors.deepBurgundy,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                q,
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.darkBrown,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 ),
-                              ),
+                              ],
                             ),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 12,
-                              color: AppColors.darkBrown.withOpacity(0.35),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.lightbulb_outline_rounded,
+                                  size: 15,
+                                  color: AppColors.deepBurgundy,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _questions[i],
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: AppColors.darkBrown,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
                 ),
                 if (_messages.isNotEmpty) const Divider(height: 32),
