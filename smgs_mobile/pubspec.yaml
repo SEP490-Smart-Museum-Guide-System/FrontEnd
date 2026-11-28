@@ -25,6 +25,7 @@ dependencies:
   image_picker: ^1.2.4
   audioplayers: ^6.8.1
   signalr_netcore: ^1.4.2
+  qr_flutter: ^4.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

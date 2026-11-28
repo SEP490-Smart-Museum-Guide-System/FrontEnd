@@ -1,6 +1,7 @@
 import '../../core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../widgets/museum_ui.dart';
 import '../../widgets/backend_panel.dart';
 import '../../services/backend_api.dart';
@@ -131,16 +132,40 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           final transactions = await BackendApi.request(
             'commerce/orders/${widget.orderId}/transactions',
           );
-          return [order, transactions];
+          Map<String, dynamic>? admissionTicket;
+          try {
+            final t = await BackendApi.request('commerce/orders/${widget.orderId}/admission-ticket');
+            if (t is Map) admissionTicket = Map<String, dynamic>.from(t);
+          } catch (_) {}
+          Map<String, dynamic>? orderItems;
+          try {
+            final it = await BackendApi.request('commerce/orders/${widget.orderId}/items');
+            if (it is Map) orderItems = Map<String, dynamic>.from(it);
+          } catch (_) {}
+          return [order, transactions, admissionTicket, orderItems];
         },
         builder: (data, reload) {
           final order = data[0] as Map<String, dynamic>;
           final transactions = data[1] as List;
+          final admissionTicket = data.length > 2 ? data[2] as Map<String, dynamic>? : null;
+          final orderItems = data.length > 3 ? data[3] as Map<String, dynamic>? : null;
           final isPaid = order['status'] == 'paid';
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 1. Thẻ Vé vào cổng Boarding Pass kèm mã QR
+              if (admissionTicket != null && admissionTicket['code'] != null) ...[
+                _buildAdmissionBoardingPass(context, admissionTicket, order, reload),
+                const SizedBox(height: 16),
+              ],
+
+              // 2. Chi tiết từng món trong đơn & nút Hủy hoàn tiền
+              if (orderItems != null && (orderItems['ticketAmount'] != null || orderItems['digitalAmount'] != null)) ...[
+                _buildOrderItemsBreakdown(context, order, admissionTicket, orderItems, reload),
+                const SizedBox(height: 16),
+              ],
+
               // Digital Pass / Ticket Header Card
               Container(
                 decoration: BoxDecoration(
@@ -561,7 +586,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   load: () => BackendApi.request(
                     'commerce/orders/${widget.orderId}/invoice',
                   ),
-                  builder: (invoice, retry) => Container(
+                  builder: (invoice, retry) {
+                    if (invoice is! Map<String, dynamic> || invoice.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: VisitorColors.surface1,
@@ -620,8 +649,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           ),
                       ],
                     ),
-                  ),
-                ),
+                  );
+                },
+              ),
 
                 // Group Pass Key Generation & Sharing
                 if ((order['seats'] as num) > 1) ...[
@@ -771,6 +801,439 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     ],
   );
+  }
+
+  Widget _buildAdmissionBoardingPass(
+    BuildContext context,
+    Map<String, dynamic> ticket,
+    Map<String, dynamic> order,
+    VoidCallback reload,
+  ) {
+    final code = ticket['code']?.toString() ?? '';
+    final visitDate = ticket['visitDate']?.toString() ?? order['visitDate']?.toString() ?? '';
+    final quantity = ticket['quantity'] ?? order['seats'] ?? 1;
+    final used = ticket['used'] ?? 0;
+    final remaining = ticket['remaining'] ?? (quantity - used);
+    final canCheckIn = ticket['canCheckIn'] == true;
+    final isCancelled = order['status'] == 'cancelled';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: Border.all(color: AppColors.mutedGold, width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: AppColors.deepBurgundy,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(VisitorRadius.xl - 1),
+                topRight: Radius.circular(VisitorRadius.xl - 1),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.confirmation_number_rounded, color: AppColors.mutedGold, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'VÉ VÀO CỔNG ĐIỆN TỬ',
+                      style: TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.antiqueIvory,
+                        fontSize: 13.5,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isCancelled
+                        ? const Color(0xFFFFEBEE)
+                        : (canCheckIn ? const Color(0xFFE8F5E9) : Colors.white24),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isCancelled
+                        ? 'Đã hủy'
+                        : (canCheckIn ? 'Hợp lệ vào cổng' : 'Đã dùng hết'),
+                    style: TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isCancelled
+                          ? const Color(0xFFC62828)
+                          : (canCheckIn ? const Color(0xFF2E7D32) : Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // QR Code Container
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              children: [
+                if (code.isNotEmpty && !isCancelled)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+                      ],
+                    ),
+                    child: QrImageView(
+                      data: code,
+                      version: QrVersions.auto,
+                      size: 190.0,
+                      backgroundColor: Colors.white,
+                    ),
+                  )
+                else
+                  Container(
+                    height: 120,
+                    alignment: Alignment.center,
+                    child: Text(
+                      isCancelled ? 'Vé đã bị hủy' : 'Chưa có mã QR',
+                      style: const TextStyle(color: AppColors.secondaryText),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                SelectableText(
+                  'Mã vé: $code',
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppColors.darkBrown,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Xuất trình mã này tại cổng để nhân viên quét xác nhận',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11.5, color: AppColors.secondaryText),
+                ),
+              ],
+            ),
+          ),
+
+          // Dashed Divider
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: List.generate(
+                30,
+                (index) => Expanded(
+                  child: Container(
+                    color: index % 2 == 0 ? AppColors.border : Colors.transparent,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Boarding pass footer stats
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildPassStat('NGÀY THAM QUAN', visitDate),
+                _buildPassStat('ĐÃ VÀO', '$used / $quantity'),
+                _buildPassStat('CÒN LẠI', '$remaining lượt', isHighlight: remaining > 0),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPassStat(String label, String value, {bool isHighlight = false}) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: AppColors.secondaryText,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.bold,
+            color: isHighlight ? AppColors.deepBurgundy : AppColors.darkBrown,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrderItemsBreakdown(
+    BuildContext context,
+    Map<String, dynamic> order,
+    Map<String, dynamic>? ticket,
+    Map<String, dynamic> orderItems,
+    VoidCallback reload,
+  ) {
+    final currency = order['currency'] ?? 'VND';
+    final ticketAmount = orderItems['ticketAmount'];
+    final digitalAmount = orderItems['digitalAmount'];
+    final ticketCancelled = orderItems['ticketCancelledAt'] != null;
+    final digitalCancelled = orderItems['digitalCancelledAt'] != null;
+    final used = ticket?['used'] ?? 0;
+    final isPaid = order['status'] == 'paid' || order['status'] == 'succeeded';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: VisitorColors.surface1,
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'CHI TIẾT MÓN TRONG ĐƠN',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.deepBurgundy,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Line 1: Vé vào cổng
+          if (ticketAmount != null) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.confirmation_number_outlined, size: 18, color: AppColors.deepBurgundy),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Vé vào cổng (${order['seats'] ?? 1} người)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                      const SizedBox(height: 2),
+                      Text(
+                        ticketCancelled
+                            ? 'Đã hủy (${orderItems['ticketCancelledAt']}) · Hoàn ${_formatAmount(orderItems['ticketRefundedAmount'], currency)} vào ví'
+                            : (used > 0 ? 'Đã check-in $used lượt (Không thể hủy)' : 'Chưa check-in'),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: ticketCancelled ? const Color(0xFFC62828) : AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(_formatAmount(ticketAmount, currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              ],
+            ),
+            if (isPaid && !ticketCancelled && used == 0) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300),
+                  ),
+                  onPressed: () => _handleCancelItem(
+                    isTicket: true,
+                    amount: (ticketAmount as num).toDouble(),
+                    currency: currency.toString(),
+                    visitDateStr: ticket?['visitDate']?.toString() ?? order['visitDate']?.toString(),
+                    reload: reload,
+                  ),
+                  child: const Text('Hủy vé vào cổng', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+          ],
+
+          // Line 2: Gói số
+          if (digitalAmount != null && (digitalAmount as num) > 0) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.headphones_outlined, size: 18, color: AppColors.deepBurgundy),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Gói thuyết minh AI & 3D', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                      const SizedBox(height: 2),
+                      Text(
+                        digitalCancelled
+                            ? 'Đã hủy gói số (${orderItems['digitalCancelledAt']}) · Hoàn ${_formatAmount(orderItems['digitalRefundedAmount'], currency)} vào ví'
+                            : 'Đang hoạt động',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: digitalCancelled ? const Color(0xFFC62828) : AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(_formatAmount(digitalAmount, currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+              ],
+            ),
+            if (isPaid && !digitalCancelled) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300),
+                  ),
+                  onPressed: () => _handleCancelItem(
+                    isTicket: false,
+                    amount: (digitalAmount as num).toDouble(),
+                    currency: currency.toString(),
+                    visitDateStr: null,
+                    reload: reload,
+                  ),
+                  child: const Text('Hủy gói thuyết minh', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleCancelItem({
+    required bool isTicket,
+    required double amount,
+    required String currency,
+    String? visitDateStr,
+    required VoidCallback reload,
+  }) async {
+    String refundNotice = '';
+    if (isTicket && visitDateStr != null) {
+      try {
+        final visitDate = DateTime.parse(visitDateStr);
+        final now = DateTime.now();
+        final days = visitDate.difference(DateTime(now.year, now.month, now.day)).inDays;
+        if (days >= 3) {
+          refundNotice = 'Hủy trước >= 3 ngày: Hoàn 100% (${_formatAmount(amount, currency)}) vào Ví SMGS.';
+        } else if (days == 2) {
+          refundNotice = 'Hủy trước đúng 2 ngày: Hoàn 50% (${_formatAmount(amount / 2, currency)}) vào Ví SMGS.';
+        } else {
+          refundNotice = 'Hủy trước <= 1 ngày: Hoàn 0% vào Ví SMGS theo chính sách.';
+        }
+      } catch (_) {
+        refundNotice = 'Tiền hoàn sẽ được tính theo chính sách thời hạn và ghi có vào Ví SMGS.';
+      }
+    } else {
+      refundNotice = 'Tiền hoàn của gói số sẽ được tính theo chính sách và ghi có vào Ví SMGS.';
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.antiqueIvory,
+        title: Text(isTicket ? 'Hủy vé vào cổng?' : 'Hủy gói thuyết minh?', style: AppTextStyles.cardTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isTicket
+                  ? 'Bạn có chắc chắn muốn hủy vé vào cổng này không? Mã QR vào cổng sẽ bị vô hiệu hóa.'
+                  : 'Bạn có chắc chắn muốn hủy gói thuyết minh này không? Quyền truy cập nội dung số và mã nhóm sẽ bị khóa.',
+              style: const TextStyle(fontSize: 13, color: AppColors.darkBrown),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFA5D6A7)),
+              ),
+              child: Text(
+                'Chính sách hoàn tiền:\n$refundNotice',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Giữ lại', style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xác nhận hủy', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final endpoint = isTicket
+          ? 'commerce/orders/${widget.orderId}/items/ticket/cancel'
+          : 'commerce/orders/${widget.orderId}/items/digital/cancel';
+      final res = await BackendApi.request(endpoint, method: 'POST', body: {});
+      final msg = res is Map ? res['message']?.toString() ?? 'Đã hủy thành công.' : 'Đã hủy.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        reload();
+      }
+    } catch (e) {
+      if (mounted) {
+        final err = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $err'), backgroundColor: AppColors.deepBurgundy),
+        );
+      }
+    }
   }
 }
 

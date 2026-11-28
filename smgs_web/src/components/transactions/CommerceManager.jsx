@@ -28,12 +28,18 @@ function MuseumCommerce({ museumId }) {
       }
     }
   }, [pendingNotificationTarget, setPendingNotificationTarget]);
-  const data = useData(`commerce:${museumId}`, signal => Promise.all([backend(`commerce/museums/${museumId}/resources`, { signal }), backend(`commerce/museums/${museumId}/products/manage`, { signal }), allPages(`commerce/museums/${museumId}/orders`, { signal, pagedArray: true })]), [[], [], []]);
+  const data = useData(`commerce:${museumId}`, signal => Promise.all([
+    backend(`commerce/museums/${museumId}/resources`, { signal }).catch(err => { console.warn('Lỗi tải resources:', err); return []; }),
+    backend(`commerce/museums/${museumId}/products/manage`, { signal }).catch(err => { console.warn('Lỗi tải products:', err); return []; }),
+    allPages(`commerce/museums/${museumId}/orders`, { signal, pagedArray: true }).catch(err => { console.warn('Lỗi tải orders:', err); return []; }),
+    backend(`commerce/museums/${museumId}/admission-offers/manage`, { signal }).catch(err => { console.warn('Lỗi tải admission-offers:', err); return []; })
+  ]), [[], [], [], []]);
   const [query, setQuery] = useState(''), action = useAction('Đã lưu thay đổi dịch vụ và giao dịch.');
   const refresh = () => { data.reload(); reloadApp(); };
-  return <><div className="business-toolbar section-tabs" aria-label="Các mục dịch vụ">{[['orders', 'Đơn hàng'], ['products', 'Gói dịch vụ'], ['resources', 'Nội dung & quyền'], ['revenue', 'Báo cáo doanh thu'], ['visits', 'Thống kê tham quan']].map(([id, name]) => <button className={`section-tab ${tab === id ? 'is-active' : ''}`} aria-pressed={tab === id} key={id} onClick={() => setTab(id)}>{name}</button>)}<button className="btn btn-secondary" onClick={data.reload}>Tải lại</button></div>
+  return <><div className="business-toolbar section-tabs" aria-label="Các mục dịch vụ">{[['orders', 'Đơn hàng'], ['admissions', 'Vé vào cổng'], ['products', 'Gói thuyết minh số'], ['resources', 'Nội dung & quyền'], ['revenue', 'Báo cáo doanh thu'], ['visits', 'Thống kê tham quan']].map(([id, name]) => <button className={`section-tab ${tab === id ? 'is-active' : ''}`} aria-pressed={tab === id} key={id} onClick={() => setTab(id)}>{name}</button>)}<button className="btn btn-secondary" onClick={data.reload}>Tải lại</button></div>
     <ErrorNotice>{action.error}</ErrorNotice>{tab === 'revenue' ? <Revenue museumId={museumId} /> : tab === 'visits' ? <VisitReport museumId={museumId} /> : <LoadState resource={data}>
     {tab === 'orders' && <><input className="form-input" aria-label="Tìm đơn hàng" placeholder="Tìm mã đơn, người mua, gói dịch vụ" value={query} onChange={e => setQuery(e.target.value)} /><div className="business-list">{data.data[2].filter(o => `${o.id} ${o.buyerName} ${o.productName}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))).map(o => <article key={o.id} className="card business-card"><h3>{o.productName}</h3><p>{o.buyerName} · {money(o.amount, o.currency)}</p><p>{statusLabels[o.status] || o.status} · {new Date(o.createdAt).toLocaleString('vi-VN')}</p><p className="business-muted">Mã đơn: {o.id}</p><button className="btn btn-secondary" onClick={() => setOrderId(o.id)}>Chi tiết đơn hàng</button></article>)}{!data.data[2].length && <Empty>Chưa có đơn hàng.</Empty>}</div></>}
+    {tab === 'admissions' && <><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}><p className="business-muted" style={{ margin: 0 }}>Cấu hình vé vào cổng bán theo lượt/người cho khách tham quan tại bảo tàng.</p><button className="btn btn-primary" onClick={() => setModal({ type: 'admission' })}>Thêm loại vé vào cổng</button></div><div className="business-grid">{(data.data[3] || []).map(a => <article key={a.id} className="card business-card"><h3>{a.name}</h3><p style={{ fontWeight: 700, color: 'var(--color-primary, #6d3032)', fontSize: '1.2rem', margin: '0.25rem 0' }}>{money(a.price, 'VND')} / người</p><p><span className={`badge badge-${a.isActive ? 'success' : 'secondary'}`}>{a.isActive ? 'Đang mở bán' : 'Tạm ẩn'}</span></p><p className="business-muted">Mã cấu hình vé: #{a.id}</p><button className="btn btn-secondary" onClick={() => setModal({ type: 'admission', value: a })}>Chỉnh sửa vé</button></article>)}</div>{!(data.data[3] || []).length && <Empty>Chưa có cấu hình vé vào cổng.</Empty>}</>}
     {tab === 'products' && <><button className="btn btn-primary" onClick={() => setModal({ type: 'product' })}>Thêm gói dịch vụ</button><div className="business-grid">{data.data[1].map(p => <article key={p.id} className="card business-card"><h3>{p.name}</h3><p>{money(p.price, p.currency)} · {p.seats} người</p><p>{p.validityHours ? `${p.validityHours} giờ từ lúc thanh toán` : 'Chưa cấu hình thời hạn mua'}</p><p>{p.isActive ? 'Đang bán' : 'Tạm ẩn'}</p><p>{p.resourceIds.map(id => data.data[0].find(r => r.id === id)?.name || `Nội dung #${id}`).join(', ')}</p><button className="btn btn-secondary" onClick={() => setModal({ type: 'product', value: p })}>Chỉnh sửa</button></article>)}</div>{!data.data[1].length && <Empty>Chưa có gói dịch vụ.</Empty>}</>}
     {tab === 'resources' && <><button className="btn btn-primary" onClick={() => setModal({ type: 'resource' })}>Thêm nội dung / quyền</button><div className="business-list">{data.data[0].map(r => <article key={r.id} className="card business-card"><h3>{r.name}</h3><p>Nội dung số · {r.accessLevel === 'premium' ? 'Trả phí' : 'Miễn phí'}</p><p>{artifacts.find(a => a.id === r.artifactId)?.name || r.scopeReference || 'Toàn phạm vi dịch vụ'}</p><button className="btn btn-secondary" onClick={() => setModal({ type: 'resource', value: r })}>Chỉnh sửa</button></article>)}</div>{!data.data[0].length && <Empty>Chưa có nội dung / quyền.</Empty>}</>}
     </LoadState>}
@@ -43,12 +49,46 @@ function MuseumCommerce({ museumId }) {
 }
 function CommerceForm({ modal, museumId, resources, artifacts, onClose, onSaved }) {
   const { showToast } = useApp();
-  const r = modal.value, product = modal.type === 'product';
-  const [form, setForm] = useState({ name: r?.name || '', kind: 'digital', accessLevel: r?.accessLevel || 'free', artifactId: r?.artifactId || '', scopeReference: r?.scopeReference || '', price: r?.price ?? '', currency: r?.currency || 'VND', seats: r?.seats ?? 1, validityHours: r?.validityHours ?? '', isActive: r?.isActive ?? false, resourceIds: r?.resourceIds || [] });
+  const r = modal.value,
+        product = modal.type === 'product',
+        admission = modal.type === 'admission';
+  const [form, setForm] = useState({
+    name: r?.name || '',
+    kind: 'digital',
+    accessLevel: r?.accessLevel || 'free',
+    artifactId: r?.artifactId || '',
+    scopeReference: r?.scopeReference || '',
+    price: r?.price ?? '',
+    currency: r?.currency || 'VND',
+    seats: r?.seats ?? 1,
+    validityHours: r?.validityHours ?? '',
+    isActive: r?.isActive ?? true,
+    resourceIds: r?.resourceIds || []
+  });
   const action = useAction('Đã lưu thay đổi dịch vụ và giao dịch.');
   const change = (key, value) => setForm(p => ({ ...p, [key]: value }));
   async function save(e) {
     e.preventDefault();
+    if (admission) {
+      if (!form.name.trim()) {
+        showToast('Vui lòng nhập tên loại vé vào cổng.', 'warning');
+        return;
+      }
+      if (form.price === '' || Number(form.price) < 0) {
+        showToast('Đơn giá vé vào cổng phải lớn hơn hoặc bằng 0 đ.', 'warning');
+        return;
+      }
+      const body = {
+        name: form.name.trim(),
+        price: Number(form.price),
+        isActive: Boolean(form.isActive)
+      };
+      await action.run(() => backend(`commerce/museums/${museumId}/admission-offers${r ? `/${r.id}` : ''}`, {
+        method: r ? 'PUT' : 'POST',
+        body
+      }), onSaved);
+      return;
+    }
     if (product) {
       if (!form.resourceIds.length) {
         showToast('Vui lòng tích chọn ít nhất một nội dung/quyền được cấp cho gói này.', 'warning');
@@ -62,9 +102,27 @@ function CommerceForm({ modal, museumId, resources, artifacts, onClose, onSaved 
     const body = product ? { name: form.name.trim(), kind: 'digital', price: Number(form.price), currency: form.currency.toUpperCase(), seats: Number(form.seats), validityHours: form.validityHours === '' ? null : Number(form.validityHours), resourceIds: form.resourceIds, isActive: form.isActive } : { name: form.name.trim(), kind: 'digital', accessLevel: form.accessLevel, artifactId: form.artifactId ? Number(form.artifactId) : null, scopeReference: form.scopeReference.trim() || null };
     await action.run(() => backend(`commerce/museums/${museumId}/${product ? 'products' : 'resources'}${r ? `/${r.id}` : ''}`, { method: r ? 'PUT' : 'POST', body }), onSaved);
   }
-  return <Modal title={product ? 'Cấu hình gói dịch vụ' : 'Cấu hình nội dung / quyền'} onClose={onClose} busy={action.busy}><form onSubmit={save}><ErrorNotice>{action.error}</ErrorNotice><Field label="Tên"><input className="form-input" required maxLength={200} value={form.name} onChange={e => change('name', e.target.value)} /></Field><Field label="Loại hình"><input className="form-input" disabled value="Nội dung số (Digital)" /></Field>
-    {product ? <><Field label="Giá"><input className="form-input" type="number" min="0.01" max="999999999999" step="0.01" required value={form.price} onChange={e => change('price', e.target.value)} /></Field><Field label="Loại tiền"><input className="form-input" required pattern="[A-Za-z]{3}" maxLength={3} value={form.currency} onChange={e => change('currency', e.target.value)} /></Field><Field label="Số người"><input className="form-input" type="number" required min={1} max={1000} value={form.seats} onChange={e => change('seats', e.target.value)} /></Field><Field label="Thời hạn tính từ lúc thanh toán (giờ)"><input className="form-input" type="number" min="1" max={87600} required={form.isActive} value={form.validityHours} onChange={e => change('validityHours', e.target.value)} /></Field><p className="business-muted">{form.isActive ? 'Bắt buộc nhập số giờ khi mở bán công khai.' : 'Để trống thời hạn nếu gói chưa sẵn sàng cho khách mua.'}</p><label className="business-check"><input type="checkbox" checked={form.isActive} onChange={e => change('isActive', e.target.checked)} />Công khai gói dịch vụ</label><h4>Nội dung được cấp quyền</h4>{resources.map(r => <label className="business-check" key={r.id}><input type="checkbox" checked={form.resourceIds.includes(r.id)} onChange={e => change('resourceIds', e.target.checked ? [...form.resourceIds, r.id] : form.resourceIds.filter(id => id !== r.id))} /><span>{r.name}</span></label>)}{!resources.length && <Empty>Tạo nội dung / quyền trước khi tạo gói dịch vụ.</Empty>}</> : <><Field label="Mức truy cập"><select className="form-select" value={form.accessLevel} onChange={e => change('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Trả phí</option></select></Field><Field label="Hiện vật liên quan"><select className="form-select" value={form.artifactId} onChange={e => change('artifactId', e.target.value)}><option value="">Không gắn hiện vật</option>{artifacts.map(a => <option value={a.id} key={a.id}>{a.name}</option>)}</select></Field><Field label="Tham chiếu phạm vi (nếu có)"><input className="form-input" maxLength={200} value={form.scopeReference} onChange={e => change('scopeReference', e.target.value)} /></Field></>}
-    <button className="btn btn-primary" disabled={action.busy || (product && !form.resourceIds.length)}>{action.busy ? 'Đang lưu…' : 'Lưu cấu hình'}</button></form></Modal>;
+  return (
+    <Modal title={admission ? 'Cấu hình vé vào cổng' : product ? 'Cấu hình gói dịch vụ số' : 'Cấu hình nội dung / quyền'} onClose={onClose} busy={action.busy}>
+      <form onSubmit={save}>
+        <ErrorNotice>{action.error}</ErrorNotice>
+        <Field label="Tên"><input className="form-input" required maxLength={200} placeholder={admission ? "Ví dụ: Vé tham quan tiêu chuẩn, Vé người lớn..." : "Tên dịch vụ"} value={form.name} onChange={e => change('name', e.target.value)} /></Field>
+        {admission ? (
+          <>
+            <Field label="Loại hình"><input className="form-input" disabled value="Vé vào cổng bảo tàng (Admission)" /></Field>
+            <Field label="Đơn giá mỗi người (VND)"><input className="form-input" type="number" min="0" max="999999999999" step="1000" required value={form.price} onChange={e => change('price', e.target.value)} /></Field>
+            <label className="business-check"><input type="checkbox" checked={form.isActive} onChange={e => change('isActive', e.target.checked)} /><span>Mở bán vé này trên ứng dụng</span></label>
+          </>
+        ) : (
+          <>
+            <Field label="Loại hình"><input className="form-input" disabled value="Nội dung số (Digital)" /></Field>
+            {product ? <><Field label="Giá"><input className="form-input" type="number" min="0.01" max="999999999999" step="0.01" required value={form.price} onChange={e => change('price', e.target.value)} /></Field><Field label="Loại tiền"><input className="form-input" required pattern="[A-Za-z]{3}" maxLength={3} value={form.currency} onChange={e => change('currency', e.target.value)} /></Field><Field label="Số người"><input className="form-input" type="number" required min={1} max={1000} value={form.seats} onChange={e => change('seats', e.target.value)} /></Field><Field label="Thời hạn tính từ lúc thanh toán (giờ)"><input className="form-input" type="number" min="1" max={87600} required={form.isActive} value={form.validityHours} onChange={e => change('validityHours', e.target.value)} /></Field><p className="business-muted">{form.isActive ? 'Bắt buộc nhập số giờ khi mở bán công khai.' : 'Để trống thời hạn nếu gói chưa sẵn sàng cho khách mua.'}</p><label className="business-check"><input type="checkbox" checked={form.isActive} onChange={e => change('isActive', e.target.checked)} />Công khai gói dịch vụ</label><h4>Nội dung được cấp quyền</h4>{resources.map(r => <label className="business-check" key={r.id}><input type="checkbox" checked={form.resourceIds.includes(r.id)} onChange={e => change('resourceIds', e.target.checked ? [...form.resourceIds, r.id] : form.resourceIds.filter(id => id !== r.id))} /><span>{r.name}</span></label>)}{!resources.length && <Empty>Tạo nội dung / quyền trước khi tạo gói dịch vụ.</Empty>}</> : <><Field label="Mức truy cập"><select className="form-select" value={form.accessLevel} onChange={e => change('accessLevel', e.target.value)}><option value="free">Miễn phí</option><option value="premium">Trả phí</option></select></Field><Field label="Hiện vật liên quan"><select className="form-select" value={form.artifactId} onChange={e => change('artifactId', e.target.value)}><option value="">Không gắn hiện vật</option>{artifacts.map(a => <option value={a.id} key={a.id}>{a.name}</option>)}</select></Field><Field label="Tham chiếu phạm vi (nếu có)"><input className="form-input" maxLength={200} value={form.scopeReference} onChange={e => change('scopeReference', e.target.value)} /></Field></>}
+          </>
+        )}
+        <button className="btn btn-primary" disabled={action.busy || (product && !form.resourceIds.length)}>{action.busy ? 'Đang lưu…' : 'Lưu cấu hình'}</button>
+      </form>
+    </Modal>
+  );
 }
 function ManagedOrder({ id, onClose }) {
   const detail = useData(`order:${id}`, signal => backend(`commerce/orders/${id}/manage`, { signal }));

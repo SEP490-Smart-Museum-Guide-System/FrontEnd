@@ -43,6 +43,19 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
   late Museum _museum;
   MuseumHighlights? _highlights;
   List<Map<String, dynamic>> _products = [];
+  List<Map<String, dynamic>> _admissionOffers = [];
+
+  String _formatPrice(dynamic amount) {
+    if (amount == null) return '0 đ';
+    if (amount is num) {
+      return '${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ';
+    }
+    final parsed = double.tryParse(amount.toString());
+    if (parsed != null) {
+      return '${parsed.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ';
+    }
+    return '$amount đ';
+  }
 
   @override
   void initState() {
@@ -60,10 +73,26 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
     _museum = widget.museum;
     _highlights = null;
     _products = [];
+    _admissionOffers = [];
     if (int.tryParse(_museum.id) != null) {
       _loadMuseum();
       _loadHighlights();
+      _loadAdmissionOffers();
       _loadProducts();
+    }
+  }
+
+  Future<void> _loadAdmissionOffers() async {
+    final id = widget.museum.id;
+    try {
+      final res = await BackendApi.request('commerce/museums/$id/admission-offers');
+      if (mounted && widget.museum.id == id && res is List) {
+        setState(() {
+          _admissionOffers = res.cast<Map<String, dynamic>>().where((p) => p['isActive'] == true).toList();
+        });
+      }
+    } catch (_) {
+      // Gracefully ignore if admission offers unavailable
     }
   }
 
@@ -293,13 +322,13 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                           : intro,
                       style: AppTextStyles.bodyMedium,
                     ),
-                    if (_products.isNotEmpty) ...[
+                    if (_admissionOffers.isNotEmpty || _products.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(l10n.isEn ? 'PASSES & DIGITAL SERVICES' : 'VÉ & GÓI DỊCH VỤ SỐ', style: _label),
-                          if (_products.length > 2)
+                          if (_products.length + _admissionOffers.length > 2)
                             GestureDetector(
                               onTap: () => openPage(
                                 context,
@@ -320,95 +349,188 @@ class _MuseumDetailScreenState extends State<MuseumDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      for (final p in _products.take(2)) ...[
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(VisitorRadius.xl),
-                            border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.45)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _burgundy.withValues(alpha: 0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.mutedGold.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: AppColors.mutedGold),
+                      if (_admissionOffers.isNotEmpty) ...[
+                        for (final a in _admissionOffers.take(1)) ...[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFDFBF7),
+                              borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                              border: Border.all(color: AppColors.mutedGold, width: 1.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _burgundy.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: _burgundy.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: _burgundy.withValues(alpha: 0.3)),
+                                      ),
+                                      child: const Text(
+                                        '🎟️ Vé vào cổng',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: _burgundy,
+                                        ),
+                                      ),
                                     ),
-                                    child: const Text(
-                                      'Tư liệu số & Thuyết minh',
-                                      style: TextStyle(
-                                        fontSize: 11,
+                                    const Spacer(),
+                                    Text(
+                                      _formatPrice(a['price']),
+                                      style: const TextStyle(
+                                        fontSize: 16.5,
                                         fontWeight: FontWeight.bold,
                                         color: _burgundy,
                                       ),
                                     ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '${p['price']} ${p['currency'] ?? 'VND'}',
-                                    style: const TextStyle(
-                                      fontSize: 16.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: _burgundy,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                p['name']?.toString() ?? 'Gói dịch vụ',
-                                style: const TextStyle(
-                                  fontFamily: AppTextStyles.serifFamily,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkBrown,
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Áp dụng: ${p['seats'] ?? 1} người · Thời hạn: ${p['validityHours'] ?? 24}h sau thanh toán',
-                                style: AppTextStyles.caption.copyWith(color: AppColors.secondaryText),
-                              ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton.icon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: _burgundy,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(VisitorRadius.md),
-                                    ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  a['name']?.toString() ?? 'Vé tham quan bảo tàng',
+                                  style: const TextStyle(
+                                    fontFamily: AppTextStyles.serifFamily,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkBrown,
                                   ),
-                                  icon: const Icon(Icons.shopping_bag_outlined, size: 16),
-                                  label: const Text('Đặt mua gói này', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                  onPressed: () => openPage(
-                                    context,
-                                    ServiceCheckoutScreen(
-                                      museumId: _museum.id,
-                                      product: p,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Bao gồm quyền vào cửa · Tùy chọn mua kèm gói thuyết minh AI khi đặt vé',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.secondaryText),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: _burgundy,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(VisitorRadius.md),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.confirmation_number_outlined, size: 16),
+                                    label: const Text('Đặt vé vào cổng ngay', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                    onPressed: () => openPage(
+                                      context,
+                                      ServicesScreen(
+                                        museumId: _museum.id,
+                                        museumName: _museum.name,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
+                      ] else ...[
+                        for (final p in _products.take(2)) ...[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(VisitorRadius.xl),
+                              border: Border.all(color: AppColors.mutedGold.withValues(alpha: 0.45)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _burgundy.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.mutedGold.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: AppColors.mutedGold),
+                                      ),
+                                      child: const Text(
+                                        'Tư liệu số & Thuyết minh',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: _burgundy,
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      _formatPrice(p['price']),
+                                      style: const TextStyle(
+                                        fontSize: 16.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: _burgundy,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  p['name']?.toString() ?? 'Gói dịch vụ',
+                                  style: const TextStyle(
+                                    fontFamily: AppTextStyles.serifFamily,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkBrown,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Áp dụng: ${p['seats'] ?? 1} người · Thời hạn: ${p['validityHours'] ?? 24}h sau thanh toán',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.secondaryText),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: _burgundy,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(VisitorRadius.md),
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.shopping_bag_outlined, size: 16),
+                                    label: const Text('Đặt mua gói này', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                    onPressed: () => openPage(
+                                      context,
+                                      ServiceCheckoutScreen(
+                                        museumId: _museum.id,
+                                        product: p,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                     if (top.isNotEmpty) ...[

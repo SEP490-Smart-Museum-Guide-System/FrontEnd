@@ -2,6 +2,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../widgets/visitor_handbook_sheet.dart';
 import 'experience_history_screen.dart';
 import 'my_museum_screen.dart';
+import 'order_detail_screen.dart';
 import '../../services/backend_api.dart';
 import 'package:flutter/material.dart';
 
@@ -32,6 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _artifactsCount = 0;
   int _museumsCount = 0;
   int _deferredQuizCount = 0;
+  int _walletBalance = 0;
+  Map<String, dynamic>? _activeTicketOrder;
   List<String> _thumbnailUrls = [];
 
   @override
@@ -48,6 +51,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     var artifacts = store.viewed.length;
     var museums = 1;
     var deferred = 0;
+    var wallet = 0;
+    Map<String, dynamic>? activeTicket;
     var thumbs = <String>[];
 
     if (user != null) {
@@ -57,6 +62,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           BackendApi.request('recognitions/collection?page=1&pageSize=4').catchError((_) => <String, dynamic>{}),
           BackendApi.list('visits/me').catchError((_) => <Map<String, dynamic>>[]),
           BackendApi.list('daily-quizzes/today').catchError((_) => <Map<String, dynamic>>[]),
+          BackendApi.request('commerce/wallet/me').catchError((_) => <String, dynamic>{}),
+          BackendApi.list('commerce/orders/me').catchError((_) => <Map<String, dynamic>>[]),
         ]);
 
         final ptsData = results[0] as Map<String, dynamic>?;
@@ -90,6 +97,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (quizzes != null) {
           deferred = quizzes.where((q) => q['status'] == 'deferred' || q['status'] == 'pending').length;
         }
+
+        final walletData = results[4] as Map<String, dynamic>?;
+        if (walletData != null && walletData['balance'] != null) {
+          wallet = (walletData['balance'] as num).toInt();
+        }
+
+        final orders = results[5] as List<dynamic>?;
+        if (orders != null && orders.isNotEmpty) {
+          final now = DateTime.now();
+          final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+          for (final ord in orders) {
+            if (ord is! Map) continue;
+            final map = Map<String, dynamic>.from(ord);
+            final status = (map['status'] ?? '').toString().toLowerCase();
+            if (status == 'paid' || status == 'completed') {
+              final vDate = map['visitDate']?.toString();
+              if (vDate != null && vDate.startsWith(todayStr)) {
+                activeTicket = map;
+                break;
+              }
+            }
+          }
+
+          if (activeTicket == null) {
+            for (final ord in orders) {
+              if (ord is! Map) continue;
+              final map = Map<String, dynamic>.from(ord);
+              final status = (map['status'] ?? '').toString().toLowerCase();
+              if (status == 'paid' || status == 'completed') {
+                final vDate = map['visitDate']?.toString();
+                if (vDate != null) {
+                  try {
+                    final dt = DateTime.parse(vDate);
+                    final diff = dt.difference(now).inDays;
+                    if (diff >= 0 && diff <= 7) {
+                      activeTicket = map;
+                      break;
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+          }
+        }
       } catch (_) {}
     }
 
@@ -107,6 +159,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _artifactsCount = artifacts;
         _museumsCount = museums;
         _deferredQuizCount = deferred;
+        _walletBalance = wallet;
+        _activeTicketOrder = activeTicket;
         _thumbnailUrls = thumbs;
       });
     }
@@ -210,7 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
                           decoration: BoxDecoration(
                             border: Border(
                               top: BorderSide(
@@ -221,11 +275,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: Row(
                             children: [
-                              _buildMetricItem('$_points', l10n.isEn ? 'Points' : 'Điểm'),
+                              _buildMetricItem(
+                                value: '$_points',
+                                label: l10n.isEn ? 'Points' : 'Điểm',
+                                icon: Icons.stars_rounded,
+                                onTap: () => openPage(context, const ExperienceHistoryScreen(kind: 'points')),
+                              ),
                               Container(width: 1, height: 26, color: Colors.white.withValues(alpha: 0.15)),
-                              _buildMetricItem('$_artifactsCount', l10n.isEn ? 'Artifacts' : 'Hiện vật'),
+                              _buildMetricItem(
+                                value: '$_artifactsCount',
+                                label: l10n.isEn ? 'Artifacts' : 'Hiện vật',
+                                icon: Icons.museum_rounded,
+                                onTap: () => openPage(context, const MyMuseumScreen()),
+                              ),
                               Container(width: 1, height: 26, color: Colors.white.withValues(alpha: 0.15)),
-                              _buildMetricItem('$_museumsCount', l10n.isEn ? 'Museums' : 'Bảo tàng'),
+                              _buildMetricItem(
+                                value: '$_museumsCount',
+                                label: l10n.isEn ? 'Museums' : 'Bảo tàng',
+                                icon: Icons.explore_rounded,
+                                onTap: () => openPage(context, const HistoryScreen()),
+                              ),
                             ],
                           ),
                         ),
@@ -236,100 +305,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // 2. Horizontal Card: "Bảo tàng của tôi"
-            Container(
-              margin: const EdgeInsets.only(top: 14),
-              decoration: BoxDecoration(
-                color: VisitorColors.surface1,
-                borderRadius: BorderRadius.circular(VisitorRadius.xl),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(VisitorRadius.xl),
-                  onTap: () => openPage(context, const MyMuseumScreen()),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    child: Row(
-                      children: [
-                        _buildThumbnailStack(_thumbnailUrls),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.isEn ? 'My Museums' : 'Bảo tàng của tôi',
-                                style: AppTextStyles.cardTitle.copyWith(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                l10n.isEn
-                                    ? '$_artifactsCount artifacts · ${store.saved.length} favorites'
-                                    : '$_artifactsCount hiện vật · ${store.saved.length} yêu thích',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 22,
-                          color: AppColors.secondaryText,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // 2. Active Ticket Card (if today / upcoming pass exists)
+            if (_activeTicketOrder != null) _buildActiveTicketCard(context, l10n),
 
-            // 3. Row of 3 Square Quick Action Tiles
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Row(
-                children: [
-                  _buildQuickActionTile(
-                    icon: Icons.history_rounded,
-                    label: l10n.isEn ? 'History' : 'Lịch sử',
-                    onTap: () => openPage(context, const HistoryScreen()),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildQuickActionTile(
-                    icon: Icons.military_tech_outlined,
-                    label: l10n.isEn ? 'Badges' : 'Huy hiệu',
-                    onTap: () => openPage(context, const BadgesScreen()),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildQuickActionTile(
-                    icon: Icons.confirmation_number_outlined,
-                    label: l10n.isEn ? 'My Passes' : 'Vé của tôi',
-                    onTap: () => openPage(context, const PurchasedServicesScreen()),
-                  ),
-                ],
-              ),
-            ),
+            // 3. Wallet Card
+            _buildWalletAndOrdersCard(context, l10n),
 
-            // 4. Section: THỬ THÁCH
+            // 4. Section: HOẠT ĐỘNG & TIỆN ÍCH
             const SizedBox(height: 22),
-            _buildSectionLabel(l10n.isEn ? 'CHALLENGES' : 'THỬ THÁCH'),
+            _buildSectionLabel(l10n.isEn ? 'ACTIVITIES & UTILITIES' : 'HOẠT ĐỘNG & TIỆN ÍCH'),
             const SizedBox(height: 8),
             _buildMenuTile(
-              icon: Icons.help_outline_rounded,
-              title: l10n.isEn ? 'Daily Quiz' : 'Quiz trong ngày',
+              icon: Icons.confirmation_number_outlined,
+              title: l10n.isEn ? 'Tickets & Orders' : 'Vé & Đơn hàng của tôi',
+              subtitle: l10n.isEn ? 'Purchased e-tickets & services' : 'Vé điện tử và các gói dịch vụ đã mua',
+              onTap: () => openPage(context, const PurchasedServicesScreen()),
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.military_tech_outlined,
+              title: l10n.isEn ? 'Heritage Badges' : 'Huy hiệu di sản',
+              subtitle: l10n.isEn ? 'Titles & achievements unlocked' : 'Danh hiệu và thành tích khám phá',
+              onTap: () => openPage(context, const BadgesScreen()),
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.quiz_outlined,
+              title: l10n.isEn ? 'Daily Quiz Challenge' : 'Thử thách Quiz trong ngày',
               subtitle: l10n.isEn ? 'Museum trivia challenges to earn points' : 'Thử thách kiến thức bảo tàng nhận điểm',
-              badgeText: _deferredQuizCount > 0 ? (l10n.isEn ? '$_deferredQuizCount pending' : '$_deferredQuizCount chờ trả lời') : null,
+              badgeText: _deferredQuizCount > 0
+                  ? (l10n.isEn ? '$_deferredQuizCount pending' : '$_deferredQuizCount câu chờ')
+                  : null,
               onTap: () => openPage(context, const DailyQuizScreen()),
             ),
             const SizedBox(height: 8),
             _buildMenuTile(
               icon: Icons.emoji_events_outlined,
-              title: l10n.isEn ? 'Challenge Results' : 'Kết quả thử tài',
+              title: l10n.isEn ? 'Challenge Results' : 'Kết quả & Lịch sử thử tài',
               subtitle: l10n.isEn ? 'Scores and quiz answer reviews' : 'Điểm số và câu trả lời các bộ câu hỏi',
               onTap: () => openPage(context, const ExperienceHistoryScreen(kind: 'quiz')),
             ),
@@ -340,31 +352,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: l10n.isEn ? 'Review questions asked across artifacts' : 'Xem lại các cuộc trò chuyện và câu hỏi di sản',
               onTap: () => openPage(context, const AiGuideHistoryScreen()),
             ),
-
-            // 5. Section: ĐƠN HÀNG & ĐIỂM
-            const SizedBox(height: 22),
-            _buildSectionLabel(l10n.isEn ? 'ORDERS & POINTS' : 'ĐƠN HÀNG & ĐIỂM'),
-            const SizedBox(height: 8),
-            _buildMenuTile(
-              icon: Icons.confirmation_number_outlined,
-              title: l10n.isEn ? 'Buy Passes & Services' : 'Mua vé & Dịch vụ số',
-              subtitle: l10n.isEn ? 'Explore passes and museum services' : 'Khám phá và đặt mua các gói dịch vụ bảo tàng',
-              onTap: () => openPage(context, const ServicesScreen()),
-            ),
-            const SizedBox(height: 8),
-            _buildMenuTile(
-              icon: Icons.receipt_long_outlined,
-              title: l10n.isEn ? 'Your Orders' : 'Đơn mua của bạn',
-              subtitle: l10n.isEn ? 'E-tickets and purchased service packages' : 'Vé điện tử và các gói dịch vụ đã mua',
-              onTap: () => openPage(context, const PurchasedServicesScreen()),
-            ),
-            _buildMenuTile(
-              icon: Icons.card_giftcard_rounded,
-              title: l10n.isEn ? 'Redeem Points' : 'Đổi điểm',
-              subtitle: l10n.isEn ? 'Accumulate experience points for gifts' : 'Tích lũy điểm trải nghiệm nhận quà',
-              badgeText: l10n.isEn ? '$_points pts' : '$_points điểm',
-              onTap: () => openPage(context, const ExperienceHistoryScreen(kind: 'points')),
-            ),
             const SizedBox(height: 8),
             AnimatedBuilder(
               animation: NotificationController.instance,
@@ -373,11 +360,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return _buildMenuTile(
                   icon: Icons.notifications_none_rounded,
                   title: l10n.notificationCenterTitle,
-                  subtitle: l10n.isEn ? 'System updates, passes and feedback' : 'Tin nhắn hệ thống, vé và phản hồi',
+                  subtitle: l10n.isEn ? 'System updates and announcements' : 'Tin nhắn hệ thống và thông báo mới',
                   badgeText: unread > 0 ? (l10n.isEn ? '$unread new' : '$unread mới') : null,
                   onTap: () => openPage(context, const NotificationCenterScreen()),
                 );
               },
+            ),
+            const SizedBox(height: 8),
+            _buildMenuTile(
+              icon: Icons.tune_rounded,
+              title: l10n.isEn ? 'Settings & Support' : 'Cài đặt & Hỗ trợ',
+              subtitle: l10n.isEn ? 'Language, refund policies & feedback' : 'Ngôn ngữ, chính sách hoàn tiền & góp ý',
+              onTap: () => openPage(context, const SettingsAndSupportScreen()),
             ),
             const SizedBox(height: 24),
           ],
@@ -386,123 +380,312 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMetricItem(String value, String label) {
+  Widget _buildMetricItem({
+    required String value,
+    required String label,
+    required VoidCallback onTap,
+    IconData? icon,
+  }) {
     return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontFamily: AppTextStyles.sansFamily,
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-              color: AppColors.antiqueIvory,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: AppTextStyles.sansFamily,
-              fontSize: 11,
-              color: AppColors.antiqueIvory.withValues(alpha: 0.75),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThumbnailStack(List<String> urls) {
-    return SizedBox(
-      width: 78,
-      height: 34,
-      child: Stack(
-        children: [
-          for (var i = 0; i < 3; i++)
-            Positioned(
-              left: i * 20.0,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  color: AppColors.secondaryBackground,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(VisitorRadius.md),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 14, color: AppColors.mutedGold.withValues(alpha: 0.9)),
+                      const SizedBox(width: 3),
+                    ],
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.antiqueIvory,
+                      ),
                     ),
                   ],
                 ),
-                child: ClipOval(
-                  child: i < urls.length && urls[i].isNotEmpty
-                      ? Image.network(
-                          urls[i].startsWith('http')
-                              ? urls[i]
-                              : ApiConfig.mediaUrl(urls[i]),
-                          headers: TokenManager.authHeaders,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.museum_outlined,
-                            size: 16,
-                            color: AppColors.deepBurgundy,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.museum_outlined,
-                          size: 16,
-                          color: AppColors.mutedGold,
-                        ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.sansFamily,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.antiqueIvory.withValues(alpha: 0.8),
+                  ),
                 ),
-              ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildQuickActionTile({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
+  Widget _buildActiveTicketCard(BuildContext context, AppLocalizations l10n) {
+    if (_activeTicketOrder == null) return const SizedBox.shrink();
+
+    final museumName = _activeTicketOrder!['museumName']?.toString() ?? (l10n.isEn ? 'Museum Pass' : 'Vé Bảo tàng');
+    final visitDate = _activeTicketOrder!['visitDate']?.toString() ?? '';
+    final orderId = _activeTicketOrder!['id'].toString();
+    final quantity = _activeTicketOrder!['quantity'] ?? 1;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2C1810), Color(0xFF1E100B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(VisitorRadius.xl),
+        border: Border.all(
+          color: AppColors.mutedGold.withValues(alpha: 0.6),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(VisitorRadius.xl),
+          onTap: () => openPage(context, OrderDetailScreen(orderId: orderId)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: AppColors.mutedGold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Icons.confirmation_number_rounded,
+                            color: AppColors.mutedGold,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.isEn ? 'TODAY\'S ADMISSION PASS' : 'VÉ VÀO CỔNG HÔM NAY',
+                          style: const TextStyle(
+                            fontFamily: AppTextStyles.sansFamily,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: AppColors.mutedGold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF81C784),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF4CAF50),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            l10n.isEn ? 'Ready' : 'Sẵn sàng',
+                            style: const TextStyle(
+                              fontFamily: AppTextStyles.sansFamily,
+                              color: Color(0xFFC8E6C9),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  museumName,
+                  style: const TextStyle(
+                    fontFamily: AppTextStyles.sansFamily,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.antiqueIvory,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.isEn
+                      ? 'Visit date: $visitDate · $quantity guest(s)'
+                      : 'Ngày tham quan: $visitDate · $quantity người',
+                  style: TextStyle(
+                    fontFamily: AppTextStyles.sansFamily,
+                    fontSize: 12.5,
+                    color: AppColors.antiqueIvory.withValues(alpha: 0.75),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.mutedGold,
+                      foregroundColor: AppColors.darkBrown,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(VisitorRadius.md),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () => openPage(context, OrderDetailScreen(orderId: orderId)),
+                    icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                    label: Text(
+                      l10n.isEn ? 'Show Check-in QR Code' : 'Mở mã QR soát vé',
+                      style: const TextStyle(
+                        fontFamily: AppTextStyles.sansFamily,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWalletAndOrdersCard(BuildContext context, AppLocalizations l10n) {
+    final formatted = _walletBalance > 0
+        ? '${_walletBalance.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ'
+        : '0 đ';
+    return InkWell(
+      onTap: () => openPage(context, const PurchasedServicesScreen()),
+      borderRadius: BorderRadius.circular(VisitorRadius.lg),
       child: Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: VisitorColors.surface1,
           borderRadius: BorderRadius.circular(VisitorRadius.lg),
+          border: Border.all(
+            color: AppColors.mutedGold.withValues(alpha: 0.4),
+            width: 1,
+          ),
         ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(VisitorRadius.lg),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.deepBurgundy.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet_outlined,
+                color: AppColors.deepBurgundy,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, size: 22, color: AppColors.darkBrown),
-                  const SizedBox(height: 6),
                   Text(
-                    label,
+                    l10n.isEn ? 'SMGS Wallet (Refunds)' : 'Ví điện tử hoàn tiền',
                     style: const TextStyle(
                       fontFamily: AppTextStyles.sansFamily,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.darkBrown,
+                      color: AppColors.secondaryText,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatted,
+                    style: const TextStyle(
+                      fontFamily: AppTextStyles.sansFamily,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.darkBrown,
+                      fontSize: 15.5,
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA5D6A7), width: 0.8),
+                ),
+                child: Text(
+                  l10n.isEn ? 'Auto-deduct' : 'Cấn trừ khi mua',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTextStyles.sansFamily,
+                    color: Color(0xFF2E7D32),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppColors.secondaryText,
+            ),
+          ],
         ),
       ),
     );
